@@ -1,0 +1,1 @@
+// Tipos compartidos (Pagination, ApiResponse) `
