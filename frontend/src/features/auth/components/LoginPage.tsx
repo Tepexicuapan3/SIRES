@@ -72,8 +72,8 @@ export const LoginPage = () => {
               />
             </div>
           </div>
-          <h1 className="font-metro text-5xl font-bold text-foreground mb-3 tracking-tight">
-            SIRES
+          <h1 className="text-5xl font-bold text-foreground mb-3 tracking-tight">
+            S I R E S
           </h1>
           <p className="text-base text-muted-foreground font-medium">
             Sistema de Información y Registro de Expedientes
