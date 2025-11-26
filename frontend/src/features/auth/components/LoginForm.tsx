@@ -4,10 +4,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useLogin } from "../hooks/useLogin";
-import { FormField } from "./FormField";
+import { FormField } from "@/components/ui/FormField";
 
+// ============================================
+// SCHEMA DE VALIDACIÓN
+// ============================================
 const loginSchema = z.object({
-  usuario: z.string().min(1, "El correo o número de empleado es requerido"),
+  usuario: z
+    .string()
+    .min(1, "El usuario es requerido")
+    .max(20, "El usuario no puede tener más de 20 caracteres")
+    .regex(/^[a-zA-Z0-9]+$/, "Solo se permiten letras y números"),
   clave: z
     .string()
     .min(1, "La contraseña es requerida")
@@ -40,12 +47,15 @@ export const LoginForm = () => {
   };
 
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border/40 rounded-xl shadow-2xl p-8">
+    <div className="liquid-glass-card">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Error de autenticación */}
         {loginError && (
-          <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <p className="text-sm text-destructive">
+          <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-2xl animate-shake backdrop-blur-sm">
+            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-white text-xs font-bold">!</span>
+            </div>
+            <p className="text-sm text-primary font-medium font-sans">
               {loginError instanceof Error
                 ? loginError.message
                 : "Error al iniciar sesión"}
@@ -53,15 +63,16 @@ export const LoginForm = () => {
           </div>
         )}
 
-        {/* Campo Email/Usuario */}
+        {/* Campo Usuario */}
         <FormField
           id="usuario"
-          label="Correo o Número de Empleado"
+          label="Usuario"
           type="text"
-          placeholder="usuario@metro.cdmx.mx"
-          icon={<Mail className="w-4 h-4" />}
+          placeholder="usuario123"
+          icon={<Mail className="w-5 h-5" />}
           error={errors.usuario}
           disabled={isPending}
+          maxLength={20}
           {...register("usuario")}
         />
 
@@ -71,23 +82,24 @@ export const LoginForm = () => {
           label="Contraseña"
           type={showPassword ? "text" : "password"}
           placeholder="••••••••"
-          icon={<Lock className="w-4 h-4" />}
+          icon={<Lock className="w-5 h-5" />}
           error={errors.clave}
           disabled={isPending}
           rightElement={
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-primary transition-colors p-2 rounded-lg hover:bg-primary/5"
               aria-label={
                 showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
               }
               disabled={isPending}
+              tabIndex={-1}
             >
               {showPassword ? (
-                <EyeOff className="w-4 h-4" />
+                <EyeOff className="w-5 h-5" />
               ) : (
-                <Eye className="w-4 h-4" />
+                <Eye className="w-5 h-5" />
               )}
             </button>
           }
@@ -95,17 +107,21 @@ export const LoginForm = () => {
         />
 
         {/* Checkbox Recordarme */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-3 group">
           <input
             type="checkbox"
             id="rememberMe"
-            className="h-4 w-4 shrink-0 rounded border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 checked:bg-primary checked:text-primary-foreground cursor-pointer accent-primary"
+            className="w-5 h-5 rounded-lg border-2 border-border bg-background text-primary 
+                     focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer 
+                     transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                     checked:bg-primary checked:border-primary"
             {...register("rememberMe")}
             disabled={isPending}
           />
           <label
             htmlFor="rememberMe"
-            className="text-sm font-normal cursor-pointer text-foreground select-none"
+            className="text-sm font-medium cursor-pointer text-foreground 
+                     group-hover:text-primary transition-colors select-none font-sans"
           >
             Recordarme en este dispositivo
           </label>
@@ -115,13 +131,17 @@ export const LoginForm = () => {
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 hover:shadow-xl active:scale-[0.98] w-full h-11"
+          className="w-full h-12 bg-primary text-white font-bold text-base rounded-2xl
+                   shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30
+                   hover:bg-primary/90 active:scale-[0.98] transition-all
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   flex items-center justify-center gap-3 font-metro"
         >
           {isPending ? (
-            <span className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              Iniciando sesión...
-            </span>
+            <>
+              <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Iniciando sesión...</span>
+            </>
           ) : (
             "Iniciar Sesión"
           )}

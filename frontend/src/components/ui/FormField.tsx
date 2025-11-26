@@ -29,7 +29,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
         {/* Label */}
         <label
           htmlFor={id}
-          className="text-sm font-semibold text-foreground block"
+          className="text-sm font-semibold text-foreground block font-sans"
         >
           {label}
         </label>
@@ -38,20 +38,44 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
         <div className="relative group">
           {/* Icono Izquierdo */}
           {icon && (
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none">
+            <div
+              className={cn(
+                "absolute left-4 top-1/2 -translate-y-1/2 transition-colors pointer-events-none",
+                error
+                  ? "text-primary"
+                  : "text-muted-foreground group-focus-within:text-primary"
+              )}
+            >
               {icon}
             </div>
           )}
 
-          {/* Input */}
+          {/* Input con estilo Apple */}
           <input
             ref={ref}
             id={id}
             className={cn(
-              "input-metro",
+              // Base
+              "w-full h-12 rounded-2xl px-4 text-base font-sans",
+              "bg-background/50 backdrop-blur-sm",
+              "border-2 transition-all duration-200",
+              "placeholder:text-muted-foreground/60",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+
+              // Estados normales
+              !error && "border-border",
+              !error &&
+                "focus:border-primary focus:ring-4 focus:ring-primary/10",
+
+              // Estados de error
+              error && "border-primary",
+              error &&
+                "focus:border-primary focus:ring-4 focus:ring-primary/20",
+
+              // Padding con iconos
               icon && "pl-12",
               rightElement && "pr-12",
-              error && "border-destructive focus-visible:ring-destructive",
+
               className
             )}
             aria-invalid={error ? "true" : "false"}
@@ -61,7 +85,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
             {...props}
           />
 
-          {/* Elemento Derecho (ej: mostrar/ocultar contraseña) */}
+          {/* Elemento Derecho */}
           {rightElement && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {rightElement}
@@ -73,7 +97,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
         {error ? (
           <p
             id={`${id}-error`}
-            className="text-xs text-destructive font-medium flex items-center gap-1.5 mt-2"
+            className="text-xs text-primary font-medium flex items-center gap-1.5 mt-2 font-sans"
             role="alert"
           >
             <svg
@@ -90,7 +114,10 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
             {error.message}
           </p>
         ) : helperText ? (
-          <p id={`${id}-helper`} className="text-xs text-muted-foreground mt-2">
+          <p
+            id={`${id}-helper`}
+            className="text-xs text-muted-foreground mt-2 font-sans"
+          >
             {helperText}
           </p>
         ) : null}
