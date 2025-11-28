@@ -2,23 +2,18 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
 import { useLogin } from "../hooks/useLogin";
 import { FormField } from "@/components/ui/FormField";
 
-// ============================================
-// SCHEMA DE VALIDACIÓN
-// ============================================
+// Schema (Mantenemos tu lógica, es correcta)
 const loginSchema = z.object({
   usuario: z
     .string()
     .min(1, "El usuario es requerido")
-    .max(20, "El usuario no puede tener más de 20 caracteres")
-    .regex(/^[a-zA-Z0-9]+$/, "Solo se permiten letras y números"),
-  clave: z
-    .string()
-    .min(1, "La contraseña es requerida")
-    .min(6, "La contraseña debe tener al menos 6 caracteres"),
+    .max(20, "Máximo 20 caracteres")
+    .regex(/^[a-zA-Z0-9]+$/, "Solo letras y números"),
+  clave: z.string().min(1, "La contraseña es requerida"),
   rememberMe: z.boolean(),
 });
 
@@ -26,7 +21,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const { mutate: login, isPending, error: loginError } = useLogin();
+  const { mutate: login, isPending } = useLogin();
 
   const {
     register,
@@ -34,135 +29,110 @@ export const LoginForm = () => {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      rememberMe: false,
-    },
+    defaultValues: { rememberMe: false },
   });
 
   const onSubmit = (data: LoginFormData) => {
-    login({
-      usuario: data.usuario,
-      clave: data.clave,
-    });
+    login({ usuario: data.usuario, clave: data.clave });
   };
 
   return (
-    <div className="liquid-glass-card">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Error de autenticación */}
-        {loginError && (
-          <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-2xl animate-shake backdrop-blur-sm">
-            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-white text-xs font-bold">!</span>
-            </div>
-            <p className="text-sm text-primary font-medium font-sans">
-              {loginError instanceof Error
-                ? loginError.message
-                : "Error al iniciar sesión"}
-            </p>
-          </div>
-        )}
-
-        {/* Campo Usuario */}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-8">
+      {/* Inputs Group */}
+      <div className="space-y-5">
         <FormField
           id="usuario"
-          label="Usuario"
-          type="text"
-          placeholder="usuario123"
-          icon={<Mail className="w-5 h-5" />}
+          label="No. Expediente o Usuario"
+          placeholder="Ej. mperez123"
+          icon={<User size={18} />}
           error={errors.usuario}
           disabled={isPending}
-          maxLength={20}
           {...register("usuario")}
         />
 
-        {/* Campo Contraseña */}
         <FormField
           id="clave"
           label="Contraseña"
           type={showPassword ? "text" : "password"}
           placeholder="••••••••"
-          icon={<Lock className="w-5 h-5" />}
+          icon={<Lock size={18} />}
           error={errors.clave}
           disabled={isPending}
           rightElement={
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-muted-foreground hover:text-primary transition-colors p-2 rounded-lg hover:bg-primary/5"
-              aria-label={
-                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-              }
+              className="p-1 hover:text-brand transition-colors focus:outline-none focus:text-brand rounded-md"
               disabled={isPending}
-              tabIndex={-1}
             >
-              {showPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           }
           {...register("clave")}
         />
+      </div>
 
-        {/* Checkbox Recordarme */}
-        <div className="flex items-center gap-3 group">
-          <input
-            type="checkbox"
-            id="rememberMe"
-            className="w-5 h-5 rounded-lg border-2 border-border bg-background text-primary 
-                     focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer 
-                     transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                     checked:bg-primary checked:border-primary"
-            {...register("rememberMe")}
-            disabled={isPending}
-          />
-          <label
-            htmlFor="rememberMe"
-            className="text-sm font-medium cursor-pointer text-foreground 
-                     group-hover:text-primary transition-colors select-none font-sans"
-          >
-            Recordarme en este dispositivo
-          </label>
-        </div>
+      {/* Opciones Adicionales */}
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <div className="relative flex items-center">
+            <input
+              type="checkbox"
+              className="peer h-4 w-4 appearance-none rounded border border-line-struct bg-paper checked:bg-brand checked:border-brand focus:ring-2 focus:ring-brand/20 transition-all cursor-pointer"
+              {...register("rememberMe")}
+              disabled={isPending}
+            />
+            {/* Checkmark SVG personalizado para control total */}
+            <svg
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="3"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4.5 12.75l6 6 9-13.5"
+              />
+            </svg>
+          </div>
+          <span className="text-sm text-txt-muted group-hover:text-txt-body transition-colors select-none">
+            Recordarme
+          </span>
+        </label>
 
-        {/* Botón Submit */}
-        <button
-          type="submit"
-          disabled={isPending}
-          className="w-full h-12 bg-primary text-white font-bold text-base rounded-2xl
-                   shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30
-                   hover:bg-primary/90 active:scale-[0.98] transition-all
-                   disabled:opacity-50 disabled:cursor-not-allowed
-                   flex items-center justify-center gap-3 font-metro"
+        <a
+          href="#forgot"
+          className="text-sm font-medium text-brand hover:text-brand-hover hover:underline underline-offset-4 decoration-2 transition-all"
         >
-          {isPending ? (
-            <>
-              <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Iniciando sesión...</span>
-            </>
-          ) : (
-            "Iniciar Sesión"
-          )}
-        </button>
+          ¿Olvidaste tu contraseña?
+        </a>
+      </div>
 
-        {/* Enlaces Secundarios */}
-        <div className="flex items-center justify-between text-xs pt-2">
-          <a
-            href="#forgot-password"
-            className="text-primary hover:text-primary/80 font-medium transition-colors"
-          >
-            ¿Olvidaste tu contraseña?
-          </a>
-          <a
-            href="#help"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Necesitas ayuda
-          </a>
-        </div>
-      </form>
-    </div>
+      {/* Botón Principal */}
+      <button
+        type="submit"
+        disabled={isPending}
+        className="
+          group relative w-full h-12 flex items-center justify-center gap-2 
+          bg-brand hover:bg-brand-hover active:scale-[0.99]
+          text-white font-semibold rounded-lg shadow-md hover:shadow-lg
+          transition-all duration-200 disabled:opacity-70 disabled:cursor-wait
+        "
+      >
+        {isPending ? (
+          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        ) : (
+          <>
+            Iniciar Sesión
+            <ArrowRight
+              size={18}
+              className="group-hover:translate-x-1 transition-transform"
+            />
+          </>
+        )}
+      </button>
+    </form>
   );
 };

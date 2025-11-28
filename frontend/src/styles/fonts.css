@@ -17,7 +17,7 @@
   @font-face {
     font-family: "Metro-DF";
     src: url("../../public/fonts/METRO-DF.woff2") format("woff2");
-    font-weight: 400;
+    font-weight: 400 700;
     font-style: normal;
   }
   /* ============================================
@@ -50,7 +50,7 @@
    ============================================ */
 @theme {
   /* Familias de fuentes para Tailwind v4 */
-  --font-family-metro: "METRO-DF", system-ui, sans-serif;
-  --font-family-sans: "Manrope", "Inter", -apple-system, system-ui, sans-serif;
-  --font-family-mono: "Fira Code", "Courier New", monospace;
+  --font-display: "Metro-DF", system-ui, sans-serif;
+  --font-body: "Manrope", -apple-system, system-ui, sans-serif;
+  --font-mono: "Inter", -apple-system, system-ui, sans-serif;
 }
