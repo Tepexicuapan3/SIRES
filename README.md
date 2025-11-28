@@ -1,83 +1,18 @@
 # SIRES
 
-Sistema de Información y Registro de Eventos y Servicios
-
-## 📋 Descripción
-
-Proyecto full-stack con backend y frontend orquestados mediante Docker.
-
-## 🏗️ Estructura del Proyecto
-
-```
-SIRES/
-├── backend/              # API Flask (Python)
-│   ├── .env.example
-│   ├── .env.development
-│   ├── .env.production
-│   ├── Dockerfile
-│   └── app.py
-├── frontend/             # Interfaz con Vite + React
-│   ├── .env.example
-│   ├── .env.development
-│   ├── .env.production
-│   ├── Dockerfile
-│   └── package.json
-├── docker-compose.yml
-├── .env.example          # Variables globales de Docker
-├── .dockerignore
-├── .gitignore
-└── README.md
-```
-
 ## 🚀 Requisitos Previos
 
 - [Docker](https://www.docker.com/get-started) (v20.10 o superior)
-- [Docker Compose](https://docs.docker.com/compose/install/) (v2.0 o superior)
-- **MySQL** instalado localmente en tu red local
+- **MySQL** instalado localmente
 
 ## ⚙️ Configuración Inicial
 
-1. **Clonar el repositorio:**
+**Clonar el repositorio:**
 
-   ```bash
-   git clone https://github.com/Luis-Ant/SIRES.git
-   cd SIRES
-   ```
-
-2. **Configurar variables de entorno:**
-
-   ```bash
-   # Variables globales de Docker (puertos)
-   cp .env.example .env
-
-   # Variables del Backend (Flask + MySQL)
-   cp backend/.env.development backend/.env
-   # O para producción:
-   # cp backend/.env.production backend/.env
-
-   # Variables del Frontend (Vite)
-   cp frontend/.env.development frontend/.env
-   # O para producción:
-   # cp frontend/.env.production frontend/.env
-   ```
-
-3. **Configurar la base de datos MySQL local:**
-
-   Edita `backend/.env` y ajusta las credenciales de MySQL:
-
-   ```
-   DB_HOST=host.docker.internal  # Para conectar desde Docker a tu máquina local
-   DB_PORT=3306
-   DB_NAME=sires_db
-   DB_USER=tu_usuario
-   DB_PASSWORD=tu_contraseña
-   ```
-
-4. **Crear la base de datos en MySQL:**
-   ```bash
-   mysql -u root -p
-   CREATE DATABASE sires_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
+```bash
+git clone https://github.com/Luis-Ant/SIRES.git
+cd SIRES
+```
 
 ## 🐳 Uso con Docker
 
@@ -91,7 +26,6 @@ Este comando iniciará:
 
 - **Backend (Flask)** en el puerto 5000
 - **Frontend (Vite)** en el puerto 5173
-- Se conectará a tu **MySQL local** en la red
 
 ### Ver logs
 
@@ -118,8 +52,6 @@ docker-compose up -d --build
 
 ## 📦 Servicios
 
-## 📦 Servicios
-
 ### Backend (API Flask)
 
 - **URL:** http://localhost:5000
@@ -131,12 +63,6 @@ docker-compose up -d --build
 
 - **URL:** http://localhost:5173
 - **Tecnologías:** Node.js, Vite, React
-
-### Base de Datos
-
-- **Ubicación:** MySQL local en tu red local
-- **Puerto:** 3306
-- **Motor:** MySQL 8.0+
 
 ## 🔐 Variables de Entorno
 

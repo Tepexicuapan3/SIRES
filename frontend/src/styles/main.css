@@ -1,0 +1,21 @@
+/* src/styles/main.css */ /**
+ * ============================================
+ * SIRES - SISTEMA DE ESTILOS GLOBAL
+ * Metro CDMX - Tailwind CSS v4
+ * ============================================
+ */
+
+@import "tailwindcss";
+
+/* Configuración de temas claros/oscuro */
+@variant dark (&:where(.dark, .dark *));
+
+@import "./fonts.css";
+@import "./theme.css";
+@import "./nprogress.css";
+
+/* Reseteo opcional para evitar el flash blanco en dark mode al cargar */
+html {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}

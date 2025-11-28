@@ -1,50 +1,36 @@
-version: "3.8"
-
+# SIRES/docker-compose.yml
 services:
-  # Backend API con Flask
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: sires_backend
-    restart: unless-stopped
-    env_file:
-      - ./backend/.env
-    environment:
-      FLASK_ENV: ${FLASK_ENV:-development}
-      FLASK_APP: ${FLASK_APP:-app.py}
-      PORT: ${BACKEND_PORT:-5000}
-    volumes:
-      - ./backend:/app
-      - /app/venv
-    ports:
-      - "${BACKEND_PORT:-5000}:5000"
-    networks:
-      - sires_network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    command: flask run --host=0.0.0.0
-
-  # Frontend con Vite
+  # === SERVICIO FRONTEND ===
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: sires_frontend
-    restart: unless-stopped
-    env_file:
-      - ./frontend/.env
+    container_name: sires-frontend
+    ports:
+      - "5173:5173"
     volumes:
+      # Sincronizamos tu carpeta local con el contenedor para desarrollo en vivo
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    restart: unless-stopped
     networks:
-      - sires_network
-    depends_on:
-      - backend
-    command: npm run dev
+      - sires-network
 
+  # === SERVICIO BACKEND (Preparado para el futuro) ===
+  # backend:
+  #   build: ./backend
+  #   container_name: sires-backend
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./backend:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - sires-network
+
+# Definimos una red interna para que front y back se comuniquen por nombre
 networks:
-  sires_network:
+  sires-network:
     driver: bridge

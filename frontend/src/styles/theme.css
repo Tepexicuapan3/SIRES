@@ -3,103 +3,155 @@
  * VARIABLES DE TEMA - SIRES Metro CDMX
  * ============================================
  * 
- * Tailwind v4 usa variables CSS nativas
- * Sintaxis: rgb(var(--color) / opacity)
  */
 
-@theme {
-  /* ============================================
-     COLORES INSTITUCIONALES
-     ============================================ */
-  --color-metro-orange: #ff6600;
-  --color-metro-orange-light: #ff8533;
-  --color-metro-orange-dark: #cc5200;
+@layer base {
+  :root {
+    /* ========================================================================
+       1. PRIMITIVAS (LA PALETA CRUDA)
+       No usar estos valores directamente en los componentes. 
+       Usar los tokens semánticos definidos más abajo.
+       ======================================================================== */
 
-  /* ============================================
-     TEMA CLARO (Light Mode)
-     ============================================ */
-  --color-background: 250 250 250;
-  --color-foreground: 23 23 23;
+    /* --- Identidad Corporativa STC Metro --- */
+    --metro-orange-500: #fe5000; /* Color Institucional Principal */
+    --metro-orange-600: #d94300; /* Hover / Active */
+    --metro-orange-100: #fff1e6; /* Fondos sutiles */
 
-  --color-card: 255 255 255;
-  --color-card-foreground: 23 23 23;
+    --metro-gray-900: #1a1a1a; /* Texto principal */
+    --metro-gray-500: #898d8d; /* Elementos deshabilitados/bordes */
+    --metro-gray-50: #f9fafb; /* Fondos generales */
 
-  --color-primary: 255 102 0;
-  --color-primary-foreground: 255 255 255;
+    /* --- Acentos de Categorización (Inspirados en Líneas del Metro) --- */
+    /* Útiles para etiquetas, badges o diferenciar áreas del hospital/clínica */
+    --line-pink: #f04e98; /* Línea 1 - Usar para: Ginecología / Maternidad */
+    --line-blue: #007ac1; /* Línea 2 - Usar para: Medicina General / Hombres */
+    --line-olive: #b59b28; /* Línea 3 - Usar para: Geriatría */
+    --line-teal: #49c0b7; /* Línea 4 - Usar para: Pediatría */
 
-  --color-secondary: 245 245 245;
-  --color-secondary-foreground: 23 23 23;
+    /* --- Semántica Clínica (Feedback del Sistema) --- */
+    --clinical-critical: #ef4444; /* Rojo: Peligro, Alerta vital, Error */
+    --clinical-alert: #f59e0b; /* Ambar: Pendiente, Precaución, En espera */
+    --clinical-stable: #10b981; /* Esmeralda: Signos estables, Éxito, Guardado */
+    --clinical-info: #3b82f6; /* Azul: Información administrativa, Notas */
 
-  --color-muted: 245 245 245;
-  --color-muted-foreground: 115 115 115;
+    /* ========================================================================
+       2. TOKENS SEMÁNTICOS (MODO CLARO - DEFAULT)
+       Aquí es donde asignamos SIGNIFICADO a los colores.
+       ======================================================================== */
 
-  --color-accent: 255 133 51;
-  --color-accent-foreground: 255 255 255;
+    /* --- Superficies (Backgrounds) --- */
+    --bg-app: #f3f4f6; /* El fondo gris pálido detrás de todo el sistema */
+    --bg-paper: #ffffff; /* El "papel" de un expediente clínico (tarjetas) */
+    --bg-paper-lift: #ffffff; /* Elementos flotantes (modales, dropdowns) */
+    --bg-subtle: #f8fafc; /* Áreas secundarias dentro de una tarjeta (ej. footer) */
 
-  --color-destructive: 239 68 68;
-  --color-destructive-foreground: 255 255 255;
+    /* --- Texto y Legibilidad --- */
+    --text-body: #111827; /* Casi negro, para lectura prolongada sin cansar */
+    --text-muted: #64748b; /* Meta-datos, fechas, etiquetas secundarias */
+    --text-hint: #94a3b8; /* Placeholders, texto de ayuda */
+    --text-on-brand: #ffffff; /* Texto que va sobre el color naranja */
 
-  --color-border: 229 229 229;
-  --color-input: 229 229 229;
-  --color-ring: 255 102 0;
+    /* --- Bordes y Separadores --- */
+    --border-hairline: #e2e8f0; /* Divisiones sutiles entre filas de tablas */
+    --border-struct: #cbd5e1; /* Bordes de inputs o tarjetas */
+    --border-focus: var(--metro-orange-500); /* Foco en formularios */
 
-  /* ============================================
-     SHADOWS (Light Mode)
-     ============================================ */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-}
+    /* --- Interacción (Botones/Enlaces) --- */
+    --action-main: var(--metro-orange-500);
+    --action-main-hover: var(--metro-orange-600);
+    --action-muted: var(--metro-gray-500);
 
-/* ============================================
-   TEMA OSCURO (Dark Mode)
-   ============================================ */
-@media (prefers-color-scheme: dark) {
-  @theme {
-    --color-background: 26 26 26;
-    --color-foreground: 250 250 250;
+    /* --- Sombras (Elevation) --- */
+    /* Sistema de profundidad para jerarquizar capas */
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-float: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
 
-    --color-card: 38 38 38;
-    --color-card-foreground: 250 250 250;
+  /* ========================================================================
+     3. TOKENS SEMÁNTICOS (MODO OSCURO - DARK MODE)
+     Redefinición automática para entornos de baja luz.
+     ======================================================================== */
+  :root.dark {
+    /* Ajuste de superficies para reducir fatiga visual */
+    --bg-app: #0f172a; /* Azul noche profundo */
+    --bg-paper: #1e293b; /* Pizarra oscura */
+    --bg-paper-lift: #334155; /* Pizarra más clara para modales */
+    --bg-subtle: #1e293b;
 
-    --color-primary: 255 102 0;
-    --color-primary-foreground: 255 255 255;
+    /* Textos invertidos */
+    --text-body: #f8fafc; /* Blanco humo */
+    --text-muted: #94a3b8; /* Gris azulado */
+    --text-hint: #64748b;
 
-    --color-secondary: 64 64 64;
-    --color-secondary-foreground: 250 250 250;
+    /* Bordes oscurecidos */
+    --border-hairline: #334155;
+    --border-struct: #475569;
 
-    --color-muted: 64 64 64;
-    --color-muted-foreground: 163 163 163;
+    /* Ajuste de colores clínicos para que no brillen demasiado en la oscuridad */
+    --clinical-critical: #f87171; /* Rojo más suave */
+    --clinical-stable: #34d399; /* Verde más suave */
 
-    --color-accent: 255 133 51;
-    --color-accent-foreground: 255 255 255;
-
-    --color-destructive: 239 68 68;
-    --color-destructive-foreground: 250 250 250;
-
-    --color-border: 64 64 64;
-    --color-input: 64 64 64;
-    --color-ring: 255 102 0;
-
-    /* Shadows más pronunciadas en dark */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.45);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5);
-    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.6);
+    /* La marca se mantiene, pero cuidado con el contraste */
+    --action-main: #fe5000;
+    --action-main-hover: #ff8547;
   }
 }
 
-/* Override manual con clase .dark */
-.dark {
-  --color-background: 26 26 26;
-  --color-foreground: 250 250 250;
-  --color-card: 38 38 38;
-  --color-card-foreground: 250 250 250;
-  --color-border: 64 64 64;
-  /* ...resto de variables dark... */
+/* ========================================================================
+   4. CONFIGURACIÓN DEL TEMA TAILWIND
+   Mapeo final para poder usar las clases en el HTML.
+   ======================================================================== */
+@theme {
+  /* --- COLORES DE INTERFAZ --- */
+  /* Uso: bg-app, text-body, border-struct */
+  --color-app: var(--bg-app);
+  --color-paper: var(--bg-paper);
+  --color-paper-lift: var(--bg-paper-lift);
+  --color-subtle: var(--bg-subtle);
+
+  --color-txt-body: var(--text-body);
+  --color-txt-muted: var(--text-muted);
+  --color-txt-hint: var(--text-hint);
+  --color-txt-inverse: var(--text-on-brand);
+
+  --color-line-hairline: var(--border-hairline);
+  --color-line-struct: var(--border-struct);
+
+  /* --- COLORES DE MARCA --- */
+  /* Uso: bg-brand, text-brand, border-brand */
+  --color-brand: var(--action-main);
+  --color-brand-hover: var(--action-main-hover);
+  --color-brand-light: var(--metro-orange-100);
+
+  /* --- COLORES DE ESTADO (CLÍNICOS) --- */
+  /* Uso: bg-status-critical, text-status-stable */
+  --color-status-critical: var(--clinical-critical);
+  --color-status-alert: var(--clinical-alert);
+  --color-status-stable: var(--clinical-stable);
+  --color-status-info: var(--clinical-info);
+
+  /* --- COLORES DE ÁREAS (METRO LINES) --- */
+  /* Uso: bg-area-gyn, text-area-peds */
+  --color-area-gyn: var(--line-pink);
+  --color-area-gral: var(--line-blue);
+  --color-area-geriat: var(--line-olive);
+  --color-area-peds: var(--line-teal);
+
+  /* --- RADIOS DE BORDE (CONSISTENCIA VISUAL) --- */
+  /* Un sistema clínico debe verse limpio y profesional, no demasiado redondo */
+  --radius-xs: 0.125rem; /* 2px - Badges pequeños */
+  --radius-sm: 0.25rem; /* 4px - Inputs internos */
+  --radius-md: 0.375rem; /* 6px - Botones estándar */
+  --radius-lg: 0.5rem; /* 8px - Tarjetas de expedientes */
+  --radius-xl: 0.75rem; /* 12px - Modales / Paneles grandes */
+
+  /* --- SOMBRAS --- */
+  --shadow-soft: var(--shadow-card);
+  --shadow-modal: var(--shadow-float);
+
+  /* --- ANIMACIONES --- */
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

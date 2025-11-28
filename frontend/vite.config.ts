@@ -18,4 +18,11 @@ export default defineConfig({
       "@routes": path.resolve(__dirname, "./src/routes"),
     },
   },
+  server: {
+    host: true,
+    port: 5173,
+    watch: {
+      usePolling: true,
+    },
+  },
 });
