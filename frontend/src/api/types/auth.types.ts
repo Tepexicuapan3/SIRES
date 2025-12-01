@@ -61,3 +61,33 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+// Payload para pedir el código
+export interface RequestResetCodeRequest {
+  email: string;
+}
+
+// Payload para verificar el código OTP
+export interface VerifyResetCodeRequest {
+  email: string;
+  code: string;
+}
+
+// Respuesta exitosa de verificación (recibes el token temporal)
+export interface VerifyResetCodeResponse {
+  valid: boolean;
+  reset_token: string;
+}
+
+// Payload para cambiar la contraseña olvidada
+export interface ResetPasswordRequest {
+  reset_token: string;
+  new_password: string;
+}
+
+// Payload para el Onboarding (Primer Login)
+export interface CompleteOnboardingRequest {
+  current_password: string;
+  new_password: string;
+  terms_accepted: boolean;
+}

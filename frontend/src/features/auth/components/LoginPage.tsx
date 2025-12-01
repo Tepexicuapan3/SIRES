@@ -1,7 +1,21 @@
+import { useState } from "react";
 import { LoginForm } from "./LoginForm";
+import { RequestCodeForm } from "./recovery/RequestCodeForm";
+import { VerifyOtpForm } from "./recovery/VerifyOtpForm";
+import { ResetPasswordForm } from "./recovery/ResetPasswordForm";
 import { ParticlesBackground } from "../animations/ParticlesBackground";
 
+export type AuthViewState =
+  | "LOGIN"
+  | "RECOVERY_REQUEST"
+  | "RECOVERY_OTP"
+  | "RECOVERY_NEW_PASS";
+
 export const LoginPage = () => {
+  const [viewState, setViewState] = useState<AuthViewState>("LOGIN");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+
   return (
     <main className="relative min-h-screen w-full bg-app flex items-center justify-center p-4 overflow-hidden">
       {/* === BACKGROUND ANIMADO === */}
@@ -27,16 +41,57 @@ export const LoginPage = () => {
               />
             </div>
 
-            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-txt-body tracking-tight">
-              S I R E S
-            </h1>
-
-            <p className="mt-2 text-txt-muted text-sm sm:text-base font-normal max-w-xs mx-auto">
-              Sistema de Información de Registro Electrónico para la Salud
-            </p>
+            {/* Títulos dinámicos según el paso */}
+            {viewState === "LOGIN" ? (
+              <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-txt-body tracking-tight">
+                S I R E S
+              </h1>
+            ) : (
+              <h1 className="font-display text-xl sm:text-2xl md:text-2xl mt-2 font-bold text-txt-body tracking-tight">
+                {viewState === "RECOVERY_REQUEST" &&
+                  "¿Olvidaste tu contraseña?"}
+                {viewState === "RECOVERY_OTP" && "Verifica tu identidad"}
+                {viewState === "RECOVERY_NEW_PASS" && "Restablecer contraseña"}
+              </h1>
+            )}
           </div>
-          {/* Formulario */}
-          <LoginForm />
+
+          {/* Renderizado Condicional de Formularios */}
+          <div className="relative z-10">
+            {viewState === "LOGIN" && (
+              <LoginForm
+                onForgotPassword={() => setViewState("RECOVERY_REQUEST")}
+              />
+            )}
+
+            {viewState === "RECOVERY_REQUEST" && (
+              <RequestCodeForm
+                onSuccess={(email) => {
+                  setRecoveryEmail(email);
+                  setViewState("RECOVERY_OTP");
+                }}
+                onCancel={() => setViewState("LOGIN")}
+              />
+            )}
+
+            {viewState === "RECOVERY_OTP" && (
+              <VerifyOtpForm
+                email={recoveryEmail}
+                onSuccess={(token) => {
+                  setResetToken(token);
+                  setViewState("RECOVERY_NEW_PASS");
+                }}
+                onBack={() => setViewState("RECOVERY_REQUEST")}
+              />
+            )}
+
+            {viewState === "RECOVERY_NEW_PASS" && (
+              <ResetPasswordForm
+                resetToken={resetToken}
+                onSuccess={() => setViewState("LOGIN")}
+              />
+            )}
+          </div>
         </div>
 
         {/* Footer Externo */}

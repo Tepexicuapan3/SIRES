@@ -19,7 +19,11 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-export const LoginForm = () => {
+interface Props {
+  onForgotPassword: () => void;
+}
+
+export const LoginForm = ({ onForgotPassword }: Props) => {
   const [showPassword, setShowPassword] = useState(false);
   const { mutate: login, isPending } = useLogin();
 
@@ -38,6 +42,10 @@ export const LoginForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-8">
+      <p className="mt-2 text-txt-muted text-sm sm:text-base font-normal max-w-xs mx-auto text-center">
+        Sistema de Información de Registro Electrónico para la Salud
+      </p>
+
       {/* Inputs Group */}
       <div className="space-y-5">
         <FormField
@@ -102,12 +110,13 @@ export const LoginForm = () => {
           </span>
         </label>
 
-        <a
-          href="#forgot"
+        <button
+          type="button"
+          onClick={onForgotPassword}
           className="text-sm font-medium text-brand hover:text-brand-hover hover:underline underline-offset-4 decoration-2 transition-all"
         >
           ¿Olvidaste tu contraseña?
-        </a>
+        </button>
       </div>
 
       {/* Botón Principal */}

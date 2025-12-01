@@ -5,6 +5,10 @@ import type {
   LoginResponse,
   RefreshTokenResponse,
   Usuario,
+  RequestResetCodeRequest,
+  VerifyResetCodeRequest,
+  VerifyResetCodeResponse,
+  ResetPasswordRequest,
 } from "../types/auth.types";
 
 /**
@@ -65,5 +69,29 @@ export const authAPI = {
     } catch {
       return false;
     }
+  },
+
+  /**
+   * Solicitar código de reseteo de contraseña
+   * POST /api/v1/auth/request-reset-code
+   */
+  requestResetCode: async (data: RequestResetCodeRequest) => {
+    return apiClient.post("/auth/request-reset-code", data);
+  },
+
+  // 2. Verificar código OTP
+  verifyResetCode: async (
+    data: VerifyResetCodeRequest
+  ): Promise<VerifyResetCodeResponse> => {
+    const response = await apiClient.post<VerifyResetCodeResponse>(
+      "/auth/verify-reset-code",
+      data
+    );
+    return response.data;
+  },
+
+  // 3. Cambiar contraseña final
+  resetPassword: async (data: ResetPasswordRequest) => {
+    return apiClient.post("/auth/reset-password", data);
   },
 };
