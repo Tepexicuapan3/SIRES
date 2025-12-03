@@ -1,0 +1,35 @@
+# --- SEGURIDAD ---
+.env
+.env.*
+!.env.example
+# Excluimos todas las llaves y secretos.
+# Docker Compose se encargará de inyectarlos, no queremos "quemarlos" en la imagen.
+
+# --- PYTHON ---
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- IDE & GIT ---
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+
+# --- TESTING ---
+.pytest_cache
+.coverage
+htmlcov/
+tests/
+
+# --- DOCKER ---
+Dockerfile
+docker-compose.yml

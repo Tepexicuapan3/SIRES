@@ -1,0 +1,30 @@
+# --- DEPENDENCIAS & BUILD ---
+node_modules
+dist
+build
+
+# --- SEGURIDAD ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Solo permitimos los archivos de ejemplo o públicos si es necesario
+!.env.example
+
+# --- LOGS ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- IDE & GIT ---
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+*.swo
+
+# --- DOCKER ---
+Dockerfile
