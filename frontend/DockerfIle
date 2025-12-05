@@ -2,7 +2,7 @@ FROM node:20-alpine
 
 # === CONFIGURACIÓN DE PROXY ===
 ENV HTTP_PROXY=http://10.15.15.56:3128
-ENV HTTPS_PROXY=http://10.15.15.56:3128
+ENV HTTPS_PROXY=https://10.15.15.56:3128
 RUN npm config set proxy http://10.15.15.56:3128
 RUN npm config set https-proxy http://10.15.15.56:3128
 RUN npm config set strict-ssl false
