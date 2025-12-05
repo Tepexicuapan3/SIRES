@@ -12,6 +12,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+#para que src sea importable
+ENV PYTHONPATH="/app"
+
 # Instalar dependencias del sistema necesarias para compilar
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
