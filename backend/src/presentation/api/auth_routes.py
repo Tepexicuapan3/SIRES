@@ -1,10 +1,13 @@
 # src/presentation/api/auth_routes.py
 from flask import Blueprint, request, jsonify
 from src.use_cases.auth.login_usecase import LoginUseCase
+from src.use_cases.auth.logout_usecase import LogoutUseCase
 
 auth_bp = Blueprint("auth", __name__)
-usecase = LoginUseCase()
+login_usecase = LoginUseCase()
+logout_usecase = LogoutUseCase()
 
+#============= inicio de sesion =============
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
@@ -15,7 +18,7 @@ def login():
     clave = data.get("clave")
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
 
-    result, error = usecase.execute(usuario, clave, ip)
+    result, error = login_usecase.execute(usuario, clave, ip)
 
     if error:
         mapping = {
@@ -28,6 +31,31 @@ def login():
         return jsonify({"code": error, "message": msg}), status
 
     return jsonify(result), 200
+
+#============= cierre de sesion =============
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    try:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return jsonify({"code": "TOKEN_REQUIRED", "message": "Token es requerido"}), 400
+
+        token = auth_header.split(" ")[1]
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+
+        result, error = logout_usecase.execute(token, ip)
+
+        if error:
+            if error == "INVALID_TOKEN":
+                return jsonify({"code": "INVALID_TOKEN", "message": "Token inválido"}), 401
+            return jsonify({"code": error, "message": "Error en logout"}), 500
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print("Error en logout route:", e)
+        return jsonify({"code": "SERVER_ERROR", "message": "Error interno del servidor"}), 500
+
 
 """
 from flask import Blueprint, request, jsonify
