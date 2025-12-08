@@ -32,7 +32,7 @@ class LoginUseCase:
         self.det_repo.update_on_success_login(det["id_detusr"], client_ip)
 
         # Registrar acceso en bit_accesos
-        self.access_repo.registrar_acceso(user["id_usuario"], client_ip, "LOGIN")
+        self.access_repo.registrar_acceso(user["id_usuario"], client_ip, "EN SESIÓN")
 
         roles = self.user_repo.get_user_roles(user["id_usuario"])
         user_payload = {

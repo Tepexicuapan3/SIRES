@@ -1,4 +1,4 @@
-# src/infrastructure/repositories/access_log_repository.py
+# src/infrastructure/audit/access_log_repository.py
 from src.infrastructure.database.mysql_connection import get_db_connection, close_db
 from datetime import datetime
 
