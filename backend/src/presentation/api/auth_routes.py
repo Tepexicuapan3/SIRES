@@ -1,4 +1,35 @@
-"""# src/presentation/api/auth_routes.py
+# src/presentation/api/auth_routes.py
+from flask import Blueprint, request, jsonify
+from src.use_cases.auth.login_usecase import LoginUseCase
+
+auth_bp = Blueprint("auth", __name__)
+usecase = LoginUseCase()
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    if not data or "usuario" not in data or "clave" not in data:
+        return jsonify({"code": "INVALID_REQUEST", "message": "Usuario y contraseña son requeridos"}), 400
+
+    usuario = data.get("usuario")
+    clave = data.get("clave")
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+
+    result, error = usecase.execute(usuario, clave, ip)
+
+    if error:
+        mapping = {
+            "INVALID_CREDENTIALS": (401, "Usuario o contraseña incorrectos"),
+            "USER_LOCKED": (423, "Usuario temporalmente bloqueado"),
+            "USER_INACTIVE": (403, "Usuario inactivo"),
+            "SERVER_ERROR": (500, "Error interno del servidor")
+        }
+        status, msg = mapping.get(error, (500, "Error desconocido"))
+        return jsonify({"code": error, "message": msg}), status
+
+    return jsonify(result), 200
+
+"""
 from flask import Blueprint, request, jsonify
 from src.use_cases.auth.login_usecase import LoginUseCase
 
@@ -37,7 +68,7 @@ def login():
 
     except Exception as e:
         print("Error in login route:", e)
-        return jsonify({"code": "SERVER_ERROR", "message": "Error interno del servidor"}), 500
+        return jsonify({"code": "SERVER_ERROR", "message": "Error interno del servidor"}), 500"""
 
 """
 from flask import Blueprint, request, jsonify
@@ -89,4 +120,4 @@ def login():
     if error:
         return jsonify({"error": error, "message": "Credenciales incorrectas"}), 401
 
-    return jsonify(result), 200
+    return jsonify(result), 200 """
