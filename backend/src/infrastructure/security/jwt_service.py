@@ -1,4 +1,4 @@
-"""# src/infrastructure/security/jwt_service.py
+# src/infrastructure/security/jwt_service.py
 #SEGUNDA VERSION
 import os
 import jwt
@@ -95,4 +95,4 @@ def generate_refresh_token(user):
         'exp': datetime.now(timezone.utc) + timedelta(seconds=REFRESH_EXPIRES),
         'type': 'refresh'
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")"""

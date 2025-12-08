@@ -1,5 +1,72 @@
-"""# src/use_cases/auth/login_usecase.py
-from src.infrastructure.repositories.user_repository import UserRepository
+# src/use_cases/auth/login_usecase.py
+from src.infrastructure.repositories.user_repository import UserRepository, DetUserRepository
+from werkzeug.security import check_password_hash
+from src.infrastructure.security.jwt_service import generate_access_token, generate_refresh_token
+from datetime import datetime, timezone
+
+from src.infrastructure.audit.access_log_repository import AccessLogRepository
+
+class LoginUseCase:
+    def __init__(self):
+        self.user_repo = UserRepository()
+        self.det_repo = DetUserRepository()
+        self.access_repo = AccessLogRepository()  # <-- repositorio de accesos
+
+    def execute(self, username: str, password: str, client_ip: str):
+        user = self.user_repo.get_user_by_username(username)
+        if not user:
+            return None, "INVALID_CREDENTIALS"
+
+        det = self.det_repo.get_det_by_userid(user["id_usuario"])
+        if not det:
+            return None, "SERVER_ERROR"
+
+        if det.get("fecha_bloqueo") and det["fecha_bloqueo"] > datetime.now():
+            return None, "USER_LOCKED"
+
+        if not check_password_hash(user["clave"], password):
+            self.det_repo.increment_failed_attempts(det["id_detusr"], det.get("intentos_fallidos", 0))
+            return None, "INVALID_CREDENTIALS"
+
+        # Login exitoso
+        self.det_repo.update_on_success_login(det["id_detusr"], client_ip)
+
+        # Registrar acceso en bit_accesos
+        self.access_repo.registrar_acceso(user["id_usuario"], client_ip, "LOGIN")
+
+        roles = self.user_repo.get_user_roles(user["id_usuario"])
+        user_payload = {
+            "id_usuario": user["id_usuario"],
+            "usuario": user["usuario"],
+            "nombre": user["nombre"],
+            "paterno": user.get("paterno"),
+            "materno": user.get("materno"),
+            "correo": user.get("correo"),
+            "expediente": user.get("expediente"),
+            "roles": roles
+        }
+
+        access = generate_access_token(user_payload, scope="full_access")
+        refresh = generate_refresh_token(user_payload)
+
+        result = {
+            "access_token": access,
+            "refresh_token": refresh,
+            "user": {
+                "id": user_payload["id_usuario"],
+                "username": user_payload["usuario"],
+                "nombre": user_payload["nombre"],
+                "paterno": user_payload["paterno"],
+                "materno": user_payload["materno"],
+                "correo": user_payload["correo"],
+                "roles": roles,
+                "must_change_password": det.get("cambiar_clave") == "T"
+            }
+        }
+        return result, None
+
+
+"""from src.infrastructure.repositories.user_repository import UserRepository
 from src.infrastructure.repositories.user_repository import DetUserRepository
 from src.infrastructure.security.jwt_service import generate_access_token, generate_refresh_token
 from werkzeug.security import check_password_hash
@@ -151,7 +218,7 @@ class LoginUseCase:
         }, None
 """
 
-
+"""
 from werkzeug.security import check_password_hash
 from src.infrastructure.repositories.user_repository import UserRepository
 from src.infrastructure.security.jwt_service import (
@@ -188,3 +255,4 @@ class LoginUseCase:
             "refresh_token": encrypt_token_aes(refresh),
             "user": user
         }, None
+"""

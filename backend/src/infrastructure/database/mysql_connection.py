@@ -1,3 +1,4 @@
+#mysql_connection.py
 import os
 import mysql.connector
 from mysql.connector import Error
@@ -12,7 +13,6 @@ DB_CONFIG = {
     'user': os.getenv('DATABASE_USER', 'sires'),
     'password': os.getenv('DATABASE_PASSWORD', '112233'),
 }
-
 
 def get_db_connection():
     try:
