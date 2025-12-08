@@ -64,3 +64,55 @@ class DetUserRepository:
             return True
         finally:
             close_db(conn, cursor)
+
+            
+    def update_onboarding(self, id_usuario: int, terminos: str, cambiar_clave: str):
+        conn = get_db_connection()
+        if not conn:
+            return False
+        
+        try:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                UPDATE det_usuarios
+                SET terminos_acept = %s,
+                    cambiar_clave = %s,
+                    act_conexion = NOW()
+                WHERE id_usuario = %s
+            """, (terminos, cambiar_clave, id_usuario))
+
+            conn.commit()
+
+            return cursor.rowcount > 0
+
+        except Exception as e:
+            print("Error in update_onboarding:", e)
+            return False
+        finally:
+            close_db(conn)
+
+
+    def disable_password_change(self, id_usuario):
+        conn = get_db_connection()
+        if not conn:
+            return False
+
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE det_usuarios
+                SET cambiar_clave = 'F',
+                    act_conexion = NOW()
+                WHERE id_usuario = %s
+            """, (id_usuario,))
+
+            conn.commit()
+            return cursor.rowcount > 0
+    
+        except Exception as e:
+            print("Error in disable_password_change:", e)
+            return False
+    
+        finally:
+            close_db(conn, cursor)

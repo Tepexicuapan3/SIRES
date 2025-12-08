@@ -36,6 +36,30 @@ class UserRepository:
             return [r["rol"] for r in roles]
         finally:
             close_db(conn, cursor)
+            
+
+    def update_password(self, email, hashed_password):
+        conn = get_db_connection()
+        if not conn:
+            return False
+
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE sy_usuarios
+                SET clave = %s, usr_modf = 'system', fch_modf = NOW()
+                WHERE correo = %s
+            """, (hashed_password, email))
+
+            conn.commit()
+            return cursor.rowcount > 0
+
+        except Exception as e:
+            print("Error updating password:", e)
+            return False
+
+        finally:
+            close_db(conn, cursor)
 
 
 class DetUserRepository:

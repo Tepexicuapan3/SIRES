@@ -1,11 +1,20 @@
 # src/presentation/api/auth_routes.py
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt
 from src.use_cases.auth.login_usecase import LoginUseCase
 from src.use_cases.auth.logout_usecase import LogoutUseCase
+from src.use_cases.auth.request_reset_code_usecase import RequestResetCodeUseCase
+from src.use_cases.auth.verify_reset_code_usecase import VerifyResetCodeUseCase
+from src.use_cases.auth.reset_password_usecase import ResetPasswordUseCase
+from src.use_cases.auth.complete_onboarding_usecase import CompleteOnboardingUseCase
 
 auth_bp = Blueprint("auth", __name__)
 login_usecase = LoginUseCase()
 logout_usecase = LogoutUseCase()
+reset_code_usecase = RequestResetCodeUseCase()
+verify_reset_usecase = VerifyResetCodeUseCase()
+reset_password_usecase = ResetPasswordUseCase()
+complete_onboarding_usecase = CompleteOnboardingUseCase()
 
 #============= inicio de sesion =============
 @auth_bp.route("/login", methods=["POST"])
@@ -56,6 +65,121 @@ def logout():
         print("Error en logout route:", e)
         return jsonify({"code": "SERVER_ERROR", "message": "Error interno del servidor"}), 500
 
+#============= refresh code =============
+@auth_bp.route("/request-reset-code", methods=["POST"])
+def request_reset_code():
+    try:
+        data = request.get_json()
+        email = data.get("email")
+
+        if not email:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El email es requerido."
+            }), 400
+
+        result, error = reset_code_usecase.execute(email)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print("Error in request-reset-code:", e)
+        return jsonify({"code": "SERVER_ERROR", "message": "Error interno del servidor"}), 500
+    
+#============= verificar codigo =============
+@auth_bp.route("/verify-reset-code", methods=["POST"])
+def verify_reset_code():
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        code = data.get("code")
+
+        if not email or not code:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "Email y código son requeridos."
+            }), 400
+
+        result, error = verify_reset_usecase.execute(email, code)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print("Error in verify-reset-code:", e)
+        return jsonify({"code": "SERVER_ERROR", "message": "Error interno del servidor"}), 500
+
+#============= reset pass =============
+@auth_bp.route("/reset-password", methods=["POST"])
+@jwt_required()  # El token debe venir en Authorization: Bearer <RESET_TOKEN>
+def reset_password():
+    try:
+        data = request.get_json()
+        new_password = data.get("new_password")
+
+        if not new_password:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "La nueva contraseña es requerida."
+            }), 400
+
+        # Extraer claims del token
+        claims = get_jwt()
+        scope = claims.get("scope")
+        user_id = claims.get("user_id")
+
+        # Validar que el token sea del tipo correcto
+        if scope != "password_reset":
+            return jsonify({
+                "code": "INVALID_SCOPE",
+                "message": "Token no autorizado para restablecer contraseña."
+            }), 403
+
+        result, error = reset_password_usecase.execute(user_id, new_password)
+
+        if error:
+            return jsonify({
+                "code": error,
+                "message": "No se pudo restablecer la contraseña."
+            }), 400
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print("Error in reset-password:", e)
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": "Error interno del servidor"
+        }), 500
+
+#============== completar onboarding ==============
+@auth_bp.route("/complete-onboarding", methods=["POST"])
+def complete_onboarding():
+    try:
+        data = request.get_json()
+        id_usuario = data.get("id_usuario")
+
+        if not id_usuario:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El id_usuario es requerido."
+            }), 400
+
+        result = complete_onboarding_usecase.execute(id_usuario)
+
+        if not result["success"]:
+            return jsonify({
+                "code": "ONBOARDING_ERROR",
+                "message": result["message"]
+            }), 400
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print("Error in complete-onboarding:", e)
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": "Error interno del servidor"
+        }), 500
 
 """
 from flask import Blueprint, request, jsonify
