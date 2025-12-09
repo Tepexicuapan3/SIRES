@@ -26,7 +26,8 @@ export interface Usuario {
   ing_perfil: string;
   est_usuario: "A" | "I"; // A=Activo, I=Inactivo
   roles: string[]; // ['ROL', 'PERS', 'CC']
-  permisos?: string[]; // Opcional: permisos específicos
+  permisos?: string[]; // Opcional: permisos específicos`
+  must_change_password: boolean;
 }
 
 export interface LoginResponse {
@@ -87,7 +88,6 @@ export interface ResetPasswordRequest {
 
 // Payload para el Onboarding (Primer Login)
 export interface CompleteOnboardingRequest {
-  current_password: string;
   new_password: string;
   terms_accepted: boolean;
 }

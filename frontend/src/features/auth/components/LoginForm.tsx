@@ -6,7 +6,7 @@ import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
 import { useLogin } from "../hooks/useLogin";
 import { FormField } from "@/components/ui/FormField";
 
-// Schema (Mantenemos tu lógica, es correcta)
+// Schema
 const loginSchema = z.object({
   usuario: z
     .string()
@@ -30,6 +30,8 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
   const {
     register,
     handleSubmit,
+    setValue,
+    setFocus,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -37,7 +39,17 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
   });
 
   const onSubmit = (data: LoginFormData) => {
-    login({ usuario: data.usuario, clave: data.clave });
+    login(
+      { usuario: data.usuario, clave: data.clave },
+      {
+        onError: () => {
+          setValue("clave", "");
+          setTimeout(() => {
+            setFocus("clave");
+          }, 10);
+        },
+      }
+    );
   };
 
   return (
