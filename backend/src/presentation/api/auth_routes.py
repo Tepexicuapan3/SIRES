@@ -181,6 +181,15 @@ def complete_onboarding():
             "message": "Error interno del servidor"
         }), 500
 
+
+
+
+
+
+
+
+
+#====================================================
 """
 from flask import Blueprint, request, jsonify
 from src.use_cases.auth.login_usecase import LoginUseCase
