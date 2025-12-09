@@ -29,6 +29,8 @@ services:
       - "5000:5000"
     volumes:
       - ./backend:/app
+    environment:
+      TZ: "America/Mexico_City"
     env_file:
       - ./backend/.env
     depends_on:
