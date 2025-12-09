@@ -8,10 +8,13 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
 
   // Acciones
   setAuth: (user: Usuario, token: string, refreshToken: string) => void;
   updateUser: (user: Partial<Usuario>) => void;
+  setToken: (token: string) => void;
+  setLoading: (loading: boolean) => void;
   logout: () => void;
   clearAuth: () => void;
 }
@@ -27,6 +30,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       refreshToken: null,
       isAuthenticated: false,
+      isLoading: false,
 
       // Setear autenticación completa
       setAuth: (user, token, refreshToken) => {
@@ -39,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
           token,
           refreshToken,
           isAuthenticated: true,
+          isLoading: false,
         });
       },
 
@@ -52,6 +57,15 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      // 3. Actualizar solo el token (sin tocar al usuario)
+      setToken: (token) => {
+        localStorage.setItem("access_token", token);
+        set({ token });
+      },
+
+      // 4. Control manual de carga
+      setLoading: (loading) => set({ isLoading: loading }),
+
       // Logout
       logout: () => {
         localStorage.removeItem("access_token");
@@ -62,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
           token: null,
           refreshToken: null,
           isAuthenticated: false,
+          isLoading: false,
         });
       },
 
@@ -86,8 +101,10 @@ export const useAuthStore = create<AuthState>()(
 
 // Selectores útiles
 export const useUser = () => useAuthStore((state) => state.user);
+export const useAuthToken = () => useAuthStore((state) => state.token);
 export const useIsAuthenticated = () =>
   useAuthStore((state) => state.isAuthenticated);
+export const useAuthLoading = () => useAuthStore((state) => state.isLoading);
 export const useUserRoles = () =>
   useAuthStore((state) => state.user?.roles || []);
 export const useHasRole = (role: string) =>

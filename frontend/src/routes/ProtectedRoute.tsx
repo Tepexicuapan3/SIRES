@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 
 /**
  * Componente para proteger rutas que requieren autenticación
+ * Y forzar el flujo de Onboarding (Términos y Cambio de Contraseña)
  */
 export const ProtectedRoute = ({
   children,
@@ -22,6 +23,18 @@ export const ProtectedRoute = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // LÓGICA DE ONBOARDING
+  // CASO A: El usuario DEBE aceptar términos, pero intenta navegar a otro lado
+  if (user?.must_change_password && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  // CASO B: El usuario YA cumplió, pero intenta volver a entrar a /onboarding
+  if (!user?.must_change_password && location.pathname === "/onboarding") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Verificación de Roles
   // Si requiere un rol específico y el usuario no lo tiene
   if (requiredRole && !user?.roles.includes(requiredRole)) {
     return (

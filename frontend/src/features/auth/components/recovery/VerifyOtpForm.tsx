@@ -7,7 +7,6 @@ import { authAPI } from "@/api/resources/auth.api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Validación estricta: exactamente 6 dígitos
 const schema = z.object({
   code: z
     .string()
@@ -26,6 +25,8 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
+    setFocus,
   } = useForm<{ code: string }>({
     resolver: zodResolver(schema),
   });
@@ -35,12 +36,22 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
     onSuccess: (data) => {
       if (data.valid && data.reset_token) {
         toast.success("Código verificado");
-        onSuccess(data.reset_token); // Pasamos el "token llave" al siguiente paso
+        onSuccess(data.reset_token);
       } else {
         toast.error("Código inválido o expirado");
+        reset();
+        setTimeout(() => {
+          setFocus("code");
+        }, 10);
       }
     },
-    onError: () => toast.error("Error al verificar el código"),
+    onError: () => {
+      toast.error("Error al verificar el código");
+      reset();
+      setTimeout(() => {
+        setFocus("code");
+      }, 10);
+    },
   });
 
   return (
@@ -48,11 +59,11 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
       onSubmit={handleSubmit((d) => mutate(d.code))}
       className="space-y-6 animate-fade-in-up"
     >
-      <div className="text-center space-y-2 mb-6">
+      <div className="mt-4 text-center space-y-2 mb-6">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand/10 text-brand mb-2">
           <ShieldCheck size={24} />
         </div>
-        <p className="text-sm text-txt-muted">
+        <p className="mt-2 text-sm text-txt-muted">
           Hemos enviado un código a <br />
           <span className="font-semibold text-txt-body">{email}</span>
         </p>

@@ -1,4 +1,5 @@
 import apiClient from "../client";
+import { authMocks } from "../mocks/auth.mocks";
 
 import type {
   LoginRequest,
@@ -9,7 +10,11 @@ import type {
   VerifyResetCodeRequest,
   VerifyResetCodeResponse,
   ResetPasswordRequest,
+  CompleteOnboardingRequest,
 } from "../types/auth.types";
+
+// Leemos la variable de entorno para saber si usar Mocks
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
 /**
  * API de Autenticación
@@ -19,12 +24,19 @@ export const authAPI = {
    * Login de usuario
    * POST /api/v1/auth/login
    */
-  login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>(
-      "/auth/login",
-      credentials
-    );
+  login: async (data: LoginRequest): Promise<LoginResponse> => {
+    if (USE_MOCKS) return authMocks.login(data);
+    const response = await apiClient.post<LoginResponse>("/auth/login", data);
     return response.data;
+  },
+
+  /**
+   * Completar Onboarding (Primer cambio de contraseña y términos)
+   * POST /api/v1/auth/complete-onboarding
+   */
+  completeOnboarding: async (data: CompleteOnboardingRequest) => {
+    if (USE_MOCKS) return authMocks.completeOnboarding();
+    return apiClient.post("/auth/complete-onboarding", data);
   },
 
   /**
@@ -76,13 +88,18 @@ export const authAPI = {
    * POST /api/v1/auth/request-reset-code
    */
   requestResetCode: async (data: RequestResetCodeRequest) => {
+    if (USE_MOCKS) return authMocks.requestResetCode();
     return apiClient.post("/auth/request-reset-code", data);
   },
 
-  // 2. Verificar código OTP
+  /**
+   * Verificar código OTP
+   * POST /api/v1/auth/verify-reset-code
+   */
   verifyResetCode: async (
     data: VerifyResetCodeRequest
   ): Promise<VerifyResetCodeResponse> => {
+    if (USE_MOCKS) return authMocks.verifyResetCode(data);
     const response = await apiClient.post<VerifyResetCodeResponse>(
       "/auth/verify-reset-code",
       data
@@ -90,8 +107,12 @@ export const authAPI = {
     return response.data;
   },
 
-  // 3. Cambiar contraseña final
+  /**
+   * Cambiar contraseña final
+   * POST /api/v1/auth/reset-password
+   */
   resetPassword: async (data: ResetPasswordRequest) => {
+    if (USE_MOCKS) return authMocks.resetPassword();
     return apiClient.post("/auth/reset-password", data);
   },
 };

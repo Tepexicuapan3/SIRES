@@ -46,8 +46,12 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+    // Si el error 401 viene de intentar iniciar sesión, NO hagas nada.
+    if (originalRequest.url?.includes("/auth/login")) {
+      return Promise.reject(error);
+    }
 
-    // Si es error 401 y no es el endpoint de login
+    // Si es error 401 (token vencido) y NO es el endpoint de login
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -75,7 +79,7 @@ apiClient.interceptors.response.use(
 
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Si falla el refresh, limpiar todo y redirigir a login
+        // Si falla el refresh (sesión expirada real), limpiar todo y redirigir
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         window.location.href = "/login";
