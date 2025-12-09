@@ -26,9 +26,9 @@ class DetUserRepository:
         if not conn:
             return False
         try:
-            new_attempts = (current_attempts or 0) + 1
+            new_attempts = (current_attempts or 0) + 1 #se quita ya que incrementa un intento
             cursor = conn.cursor()
-            if new_attempts >= 3:
+            if new_attempts >= 10:
                 cursor.execute("""
                     UPDATE det_usuarios
                     SET intentos_fallidos = %s, fecha_bloqueo = DATE_ADD(NOW(), INTERVAL 5 MINUTE)
@@ -116,3 +116,53 @@ class DetUserRepository:
     
         finally:
             close_db(conn, cursor)
+
+
+    def reset_lock_status(self, id_detusr):
+        conn = get_db_connection()
+        if not conn:
+            return False
+
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE det_usuarios
+                SET intentos_fallidos = 0,
+                    fecha_bloqueo = NULL
+                WHERE id_detusr = %s
+            """, (id_detusr,))
+
+            conn.commit()
+            return cursor.rowcount > 0
+
+        except Exception as e:
+            print("Error resetting lock status:", e)
+            return False
+
+        finally:
+            close_db(conn, cursor)
+
+
+    def lock_user(self, id_detusr):
+        conn = get_db_connection()
+        if not conn:
+            return False
+
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE det_usuarios
+                SET fecha_bloqueo = NOW()
+                WHERE id_detusr = %s
+            """, (id_detusr,))
+
+            conn.commit()
+            return cursor.rowcount > 0
+
+        except Exception as e:
+            print("Error locking user:", e)
+            return False
+
+        finally:
+            close_db(conn, cursor)
+

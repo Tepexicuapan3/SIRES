@@ -1,8 +1,9 @@
 # src/use_cases/auth/login_usecase.py
-from src.infrastructure.repositories.user_repository import UserRepository, DetUserRepository
+from src.infrastructure.repositories.user_repository import UserRepository
+from src.infrastructure.repositories.det_user_repository import DetUserRepository
 from werkzeug.security import check_password_hash
 from src.infrastructure.security.jwt_service import generate_access_token, generate_refresh_token
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from src.infrastructure.audit.access_log_repository import AccessLogRepository
 
@@ -10,7 +11,7 @@ class LoginUseCase:
     def __init__(self):
         self.user_repo = UserRepository()
         self.det_repo = DetUserRepository()
-        self.access_repo = AccessLogRepository()  # <-- repositorio de accesos
+        self.access_repo = AccessLogRepository()
 
     def execute(self, username: str, password: str, client_ip: str):
         user = self.user_repo.get_user_by_username(username)
@@ -21,17 +22,53 @@ class LoginUseCase:
         if not det:
             return None, "SERVER_ERROR"
 
-        if det.get("fecha_bloqueo") and det["fecha_bloqueo"] > datetime.now():
-            return None, "USER_LOCKED"
+        # ============================
+        # 1. REVISAR SI ESTA BLOQUEADO
+        # ============================
+        fecha_bloqueo = det.get("fecha_bloqueo")
 
+        if fecha_bloqueo:
+            desbloqueo = fecha_bloqueo + timedelta(minutes=5)
+
+            if datetime.now() < desbloqueo:
+                return None, "USER_LOCKED"
+            else:
+                # bloqueo expirado → limpiar estado
+                self.det_repo.reset_lock_status(det["id_detusr"])
+                # recargar datos después del reset
+                det = self.det_repo.get_det_by_userid(user["id_usuario"])
+
+        # ============================
+        # 2. VALIDAR CONTRASEÑA
+        # ============================
         if not check_password_hash(user["clave"], password):
-            self.det_repo.increment_failed_attempts(det["id_detusr"], det.get("intentos_fallidos", 0))
+
+            # fallos actuales
+            intentos = det.get("intentos_fallidos", 0)
+
+            # incrementa internamente +1 (corregido en el repo)
+            self.det_repo.increment_failed_attempts(det["id_detusr"], intentos)
+
             return None, "INVALID_CREDENTIALS"
 
-        # Login exitoso
+        # ============================
+        # *** BLOQUEO AÚN VIGENTE ***
+        # Aunque la contraseña sea correcta
+        # ============================
+        det = self.det_repo.get_det_by_userid(user["id_usuario"])  # refrescar
+        fecha_bloqueo = det.get("fecha_bloqueo")
+
+        if fecha_bloqueo:
+            desbloqueo = fecha_bloqueo + timedelta(minutes=5)
+            if datetime.now() < desbloqueo:
+                return None, "USER_LOCKED"
+
+        # ============================
+        # 3. LOGIN EXITOSO
+        # ============================
         self.det_repo.update_on_success_login(det["id_detusr"], client_ip)
 
-        # Registrar acceso en bit_accesos
+        # Registrar acceso
         self.access_repo.registrar_acceso(user["id_usuario"], client_ip, "EN SESIÓN")
 
         roles = self.user_repo.get_user_roles(user["id_usuario"])
@@ -64,6 +101,7 @@ class LoginUseCase:
             }
         }
         return result, None
+
 
 
 """from src.infrastructure.repositories.user_repository import UserRepository
