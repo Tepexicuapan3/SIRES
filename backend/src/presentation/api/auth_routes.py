@@ -1,6 +1,6 @@
 # src/presentation/api/auth_routes.py
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from src.use_cases.auth.login_usecase import LoginUseCase
 from src.use_cases.auth.logout_usecase import LogoutUseCase
 from src.use_cases.auth.request_reset_code_usecase import RequestResetCodeUseCase
@@ -78,9 +78,8 @@ def request_reset_code():
                 "message": "El email es requerido."
             }), 400
 
-        result, error = reset_code_usecase.execute(email)
-
-        return jsonify(result), 200
+        result, status = reset_code_usecase.execute(email)
+        return jsonify(result), status
 
     except Exception as e:
         print("Error in request-reset-code:", e)
@@ -100,9 +99,8 @@ def verify_reset_code():
                 "message": "Email y código son requeridos."
             }), 400
 
-        result, error = verify_reset_usecase.execute(email, code)
-
-        return jsonify(result), 200
+        result, status = verify_reset_usecase.execute(email, code)
+        return jsonify(result), status
 
     except Exception as e:
         print("Error in verify-reset-code:", e)
@@ -110,7 +108,7 @@ def verify_reset_code():
 
 #============= reset pass =============
 @auth_bp.route("/reset-password", methods=["POST"])
-@jwt_required()  # El token debe venir en Authorization: Bearer <RESET_TOKEN>
+@jwt_required()
 def reset_password():
     try:
         data = request.get_json()
@@ -122,27 +120,20 @@ def reset_password():
                 "message": "La nueva contraseña es requerida."
             }), 400
 
-        # Extraer claims del token
+        # Extraer claims y user_id desde el JWT
         claims = get_jwt()
-        scope = claims.get("scope")
-        user_id = claims.get("user_id")
+        user_id = get_jwt_identity()
 
-        # Validar que el token sea del tipo correcto
-        if scope != "password_reset":
+        # Validar que el token tenga el scope correcto
+        if claims.get("scope") != "password_reset":
             return jsonify({
                 "code": "INVALID_SCOPE",
                 "message": "Token no autorizado para restablecer contraseña."
             }), 403
 
-        result, error = reset_password_usecase.execute(user_id, new_password)
-
-        if error:
-            return jsonify({
-                "code": error,
-                "message": "No se pudo restablecer la contraseña."
-            }), 400
-
-        return jsonify(result), 200
+        # Ejecutar caso de uso
+        result, status = reset_password_usecase.execute(user_id, new_password)
+        return jsonify(result), status
 
     except Exception as e:
         print("Error in reset-password:", e)
@@ -150,6 +141,7 @@ def reset_password():
             "code": "SERVER_ERROR",
             "message": "Error interno del servidor"
         }), 500
+
 
 #============== completar onboarding ==============
 @auth_bp.route("/complete-onboarding", methods=["POST"])

@@ -1,57 +1,39 @@
-import random
-from src.infrastructure.repositories.password_reset_repository import PasswordResetRepository
-from src.infrastructure.repositories.user_repository import UserRepository  
+from flask_jwt_extended import get_jwt_identity, get_jwt
+from src.infrastructure.repositories.user_repository import UserRepository
 from src.infrastructure.security.password_hasher import PasswordHasher
-from src.domain.dto.reset_password_dto import ResetPasswordDTO
-from datetime import datetime
+
 
 class RequestResetCodeUseCase:
 
     def __init__(self):
-        self.reset_repo = PasswordResetRepository()
         self.user_repo = UserRepository()
 
-    def execute(self, email):
-        # 1. Buscar usuario (SIN revelar si existe o no)
-        user = self.user_repo.get_user_by_email(email)
+    def execute(self, new_password: str):
 
-        # 2. Generar OTP SI el usuario existe
-        if user:
-            otp = f"{random.randint(100000, 999999)}"
+        # 1. Validar scope
+        claims = get_jwt()
+        if claims.get("scope") != "password_reset":
+            return {
+                "success": False,
+                "message": "Token inválido para esta operación."
+            }, 403
 
-            saved = self.reset_repo.save_reset_code(email, otp)
+        # 2. Obtener usuario del token
+        user_id = get_jwt_identity()
 
-            if not saved:
-                # Pero igual devolvemos OK para evitar enumeración
-                print("Warning: OTP not saved for:", email)
+        # 3. Hash
+        hashed = PasswordHasher.hash_password(new_password)
 
-            # Aquí iría el envío de correo real
-            print(f"[DEBUG] Código OTP para {email}: {otp}")
-
-        # 3. Siempre devolver mensaje genérico
-        return {
-            "message": "Si el correo existe, se han enviado instrucciones"
-        }, None
-    
-
-    def execute(self, dto: ResetPasswordDTO):
-
-        # 1. Validar que el código existe, no ha expirado y no está usado
-        code_info = self.reset_repo.validate_code(dto.email, dto.code)
-
-        if not code_info:
-            return {"error": "Invalid or expired code"}, 400
-
-        # 2. Generar hash usando generate_password_hash
-        hashed_password = PasswordHasher.hash_password(dto.new_password)
-
-        # 3. Actualizar contraseña del usuario en sy_usuarios
-        updated = self.user_repo.update_password(dto.email, hashed_password)
+        # 4. Actualizar
+        updated = self.user_repo.update_password_by_id(user_id, hashed)
 
         if not updated:
-            return {"error": "User not found or password not updated"}, 404
+            return {
+                "success": False,
+                "message": "No se pudo actualizar la contraseña."
+            }, 400
 
-        # 4. Marcar OTP como usado
-        self.reset_repo.mark_as_used(code_info["id"])
-
-        return {"message": "Password reset successfully"}, 200
+        return {
+            "success": True,
+            "message": "La contraseña ha sido actualizada correctamente."
+        }, 200
