@@ -38,7 +38,7 @@ class UserRepository:
             close_db(conn, cursor)
             
 
-    def update_password(self, email, hashed_password):
+    def update_password_by_id(self, user_id, hashed_password):
         conn = get_db_connection()
         if not conn:
             return False
@@ -48,80 +48,16 @@ class UserRepository:
             cursor.execute("""
                 UPDATE sy_usuarios
                 SET clave = %s, usr_modf = 'system', fch_modf = NOW()
-                WHERE correo = %s
-            """, (hashed_password, email))
+                WHERE id_usuario = %s
+            """, (hashed_password, user_id))
 
             conn.commit()
             return cursor.rowcount > 0
 
         except Exception as e:
-            print("Error updating password:", e)
+            print("Error updating password by ID:", e)
             return False
 
-        finally:
-            close_db(conn, cursor)
-
-
-class DetUserRepository:
-
-    def get_det_by_userid(self, id_usuario):
-        conn = get_db_connection()
-        if not conn:
-            return None
-        try:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT id_detusr, id_usuario, terminos_acept, last_conexion, act_conexion,
-                       token, vida_token, cambiar_clave, ip_ultima, intentos_fallidos, fecha_bloqueo
-                FROM det_usuarios
-                WHERE id_usuario = %s
-                LIMIT 1
-            """, (id_usuario,))
-            return cursor.fetchone()
-        finally:
-            close_db(conn, cursor)
-
-    def increment_failed_attempts(self, id_detusr, current_attempts):
-        conn = get_db_connection()
-        if not conn:
-            return False
-        try:
-            new_attempts = (current_attempts or 0) + 1
-            cursor = conn.cursor()
-            if new_attempts >= 3:
-                cursor.execute("""
-                    UPDATE det_usuarios
-                    SET intentos_fallidos = %s, fecha_bloqueo = DATE_ADD(NOW(), INTERVAL 5 MINUTE)
-                    WHERE id_detusr = %s
-                """, (new_attempts, id_detusr))
-            else:
-                cursor.execute("""
-                    UPDATE det_usuarios
-                    SET intentos_fallidos = %s
-                    WHERE id_detusr = %s
-                """, (new_attempts, id_detusr))
-            conn.commit()
-            return True
-        finally:
-            close_db(conn, cursor)
-
-    def update_on_success_login(self, id_detusr, ip):
-        conn = get_db_connection()
-        if not conn:
-            return False
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE det_usuarios
-                SET last_conexion = act_conexion,
-                    act_conexion = NOW(),
-                    ip_ultima = %s,
-                    intentos_fallidos = 0,
-                    fecha_bloqueo = NULL
-                WHERE id_detusr = %s
-            """, (ip, id_detusr))
-            conn.commit()
-            return True
         finally:
             close_db(conn, cursor)
 
