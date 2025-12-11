@@ -14,40 +14,41 @@ class VerifyResetCodeUseCase:
 
         record = self.repo.get_reset_record(email)
 
-        # Respuesta genérica si no existe
+        # en caso de que no exista el codigo (revisar el mensaje generico)
         if not record:
             return {"valid": False, "message": "Código inválido"}, 400
 
-        # 1. Validar intentos
+        # valida los intentos
         if record["attempts"] >= 3:
             self.repo.delete_reset_record(email)
             return {"valid": False, "message": "Código inválido"}, 400
 
-        # 2. Validar expiración
+        # valida la expericaion 
         if datetime.now() > record["expires_at"]:
             self.repo.delete_reset_record(email)
             return {"valid": False, "message": "El código ha expirado"}, 400
 
-        # 3. Validar código
+        # aplica validacion en el codigo
         if record["otp_code"] != code:
             self.repo.increment_attempts(email)
             return {"valid": False, "message": "Código incorrecto"}, 400
 
-        # 4. OTP correcto → borrar
+        # OTP correcto se borra
         self.repo.delete_reset_record(email)
 
-        # 5. Obtener user
+        # obtiene el usuario
         user = self.user_repo.get_user_by_email(email)
         if not user:
             return {"valid": False, "message": "Código inválido"}, 400
 
-        # 6. JWT temporal
+        # JWT temporal
         reset_token = create_access_token(
             identity=user["id"],
             additional_claims={"scope": "password_reset"},
             expires_delta=timedelta(minutes=5)
         )
 
+        #si es que todo salio bien
         return {
             "valid": True,
             "reset_token": reset_token
