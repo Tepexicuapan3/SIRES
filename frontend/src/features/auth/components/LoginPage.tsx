@@ -35,7 +35,7 @@ export const LoginPage = () => {
             {/* Logo Wrapper */}
             <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full flex items-center justify-center shadow-xl shadow-brand/20 mb-4 sm:mb-6 transition-all duration-300 hover:scale-105 hover:rotate-2">
               <img
-                src="/SIRES.svg"
+                src="/SIRES.webp"
                 alt="Logo SIRES"
                 className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain"
               />

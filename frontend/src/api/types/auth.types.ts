@@ -24,7 +24,6 @@ export interface Usuario {
   curp: string;
   correo: string;
   ing_perfil: string;
-  est_usuario: "A" | "I"; // A=Activo, I=Inactivo
   roles: string[]; // ['ROL', 'PERS', 'CC']
   permisos?: string[]; // Opcional: permisos específicos`
   must_change_password: boolean;
