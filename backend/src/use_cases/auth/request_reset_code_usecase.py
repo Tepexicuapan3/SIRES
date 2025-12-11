@@ -10,7 +10,7 @@ class RequestResetCodeUseCase:
 
     def execute(self, new_password: str):
 
-        # 1. Validar scope
+        # valida scope
         claims = get_jwt()
         if claims.get("scope") != "password_reset":
             return {
@@ -18,13 +18,13 @@ class RequestResetCodeUseCase:
                 "message": "Token inválido para esta operación."
             }, 403
 
-        # 2. Obtener usuario del token
+        # obtiene el usuario del token
         user_id = get_jwt_identity()
 
-        # 3. Hash
+        # aplica un hash
         hashed = PasswordHasher.hash_password(new_password)
 
-        # 4. Actualizar
+        # actualiza la contra
         updated = self.user_repo.update_password_by_id(user_id, hashed)
 
         if not updated:

@@ -1,13 +1,11 @@
 import random
 from datetime import datetime, timedelta
 
-# Aquí usaremos una lista temporal. 
-# Después podemos reemplazarlo por una tabla SQL o Redis.
+# Aun no se guarda en la base de datos
 
 OTP_STORE = {}  
-# Formato:
-# email: { "code": "123456", "expires": datetime, "attempts": 0 }
-
+""" formato:
+ email: { "code": "123456", "expires": datetime, "attempts": 0 } """
 
 class OTPService:
 
