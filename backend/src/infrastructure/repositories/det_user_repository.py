@@ -28,7 +28,7 @@ class DetUserRepository:
         try:
             new_attempts = (current_attempts or 0) + 1 #se quita ya que incrementa un intento
             cursor = conn.cursor()
-            if new_attempts >= 10:
+            if new_attempts >= 7:
                 cursor.execute("""
                     UPDATE det_usuarios
                     SET intentos_fallidos = %s, fecha_bloqueo = DATE_ADD(NOW(), INTERVAL 5 MINUTE)
