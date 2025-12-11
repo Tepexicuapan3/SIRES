@@ -35,7 +35,7 @@ export const authAPI = {
    * POST /api/v1/auth/complete-onboarding
    */
   completeOnboarding: async (data: CompleteOnboardingRequest) => {
-    if (USE_MOCKS) return authMocks.completeOnboarding();
+    if (USE_MOCKS) return authMocks.completeOnboarding(data);
     return apiClient.post("/auth/complete-onboarding", data);
   },
 
@@ -88,7 +88,7 @@ export const authAPI = {
    * POST /api/v1/auth/request-reset-code
    */
   requestResetCode: async (data: RequestResetCodeRequest) => {
-    if (USE_MOCKS) return authMocks.requestResetCode();
+    if (USE_MOCKS) return authMocks.requestResetCode(data);
     return apiClient.post("/auth/request-reset-code", data);
   },
 
@@ -112,7 +112,7 @@ export const authAPI = {
    * POST /api/v1/auth/reset-password
    */
   resetPassword: async (data: ResetPasswordRequest) => {
-    if (USE_MOCKS) return authMocks.resetPassword();
+    if (USE_MOCKS) return authMocks.resetPassword(data);
     return apiClient.post("/auth/reset-password", data);
   },
 };
