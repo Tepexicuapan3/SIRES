@@ -42,7 +42,9 @@ Si no solicitaste este código, simplemente ignora este mensaje.
         try:
             #se crea la conexion con el servidor SMTP
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.ehlo()
                 server.starttls() #conexion con TLS
+                server.ehlo()
                 server.login(self.smtp_user, self.smtp_password) #autentifica al usuario
                 server.sendmail(self.from_email, to_email, msg.as_string()) #envia el correo electronico
 
