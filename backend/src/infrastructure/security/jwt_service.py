@@ -1,64 +1,70 @@
 # src/infrastructure/security/jwt_service.py
 #SEGUNDA VERSION
 import os
-import jwt
-from datetime import datetime, timedelta, timezone
+import jwt #generar y decodificar tokens en JWT
+from datetime import datetime, timedelta, timezone #hora, fecha y zona horaria
 
-JWT_SECRET = os.getenv("JWT_SECRET_KEY", "dev-secret")
-JWT_ALGO = os.getenv("JWT_ALGORITHM", "HS256")
+JWT_SECRET = os.getenv("JWT_SECRET_KEY", "dev-secret") #clave para firmar tokens
+JWT_ALGO = os.getenv("JWT_ALGORITHM", "HS256") #HS256 para firma del token
 ACCESS_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 60*30))   # default 30 min
 RESET_EXPIRES = int(os.getenv("JWT_RESET_EXPIRES", 60*5))          # 5 min
 PREAUTH_EXPIRES = int(os.getenv("JWT_PREAUTH_EXPIRES", 60*15))     # 15 min
 REFRESH_EXPIRES = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES", 60*60*24*7))  # 7 days
 
 def _now_ts():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc) #fecha y hora actual en UTC
 
+#genera access token
 def generate_access_token(user_payload: dict, scope: str = "full_access", expires_seconds: int = None) -> str:
     if expires_seconds is None:
-        if scope == "password_reset":
+        if scope == "password_reset": #define el tiempo de expiracion
             expires_seconds = RESET_EXPIRES
-        elif scope == "pre_auth_onboarding":
+        elif scope == "pre_auth_onboarding": 
             expires_seconds = PREAUTH_EXPIRES
         else:
             expires_seconds = ACCESS_EXPIRES
 
-    iat = _now_ts()
-    exp = iat + timedelta(seconds=expires_seconds)
+    iat = _now_ts() # fecha de creacion el token 
+    exp = iat + timedelta(seconds=expires_seconds) #fecha de espiracion
     payload = {
-        "sub": user_payload.get("id_usuario"),
-        "username": user_payload.get("usuario"),
-        "scope": scope,
-        "iat": int(iat.timestamp()),
-        "exp": int(exp.timestamp())
+        "sub": user_payload.get("id_usuario"), #identificador del usuario
+        "username": user_payload.get("usuario"), #nombre del usuario 
+        "scope": scope,   #alcance del token
+        "iat": int(iat.timestamp()), #fecha de creacion
+        "exp": int(exp.timestamp()) #expiracion
     }
-    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
-    # PyJWT >=2.0 returns str; if bytes, decode
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO) #se genera el token firmado
+    
+    # PyJWT retorna en string
     if isinstance(token, bytes):
-        token = token.decode()
+        token = token.decode() #si esta en bytes se convierte a string
     return token
 
+#se genera el refresh token
 def generate_refresh_token(user_payload: dict) -> str:
-    iat = _now_ts()
-    exp = iat + timedelta(seconds=REFRESH_EXPIRES)
+    iat = _now_ts() #fecha de creacion
+    exp = iat + timedelta(seconds=REFRESH_EXPIRES) #fecha de expiracion
     payload = {
-        "sub": user_payload.get("id_usuario"),
-        "username": user_payload.get("usuario"),
-        "scope": "refresh",
-        "iat": int(iat.timestamp()),
-        "exp": int(exp.timestamp())
+        "sub": user_payload.get("id_usuario"), #identificador del usuario
+        "username": user_payload.get("usuario"), #nombre del usuario
+        "scope": "refresh", #alcanse del token (especifico para refresh)
+        "iat": int(iat.timestamp()), #fecha de creacion
+        "exp": int(exp.timestamp()) #fecha de espiracion
     }
+    #se genera el refresh token firmado
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
     if isinstance(token, bytes):
-        token = token.decode()
+        token = token.decode()  #si esta en bytes se convierte a string
     return token
 
+#decodifica y valida el token
 def decode_token(token: str):
     try:
+        #intenta decodificar el token con la clave y algoritmo
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
-        return payload
+        return payload #si es valido retorna el payload
     except Exception:
-        return None
+        return None #en caso que el token no sea valido o expirado
 
 """
 #PRIMERA VERSION
