@@ -1,6 +1,10 @@
 # src/presentation/api/auth_routes.py
+# CREACION DE APIs PARA LA AUTENTICACION
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
+
+#casos de uso para autenticacion
 from src.use_cases.auth.login_usecase import LoginUseCase
 from src.use_cases.auth.logout_usecase import LogoutUseCase
 from src.use_cases.auth.request_reset_code_usecase import RequestResetCodeUseCase
@@ -9,6 +13,8 @@ from src.use_cases.auth.reset_password_usecase import ResetPasswordUseCase
 from src.use_cases.auth.complete_onboarding_usecase import CompleteOnboardingUseCase
 
 auth_bp = Blueprint("auth", __name__)
+
+#instancaias de los casos de uso utilizados
 login_usecase = LoginUseCase()
 logout_usecase = LogoutUseCase()
 reset_code_usecase = RequestResetCodeUseCase()

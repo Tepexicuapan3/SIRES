@@ -18,7 +18,7 @@ class LogoutUseCase:
 
             id_usuario = payload.get("id_usuario")
 
-            # Registrar auditoría
+            # registra las sesiones
             self.access_repo.registrar_acceso(id_usuario, ip, "FUERA DE SESIÓN")
 
             return {"message": "Logout exitoso"}, None
