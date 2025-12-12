@@ -1,39 +1,36 @@
-from flask_jwt_extended import get_jwt_identity, get_jwt
+import random
 from src.infrastructure.repositories.user_repository import UserRepository
-from src.infrastructure.security.password_hasher import PasswordHasher
+from src.infrastructure.repositories.password_reset_repository import PasswordResetRepository
+from src.infrastructure.email.email_service import EmailService
 
 
 class RequestResetCodeUseCase:
 
     def __init__(self):
         self.user_repo = UserRepository()
+        self.reset_repo = PasswordResetRepository()
+        self.email_service = EmailService()
 
-    def execute(self, new_password: str):
+    def execute(self, email: str):
 
-        # valida scope
-        claims = get_jwt()
-        if claims.get("scope") != "password_reset":
-            return {
-                "success": False,
-                "message": "Token inválido para esta operación."
-            }, 403
+        # Bbusca usuario sin importar que exista
+        user = self.user_repo.get_user_by_email(email)
 
-        # obtiene el usuario del token
-        user_id = get_jwt_identity()
+        if user:
+            # genera codigo OTP en el rango
+            otp = f"{random.randint(100000, 999999)}"
 
-        # aplica un hash
-        hashed = PasswordHasher.hash_password(new_password)
+            # guarda el OTP
+            self.reset_repo.save_reset_code(email, otp)
 
-        # actualiza la contra
-        updated = self.user_repo.update_password_by_id(user_id, hashed)
+            # envia el correo
+            try:
+                self.email_service.send_reset_code(email, otp)
+                print(f"[OTP] enviado a {email}: {otp}")
+            except Exception as e:
+                print("Error enviando correo:", e)
 
-        if not updated:
-            return {
-                "success": False,
-                "message": "No se pudo actualizar la contraseña."
-            }, 400
-
+        # respuesta generica 
         return {
-            "success": True,
-            "message": "La contraseña ha sido actualizada correctamente."
+            "message": "Si el correo existe, se han enviado instrucciones"
         }, 200

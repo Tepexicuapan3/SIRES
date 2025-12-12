@@ -25,16 +25,19 @@ complete_onboarding_usecase = CompleteOnboardingUseCase()
 #============= inicio de sesion =============
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
+    data = request.get_json() #obtiene el cuerpo de la petision en JSON
+
+    #valida que existan los campos requeridos
     if not data or "usuario" not in data or "clave" not in data:
         return jsonify({"code": "INVALID_REQUEST", "message": "Usuario y contraseña son requeridos"}), 400
 
-    usuario = data.get("usuario")
-    clave = data.get("clave")
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    usuario = data.get("usuario") #extrae el usuario
+    clave = data.get("clave") #extrae a clave
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr) #btiene la ip dle cliente 
 
-    result, error = login_usecase.execute(usuario, clave, ip)
+    result, error = login_usecase.execute(usuario, clave, ip) #ejecuta el caso de uso
 
+    #manejo de errores y codigos HTTP
     if error:
         mapping = {
             "INVALID_CREDENTIALS": (401, "Usuario o contraseña incorrectos"),
@@ -42,47 +45,52 @@ def login():
             "USER_INACTIVE": (403, "Usuario inactivo"),
             "SERVER_ERROR": (500, "Error interno del servidor")
         }
+        # status y mensaje correspondiente al error
         status, msg = mapping.get(error, (500, "Error desconocido"))
         return jsonify({"code": error, "message": msg}), status
 
-    return jsonify(result), 200
+    return jsonify(result), 200 #login exitoso con status
 
 #============= cierre de sesion =============
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     try:
+        #obtiene el header de la autorizacion
         auth_header = request.headers.get("Authorization")
+
+        #valida que exista el token
         if not auth_header:
             return jsonify({"code": "TOKEN_REQUIRED", "message": "Token es requerido"}), 400
 
-        token = auth_header.split(" ")[1]
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        token = auth_header.split(" ")[1] #extrae el token del header (bearer token)
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr) #obtiene la IP
 
-        result, error = logout_usecase.execute(token, ip)
+        result, error = logout_usecase.execute(token, ip)  #ejecuta caso de uso de cerrar sesion
 
+        #manejo de errores para el cierre de sesion
         if error:
             if error == "INVALID_TOKEN":
                 return jsonify({"code": "INVALID_TOKEN", "message": "Token inválido"}), 401
             return jsonify({"code": error, "message": "Error en logout"}), 500
 
-        return jsonify(result), 200
+        return jsonify(result), 200 #respuesta y status exitoso
 
     except Exception as e:
-        print("Error en logout route:", e)
+        print("Error en logout route:", e) #imprime el error en consola
         return jsonify({"code": "SERVER_ERROR", "message": "Error interno del servidor"}), 500
 
 #============= refresh code =============
 @auth_bp.route("/request-reset-code", methods=["POST"])
 def request_reset_code():
     try:
-        data = request.get_json()
-        email = data.get("email")
+        data = request.get_json() #obtiene el cuerpo del request
+        email = data.get("email") #obtiene el email
 
-        if not email:
+        if not email: #valida que el email exista
             return jsonify({
                 "code": "INVALID_REQUEST",
                 "message": "El email es requerido."
-            }), 400
+            }), 400 #en  caso de que no, se pide 
 
         result, status = reset_code_usecase.execute(email)
         return jsonify(result), status
