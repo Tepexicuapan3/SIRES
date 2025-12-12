@@ -20,6 +20,24 @@ class UserRepository:
         finally:
             close_db(conn, cursor)
 
+    def get_user_by_email(self, email):
+        conn = get_db_connection()
+        if not conn:
+            return None
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT id_usuario, usuario, clave, nombre, paterno, materno,
+                       expediente, curp, img_perfil, correo, est_usuario
+                FROM sy_usuarios
+                WHERE correo = %s
+                LIMIT 1
+            """, (email,))
+            return cursor.fetchone()
+        finally:
+            close_db(conn, cursor)
+
+
     def get_user_roles(self, id_usuario):
         conn = get_db_connection()
         if not conn:
