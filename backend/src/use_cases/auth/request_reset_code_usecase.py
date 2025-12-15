@@ -13,22 +13,23 @@ class RequestResetCodeUseCase:
 
     def execute(self, email: str):
 
-        # Bbusca usuario sin importar que exista
+        # busca usuario sin importar que exista
         user = self.user_repo.get_user_by_email(email)
 
         if user:
             # genera codigo OTP en el rango
             otp = f"{random.randint(100000, 999999)}"
 
-            # guarda el OTP
-            self.reset_repo.save_reset_code(email, otp)
+            # guarda el OTP en redis
+            saved = self.reset_repo.save_or_replace_code(email, otp)
 
+            if saved:
             # envia el correo
-            try:
-                self.email_service.send_reset_code(email, otp)
-                print(f"[OTP] enviado a {email}: {otp}")
-            except Exception as e:
-                print("Error enviando correo:", e)
+                try:
+                    self.email_service.send_reset_code(email, otp)
+                    print(f"[OTP] enviado a {email}: {otp}")
+                except Exception as e:
+                    print("Error enviando correo:", e)
 
         # respuesta generica 
         return {
