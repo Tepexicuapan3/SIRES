@@ -43,7 +43,7 @@ class VerifyResetCodeUseCase:
 
         # JWT temporal
         reset_token = create_access_token(
-            identity=user["id"],
+            identity=user["id_usuario"],
             additional_claims={"scope": "password_reset"},
             expires_delta=timedelta(minutes=5)
         )
