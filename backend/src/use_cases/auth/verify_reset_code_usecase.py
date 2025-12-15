@@ -7,12 +7,12 @@ from src.infrastructure.repositories.user_repository import UserRepository
 class VerifyResetCodeUseCase:
 
     def __init__(self):
-        self.repo = PasswordResetRepository()
+        self.reset_repo = PasswordResetRepository()
         self.user_repo = UserRepository()
 
     def execute(self, email: str, code: str):
 
-        record = self.repo.get_reset_record(email)
+        record = self.reset_repo.get_by_email(email)
 
         # en caso de que no exista el codigo (revisar el mensaje generico)
         if not record:
@@ -20,21 +20,21 @@ class VerifyResetCodeUseCase:
 
         # valida los intentos
         if record["attempts"] >= 3:
-            self.repo.delete_reset_record(email)
+            self.reset_repo.delete_by_email(email)
             return {"valid": False, "message": "Código inválido"}, 400
 
-        # valida la expericaion 
+        # valida la expiracion
         if datetime.now() > record["expires_at"]:
-            self.repo.delete_reset_record(email)
+            self.reset_repo.delete_by_email(email)
             return {"valid": False, "message": "El código ha expirado"}, 400
 
         # aplica validacion en el codigo
         if record["otp_code"] != code:
-            self.repo.increment_attempts(email)
+            self.reset_repo.increment_attempts(email)
             return {"valid": False, "message": "Código incorrecto"}, 400
 
         # OTP correcto se borra
-        self.repo.delete_reset_record(email)
+        self.reset_repo.delete_by_email(email)
 
         # obtiene el usuario
         user = self.user_repo.get_user_by_email(email)
