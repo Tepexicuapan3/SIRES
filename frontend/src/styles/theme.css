@@ -154,4 +154,19 @@
   /* --- ANIMACIONES --- */
   --animate-spin-slow: spin 3s linear infinite;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-fade-in-up: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ============================================
+   5. DEFINICIÓN DE KEYFRAMES
+   ============================================ */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px); /* Empieza 20px abajo */
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0); /* Termina en su lugar original */
+  }
 }
