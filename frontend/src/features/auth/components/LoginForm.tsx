@@ -41,12 +41,20 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { rememberMe: false },
+    defaultValues: { rememberMe: false, usuario: "" },
   });
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("saved_username");
+    if (savedUser) {
+      setValue("usuario", savedUser);
+      setValue("rememberMe", true);
+    }
+  }, [setValue]);
 
   const onSubmit = (data: LoginFormData) => {
     login(
-      { usuario: data.usuario, clave: data.clave },
+      { usuario: data.usuario, clave: data.clave, rememberMe: data.rememberMe },
       {
         onError: () => {
           setValue("clave", "");
@@ -63,10 +71,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
     let interval: NodeJS.Timeout;
 
     if (locked) {
-      // Inicializar tiempo
       setTimeLeft(getRemainingTime());
-
-      // Actualizar cada segundo
       interval = setInterval(() => {
         const remaining = getRemainingTime();
         setTimeLeft(remaining);
@@ -75,7 +80,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
     }
 
     return () => clearInterval(interval);
-  }, [locked, getRemainingTime]); // Se ejecuta cuando cambia el estado de bloqueo
+  }, [locked, getRemainingTime]);
 
   // Helper para formatear MM:SS
   const formatTime = (seconds: number) => {
@@ -124,7 +129,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
         />
       </div>
 
-      {/* MENSAJE DE ALERTA SI ESTÁ BLOQUEADO */}
+      {/* Alerta de bloqueo */}
       {locked && (
         <div className="mx-6 p-4 rounded-lg bg-status-critical/10 border border-status-critical/20 flex items-start gap-3 animate-pulse-slow">
           <Timer className="text-status-critical shrink-0 mt-0.5" />
@@ -135,7 +140,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
         </div>
       )}
 
-      {/* Opciones Adicionales */}
+      {/* Checkbox Recordarme */}
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 cursor-pointer group">
           <div className="relative flex items-center">

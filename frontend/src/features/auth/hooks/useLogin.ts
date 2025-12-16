@@ -12,6 +12,8 @@ interface LoginError {
   code?: string;
 }
 
+type LoginMutationVariables = LoginRequest & { rememberMe: boolean };
+
 /**
  * Hook para manejar el login de usuario
  */
@@ -22,7 +24,10 @@ export const useLogin = () => {
     useLoginProtectionStore();
 
   return useMutation({
-    mutationFn: async (credentials: LoginRequest) => {
+    mutationFn: async ({
+      rememberMe,
+      ...credentials
+    }: LoginMutationVariables) => {
       // Si el store dice que estamos bloqueados, lanzamos un error local inmediatamente
       if (isLocked()) {
         throw new Error("LOCKED_CLIENT_SIDE");
@@ -30,9 +35,16 @@ export const useLogin = () => {
       return authAPI.login(credentials);
     },
 
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       // Reiniciamos la protección (volvemos a 0 intentos)
       resetProtection();
+
+      // Recordarme
+      if (variables.rememberMe) {
+        localStorage.setItem("saved_username", variables.usuario);
+      } else {
+        localStorage.removeItem("saved_username");
+      }
 
       // Guardar datos de autenticación en el store
       setAuth(data.user, data.access_token, data.refresh_token);
