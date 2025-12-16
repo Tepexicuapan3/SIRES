@@ -4,6 +4,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        HTTP_PROXY: http://10.15.15.56:3128
+        HTTPS_PROXY: http://10.15.15.56:3128
     container_name: sires-frontend
     ports:
       - "5173:5173"

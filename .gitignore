@@ -21,7 +21,7 @@ envdevelopment/
 backend/.env
 frontend/.env
 
-# PERMITIR subir los templates (seguro)
+# PERMITIR subir los templates
 !**/.env.example
 !**/.env.development
 !**/.env.production
