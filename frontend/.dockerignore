@@ -1,5 +1,6 @@
 # --- DEPENDENCIAS & BUILD ---
 node_modules
+bun.lockb
 dist
 build
 

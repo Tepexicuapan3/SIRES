@@ -1,19 +1,25 @@
-FROM node:20-alpine
+FROM oven/bun:1-alpine
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
 
 # === CONFIGURACIÓN DE PROXY ===
 ENV HTTP_PROXY=http://10.15.15.56:3128
-ENV HTTPS_PROXY=https://10.15.15.56:3128
-RUN npm config set proxy http://10.15.15.56:3128
-RUN npm config set https-proxy http://10.15.15.56:3128
-RUN npm config set strict-ssl false
+ENV HTTPS_PROXY=http://10.15.15.56:3128
+ENV NO_PROXY=localhost,127.0.0.1,::1
+
+# === SSL CONFIG ===
+RUN echo "[install]" > bunfig.toml && \
+    echo "proxy = \"http://10.15.15.56:3128\"" >> bunfig.toml && \
+    echo "rejectUnauthorized = false" >> bunfig.toml && \
+    echo "registry = \"https://registry.npmjs.org/\"" >> bunfig.toml
 
 WORKDIR /app
 
 # Copiar dependencias
-COPY package.json package-lock.json ./
+COPY package.json bun.lock ./
 
 # Instalar dependencias
-RUN npm install
+RUN bun install --frozen-lockfile
 
 # Copiar el resto del código fuente
 COPY . .
@@ -22,4 +28,4 @@ COPY . .
 EXPOSE 5173
 
 # Comando para iniciar en modo desarrollo
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["bun", "run", "dev", "--", "--host"]
