@@ -47,7 +47,10 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
     // Si el error 401 viene de intentar iniciar sesión, NO hagas nada.
-    if (originalRequest.url?.includes("/auth/login")) {
+    if (
+      originalRequest.url?.includes("/auth/login") ||
+      originalRequest.url?.includes("/auth/logout")
+    ) {
       return Promise.reject(error);
     }
 
