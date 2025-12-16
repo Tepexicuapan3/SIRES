@@ -2,8 +2,12 @@ import { useState } from "react";
 import { LoginForm } from "./LoginForm";
 import { RequestCodeForm } from "./recovery/RequestCodeForm";
 import { VerifyOtpForm } from "./recovery/VerifyOtpForm";
-import { ResetPasswordForm } from "./recovery/ResetPasswordForm";
+import { AuthPasswordForm, PasswordFormData } from "./AuthPasswordForm";
 import { ParticlesBackground } from "../animations/ParticlesBackground";
+import { useMutation } from "@tanstack/react-query";
+import { authAPI } from "@/api/resources/auth.api";
+import { toast } from "sonner";
+import { useLoginProtectionStore } from "@/store/loginProtectionStore";
 
 export type AuthViewState =
   | "LOGIN"
@@ -15,6 +19,29 @@ export const LoginPage = () => {
   const [viewState, setViewState] = useState<AuthViewState>("LOGIN");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [resetToken, setResetToken] = useState("");
+  const { resetProtection } = useLoginProtectionStore();
+
+  // Mutacion para RECOVERY
+  const { mutate: resetPassword, isPending: isResetting } = useMutation({
+    mutationFn: (data: PasswordFormData) =>
+      authAPI.resetPassword({
+        reset_token: resetToken,
+        new_password: data.newPassword,
+      }),
+    onSuccess: () => {
+      resetProtection();
+      toast.success("¡Contraseña actualizada!", {
+        description: "Ya puedes iniciar sesión con tu nueva clave.",
+      });
+      setViewState("LOGIN");
+    },
+    onError: () => {
+      toast.error("Error al restablecer", {
+        description: "El token ha expirado, por favor solicita uno nuevo.",
+      });
+      setViewState("RECOVERY_REQUEST");
+    },
+  });
 
   return (
     <main className="relative min-h-screen w-full bg-app flex items-center justify-center p-4 overflow-hidden">
@@ -47,7 +74,7 @@ export const LoginPage = () => {
                 S I R E S
               </h1>
             ) : (
-              <h1 className="font-display text-xl sm:text-2xl md:text-2xl mt-2 font-bold text-txt-body tracking-tight">
+              <h1 className="font-display text-xl sm:text-2xl md:text-2xl mt-2 font-bold text-txt-body tracking-tight mx-2">
                 {viewState === "RECOVERY_REQUEST" &&
                   "¿Olvidaste tu contraseña?"}
                 {viewState === "RECOVERY_OTP" && "Verifica tu identidad"}
@@ -86,9 +113,10 @@ export const LoginPage = () => {
             )}
 
             {viewState === "RECOVERY_NEW_PASS" && (
-              <ResetPasswordForm
-                resetToken={resetToken}
-                onSuccess={() => setViewState("LOGIN")}
+              <AuthPasswordForm
+                mode="recovery"
+                isPending={isResetting}
+                onSubmit={(data) => resetPassword(data)}
               />
             )}
           </div>
