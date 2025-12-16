@@ -90,3 +90,5 @@ export interface CompleteOnboardingRequest {
   new_password: string;
   terms_accepted: boolean;
 }
+
+export type CompleteOnboardingResponse = LoginResponse;

@@ -123,13 +123,30 @@ export const authMocks = {
     };
   },
 
-  // 2. Simulación de Onboarding
+// 2. Simulación de Onboarding
   completeOnboarding: async (
     _data: CompleteOnboardingRequest
-  ): Promise<{ access_token: string }> => {
+  ): Promise<LoginResponse> => {
     await delay(1500);
     return {
       access_token: "mock_token_final_definitivo",
+      refresh_token: "mock_refresh_token_final",
+      token_type: "Bearer",
+      expires_in: 3600,
+      user: {
+        id_usuario: 1,
+        usuario: "usuario_demo",
+        nombre: "Usuario",
+        paterno: "Demo",
+        materno: "SIRES",
+        nombre_completo: "Usuario Demo SIRES",
+        expediente: "EXP001",
+        curp: "DEMO123456HDFXXX00",
+        correo: "usuario@demo.com",
+        ing_perfil: "Médico",
+        roles: ["ROL"],
+        must_change_password: false,
+      },
     };
   },
 

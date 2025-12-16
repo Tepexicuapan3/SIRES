@@ -34,9 +34,10 @@ export const authAPI = {
    * Completar Onboarding (Primer cambio de contraseña y términos)
    * POST /api/v1/auth/complete-onboarding
    */
-  completeOnboarding: async (data: CompleteOnboardingRequest) => {
+completeOnboarding: async (data: CompleteOnboardingRequest): Promise<LoginResponse> => {
     if (USE_MOCKS) return authMocks.completeOnboarding(data);
-    return apiClient.post("/auth/complete-onboarding", data);
+    const response = await apiClient.post<LoginResponse>("/auth/complete-onboarding", data);
+    return response.data;
   },
 
   /**
