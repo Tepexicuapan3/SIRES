@@ -4,10 +4,15 @@ import { ProtectedRoute } from "./ProtectedRoute";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
-// Lazy Loading de Páginas
+// Lazy Imports
 const LoginPage = lazy(() =>
   import("@features/auth/components/LoginPage").then((m) => ({
     default: m.LoginPage,
+  }))
+);
+const OnboardingPage = lazy(() =>
+  import("@/features/auth/components/onboarding/OnboardingPage").then((m) => ({
+    default: m.OnboardingPage,
   }))
 );
 const DashboardPage = lazy(
@@ -39,8 +44,19 @@ export const router = createBrowserRouter([
       </SuspenseWrapper>
     ),
   },
+  // Ruta de Onboarding
   {
-    // Rutas Protegidas (Dashboard, App interna)
+    path: "/onboarding",
+    element: (
+      <ProtectedRoute>
+        <SuspenseWrapper>
+          <OnboardingPage />
+        </SuspenseWrapper>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    // Rutas del sistema
     element: (
       <ProtectedRoute>
         <MainLayout />
