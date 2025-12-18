@@ -17,41 +17,28 @@ import type {
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
 /**
- * API de Autenticación
+ * Implementación Real de la API
  */
-export const authAPI = {
-  /**
-   * Login de usuario
-   * POST /api/v1/auth/login
-   */
+const realAuthAPI = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
-    if (USE_MOCKS) return authMocks.login(data);
     const response = await apiClient.post<LoginResponse>("/auth/login", data);
     return response.data;
   },
 
-  /**
-   * Completar Onboarding (Primer cambio de contraseña y términos)
-   * POST /api/v1/auth/complete-onboarding
-   */
-completeOnboarding: async (data: CompleteOnboardingRequest): Promise<LoginResponse> => {
-    if (USE_MOCKS) return authMocks.completeOnboarding(data);
-    const response = await apiClient.post<LoginResponse>("/auth/complete-onboarding", data);
+  completeOnboarding: async (
+    data: CompleteOnboardingRequest
+  ): Promise<LoginResponse> => {
+    const response = await apiClient.post<LoginResponse>(
+      "/auth/complete-onboarding",
+      data
+    );
     return response.data;
   },
 
-  /**
-   * Logout de usuario
-   * POST /api/v1/auth/logout
-   */
   logout: async (): Promise<void> => {
     await apiClient.post("/auth/logout");
   },
 
-  /**
-   * Refrescar access token
-   * POST /api/v1/auth/refresh
-   */
   refreshToken: async (refreshToken: string): Promise<RefreshTokenResponse> => {
     const response = await apiClient.post<RefreshTokenResponse>(
       "/auth/refresh",
@@ -62,19 +49,11 @@ completeOnboarding: async (data: CompleteOnboardingRequest): Promise<LoginRespon
     return response.data;
   },
 
-  /**
-   * Obtener usuario actual
-   * GET /api/v1/auth/me
-   */
   getCurrentUser: async (): Promise<Usuario> => {
     const response = await apiClient.get<Usuario>("/auth/me");
     return response.data;
   },
 
-  /**
-   * Verificar si el token es válido
-   * GET /api/v1/auth/verify
-   */
   verifyToken: async (): Promise<boolean> => {
     try {
       await apiClient.get("/auth/verify");
@@ -84,23 +63,13 @@ completeOnboarding: async (data: CompleteOnboardingRequest): Promise<LoginRespon
     }
   },
 
-  /**
-   * Solicitar código de reseteo de contraseña
-   * POST /api/v1/auth/request-reset-code
-   */
   requestResetCode: async (data: RequestResetCodeRequest) => {
-    if (USE_MOCKS) return authMocks.requestResetCode(data);
     return apiClient.post("/auth/request-reset-code", data);
   },
 
-  /**
-   * Verificar código OTP
-   * POST /api/v1/auth/verify-reset-code
-   */
   verifyResetCode: async (
     data: VerifyResetCodeRequest
   ): Promise<VerifyResetCodeResponse> => {
-    if (USE_MOCKS) return authMocks.verifyResetCode(data);
     const response = await apiClient.post<VerifyResetCodeResponse>(
       "/auth/verify-reset-code",
       data
@@ -108,12 +77,21 @@ completeOnboarding: async (data: CompleteOnboardingRequest): Promise<LoginRespon
     return response.data;
   },
 
-  /**
-   * Cambiar contraseña final
-   * POST /api/v1/auth/reset-password
-   */
   resetPassword: async (data: ResetPasswordRequest) => {
-    if (USE_MOCKS) return authMocks.resetPassword(data);
-    return apiClient.post("/auth/reset-password", data);
+    return apiClient.post(
+      "/auth/reset-password",
+      { new_password: data.new_password }, // Solo mandamos la password en el body
+      {
+        headers: {
+          Authorization: `Bearer ${data.reset_token}`, // El token va acá
+        },
+      }
+    );
   },
 };
+
+/**
+ * Exportamos la API según el entorno.
+ * Si USE_MOCKS es true, usamos el objeto de mocks, sino el real.
+ */
+export const authAPI = USE_MOCKS ? authMocks : realAuthAPI;
