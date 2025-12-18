@@ -124,9 +124,12 @@ def verify_reset_code():
 @auth_bp.route("/reset-password", methods=["POST"])
 @jwt_required()
 def reset_password():
+    print("DEBUG: Headers ->", request.headers)
     try:
         data = request.get_json()
+        print("DEBUG: Body ->", data)
         new_password = data.get("new_password")
+
 
         if not new_password:
             return jsonify({
@@ -136,7 +139,7 @@ def reset_password():
 
         # Extraer claims y user_id desde el JWT
         claims = get_jwt()
-        user_id = get_jwt_identity()
+        user_identity = get_jwt_identity()
 
         # Validar que el token tenga el scope correcto
         if claims.get("scope") != "password_reset":
@@ -145,9 +148,16 @@ def reset_password():
                 "message": "Token no autorizado para restablecer contraseña."
             }), 403
 
+        # Asegurarnos de que el user_id sea un entero (JWT lo guarda como string a veces)
+        try:
+            user_id = int(user_identity)
+        except (ValueError, TypeError):
+            return jsonify({"code": "INVALID_TOKEN", "message": "Identidad de usuario inválida en el token"}), 401
+
         # Ejecutar caso de uso
         result, status = reset_password_usecase.execute(user_id, new_password)
         return jsonify(result), status
+
 
     except Exception as e:
         print("Error in reset-password:", e)
