@@ -41,9 +41,9 @@ class VerifyResetCodeUseCase:
         if not user:
             return {"valid": False, "message": "Código inválido"}, 400
 
-        # JWT temporal
+        # JWT temporal (identity DEBE ser string en flask-jwt-extended 4.x)
         reset_token = create_access_token(
-            identity=user["id_usuario"],
+            identity=str(user["id_usuario"]),
             additional_claims={"scope": "password_reset"},
             expires_delta=timedelta(minutes=5)
         )
