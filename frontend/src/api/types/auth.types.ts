@@ -44,13 +44,10 @@ export interface RefreshTokenResponse {
 }
 
 // ===== ERROR TYPES =====
-export interface AuthError {
+export interface ApiError {
+  code: string;
   message: string;
-  code:
-    | "INVALID_CREDENTIALS"
-    | "USER_INACTIVE"
-    | "USER_NOT_FOUND"
-    | "TOKEN_EXPIRED";
+  status: number;
 }
 
 // ===== STORE TYPES =====

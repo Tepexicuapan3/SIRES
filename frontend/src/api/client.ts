@@ -26,6 +26,10 @@ apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem("access_token");
 
+    if (config.headers.Authorization) {
+      return config;
+    }
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -46,51 +50,52 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
-    // Si el error 401 viene de intentar iniciar sesión, NO hagas nada.
+
+    const apiError = {
+      code: (error.response?.data as any)?.code || "UNKNOWN_ERROR",
+      message:
+        (error.response?.data as any)?.message || "Ocurrió un error inesperado",
+      status: error.response?.status || 500,
+    };
+
+    // Si el error 401 viene de intentar iniciar sesión o cerrar, NO reintentar
     if (
       originalRequest.url?.includes("/auth/login") ||
       originalRequest.url?.includes("/auth/logout")
     ) {
-      return Promise.reject(error);
+      return Promise.reject(apiError);
     }
 
-    // Si es error 401 (token vencido) y NO es el endpoint de login
+    // Si es error 401 (token vencido) y no estamos reintentando ya
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        // Intentar refrescar el token
         const refreshToken = localStorage.getItem("refresh_token");
 
-        if (!refreshToken) {
-          throw new Error("No refresh token available");
-        }
+        if (!refreshToken) throw new Error("NO_REFRESH_TOKEN");
 
+        // Usamos axios base para evitar interceptores en el refresh
         const response = await axios.post(`${env.apiUrl}/auth/refresh`, {
           refresh_token: refreshToken,
         });
 
         const { access_token } = response.data;
-
-        // Guardar nuevo token
         localStorage.setItem("access_token", access_token);
 
-        // Reintentar request original con nuevo token
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${access_token}`;
         }
 
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Si falla el refresh (sesión expirada real), limpiar todo y redirigir
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        window.location.href = "/login";
-        return Promise.reject(refreshError);
+        localStorage.clear(); // Limpiamos todo
+        window.location.href = "/login?expired=true";
+        return Promise.reject({ ...apiError, code: "SESSION_EXPIRED" });
       }
     }
 
-    return Promise.reject(error);
+    return Promise.reject(apiError);
   }
 );
 

@@ -15,17 +15,22 @@ export type AuthViewState =
   | "RECOVERY_OTP"
   | "RECOVERY_NEW_PASS";
 
+// Tipo extendido para incluir el token en el submit
+interface ResetPasswordData extends PasswordFormData {
+  resetToken: string;
+}
+
 export const LoginPage = () => {
   const [viewState, setViewState] = useState<AuthViewState>("LOGIN");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [resetToken, setResetToken] = useState("");
   const { resetProtection } = useLoginProtectionStore();
 
-  // Mutacion para RECOVERY
+  // Mutacion para RECOVERY - Ahora recibe el token como parámetro
   const { mutate: resetPassword, isPending: isResetting } = useMutation({
-    mutationFn: (data: PasswordFormData) =>
+    mutationFn: (data: ResetPasswordData) =>
       authAPI.resetPassword({
-        reset_token: resetToken,
+        reset_token: data.resetToken, // Usamos el token que viene como argumento
         new_password: data.newPassword,
       }),
     onSuccess: () => {
@@ -116,7 +121,7 @@ export const LoginPage = () => {
               <AuthPasswordForm
                 mode="recovery"
                 isPending={isResetting}
-                onSubmit={(data) => resetPassword(data)}
+                onSubmit={(data) => resetPassword({ ...data, resetToken })}
               />
             )}
           </div>
