@@ -10,7 +10,9 @@ import type {
   VerifyResetCodeRequest,
   VerifyResetCodeResponse,
   ResetPasswordRequest,
+  ResetPasswordResponse,
   CompleteOnboardingRequest,
+  IAuthAPI,
 } from "../types/auth.types";
 
 // Leemos la variable de entorno para saber si usar Mocks
@@ -19,7 +21,7 @@ const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 /**
  * Implementación Real de la API
  */
-const realAuthAPI = {
+const realAuthAPI: IAuthAPI = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>("/auth/login", data);
     return response.data;
@@ -63,8 +65,8 @@ const realAuthAPI = {
     }
   },
 
-  requestResetCode: async (data: RequestResetCodeRequest) => {
-    return apiClient.post("/auth/request-reset-code", data);
+  requestResetCode: async (data: RequestResetCodeRequest): Promise<void> => {
+    await apiClient.post("/auth/request-reset-code", data);
   },
 
   verifyResetCode: async (
@@ -77,16 +79,17 @@ const realAuthAPI = {
     return response.data;
   },
 
-  resetPassword: async (data: ResetPasswordRequest) => {
-    return apiClient.post(
+  resetPassword: async (data: ResetPasswordRequest): Promise<ResetPasswordResponse> => {
+    const response = await apiClient.post<ResetPasswordResponse>(
       "/auth/reset-password",
-      { new_password: data.new_password }, // Solo mandamos la password en el body
+      { new_password: data.new_password },
       {
         headers: {
-          Authorization: `Bearer ${data.reset_token}`, // El token va acá
+          Authorization: `Bearer ${data.reset_token}`,
         },
       }
     );
+    return response.data;
   },
 };
 
@@ -94,4 +97,4 @@ const realAuthAPI = {
  * Exportamos la API según el entorno.
  * Si USE_MOCKS es true, usamos el objeto de mocks, sino el real.
  */
-export const authAPI = USE_MOCKS ? authMocks : realAuthAPI;
+export const authAPI: IAuthAPI = USE_MOCKS ? authMocks : realAuthAPI;

@@ -82,6 +82,9 @@ export interface ResetPasswordRequest {
   new_password: string;
 }
 
+// Respuesta de reset password (ahora retorna LoginResponse con tokens)
+export type ResetPasswordResponse = LoginResponse;
+
 // Payload para el Onboarding (Primer Login)
 export interface CompleteOnboardingRequest {
   new_password: string;
@@ -89,3 +92,20 @@ export interface CompleteOnboardingRequest {
 }
 
 export type CompleteOnboardingResponse = LoginResponse;
+
+// ===== API INTERFACE =====
+/**
+ * Interfaz que define el contrato de la API de autenticación.
+ * Tanto la implementación real como los mocks deben cumplir esta interfaz.
+ */
+export interface IAuthAPI {
+  login: (data: LoginRequest) => Promise<LoginResponse>;
+  completeOnboarding: (data: CompleteOnboardingRequest) => Promise<LoginResponse>;
+  logout: () => Promise<void>;
+  refreshToken: (refreshToken: string) => Promise<RefreshTokenResponse>;
+  getCurrentUser: () => Promise<Usuario>;
+  verifyToken: () => Promise<boolean>;
+  requestResetCode: (data: RequestResetCodeRequest) => Promise<void>;
+  verifyResetCode: (data: VerifyResetCodeRequest) => Promise<VerifyResetCodeResponse>;
+  resetPassword: (data: ResetPasswordRequest) => Promise<ResetPasswordResponse>;
+}
