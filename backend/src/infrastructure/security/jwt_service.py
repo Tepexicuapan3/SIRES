@@ -27,7 +27,7 @@ def generate_access_token(user_payload: dict, scope: str = "full_access", expire
     iat = _now_ts() # fecha de creacion el token 
     exp = iat + timedelta(seconds=expires_seconds) #fecha de espiracion
     payload = {
-        "sub": user_payload.get("id_usuario"), #identificador del usuario
+        "sub": str(user_payload.get("id_usuario")), #identificador del usuario (string para Flask-JWT-Extended)
         "username": user_payload.get("usuario"), #nombre del usuario 
         "scope": scope,   #alcance del token
         "iat": int(iat.timestamp()), #fecha de creacion
@@ -45,7 +45,7 @@ def generate_refresh_token(user_payload: dict) -> str:
     iat = _now_ts() #fecha de creacion
     exp = iat + timedelta(seconds=REFRESH_EXPIRES) #fecha de expiracion
     payload = {
-        "sub": user_payload.get("id_usuario"), #identificador del usuario
+        "sub": str(user_payload.get("id_usuario")), #identificador del usuario (string para Flask-JWT-Extended)
         "username": user_payload.get("usuario"), #nombre del usuario
         "scope": "refresh", #alcanse del token (especifico para refresh)
         "iat": int(iat.timestamp()), #fecha de creacion
