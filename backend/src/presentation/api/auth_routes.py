@@ -124,19 +124,17 @@ def verify_reset_code():
 @auth_bp.route("/reset-password", methods=["POST"])
 @jwt_required()
 def reset_password():
-    print("DEBUG: Headers ->", request.headers)
+    """
+    Restablece la contraseña del usuario.
+    
+    Requiere:
+    - JWT valido con scope 'password_reset'
+    - Body: { "new_password": "..." }
+    
+    Retorna:
+    - LoginResponse completa con nuevos tokens (scope full_access)
+    """
     try:
-        data = request.get_json()
-        print("DEBUG: Body ->", data)
-        new_password = data.get("new_password")
-
-
-        if not new_password:
-            return jsonify({
-                "code": "INVALID_REQUEST",
-                "message": "La nueva contraseña es requerida."
-            }), 400
-
         # Extraer claims y user_id desde el JWT
         claims = get_jwt()
         user_identity = get_jwt_identity()
@@ -145,56 +143,154 @@ def reset_password():
         if claims.get("scope") != "password_reset":
             return jsonify({
                 "code": "INVALID_SCOPE",
-                "message": "Token no autorizado para restablecer contraseña."
+                "message": "Token no autorizado para restablecer contrasena."
             }), 403
 
-        # Asegurarnos de que el user_id sea un entero (JWT lo guarda como string a veces)
+        # Asegurarnos de que el user_id sea un entero
         try:
             user_id = int(user_identity)
         except (ValueError, TypeError):
-            return jsonify({"code": "INVALID_TOKEN", "message": "Identidad de usuario inválida en el token"}), 401
+            return jsonify({
+                "code": "INVALID_TOKEN", 
+                "message": "Identidad de usuario invalida en el token."
+            }), 401
+
+        # Obtener datos del body
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "Body de la peticion es requerido."
+            }), 400
+        
+        new_password = data.get("new_password")
+
+        if not new_password:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "La nueva contrasena es requerida."
+            }), 400
+
+        # Obtener IP del cliente
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
 
         # Ejecutar caso de uso
-        result, status = reset_password_usecase.execute(user_id, new_password)
-        return jsonify(result), status
+        result, error = reset_password_usecase.execute(user_id, new_password, ip)
+        
+        # Manejo de errores
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado."),
+                "PASSWORD_REQUIRED": (400, "La contrasena es requerida."),
+                "PASSWORD_TOO_SHORT": (400, "La contrasena debe tener al menos 8 caracteres."),
+                "PASSWORD_NO_UPPERCASE": (400, "La contrasena debe incluir al menos una letra mayuscula."),
+                "PASSWORD_NO_NUMBER": (400, "La contrasena debe incluir al menos un numero."),
+                "PASSWORD_NO_SPECIAL": (400, "La contrasena debe incluir al menos un caracter especial (@, #, $, etc.)."),
+                "PASSWORD_UPDATE_FAILED": (500, "Error al actualizar la contrasena."),
+            }
+            status, msg = error_mapping.get(error, (500, "Error desconocido en el servidor."))
+            return jsonify({"code": error, "message": msg}), status
 
+        return jsonify(result), 200
 
     except Exception as e:
         print("Error in reset-password:", e)
         return jsonify({
             "code": "SERVER_ERROR",
-            "message": "Error interno del servidor"
+            "message": "Error interno del servidor."
         }), 500
 
 
 #============== completar onboarding ==============
 @auth_bp.route("/complete-onboarding", methods=["POST"])
+@jwt_required()
 def complete_onboarding():
+    """
+    Completa el proceso de onboarding para usuarios nuevos.
+    
+    Requiere:
+    - JWT valido con scope 'onboarding' o 'pre_auth_onboarding'
+    - Body: { "new_password": "...", "terms_accepted": true }
+    
+    Retorna:
+    - LoginResponse completa con nuevos tokens (scope full_access)
+    """
     try:
+        # Obtener usuario del token (NO del body - seguridad)
+        claims = get_jwt()
+        user_identity = get_jwt_identity()
+        
+        # Validar scope del token
+        token_scope = claims.get("scope", "")
+        if token_scope not in ["onboarding", "pre_auth_onboarding"]:
+            return jsonify({
+                "code": "INVALID_SCOPE",
+                "message": "Token no autorizado para completar onboarding. Inicia sesion nuevamente."
+            }), 403
+        
+        # Convertir user_identity a int
+        try:
+            user_id = int(user_identity)
+        except (ValueError, TypeError):
+            return jsonify({
+                "code": "INVALID_TOKEN", 
+                "message": "Identidad de usuario invalida en el token."
+            }), 401
+        
+        # Obtener datos del body
         data = request.get_json()
-        id_usuario = data.get("id_usuario")
-
-        if not id_usuario:
+        
+        if not data:
             return jsonify({
                 "code": "INVALID_REQUEST",
-                "message": "El id_usuario es requerido."
+                "message": "Body de la peticion es requerido."
             }), 400
-
-        result = complete_onboarding_usecase.execute(id_usuario)
-
-        if not result["success"]:
+        
+        new_password = data.get("new_password")
+        terms_accepted = data.get("terms_accepted", False)
+        
+        if not new_password:
             return jsonify({
-                "code": "ONBOARDING_ERROR",
-                "message": result["message"]
+                "code": "INVALID_REQUEST",
+                "message": "La nueva contrasena es requerida."
             }), 400
-
+        
+        # Obtener IP del cliente
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        
+        # Ejecutar caso de uso
+        result, error = complete_onboarding_usecase.execute(
+            user_id=user_id,
+            new_password=new_password,
+            terms_accepted=terms_accepted,
+            client_ip=ip
+        )
+        
+        # Manejo de errores
+        if error:
+            error_mapping = {
+                "TERMS_NOT_ACCEPTED": (400, "Debes aceptar los terminos y condiciones."),
+                "USER_NOT_FOUND": (404, "Usuario no encontrado."),
+                "ONBOARDING_NOT_REQUIRED": (400, "El usuario ya completo el proceso de activacion."),
+                "PASSWORD_REQUIRED": (400, "La contrasena es requerida."),
+                "PASSWORD_TOO_SHORT": (400, "La contrasena debe tener al menos 8 caracteres."),
+                "PASSWORD_NO_UPPERCASE": (400, "La contrasena debe incluir al menos una letra mayuscula."),
+                "PASSWORD_NO_NUMBER": (400, "La contrasena debe incluir al menos un numero."),
+                "PASSWORD_NO_SPECIAL": (400, "La contrasena debe incluir al menos un caracter especial (@, #, $, etc.)."),
+                "PASSWORD_UPDATE_FAILED": (500, "Error al actualizar la contrasena."),
+                "ONBOARDING_UPDATE_FAILED": (500, "Error al completar el proceso de activacion."),
+            }
+            status, msg = error_mapping.get(error, (500, "Error desconocido en el servidor."))
+            return jsonify({"code": error, "message": msg}), status
+        
         return jsonify(result), 200
-
+        
     except Exception as e:
         print("Error in complete-onboarding:", e)
         return jsonify({
             "code": "SERVER_ERROR",
-            "message": "Error interno del servidor"
+            "message": "Error interno del servidor."
         }), 500
 
 
