@@ -5,40 +5,36 @@ import { authAPI } from "@api/resources/auth.api";
 import { useAuthStore } from "@store/authStore";
 import { LoginRequest } from "@api/types/auth.types";
 import { AxiosError } from "axios";
-import { useLoginProtectionStore } from "@store/loginProtectionStore";
 
 interface LoginError {
   message: string;
   code?: string;
+  retry_after?: number; // Segundos de espera (rate limiting)
 }
 
 type LoginMutationVariables = LoginRequest & { rememberMe: boolean };
 
 /**
- * Hook para manejar el login de usuario
+ * Hook para manejar el login de usuario.
+ *
+ * NOTA DE SEGURIDAD: El rate limiting y bloqueo por intentos fallidos
+ * se maneja EXCLUSIVAMENTE en el backend con Redis.
+ * El frontend solo muestra los mensajes de error del servidor.
+ *
+ * @see backend/docs/RATE_LIMITING.md para documentación de implementación
  */
 export const useLogin = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const { recordFailure, resetProtection, isLocked } =
-    useLoginProtectionStore();
 
   return useMutation({
-    mutationFn: async ({
-      rememberMe,
-      ...credentials
-    }: LoginMutationVariables) => {
-      // Si el store dice que estamos bloqueados, lanzamos un error local inmediatamente
-      if (isLocked()) {
-        throw new Error("LOCKED_CLIENT_SIDE");
-      }
+    mutationFn: async ({ rememberMe, ...credentials }: LoginMutationVariables) => {
+      // rememberMe se usa en onSuccess via variables, no aquí
+      void rememberMe;
       return authAPI.login(credentials);
     },
 
     onSuccess: (data, variables) => {
-      // Reiniciamos la protección (volvemos a 0 intentos)
-      resetProtection();
-
       // Recordarme
       if (variables.rememberMe) {
         localStorage.setItem("saved_username", variables.usuario);
@@ -54,35 +50,41 @@ export const useLogin = () => {
         description: "Has iniciado sesión correctamente",
       });
 
-      // Redirigir al dashbord
+      // Redirigir al dashboard
       navigate("/dashboard");
     },
 
     onError: (error: AxiosError<LoginError> | Error) => {
-      // Manejo del bloqueo preventivo
-      if (error.message === "LOCKED_CLIENT_SIDE") {
-        toast.error("Acceso temporalmente bloqueado", {
-          description:
-            "Has excedido el número de intentos. Por seguridad, espera a que el contador termine.",
+      const axiosError = error as AxiosError<LoginError>;
+      const errorCode = axiosError.response?.data?.code;
+      const errorMessage =
+        axiosError.response?.data?.message || "Error al iniciar sesión";
+      const retryAfter = axiosError.response?.data?.retry_after;
+
+      // Errores de rate limiting con tiempo de espera
+      if (retryAfter && ["TOO_MANY_REQUESTS", "IP_BLOCKED", "USER_LOCKED"].includes(errorCode || "")) {
+        const minutes = Math.ceil(retryAfter / 60);
+        const timeText = minutes >= 60 
+          ? `${Math.floor(minutes / 60)} hora${Math.floor(minutes / 60) > 1 ? 's' : ''}`
+          : `${minutes} minuto${minutes > 1 ? 's' : ''}`;
+
+        toast.error("Acceso bloqueado temporalmente", {
+          description: `Por seguridad, espera ${timeText} antes de intentar nuevamente.`,
+          duration: 6000,
         });
+
+        console.warn(`[Rate Limit] ${errorCode}: retry_after=${retryAfter}s`);
         return;
       }
 
-      // Registramos el fallo para aumentar el contador de seguridad
-      recordFailure();
-
-      // Casteamos a AxiosError para acceder a la data del servidor
-      const axiosError = error as AxiosError<LoginError>;
-
-      const errorMessage =
-        axiosError.response?.data?.message || "Error al iniciar sesión";
-      const errorCode = axiosError.response?.data?.code;
-
-      // Mensajes personalizados según el código de error
+      // Mensajes personalizados según el código de error del backend
       const messages: Record<string, string> = {
         INVALID_CREDENTIALS: "Usuario o contraseña incorrectos",
         USER_INACTIVE: "Tu usuario está inactivo. Contacta al administrador",
         USER_NOT_FOUND: "El usuario no existe",
+        USER_LOCKED: "Cuenta bloqueada temporalmente por seguridad",
+        TOO_MANY_REQUESTS: "Demasiados intentos. Espera unos minutos.",
+        IP_BLOCKED: "Tu IP ha sido bloqueada temporalmente",
         default: errorMessage,
       };
 

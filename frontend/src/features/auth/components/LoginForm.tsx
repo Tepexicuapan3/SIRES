@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, User, Lock, ArrowRight, Timer } from "lucide-react";
+import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
 import { useLogin } from "../hooks/useLogin";
 import { FormField } from "@/components/ui/FormField";
-import { useLoginProtectionStore } from "@store/loginProtectionStore";
 
 // Schema
 const loginSchema = z.object({
@@ -24,14 +23,18 @@ interface Props {
   onForgotPassword: () => void;
 }
 
+/**
+ * Formulario de login.
+ *
+ * NOTA DE SEGURIDAD: El rate limiting y bloqueo por intentos fallidos
+ * se maneja EXCLUSIVAMENTE en el backend. No hay validación client-side
+ * porque sería trivial de evadir (borrar localStorage, usar cURL, etc.)
+ *
+ * @see backend/docs/RATE_LIMITING.md
+ */
 export const LoginForm = ({ onForgotPassword }: Props) => {
-  const [showPassword, setShowPassword] = useState(false);
-  const { isLocked, getRemainingTime } = useLoginProtectionStore();
+  const [showPassword, setShowPassword] = React.useState(false);
   const { mutate: login, isPending } = useLogin();
-
-  // Estado local para el contador visual (se actualiza cada segundo)
-  const [timeLeft, setTimeLeft] = useState(0);
-  const locked = isLocked();
 
   const {
     register,
@@ -64,29 +67,6 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
         },
       }
     );
-  };
-
-  // Efecto para la cuenta regresiva en vivo
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (locked) {
-      setTimeLeft(getRemainingTime());
-      interval = setInterval(() => {
-        const remaining = getRemainingTime();
-        setTimeLeft(remaining);
-        if (remaining <= 0) clearInterval(interval);
-      }, 1000);
-    }
-
-    return () => clearInterval(interval);
-  }, [locked, getRemainingTime]);
-
-  // Helper para formatear MM:SS
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -128,17 +108,6 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
           {...register("clave")}
         />
       </div>
-
-      {/* Alerta de bloqueo */}
-      {locked && (
-        <div className="mx-6 p-4 rounded-lg bg-status-critical/10 border border-status-critical/20 flex items-start gap-3 animate-pulse-slow">
-          <Timer className="text-status-critical shrink-0 mt-0.5" />
-          <div className="text-sm text-status-critical">
-            <p className="font-bold">Acceso Bloqueado Temporalmente</p>
-            <p>Demasiados intentos fallidos.</p>
-          </div>
-        </div>
-      )}
 
       {/* Checkbox Recordarme */}
       <div className="flex items-center justify-between">
@@ -182,7 +151,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
       {/* Botón Principal */}
       <button
         type="submit"
-        disabled={isPending || locked}
+        disabled={isPending}
         className="
           group relative w-full h-12 flex items-center justify-center gap-2 
           bg-brand hover:bg-brand-hover active:scale-[0.99]
@@ -191,10 +160,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
         "
       >
         {isPending ? (
-          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
-        ) : locked ? (
-          // Texto cuando está bloqueado
-          `Espera ${formatTime(timeLeft)}`
+          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
         ) : (
           <>
             Iniciar Sesión
