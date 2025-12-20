@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { LoginForm } from "./LoginForm";
 import { RequestCodeForm } from "./recovery/RequestCodeForm";
 import { VerifyOtpForm } from "./recovery/VerifyOtpForm";
@@ -6,8 +7,9 @@ import { AuthPasswordForm, PasswordFormData } from "./AuthPasswordForm";
 import { ParticlesBackground } from "../animations/ParticlesBackground";
 import { useMutation } from "@tanstack/react-query";
 import { authAPI } from "@/api/resources/auth.api";
+import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
-import { useLoginProtectionStore } from "@/store/loginProtectionStore";
+import type { ResetPasswordResponse } from "@/api/types/auth.types";
 
 export type AuthViewState =
   | "LOGIN"
@@ -21,30 +23,54 @@ interface ResetPasswordData extends PasswordFormData {
 }
 
 export const LoginPage = () => {
+  const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  
   const [viewState, setViewState] = useState<AuthViewState>("LOGIN");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [resetToken, setResetToken] = useState("");
-  const { resetProtection } = useLoginProtectionStore();
 
-  // Mutacion para RECOVERY - Ahora recibe el token como parámetro
+  // Mutacion para RECOVERY - Ahora recibe tokens y auto-loguea
   const { mutate: resetPassword, isPending: isResetting } = useMutation({
     mutationFn: (data: ResetPasswordData) =>
       authAPI.resetPassword({
-        reset_token: data.resetToken, // Usamos el token que viene como argumento
+        reset_token: data.resetToken,
         new_password: data.newPassword,
       }),
-    onSuccess: () => {
-      resetProtection();
+    onSuccess: (response: ResetPasswordResponse) => {
+      // Guardar auth en el store (auto-login)
+      setAuth(response.user, response.access_token, response.refresh_token);
+      
       toast.success("¡Contraseña actualizada!", {
-        description: "Ya puedes iniciar sesión con tu nueva clave.",
+        description: "Bienvenido de vuelta.",
       });
-      setViewState("LOGIN");
+      
+      // Redirigir al dashboard
+      navigate("/dashboard", { replace: true });
     },
-    onError: () => {
-      toast.error("Error al restablecer", {
-        description: "El token ha expirado, por favor solicita uno nuevo.",
-      });
-      setViewState("RECOVERY_REQUEST");
+    onError: (error: Error & { response?: { data?: { code?: string } } }) => {
+      const errorCode = error.response?.data?.code;
+      
+      // Mapeo de errores específicos
+      const errorMessages: Record<string, string> = {
+        PASSWORD_TOO_SHORT: "La contraseña debe tener al menos 8 caracteres.",
+        PASSWORD_NO_UPPERCASE: "Incluye al menos una letra mayúscula.",
+        PASSWORD_NO_NUMBER: "Incluye al menos un número.",
+        PASSWORD_NO_SPECIAL: "Incluye al menos un carácter especial (@, #, $).",
+        INVALID_SCOPE: "El enlace ha expirado. Solicita uno nuevo.",
+        USER_NOT_FOUND: "Usuario no encontrado.",
+      };
+      
+      const message = errorCode 
+        ? errorMessages[errorCode] || "Error al restablecer la contraseña."
+        : "El token ha expirado, solicita uno nuevo.";
+      
+      toast.error("Error al restablecer", { description: message });
+      
+      // Si el token expiró, volver al inicio del flujo
+      if (errorCode === "INVALID_SCOPE") {
+        setViewState("RECOVERY_REQUEST");
+      }
     },
   });
 
@@ -59,7 +85,7 @@ export const LoginPage = () => {
       <div className="absolute inset-0 bg-radial-[at_center_center] from-transparent via-transparent to-app/80 pointer-events-none z-0" />
 
       {/* === TARJETA DE LOGIN === */}
-      <div className="w-full max-w-[440px] z-10 animate-fade-in-up">
+      <div className="w-full max-w-md z-10 animate-fade-in-up">
         {/* Card Container */}
         <div className="relative rounded-3xl p-8 sm:p-10 overflow-hidden bg-paper/60 dark:bg-paper/40 border border-white/40 dark:border-white/10 backdrop-blur-xl shadow-2xl shadow-black/10 transition-all duration-300">
           {/* Header de Identidad */}
