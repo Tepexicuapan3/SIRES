@@ -56,6 +56,32 @@ class UserRepository:
             close_db(conn, cursor)
             
 
+    def get_user_by_id(self, user_id: int):
+        """
+        Obtiene un usuario por su ID.
+        
+        Args:
+            user_id: ID del usuario
+            
+        Returns:
+            dict | None: Datos del usuario o None si no existe
+        """
+        conn = get_db_connection()
+        if not conn:
+            return None
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT id_usuario, usuario, nombre, paterno, materno,
+                       expediente, curp, img_perfil, correo, est_usuario
+                FROM sy_usuarios
+                WHERE id_usuario = %s
+                LIMIT 1
+            """, (user_id,))
+            return cursor.fetchone()
+        finally:
+            close_db(conn, cursor)
+
     def update_password_by_id(self, user_id, hashed_password):
         conn = get_db_connection()
         if not conn:

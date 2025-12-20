@@ -71,35 +71,84 @@ class LoginUseCase:
         # Registrar acceso
         self.access_repo.registrar_acceso(user["id_usuario"], client_ip, "EN SESIÓN")
 
+        # Verificar si requiere onboarding (cambio de contrasena obligatorio)
+        requires_onboarding = det.get("cambiar_clave") == "T"
+
         roles = self.user_repo.get_user_roles(user["id_usuario"])
-        user_payload = {
-            "id_usuario": user["id_usuario"],
-            "usuario": user["usuario"],
-            "nombre": user["nombre"],
-            "paterno": user.get("paterno"),
-            "materno": user.get("materno"),
-            "correo": user.get("correo"),
-            "expediente": user.get("expediente"),
-            "roles": roles
-        }
-
-        access = generate_access_token(user_payload, scope="full_access")
-        refresh = generate_refresh_token(user_payload)
-
-        result = {
-            "access_token": access,
-            "refresh_token": refresh,
-            "user": {
-                "id": user_payload["id_usuario"],
-                "username": user_payload["usuario"],
-                "nombre": user_payload["nombre"],
-                "paterno": user_payload["paterno"],
-                "materno": user_payload["materno"],
-                "correo": user_payload["correo"],
-                "roles": roles,
-                "must_change_password": det.get("cambiar_clave") == "T"
+        
+        if requires_onboarding:
+            # ============================
+            # FLUJO DE ONBOARDING
+            # Token limitado, sin refresh, expiracion corta
+            # ============================
+            onboarding_payload = {
+                "id_usuario": user["id_usuario"],
+                "usuario": user["usuario"]
             }
-        }
+            
+            # Token con scope limitado para onboarding
+            access = generate_access_token(onboarding_payload, scope="onboarding")
+            
+            result = {
+                "access_token": access,
+                "refresh_token": None,  # Sin refresh token hasta completar
+                "token_type": "Bearer",
+                "expires_in": 600,  # 10 minutos para completar onboarding
+                "user": {
+                    "id_usuario": user["id_usuario"],
+                    "usuario": user["usuario"],
+                    "nombre": user["nombre"],
+                    "paterno": user.get("paterno", ""),
+                    "materno": user.get("materno", ""),
+                    "nombre_completo": f"{user['nombre']} {user.get('paterno', '')} {user.get('materno', '')}".strip(),
+                    "expediente": user.get("expediente", ""),
+                    "curp": "",
+                    "correo": user.get("correo", ""),
+                    "ing_perfil": "Nuevo Usuario",
+                    "roles": [],  # Sin roles hasta completar onboarding
+                    "must_change_password": True
+                }
+            }
+        else:
+            # ============================
+            # FLUJO NORMAL
+            # Token completo con refresh
+            # ============================
+            user_payload = {
+                "id_usuario": user["id_usuario"],
+                "usuario": user["usuario"],
+                "nombre": user["nombre"],
+                "paterno": user.get("paterno"),
+                "materno": user.get("materno"),
+                "correo": user.get("correo"),
+                "expediente": user.get("expediente"),
+                "roles": roles
+            }
+
+            access = generate_access_token(user_payload, scope="full_access")
+            refresh = generate_refresh_token(user_payload)
+
+            result = {
+                "access_token": access,
+                "refresh_token": refresh,
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "user": {
+                    "id_usuario": user_payload["id_usuario"],
+                    "usuario": user_payload["usuario"],
+                    "nombre": user_payload["nombre"],
+                    "paterno": user_payload.get("paterno", ""),
+                    "materno": user_payload.get("materno", ""),
+                    "nombre_completo": f"{user['nombre']} {user.get('paterno', '')} {user.get('materno', '')}".strip(),
+                    "expediente": user.get("expediente", ""),
+                    "curp": user.get("curp", ""),
+                    "correo": user_payload.get("correo", ""),
+                    "ing_perfil": "Usuario",
+                    "roles": roles,
+                    "must_change_password": False
+                }
+            }
+        
         return result, None
 
 
