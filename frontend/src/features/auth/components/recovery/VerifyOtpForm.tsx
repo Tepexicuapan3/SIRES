@@ -1,19 +1,10 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState, useCallback } from "react";
 import { ShieldCheck, ArrowLeft, AlertCircle } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { authAPI } from "@/api/resources/auth.api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-const schema = z.object({
-  code: z
-    .string()
-    .length(6, "El código debe tener 6 dígitos")
-    .regex(/^\d+$/, "Solo se permiten números"),
-});
+import { OtpInput } from "@/components/ui/OtpInput";
 
 interface Props {
   email: string;
@@ -24,131 +15,177 @@ interface Props {
 const MAX_ATTEMPTS = 3;
 
 export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
+  const [code, setCode] = useState("");
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const isBlocked = failedAttempts >= MAX_ATTEMPTS;
+  const [hasError, setHasError] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setFocus,
-  } = useForm<{ code: string }>({
-    resolver: zodResolver(schema),
-  });
+  const isBlocked = failedAttempts >= MAX_ATTEMPTS;
+  const isCodeComplete = code.length === 6;
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (code: string) => authAPI.verifyResetCode({ email, code }),
+    mutationFn: (otpCode: string) =>
+      authAPI.verifyResetCode({ email, code: otpCode }),
     onSuccess: (data) => {
       if (data.valid && data.reset_token) {
         toast.success("Código verificado");
         onSuccess(data.reset_token);
       } else {
-        toast.error("Código inválido o expirado");
-        const newCount = failedAttempts + 1;
-        setFailedAttempts(newCount);
-        setTimeout(() => {
-          setFocus("code");
-        }, 10);
+        handleVerificationError();
       }
     },
     onError: () => {
-      toast.error("Error al verificar el código");
-      const newCount = failedAttempts + 1;
-      setFailedAttempts(newCount);
-      setTimeout(() => {
-        setFocus("code");
-      }, 10);
+      handleVerificationError();
     },
   });
 
-  const onSubmit = (d: { code: string }) => {
-    if (isBlocked) return;
-    mutate(d.code);
+  const handleVerificationError = useCallback(() => {
+    setHasError(true);
+    setCode(""); // Limpiar el código
+
+    const newCount = failedAttempts + 1;
+    setFailedAttempts(newCount);
+
+    if (newCount >= MAX_ATTEMPTS) {
+      toast.error("Código invalidado", {
+        description: "Has superado el número máximo de intentos.",
+      });
+    } else {
+      toast.error("Código incorrecto", {
+        description: `Te quedan ${MAX_ATTEMPTS - newCount} intento${
+          MAX_ATTEMPTS - newCount !== 1 ? "s" : ""
+        }.`,
+      });
+    }
+
+    // Quitar estado de error después de un momento
+    setTimeout(() => setHasError(false), 1500);
+  }, [failedAttempts]);
+
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
+    // Limpiar error cuando el usuario empieza a escribir
+    if (hasError) setHasError(false);
   };
 
+  const handleComplete = useCallback(
+    (completedCode: string) => {
+      if (!isBlocked && !isPending) {
+        mutate(completedCode);
+      }
+    },
+    [isBlocked, isPending, mutate]
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isCodeComplete && !isBlocked && !isPending) {
+      mutate(code);
+    }
+  };
+
+  // Ofuscar el email para mostrar solo parte
+  const obfuscatedEmail = email.replace(
+    /(.{2})(.*)(@.*)/,
+    (_, start, middle, end) =>
+      `${start}${"•".repeat(Math.min(middle.length, 6))}${end}`
+  );
+
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-6 animate-fade-in-up"
-    >
+    <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in-up">
+      {/* Header con icono y mensaje */}
       <div className="mt-4 text-center space-y-2 mb-6">
         <div
           className={cn(
-            "inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 transition-colors",
+            "inline-flex items-center justify-center w-14 h-14 rounded-full mb-3 transition-all duration-300",
             isBlocked
               ? "bg-status-critical/10 text-status-critical"
+              : hasError
+              ? "bg-status-alert/10 text-status-alert animate-pulse"
               : "bg-brand/10 text-brand"
           )}
         >
-          {isBlocked ? <AlertCircle size={34} /> : <ShieldCheck size={34} />}
+          {isBlocked ? (
+            <AlertCircle size={32} strokeWidth={1.5} />
+          ) : (
+            <ShieldCheck size={32} strokeWidth={1.5} />
+          )}
         </div>
 
         {isBlocked ? (
           <div className="space-y-1">
-            <h3 className="font-bold text-status-critical">Código Expirado</h3>
-            <p className="text-sm text-txt-muted">
-              Has superado los 3 intentos. Por seguridad, el código ha sido
-              invalidado.
+            <h3 className="font-bold text-status-critical text-lg">
+              Código Invalidado
+            </h3>
+            <p className="text-sm text-txt-muted leading-relaxed max-w-xs mx-auto">
+              Has superado los 3 intentos. Por seguridad, debes solicitar un
+              nuevo código.
             </p>
           </div>
         ) : (
-          <p className="mt-2 text-sm text-txt-muted leading-relaxed">
-            Hemos enviado un código a <br />
-            <span className="font-semibold text-txt-body">{email}</span>
-          </p>
+          <div className="space-y-1">
+            <p className="text-sm text-txt-muted leading-relaxed">
+              Ingresa el código de 6 dígitos enviado a
+            </p>
+            <p className="font-semibold text-txt-body">{obfuscatedEmail}</p>
+          </div>
         )}
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="otp" className="sr-only">
-          Código de Verificación
-        </label>
-        <input
-          id="otp"
-          type="text"
-          maxLength={6}
-          autoComplete="one-time-code"
-          placeholder="000000"
-          className={cn(
-            "w-full h-14 text-center text-2xl font-mono tracking-[0.5em] font-bold",
-            "bg-paper border rounded-lg outline-none transition-all",
-            isBlocked
-              ? "border-status-critical bg-status-critical/5 text-status-critical cursor-not-allowed"
-              : errors.code
-              ? "border-status-critical text-status-critical focus:ring-2 focus:ring-status-critical/20"
-              : "border-line-struct text-txt-body focus:border-brand focus:ring-4 focus:ring-brand/10",
-            "placeholder:text-txt-hint/30 placeholder:tracking-widest"
-          )}
+      {/* OTP Input */}
+      <div className="pt-2">
+        <OtpInput
+          length={6}
+          value={code}
+          onChange={handleCodeChange}
+          onComplete={handleComplete}
           disabled={isPending || isBlocked}
-          {...register("code")}
+          hasError={hasError}
+          autoFocus={!isBlocked}
         />
-        {errors.code ? (
-          <p className="text-xs text-center text-status-critical font-medium animate-pulse">
-            {errors.code.message}
-          </p>
-        ) : null}
+
+        {/* Indicador sutil de estado */}
+        {!isBlocked && (
+          <div className="h-8 mt-4 flex items-center justify-center">
+            {isPending ? (
+              <span className="flex items-center gap-2 text-brand font-medium text-sm">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Verificando...
+              </span>
+            ) : (
+              <p className="text-xs text-txt-hint">
+                El código expira en 10 minutos
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="space-y-3 pt-2">
-        {!isBlocked ? (
-          <button
-            type="submit"
-            disabled={isPending}
-            className="w-full h-12 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg transition-colors shadow-lg shadow-brand/20"
-          >
-            {isPending ? "Verificando..." : "Verificar Código"}
-          </button>
-        ) : null}
-
+      {/* Botón de acción */}
+      <div className="space-y-3">
         <button
           type="button"
           onClick={onBack}
           disabled={isPending}
           className={cn(
-            "w-full h-12 font-medium flex items-center justify-center gap-2 transition-colors",
+            "w-full h-12 font-medium flex items-center justify-center gap-2 transition-all duration-200 rounded-lg",
             isBlocked
-              ? "bg-brand text-white hover:bg-brand-hover rounded-lg shadow-md" // Resaltamos este botón si está bloqueado
-              : "text-txt-muted hover:text-txt-body"
+              ? "bg-brand text-white hover:bg-brand-hover shadow-md"
+              : "text-txt-muted hover:text-txt-body hover:bg-subtle"
           )}
         >
           {isBlocked ? (
@@ -158,11 +195,27 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
             </>
           ) : (
             <>
-              <ArrowLeft size={16} /> Cambiar correo
+              <ArrowLeft size={16} />
+              Cambiar correo
             </>
           )}
         </button>
       </div>
+
+      {/* Texto de ayuda */}
+      {!isBlocked && (
+        <p className="text-xs text-center text-txt-hint">
+          ¿No recibiste el código?{" "}
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-brand hover:underline font-medium"
+            disabled={isPending}
+          >
+            Reenviar
+          </button>
+        </p>
+      )}
     </form>
   );
 };
