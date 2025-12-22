@@ -452,9 +452,9 @@ export const authMocks: IAuthAPI = {
 
   /**
    * 4. SIMULACIÓN DE REFRESH TOKEN
+   * With HttpOnly cookies, token comes from cookie - no param needed
    */
-  refreshToken: async (refreshToken: string): Promise<RefreshTokenResponse> => {
-    void refreshToken; // Parámetro requerido por la interfaz pero no usado en mock
+  refreshToken: async (): Promise<RefreshTokenResponse> => {
     await delay(SHORT_DELAY);
     return {
       access_token: `mock_refreshed_token_${Date.now()}`,

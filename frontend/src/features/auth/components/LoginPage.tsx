@@ -17,35 +17,40 @@ export type AuthViewState =
   | "RECOVERY_OTP"
   | "RECOVERY_NEW_PASS";
 
-// Tipo extendido para incluir el token en el submit
-interface ResetPasswordData extends PasswordFormData {
-  resetToken: string;
-}
-
 export const LoginPage = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
   
   const [viewState, setViewState] = useState<AuthViewState>("LOGIN");
   const [recoveryEmail, setRecoveryEmail] = useState("");
-  const [resetToken, setResetToken] = useState("");
 
-  // Mutacion para RECOVERY - Ahora recibe tokens y auto-loguea
+  // Mutacion para RECOVERY
+  // El token de reset está en HttpOnly cookie (seteado por verify-reset-code)
   const { mutate: resetPassword, isPending: isResetting } = useMutation({
-    mutationFn: (data: ResetPasswordData) =>
+    mutationFn: (data: PasswordFormData) =>
       authAPI.resetPassword({
-        reset_token: data.resetToken,
         new_password: data.newPassword,
       }),
     onSuccess: (response: ResetPasswordResponse) => {
-      // Guardar auth en el store (auto-login)
-      setAuth(response.user, response.access_token, response.refresh_token);
+      // Guardar datos del usuario en el store
+      // Los tokens ya están en HttpOnly cookies (seteados por el backend)
+      setAuth(response.user);
+      
+      // ✅ VERIFICAR SI REQUIERE ONBOARDING (aceptar T&C)
+      // Si el usuario nunca aceptó los términos, DEBE hacerlo antes de acceder al dashboard
+      if (response.requires_onboarding) {
+        toast.info("Configuración inicial requerida", {
+          description: "Por favor acepta los términos para continuar.",
+        });
+        navigate("/onboarding", { replace: true });
+        return;
+      }
       
       toast.success("¡Contraseña actualizada!", {
         description: "Bienvenido de vuelta.",
       });
       
-      // Redirigir al dashboard
+      // Redirigir al dashboard solo si NO requiere onboarding
       navigate("/dashboard", { replace: true });
     },
     onError: (error: Error & { response?: { data?: { code?: string } } }) => {
@@ -135,8 +140,8 @@ export const LoginPage = () => {
             {viewState === "RECOVERY_OTP" && (
               <VerifyOtpForm
                 email={recoveryEmail}
-                onSuccess={(token) => {
-                  setResetToken(token);
+                onSuccess={() => {
+                  // El token de reset se setea en cookie por el backend
                   setViewState("RECOVERY_NEW_PASS");
                 }}
                 onBack={() => setViewState("RECOVERY_REQUEST")}
@@ -147,7 +152,7 @@ export const LoginPage = () => {
               <AuthPasswordForm
                 mode="recovery"
                 isPending={isResetting}
-                onSubmit={(data) => resetPassword({ ...data, resetToken })}
+                onSubmit={(data) => resetPassword(data)}
               />
             )}
           </div>

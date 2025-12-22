@@ -5,7 +5,9 @@ import { useAuthStore } from "@/store/authStore";
 
 /**
  * Hook principal de autenticación
- * Verifica y obtiene el usuario actual
+ * 
+ * Verifica si la sesión es válida consultando /auth/me
+ * Los tokens están en HttpOnly cookies, el browser los envía automáticamente
  */
 export const useAuth = () => {
   const { user, isAuthenticated, logout, setAuth } = useAuthStore();
@@ -13,22 +15,22 @@ export const useAuth = () => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["auth", "current-user"],
     queryFn: authAPI.getCurrentUser,
-    enabled: isAuthenticated && !!localStorage.getItem("access_token"),
+    // Solo ejecutar si creemos que estamos autenticados
+    // La cookie HttpOnly valida la sesión real
+    enabled: isAuthenticated,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   useEffect(() => {
-    // Actualizar usuario en store si cambió
+    // Actualizar usuario en store si los datos cambiaron
     if (data && JSON.stringify(user) !== JSON.stringify(data)) {
-      const token = localStorage.getItem("access_token") || "";
-      const refreshToken = localStorage.getItem("refresh_token") || "";
-      setAuth(data, token, refreshToken);
+      setAuth(data);
     }
   }, [data, user, setAuth]);
 
   useEffect(() => {
-    // Si hay error, hacer logout
+    // Si hay error de autenticación, hacer logout local
     if (error) {
       logout();
     }

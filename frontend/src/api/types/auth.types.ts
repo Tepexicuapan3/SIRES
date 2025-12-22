@@ -8,8 +8,10 @@ export interface LoginRequest {
   clave: string;
 }
 
+// Note: With HttpOnly cookies, refresh is automatic via cookie - no body needed
+// Keeping for backwards compatibility with mock system
 export interface RefreshTokenRequest {
-  refresh_token: string;
+  refresh_token?: string; // Deprecated: token comes from cookie
 }
 
 // ===== RESPONSE TYPES =====
@@ -29,18 +31,26 @@ export interface Usuario {
   must_change_password: boolean;
 }
 
+/**
+ * Login Response
+ * With HttpOnly cookies migration:
+ * - Tokens are set via Set-Cookie header (not in body)
+ * - Only user data and metadata come in response body
+ * - access_token/refresh_token kept optional for mock compatibility
+ */
 export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: "Bearer";
-  expires_in: number; // Segundos hasta expiración
+  access_token?: string; // Deprecated: now in HttpOnly cookie
+  refresh_token?: string; // Deprecated: now in HttpOnly cookie  
+  token_type?: "Bearer";
+  expires_in?: number;
   user: Usuario;
+  requires_onboarding?: boolean; // Flag for first-time users
 }
 
 export interface RefreshTokenResponse {
-  access_token: string;
-  token_type: "Bearer";
-  expires_in: number;
+  access_token?: string; // Deprecated: now in HttpOnly cookie
+  token_type?: "Bearer";
+  expires_in?: number;
 }
 
 // ===== ERROR TYPES =====
@@ -51,12 +61,12 @@ export interface ApiError {
 }
 
 // ===== STORE TYPES =====
+// Note: With HttpOnly cookies, tokens are NOT stored client-side
 export interface AuthState {
   user: Usuario | null;
-  token: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  // Removed: token and refreshToken - now in HttpOnly cookies
 }
 
 // Payload para pedir el código
@@ -70,16 +80,18 @@ export interface VerifyResetCodeRequest {
   code: string;
 }
 
-// Respuesta exitosa de verificación (recibes el token temporal)
+// Respuesta exitosa de verificación
+// Note: reset_token now set via HttpOnly cookie, not in body
 export interface VerifyResetCodeResponse {
   valid: boolean;
-  reset_token: string;
+  reset_token?: string; // Deprecated: now in HttpOnly cookie (kept for mock compat)
 }
 
 // Payload para cambiar la contraseña olvidada
+// Note: reset_token now comes from HttpOnly cookie, not request body
 export interface ResetPasswordRequest {
-  reset_token: string;
   new_password: string;
+  // Removed: reset_token - now in HttpOnly cookie
 }
 
 // Respuesta de reset password (ahora retorna LoginResponse con tokens)
@@ -97,12 +109,17 @@ export type CompleteOnboardingResponse = LoginResponse;
 /**
  * Interfaz que define el contrato de la API de autenticación.
  * Tanto la implementación real como los mocks deben cumplir esta interfaz.
+ * 
+ * Note: With HttpOnly cookies migration:
+ * - Tokens are managed via cookies (Set-Cookie headers)
+ * - No tokens in request/response bodies
+ * - refreshToken() no longer needs a token parameter
  */
 export interface IAuthAPI {
   login: (data: LoginRequest) => Promise<LoginResponse>;
   completeOnboarding: (data: CompleteOnboardingRequest) => Promise<LoginResponse>;
   logout: () => Promise<void>;
-  refreshToken: (refreshToken: string) => Promise<RefreshTokenResponse>;
+  refreshToken: () => Promise<RefreshTokenResponse>; // No param - token in cookie
   getCurrentUser: () => Promise<Usuario>;
   verifyToken: () => Promise<boolean>;
   requestResetCode: (data: RequestResetCodeRequest) => Promise<void>;
