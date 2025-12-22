@@ -1,25 +1,21 @@
 # src/use_cases/auth/complete_onboarding_usecase.py
-
 """
 Caso de uso para completar el proceso de onboarding de un usuario nuevo.
 
 El onboarding incluye:
 1. Aceptacion de terminos y condiciones
 2. Cambio obligatorio de contrasena
-3. Generacion de tokens con acceso completo
 
-Seguridad:
-- El user_id se obtiene del JWT, NO del body
-- Se valida que el token tenga scope 'onboarding'
-- Se valida fuerza de contrasena en backend
-- Se generan nuevos tokens con scope 'full_access'
+IMPORTANTE: Este use case NO genera tokens JWT.
+Los tokens son generados por el route usando Flask-JWT-Extended
+para mantener consistencia con el sistema de cookies HttpOnly.
 """
 
 import re
 from src.infrastructure.repositories.det_user_repository import DetUserRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 from src.infrastructure.security.password_hasher import PasswordHasher
-from src.infrastructure.security.jwt_service import generate_access_token, generate_refresh_token
+from src.infrastructure.audit.access_log_repository import AccessLogRepository
 
 
 class CompleteOnboardingUseCase:
@@ -33,6 +29,7 @@ class CompleteOnboardingUseCase:
     def __init__(self):
         self.det_user_repo = DetUserRepository()
         self.user_repo = UserRepository()
+        self.audit_repo = AccessLogRepository()
 
     def execute(self, user_id: int, new_password: str, terms_accepted: bool, client_ip: str):
         """
@@ -40,7 +37,6 @@ class CompleteOnboardingUseCase:
         1. Valida que el usuario necesite onboarding
         2. Valida la aceptacion de terminos
         3. Valida y actualiza la contrasena
-        4. Genera nuevos tokens con scope completo
         
         Args:
             user_id: ID del usuario (extraido del JWT, NO del body)
@@ -50,7 +46,7 @@ class CompleteOnboardingUseCase:
             
         Returns:
             tuple: (resultado, error)
-            - Exito: (LoginResponse dict, None)
+            - Exito: (user_data dict, None)
             - Error: (None, "ERROR_CODE")
         """
         
@@ -89,59 +85,48 @@ class CompleteOnboardingUseCase:
         if not onboarding_updated:
             return None, "ONBOARDING_UPDATE_FAILED"
         
-        # 7. Obtener datos completos del usuario para el token
+        # 7. Registrar auditoría de aceptación de términos y condiciones
+        self.audit_repo.registrar_acceso(
+            id_usuario=user_id,
+            ip=client_ip,
+            conexion_act="TÉRMINOS ACEPTADOS"
+        )
+        
+        # 8. Obtener datos completos del usuario
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return None, "USER_NOT_FOUND"
         
         roles = self.user_repo.get_user_roles(user_id)
         
-        # 8. Generar payload para tokens
-        user_payload = {
-            "id_usuario": user_id,
-            "usuario": user["usuario"],
-            "nombre": user["nombre"],
-            "paterno": user.get("paterno"),
-            "materno": user.get("materno"),
-            "correo": user.get("correo"),
-            "expediente": user.get("expediente"),
-            "roles": roles
-        }
-        
-        # 9. Generar nuevos tokens con scope completo
-        access_token = generate_access_token(user_payload, scope="full_access")
-        refresh_token = generate_refresh_token(user_payload)
-        
-        # 10. Actualizar IP y timestamp de conexion
+        # 9. Actualizar IP y timestamp de conexion
         self.det_user_repo.update_on_success_login(det["id_detusr"], client_ip)
         
-        # 11. Construir nombre completo
+        # 10. Construir nombre completo
         nombre_completo = " ".join(filter(None, [
             user.get("nombre", ""),
             user.get("paterno", ""),
             user.get("materno", "")
         ]))
         
-        # 12. Retornar respuesta completa (mismo formato que login)
+        # 11. Retornar datos del usuario (sin tokens - los genera el route)
+        user_data = {
+            "id_usuario": user_id,
+            "usuario": user["usuario"],
+            "nombre": user.get("nombre", ""),
+            "paterno": user.get("paterno", ""),
+            "materno": user.get("materno", ""),
+            "nombre_completo": nombre_completo,
+            "expediente": user.get("expediente", ""),
+            "curp": user.get("curp", ""),
+            "correo": user.get("correo", ""),
+            "ing_perfil": "Usuario",
+            "roles": roles,
+            "must_change_password": False
+        }
+        
         result = {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "user": {
-                "id_usuario": user_id,
-                "usuario": user["usuario"],
-                "nombre": user.get("nombre", ""),
-                "paterno": user.get("paterno", ""),
-                "materno": user.get("materno", ""),
-                "nombre_completo": nombre_completo,
-                "expediente": user.get("expediente", ""),
-                "curp": user.get("curp", ""),
-                "correo": user.get("correo", ""),
-                "ing_perfil": "Usuario",  # Podria venir de otra tabla
-                "roles": roles,
-                "must_change_password": False
-            }
+            "user": user_data
         }
         
         return result, None
