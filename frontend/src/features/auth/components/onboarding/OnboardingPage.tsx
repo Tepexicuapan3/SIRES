@@ -41,14 +41,10 @@ export const OnboardingPage = () => {
       });
     },
     onSuccess: (response) => {
-      if (response.access_token && response.user) {
-        useAuthStore
-          .getState()
-          .setAuth(
-            response.user,
-            response.access_token,
-            response.refresh_token
-          );
+      // Guardar datos del usuario en el store
+      // Los tokens ya están en HttpOnly cookies (seteados por el backend)
+      if (response.user) {
+        useAuthStore.getState().setAuth(response.user);
       }
 
       toast.success("¡Cuenta activada!", {

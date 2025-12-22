@@ -3,17 +3,14 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { Usuario } from "@api/types/auth.types";
 
 interface AuthState {
-  // Estado
+  // Estado - Ya no almacenamos tokens (están en HttpOnly cookies)
   user: Usuario | null;
-  token: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 
   // Acciones
-  setAuth: (user: Usuario, token: string, refreshToken: string) => void;
+  setAuth: (user: Usuario) => void;
   updateUser: (user: Partial<Usuario>) => void;
-  setToken: (token: string) => void;
   setLoading: (loading: boolean) => void;
   logout: () => void;
   clearAuth: () => void;
@@ -21,33 +18,33 @@ interface AuthState {
 
 /**
  * Store global de autenticación
+ * 
+ * IMPORTANTE: Los tokens JWT están en HttpOnly cookies (no accesibles desde JS)
+ * Este store solo mantiene los datos del usuario para la UI
  */
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       // Estado inicial
       user: null,
-      token: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
 
-      // Setear autenticación completa
-      setAuth: (user, token, refreshToken) => {
-        // Guardar tokens en localStorage también (para el interceptor)
-        localStorage.setItem("access_token", token);
-        localStorage.setItem("refresh_token", refreshToken);
-
+      /**
+       * Setear autenticación después de login exitoso
+       * Los tokens ya están en cookies HttpOnly (seteados por el backend)
+       */
+      setAuth: (user) => {
         set({
           user,
-          token,
-          refreshToken,
           isAuthenticated: true,
           isLoading: false,
         });
       },
 
-      // Actualizar datos del usuario
+      /**
+       * Actualizar datos del usuario
+       */
       updateUser: (userData) => {
         const currentUser = get().user;
         if (currentUser) {
@@ -57,42 +54,36 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // 3. Actualizar solo el token (sin tocar al usuario)
-      setToken: (token) => {
-        localStorage.setItem("access_token", token);
-        set({ token });
-      },
-
-      // 4. Control manual de carga
+      /**
+       * Control manual de estado de carga
+       */
       setLoading: (loading) => set({ isLoading: loading }),
 
-      // Logout
+      /**
+       * Logout - Limpia el estado local
+       * NOTA: El backend elimina las cookies en /auth/logout
+       */
       logout: () => {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-
         set({
           user: null,
-          token: null,
-          refreshToken: null,
           isAuthenticated: false,
           isLoading: false,
         });
       },
 
-      // Limpiar auth (por errores)
+      /**
+       * Limpiar auth (por errores o sesión expirada)
+       */
       clearAuth: () => {
         get().logout();
       },
     }),
     {
-      name: "sires-auth-storage", // Nombre en localStorage
+      name: "sires-auth-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        // Solo persistir estos campos
+        // Solo persistir datos del usuario (NO tokens - están en cookies)
         user: state.user,
-        token: state.token,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }
@@ -101,7 +92,6 @@ export const useAuthStore = create<AuthState>()(
 
 // Selectores útiles
 export const useUser = () => useAuthStore((state) => state.user);
-export const useAuthToken = () => useAuthStore((state) => state.token);
 export const useIsAuthenticated = () =>
   useAuthStore((state) => state.isAuthenticated);
 export const useAuthLoading = () => useAuthStore((state) => state.isLoading);

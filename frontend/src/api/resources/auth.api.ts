@@ -41,13 +41,9 @@ const realAuthAPI: IAuthAPI = {
     await apiClient.post("/auth/logout");
   },
 
-  refreshToken: async (refreshToken: string): Promise<RefreshTokenResponse> => {
-    const response = await apiClient.post<RefreshTokenResponse>(
-      "/auth/refresh",
-      {
-        refresh_token: refreshToken,
-      }
-    );
+  refreshToken: async (): Promise<RefreshTokenResponse> => {
+    // With HttpOnly cookies, refresh token is sent automatically via cookie
+    const response = await apiClient.post<RefreshTokenResponse>("/auth/refresh");
     return response.data;
   },
 
@@ -80,14 +76,10 @@ const realAuthAPI: IAuthAPI = {
   },
 
   resetPassword: async (data: ResetPasswordRequest): Promise<ResetPasswordResponse> => {
+    // With HttpOnly cookies, reset_token comes from cookie automatically
     const response = await apiClient.post<ResetPasswordResponse>(
       "/auth/reset-password",
-      { new_password: data.new_password },
-      {
-        headers: {
-          Authorization: `Bearer ${data.reset_token}`,
-        },
-      }
+      { new_password: data.new_password }
     );
     return response.data;
   },

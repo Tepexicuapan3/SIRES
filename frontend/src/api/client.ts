@@ -1,14 +1,16 @@
 import axios from "axios";
-import type {
-  AxiosInstance,
-  AxiosError,
-  InternalAxiosRequestConfig,
-} from "axios";
+import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
 
 import { env } from "@/config/env";
+import { getCookie } from "@/lib/utils";
 
 /**
  * Cliente Axios configurado para la API de SIRES
+ * 
+ * IMPORTANTE: Usa HttpOnly cookies para autenticación
+ * - Los tokens NO se almacenan en localStorage (vulnerabilidad XSS)
+ * - Las cookies se envían automáticamente con withCredentials: true
+ * - El CSRF token se envía en header X-CSRF-TOKEN
  */
 const apiClient: AxiosInstance = axios.create({
   baseURL: env.apiUrl,
@@ -17,21 +19,24 @@ const apiClient: AxiosInstance = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
+  // CRÍTICO: Permite envío de cookies en requests cross-origin
+  withCredentials: true,
 });
 
 /**
- * Agrega token JWT a todas las peticiones
+ * Interceptor de Request
+ * - Agrega CSRF token a requests que modifican datos
  */
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem("access_token");
-
-    if (config.headers.Authorization) {
-      return config;
-    }
-
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Agregar CSRF token para métodos que lo requieren
+    const methodsRequiringCsrf = ["POST", "PUT", "PATCH", "DELETE"];
+    
+    if (config.method && methodsRequiringCsrf.includes(config.method.toUpperCase())) {
+      const csrfToken = getCookie("csrf_access_token");
+      if (csrfToken && config.headers) {
+        config.headers["X-CSRF-TOKEN"] = csrfToken;
+      }
     }
 
     return config;
@@ -42,7 +47,10 @@ apiClient.interceptors.request.use(
 );
 
 /**
- * Maneja errores globales en las respuestas
+ * Interceptor de Response
+ * - Maneja errores globalmente
+ * - Intenta refresh automático en 401
+ * - Redirige a login si la sesión expiró
  */
 apiClient.interceptors.response.use(
   (response) => response,
@@ -52,17 +60,18 @@ apiClient.interceptors.response.use(
     };
 
     const apiError = {
-      code: (error.response?.data as any)?.code || "UNKNOWN_ERROR",
-      message:
-        (error.response?.data as any)?.message || "Ocurrió un error inesperado",
+      code: (error.response?.data as Record<string, unknown>)?.code as string || "UNKNOWN_ERROR",
+      message: (error.response?.data as Record<string, unknown>)?.message as string || "Ocurrió un error inesperado",
       status: error.response?.status || 500,
     };
 
-    // Si el error 401 viene de intentar iniciar sesión o cerrar, NO reintentar
-    if (
-      originalRequest.url?.includes("/auth/login") ||
-      originalRequest.url?.includes("/auth/logout")
-    ) {
+    // Si el error 401 viene de login, logout o refresh, NO reintentar
+    const noRetryEndpoints = ["/auth/login", "/auth/logout", "/auth/refresh"];
+    const shouldNotRetry = noRetryEndpoints.some(endpoint => 
+      originalRequest.url?.includes(endpoint)
+    );
+
+    if (shouldNotRetry) {
       return Promise.reject(apiError);
     }
 
@@ -71,25 +80,20 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem("refresh_token");
+        // Intentar renovar el token usando la cookie de refresh
+        // El backend lee el refresh_token de la cookie automáticamente
+        await axios.post(
+          `${env.apiUrl}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
 
-        if (!refreshToken) throw new Error("NO_REFRESH_TOKEN");
-
-        // Usamos axios base para evitar interceptores en el refresh
-        const response = await axios.post(`${env.apiUrl}/auth/refresh`, {
-          refresh_token: refreshToken,
-        });
-
-        const { access_token } = response.data;
-        localStorage.setItem("access_token", access_token);
-
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-        }
-
+        // Si el refresh fue exitoso, reintentar la petición original
+        // Las nuevas cookies ya están seteadas por el backend
         return apiClient(originalRequest);
-      } catch (refreshError) {
-        localStorage.clear(); // Limpiamos todo
+      } catch {
+        // Refresh falló - sesión expirada
+        // Limpiar estado local y redirigir a login
         window.location.href = "/login?expired=true";
         return Promise.reject({ ...apiError, code: "SESSION_EXPIRED" });
       }

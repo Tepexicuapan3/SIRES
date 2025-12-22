@@ -8,7 +8,7 @@ import { OtpInput } from "@/components/ui/OtpInput";
 
 interface Props {
   email: string;
-  onSuccess: (token: string) => void;
+  onSuccess: () => void; // Token now comes in HttpOnly cookie
   onBack: () => void;
 }
 
@@ -26,9 +26,9 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
     mutationFn: (otpCode: string) =>
       authAPI.verifyResetCode({ email, code: otpCode }),
     onSuccess: (data) => {
-      if (data.valid && data.reset_token) {
+      if (data.valid) {
         toast.success("Código verificado");
-        onSuccess(data.reset_token);
+        onSuccess(); // Token already set in HttpOnly cookie by backend
       } else {
         handleVerificationError();
       }

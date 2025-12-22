@@ -9,7 +9,7 @@ import { AxiosError } from "axios";
 interface LoginError {
   message: string;
   code?: string;
-  retry_after?: number; // Segundos de espera (rate limiting)
+  retry_after?: number;
 }
 
 type LoginMutationVariables = LoginRequest & { rememberMe: boolean };
@@ -17,11 +17,10 @@ type LoginMutationVariables = LoginRequest & { rememberMe: boolean };
 /**
  * Hook para manejar el login de usuario.
  *
- * NOTA DE SEGURIDAD: El rate limiting y bloqueo por intentos fallidos
- * se maneja EXCLUSIVAMENTE en el backend con Redis.
- * El frontend solo muestra los mensajes de error del servidor.
+ * NOTA: Los tokens JWT se manejan en HttpOnly cookies (seteadas por el backend).
+ * El frontend solo recibe los datos del usuario, NO los tokens.
  *
- * @see backend/docs/RATE_LIMITING.md para documentación de implementación
+ * @see backend/docs/RATE_LIMITING.md para documentación de rate limiting
  */
 export const useLogin = () => {
   const navigate = useNavigate();
@@ -29,23 +28,32 @@ export const useLogin = () => {
 
   return useMutation({
     mutationFn: async ({ rememberMe, ...credentials }: LoginMutationVariables) => {
-      // rememberMe se usa en onSuccess via variables, no aquí
       void rememberMe;
       return authAPI.login(credentials);
     },
 
     onSuccess: (data, variables) => {
-      // Recordarme
+      // Recordar username (esto SÍ va en localStorage - no es sensible)
       if (variables.rememberMe) {
         localStorage.setItem("saved_username", variables.usuario);
       } else {
         localStorage.removeItem("saved_username");
       }
 
-      // Guardar datos de autenticación en el store
-      setAuth(data.user, data.access_token, data.refresh_token);
+      // Guardar datos del usuario en el store
+      // Los tokens ya están en HttpOnly cookies (seteados por el backend)
+      setAuth(data.user);
 
-      // Mostrar mensaje de bienvenida
+      // Verificar si requiere onboarding
+      if (data.requires_onboarding) {
+        toast.info("Configuración inicial requerida", {
+          description: "Por favor completa tu perfil para continuar.",
+        });
+        navigate("/onboarding");
+        return;
+      }
+
+      // Mensaje de bienvenida
       toast.success(`¡Bienvenido, ${data.user.nombre}!`, {
         description: "Has iniciado sesión correctamente",
       });
@@ -61,7 +69,7 @@ export const useLogin = () => {
         axiosError.response?.data?.message || "Error al iniciar sesión";
       const retryAfter = axiosError.response?.data?.retry_after;
 
-      // Errores de rate limiting con tiempo de espera
+      // Errores de rate limiting
       if (retryAfter && ["TOO_MANY_REQUESTS", "IP_BLOCKED", "USER_LOCKED"].includes(errorCode || "")) {
         const minutes = Math.ceil(retryAfter / 60);
         const timeText = minutes >= 60 
@@ -77,7 +85,7 @@ export const useLogin = () => {
         return;
       }
 
-      // Mensajes personalizados según el código de error del backend
+      // Mensajes personalizados
       const messages: Record<string, string> = {
         INVALID_CREDENTIALS: "Usuario o contraseña incorrectos",
         USER_INACTIVE: "Tu usuario está inactivo. Contacta al administrador",
