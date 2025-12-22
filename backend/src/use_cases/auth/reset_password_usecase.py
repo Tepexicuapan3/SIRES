@@ -1,18 +1,24 @@
 # src/use_cases/auth/reset_password_usecase.py
+"""
+ResetPasswordUseCase - Restablece la contraseña de un usuario.
+
+IMPORTANTE: Este use case NO genera tokens JWT.
+Los tokens son generados por el route usando Flask-JWT-Extended
+para mantener consistencia con el sistema de cookies HttpOnly.
+"""
 
 import re
 from src.infrastructure.repositories.user_repository import UserRepository
 from src.infrastructure.repositories.det_user_repository import DetUserRepository
 from src.infrastructure.security.password_hasher import PasswordHasher
-from src.infrastructure.security.jwt_service import generate_access_token, generate_refresh_token
 
 
 class ResetPasswordUseCase:
     """
     Caso de uso para restablecer la contraseña de un usuario.
     
-    Valida la fuerza de la contraseña y genera nuevos tokens
-    para que el usuario quede logueado automáticamente.
+    Valida la fuerza de la contraseña y retorna datos del usuario
+    para que el route genere los tokens.
     """
 
     def __init__(self):
@@ -56,50 +62,44 @@ class ResetPasswordUseCase:
             return None, "PASSWORD_UPDATE_FAILED"
         
         # ============================
-        # 4. OBTENER ROLES Y DATOS COMPLETOS
+        # 4. VERIFICAR ESTADO DE TÉRMINOS Y CONDICIONES
         # ============================
-        roles = self.user_repo.get_user_roles(user_id)
         det = self.det_repo.get_det_by_userid(user_id)
+        if not det:
+            return None, "USER_DETAILS_NOT_FOUND"
+        
+        # Determinar si el usuario necesita completar onboarding
+        # Si terminos_acept = 'F', el usuario DEBE aceptar T&C
+        requires_onboarding = det.get("terminos_acept") == "F"
         
         # ============================
-        # 5. GENERAR NUEVOS TOKENS (full_access)
+        # 5. OBTENER ROLES Y DATOS COMPLETOS
         # ============================
-        user_payload = {
+        roles = self.user_repo.get_user_roles(user_id)
+        
+        # ============================
+        # 6. CONSTRUIR RESPUESTA (sin tokens - los genera el route)
+        # ============================
+        user_data = {
             "id_usuario": user["id_usuario"],
             "usuario": user["usuario"],
             "nombre": user["nombre"],
-            "paterno": user.get("paterno"),
-            "materno": user.get("materno"),
-            "correo": user.get("correo"),
-            "expediente": user.get("expediente"),
-            "roles": roles
+            "paterno": user.get("paterno", ""),
+            "materno": user.get("materno", ""),
+            "nombre_completo": f"{user['nombre']} {user.get('paterno', '')} {user.get('materno', '')}".strip(),
+            "expediente": user.get("expediente", ""),
+            "curp": user.get("curp", ""),
+            "correo": user.get("correo", ""),
+            "ing_perfil": "Usuario",
+            "roles": roles,
+            # Si requiere onboarding, debe mostrar la pantalla de aceptación de T&C
+            "must_change_password": requires_onboarding
         }
         
-        access_token = generate_access_token(user_payload, scope="full_access")
-        refresh_token = generate_refresh_token(user_payload)
-        
-        # ============================
-        # 6. CONSTRUIR RESPUESTA (LoginResponse)
-        # ============================
         result = {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "user": {
-                "id_usuario": user["id_usuario"],
-                "usuario": user["usuario"],
-                "nombre": user["nombre"],
-                "paterno": user.get("paterno", ""),
-                "materno": user.get("materno", ""),
-                "nombre_completo": f"{user['nombre']} {user.get('paterno', '')} {user.get('materno', '')}".strip(),
-                "expediente": user.get("expediente", ""),
-                "curp": user.get("curp", ""),
-                "correo": user.get("correo", ""),
-                "ing_perfil": "Usuario",
-                "roles": roles,
-                "must_change_password": False
-            }
+            "user": user_data,
+            # Flag explícito para que el route decida qué tipo de token generar
+            "requires_onboarding": requires_onboarding
         }
         
         return result, None
