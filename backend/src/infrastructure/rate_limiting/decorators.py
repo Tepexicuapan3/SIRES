@@ -5,7 +5,7 @@ Estos decoradores se aplican a los endpoints que necesitan
 protección contra abuso.
 """
 from functools import wraps
-from flask import request, jsonify
+from flask import request, jsonify  # type: ignore
 from typing import Tuple, Optional
 
 from .rate_limiter import rate_limiter
@@ -13,23 +13,40 @@ from .rate_limiter import rate_limiter
 
 def get_client_ip() -> str:
     """
-    Obtiene la IP real del cliente considerando proxies.
-    
-    El orden de prioridad es:
-    1. X-Forwarded-For (primer IP de la lista)
-    2. X-Real-IP
-    3. remote_addr (fallback)
-    
-    Returns:
-        str: Dirección IP del cliente
+    Obtiene la IP del cliente.
+
+    IMPORTANTE: NO confiar ciegamente en headers tipo X-Forwarded-For.
+    Esos headers son triviales de falsificar desde internet.
+
+    Regla:
+    - Solo confiamos en X-Forwarded-For / X-Real-IP si la request viene de un
+      proxy "trusted" (allowlist configurable via env TRUSTED_PROXIES).
+    - Si no, usamos request.remote_addr.
     """
-    if request.headers.get("X-Forwarded-For"):
-        # X-Forwarded-For puede tener múltiples IPs: client, proxy1, proxy2
-        return request.headers.get("X-Forwarded-For").split(",")[0].strip()
-    elif request.headers.get("X-Real-IP"):
-        return request.headers.get("X-Real-IP")
-    else:
-        return request.remote_addr or "unknown"
+
+    remote_addr = request.remote_addr or "unknown"
+
+    # Allowlist de proxies confiables (IPs exactas)
+    # Ej: TRUSTED_PROXIES=127.0.0.1,172.18.0.1
+    import os
+    raw = os.getenv("TRUSTED_PROXIES", "")
+    trusted = {ip.strip() for ip in raw.split(",") if ip.strip()}
+
+    # Si no hay proxies declarados, no confiamos en headers.
+    if not trusted or remote_addr not in trusted:
+        return remote_addr
+
+    # Ya estamos detras de un proxy confiable: ahora si podemos leer headers.
+    xff = request.headers.get("X-Forwarded-For")
+    if xff:
+        # Puede venir: client, proxy1, proxy2
+        return xff.split(",")[0].strip()
+
+    xri = request.headers.get("X-Real-IP")
+    if xri:
+        return xri.strip()
+
+    return remote_addr
 
 
 def rate_limit_login(f):
@@ -93,14 +110,13 @@ def rate_limit_otp(f):
     def decorated_function(*args, **kwargs):
         ip = get_client_ip()
         
-        # Usar un rate limit más restrictivo para OTP
-        # Temporalmente verificamos el rate limit general
-        is_limited, remaining = rate_limiter.check_ip_rate_limit(ip)
+        # Rate limit independiente para OTP/recovery (NO mezclar con login)
+        is_limited, remaining = rate_limiter.check_ip_rate_limit_otp(ip)
         if is_limited:
             return jsonify({
                 "code": "TOO_MANY_REQUESTS",
                 "message": "Demasiados intentos. Espera un momento.",
-                "retry_after": rate_limiter.IP_RATE_WINDOW
+                "retry_after": rate_limiter.OTP_RATE_WINDOW
             }), 429
 
         return f(*args, **kwargs)
