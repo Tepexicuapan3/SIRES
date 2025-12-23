@@ -39,8 +39,21 @@ class RateLimiter:
     # =====================================================
 
     # Rate limiting por IP (requests por minuto)
+    # Login: intencionalmente un poco mas permisivo para UX.
     IP_RATE_LIMIT = int(os.getenv("RATE_LIMIT_LOGIN_PER_MINUTE", 10))
     IP_RATE_WINDOW = 60  # Ventana en segundos (1 minuto)
+
+    # OTP / Password recovery: mas estricto para evitar spam/bruteforce.
+    # Compat: aceptamos el nombre viejo sugerido en docs (RATE_LIMIT_RESET_CODE_PER_MINUTE).
+    # Preferido: RATE_LIMIT_OTP_PER_MINUTE.
+    OTP_RATE_LIMIT = int(os.getenv(
+        "RATE_LIMIT_OTP_PER_MINUTE",
+        os.getenv("RATE_LIMIT_RESET_CODE_PER_MINUTE", 5)
+    ))
+    OTP_RATE_WINDOW = 60  # Ventana en segundos (1 minuto)
+
+    # Prefijo separado para no mezclar trafico de login con OTP
+    PREFIX_IP_RATE_OTP = "rate:otp:ip:"
 
     # Bloqueo por IP (intentos fallidos)
     IP_BLOCK_THRESHOLDS = [
@@ -70,24 +83,16 @@ class RateLimiter:
     # RATE LIMITING POR IP (Sliding Window)
     # =====================================================
 
-    def check_ip_rate_limit(self, ip: str) -> Tuple[bool, int]:
+    def _check_rate_limit(self, *, key_prefix: str, ip: str, limit: int, window_seconds: int) -> Tuple[bool, int]:
         """
-        Verifica si una IP ha excedido el rate limit usando sliding window.
-        
-        El sliding window funciona así:
-        - Guardamos el timestamp de cada request en un sorted set
-        - Eliminamos los timestamps fuera de la ventana
-        - Contamos cuántos quedan
-        
-        Args:
-            ip: Dirección IP del cliente
-            
-        Returns:
-            Tuple[bool, int]: (is_limited, remaining_requests)
+        Implementacion generica de sliding window rate limiting.
+
+        Nota: se diseno para reutilizar la misma mecanica en login y OTP
+        sin mezclar keys ni limites.
         """
-        key = f"{self.PREFIX_IP_RATE}{ip}"
+        key = f"{key_prefix}{ip}"
         now = time.time()
-        window_start = now - self.IP_RATE_WINDOW
+        window_start = now - window_seconds
 
         pipe = redis_client.pipeline()
 
@@ -98,18 +103,49 @@ class RateLimiter:
         pipe.zcard(key)
 
         # Agregar el request actual
+        # OJO: usar timestamps como miembros puede colisionar si hay requests en el mismo instante.
+        # Para este caso practico esta OK; si queres ser 100% robustos, usamos now+random.
         pipe.zadd(key, {str(now): now})
 
-        # Establecer TTL para limpieza automática
-        pipe.expire(key, self.IP_RATE_WINDOW)
+        # Establecer TTL para limpieza automatica
+        pipe.expire(key, window_seconds)
 
         results = pipe.execute()
         current_count = results[1]
 
-        remaining = max(0, self.IP_RATE_LIMIT - current_count - 1)
-        is_limited = current_count >= self.IP_RATE_LIMIT
+        remaining = max(0, limit - current_count - 1)
+        is_limited = current_count >= limit
 
         return is_limited, remaining
+
+    def check_ip_rate_limit(self, ip: str) -> Tuple[bool, int]:
+        """
+        Rate limit por IP para LOGIN.
+
+        Returns:
+            Tuple[bool, int]: (is_limited, remaining_requests)
+        """
+        return self._check_rate_limit(
+            key_prefix=self.PREFIX_IP_RATE,
+            ip=ip,
+            limit=self.IP_RATE_LIMIT,
+            window_seconds=self.IP_RATE_WINDOW,
+        )
+
+    def check_ip_rate_limit_otp(self, ip: str) -> Tuple[bool, int]:
+        """Rate limit por IP para endpoints de OTP/recovery.
+
+        Ojo: usar este metodo SOLO para endpoints tipo request-reset-code / verify-reset-code.
+        """
+        return self._check_rate_limit(
+            key_prefix=self.PREFIX_IP_RATE_OTP,
+            ip=ip,
+            limit=self.OTP_RATE_LIMIT,
+            window_seconds=self.OTP_RATE_WINDOW,
+        )
+
+
+
 
     def is_ip_rate_limited(self, ip: str) -> bool:
         """
