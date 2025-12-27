@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { LogOut, ArrowLeft } from "lucide-react";
+import { LogOut, Lock } from "lucide-react";
 import { AxiosError } from "axios";
 
 import { useAuthStore } from "@/store/authStore";
 import { authAPI } from "@/api/resources/auth.api";
 import { useLogout } from "../../hooks/useLogout";
+import { onboardingErrorMessages } from "../../utils/errorMessages";
 
 import { CompleteOnboardingResponse } from "@/api/types/auth.types";
 import { TermsStep } from "./TermsStep";
@@ -16,6 +17,30 @@ import {
   PasswordFormData,
 } from "@/features/auth/components/AuthPasswordForm";
 import { ParticlesBackground } from "../../animations/ParticlesBackground";
+import { AuthCard } from "../shared/AuthCard";
+
+/**
+ * OnboardingPage - Flujo de Activación de Cuenta (2 Pasos)
+ *
+ * REFACTORIZACIÓN (Code Review):
+ * ✅ Consistencia visual: Ambos pasos usan AuthCard (mismo header/footer)
+ * ✅ Código DRY: Header/footer ya no duplicados
+ * ✅ Responsividad: maxWidth configurable por paso (md para PASSWORD, md para TERMS)
+ * ✅ Navegación: Botón "Volver" en paso PASSWORD
+ *
+ * FLUJO:
+ * 1. TERMS → Usuario acepta Acta Responsiva (checkbox obligatorio)
+ * 2. PASSWORD → Usuario crea contraseña segura (validación Zod)
+ * 3. Redirección a /dashboard tras completar onboarding
+ *
+ * SEGURIDAD:
+ * - JWT con scope "onboarding_required" (validado en backend)
+ * - Tokens en cookies HttpOnly (backend los setea tras completar)
+ * - Logout disponible en todo momento (botón flotante)
+ *
+ * @see backend/src/use_cases/auth/complete_onboarding_usecase.py
+ * @see AuthCard.tsx - Wrapper reutilizable
+ */
 
 type Step = "TERMS" | "PASSWORD";
 
@@ -60,28 +85,10 @@ export const OnboardingPage = () => {
       const errorCode = axiosError.response?.data?.code;
       const errorMessage = axiosError.response?.data?.message;
 
-      const errorMessages: Record<string, string> = {
-        PASSWORD_TOO_SHORT: "La contraseña debe tener al menos 8 caracteres",
-        PASSWORD_NO_UPPERCASE:
-          "La contraseña debe incluir al menos una mayúscula",
-        PASSWORD_NO_NUMBER: "La contraseña debe incluir al menos un número",
-        PASSWORD_NO_SPECIAL:
-          "La contraseña debe incluir al menos un carácter especial",
-        PASSWORD_REQUIRED: "La contraseña es requerida",
-        ONBOARDING_NOT_REQUIRED: "Tu cuenta ya está activada. Redirigiendo...",
-        TERMS_NOT_ACCEPTED: "Debes aceptar los términos y condiciones",
-        INVALID_SCOPE: "Tu sesión expiró. Por favor inicia sesión nuevamente.",
-        INVALID_TOKEN: "Sesión inválida. Por favor inicia sesión nuevamente.",
-        USER_NOT_FOUND: "Usuario no encontrado",
-        PASSWORD_UPDATE_FAILED:
-          "Error al actualizar la contraseña. Intenta de nuevo.",
-        ONBOARDING_UPDATE_FAILED:
-          "Error al completar la activación. Intenta de nuevo.",
-        SERVER_ERROR: "Error del servidor. Intenta más tarde.",
-      };
-
       const displayMessage =
-        errorMessages[errorCode || ""] || errorMessage || "Error inesperado";
+        onboardingErrorMessages[errorCode || ""] ||
+        errorMessage ||
+        "Error inesperado";
 
       if (errorCode === "INVALID_SCOPE" || errorCode === "INVALID_TOKEN") {
         toast.error("Sesión expirada", { description: displayMessage });
@@ -98,7 +105,11 @@ export const OnboardingPage = () => {
       }
 
       toast.error("Error al activar cuenta", { description: displayMessage });
-      console.error("Error en onboarding:", axiosError);
+
+      // Solo loggear errores en desarrollo (no exponer info en producción)
+      if (import.meta.env.DEV) {
+        console.error("Error en onboarding:", axiosError);
+      }
     },
   });
 
@@ -109,78 +120,78 @@ export const OnboardingPage = () => {
       <div className="absolute inset-0 bg-radial-[at_center_center] from-transparent via-transparent to-app/80 pointer-events-none z-0" />
 
       {/* Botón de Logout - Flotante */}
-      <div className="absolute top-6 right-6 z-20">
+      <div className="absolute top-4 right-4 z-20">
         <button
           onClick={() => logout()}
           disabled={isLoggingOut || isPending}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-txt-muted hover:text-status-critical hover:bg-status-critical/10 rounded-lg transition-colors disabled:opacity-50 backdrop-blur-sm bg-paper/30"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-txt-muted hover:text-status-critical hover:bg-status-critical/10 rounded-lg transition-colors disabled:opacity-50 backdrop-blur-sm bg-paper/30 min-h-[44px]"
+          aria-label="Cerrar sesión"
         >
-          <LogOut size={16} />
+          <LogOut size={16} aria-hidden="true" />
           {isLoggingOut ? "Cerrando..." : "Salir"}
         </button>
       </div>
 
-      {/* === PASO 1: TÉRMINOS Y CONDICIONES (Card Grande) === */}
-      {step === "TERMS" && (
-        <div className="w-full max-w-2xl z-10 animate-fade-in-up">
-          <TermsStep onAccept={() => setStep("PASSWORD")} />
+      {/* 
+        === CONTENEDOR CENTRALIZADO ===
+        Card único centrado verticalmente y horizontalmente
+      */}
+      <div className="flex flex-col items-center w-full z-10">
+        {/* 
+          === PASO 1: TÉRMINOS Y CONDICIONES ===
+          
+          DISEÑO INSTITUCIONAL:
+          - maxWidth="lg" (672px): Card ANCHA para lectura de documento legal
+          - hideHeader: TERMS tiene su propio header institucional (Metro + SIRES)
+          - NO necesita title/subtitle: TermsStep renderiza su propio header completo
+          
+          RAZONAMIENTO:
+          - Es un ACTA RESPONSIVA (documento legal/institucional)
+          - Requiere peso visual con logos oficiales (dual branding)
+          - Gradiente naranja → identidad Metro CDMX
+        */}
+        {step === "TERMS" && (
+          <AuthCard maxWidth="lg" hideHeader>
+            <TermsStep onAccept={() => setStep("PASSWORD")} />
+          </AuthCard>
+        )}
 
-          {/* Footer */}
-          <p className="mt-6 text-center text-xs text-txt-muted/70">
-            © {new Date().getFullYear()} Sistema de Transporte Colectivo.
-            <br className="sm:hidden" /> Activación de cuenta de usuario.
-          </p>
-        </div>
-      )}
-
-      {/* === PASO 2: CONTRASEÑA (Card Normal - igual que Login) === */}
-      {step === "PASSWORD" && (
-        <div className="w-full max-w-md z-10 animate-fade-in-up">
-          <div className="relative rounded-3xl p-8 sm:p-10 overflow-hidden bg-paper/60 dark:bg-paper/40 border border-white/40 dark:border-white/10 backdrop-blur-xl shadow-2xl shadow-black/10">
-            {/* Header con Logo */}
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center shadow-xl shadow-brand/20 mb-4 transition-all duration-300 hover:scale-105">
-                <img
-                  src="/SIRES.webp"
-                  alt="Logo SIRES"
-                  className="w-24 h-24 sm:w-28 sm:h-28 object-contain"
-                />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-display font-bold text-txt-body mb-4">
-                S I R E S
-              </h1>
-
-              <h2 className="text-lg sm:text-xl text-txt-body">
-                Crea tu Contraseña
-              </h2>
-              <p className="text-sm text-txt-muted mt-2">
-                Establece una contraseña segura para tu cuenta
-              </p>
-            </div>
-
-            {/* Botón para volver */}
-            <button
-              onClick={() => setStep("TERMS")}
-              className="text-xs text-txt-muted flex items-center gap-1 hover:text-brand transition-colors mb-4"
-            >
-              <ArrowLeft size={16} /> Volver a Términos
-            </button>
-
-            {/* Formulario */}
+        {/* 
+          === PASO 2: CREAR CONTRASEÑA ===
+          
+          REFACTOR v2 (Iteración 3):
+          - Botón Volver en esquina superior (backButtonCorner={true})
+          - Ícono Lock reemplaza logo SIRES (customIcon)
+          - Textos motivacionales: "Crea tu contraseña" + "Último paso para activar tu cuenta"
+          
+          DISEÑO INTENCIONAL:
+          - maxWidth="md" (448px): Card COMPACTA para formulario simple (2 campos)
+          - customIcon={<Lock />}: Refuerza seguridad + más motivacional que logo institucional
+          - backButtonCorner: NO desplaza contenido del header
+          
+          UX RATIONALE:
+          - Usuario siente que está "casi listo" (mensajes motivacionales)
+          - Lock icon = seguridad (no burocracia)
+          - Botón esquina = más espacio para header (no apretado)
+        */}
+        {step === "PASSWORD" && (
+          <AuthCard
+            title="Crea tu contraseña"
+            subtitle="Último paso para activar tu cuenta"
+            maxWidth="md"
+            showBackButton
+            backButtonCorner
+            customIcon={<Lock size={32} className="text-brand" />}
+            onBack={() => setStep("TERMS")}
+          >
             <AuthPasswordForm
               mode="onboarding"
               isPending={isPending}
               onSubmit={(data) => completeOnboarding(data)}
             />
-          </div>
-
-          {/* Footer */}
-          <p className="mt-8 text-center text-xs text-txt-muted/70">
-            © {new Date().getFullYear()} Sistema de Transporte Colectivo.
-            <br className="sm:hidden" /> Activación de cuenta de usuario.
-          </p>
-        </div>
-      )}
+          </AuthCard>
+        )}
+      </div>
     </main>
   );
 };

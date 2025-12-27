@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Lock, Eye, EyeOff, CheckCircle2, ShieldCheck } from "lucide-react";
+
 import { FormField } from "@/components/ui/FormField";
+import { Button } from "@/components/ui/button";
+import { PasswordRequirements } from "./PasswordRequirements";
 
 const schema = z
   .object({
@@ -38,9 +41,18 @@ export const AuthPasswordForm = ({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<PasswordFormData>({
     resolver: zodResolver(schema),
+  });
+
+  // Watch password value para validación en tiempo real
+  // useWatch es preferido por React Compiler (memoization-safe)
+  const passwordValue = useWatch({
+    control,
+    name: "newPassword",
+    defaultValue: "",
   });
 
   return (
@@ -48,26 +60,57 @@ export const AuthPasswordForm = ({
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-5 animate-fade-in-up"
     >
-      <div className="mt-6 bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 flex gap-3 items-start">
+      {/* 
+        Banner Informativo - Adaptado a Metro CDMX
+        
+        DECISIÓN DE DISEÑO:
+        - Recovery: usa status-info (azul institucional para información administrativa)
+        - Onboarding: usa brand (naranja Metro para reforzar la marca en activación)
+        
+        RAZONAMIENTO:
+        - Recovery es un proceso de soporte → info neutral (azul)
+        - Onboarding es el primer contacto con la marca → brand identity (naranja)
+      */}
+      <div
+        className={
+          mode === "recovery"
+            ? "mt-6 bg-status-info/10 dark:bg-status-info/20 p-4 rounded-lg border border-status-info/30 dark:border-status-info/40 flex gap-3 items-start"
+            : "mt-6 bg-brand/5 dark:bg-brand/10 p-4 rounded-lg border border-brand/20 dark:border-brand/30 flex gap-3 items-start"
+        }
+      >
         {mode === "recovery" ? (
           <CheckCircle2
             size={20}
-            className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5"
+            className="text-status-info shrink-0 mt-0.5"
+            aria-hidden="true"
           />
         ) : (
           <ShieldCheck
             size={20}
-            className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5"
+            className="text-brand shrink-0 mt-0.5"
+            aria-hidden="true"
           />
         )}
         <div className="space-y-1">
-          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+          <p
+            className={
+              mode === "recovery"
+                ? "text-sm font-medium text-status-info dark:text-status-info"
+                : "text-sm font-medium text-brand dark:text-brand"
+            }
+          >
             {mode === "recovery" ? "Identidad Verificada" : "Activa tu Cuenta"}
           </p>
-          <p className="text-xs text-blue-600/80 dark:text-blue-400/80 leading-relaxed">
+          <p
+            className={
+              mode === "recovery"
+                ? "text-xs text-status-info/80 leading-relaxed"
+                : "text-xs text-brand/80 leading-relaxed"
+            }
+          >
             {mode === "recovery"
               ? "Ingresa tu nueva contraseña para recuperar el acceso."
-              : "Establece una contraseña segura para finalizar tu registro."}
+              : "¡Ya casi! Solo falta establecer una contraseña segura."}
           </p>
         </div>
       </div>
@@ -87,6 +130,22 @@ export const AuthPasswordForm = ({
           {...register("newPassword")}
         />
 
+        {/* 
+          Validación en Tiempo Real (NUEVA FUNCIONALIDAD)
+          
+          MEJORA UX IMPLEMENTADA:
+          - Feedback progresivo mientras el usuario tipea
+          - Checklist visual de requisitos cumplidos
+          - Barra de progreso 0/4 → 4/4
+          - Reduce frustración de "submit fallido"
+          
+          DECISIÓN DE DISEÑO:
+          - Solo se muestra cuando el usuario empieza a escribir (no abruma al inicio)
+        */}
+        {passwordValue && passwordValue.length > 0 && (
+          <PasswordRequirements password={passwordValue} />
+        )}
+
         <FormField
           id="confirmPassword"
           label="Confirmar Contraseña"
@@ -98,17 +157,18 @@ export const AuthPasswordForm = ({
         />
       </div>
 
-      <button
+      <Button
         type="submit"
         disabled={isPending}
-        className="w-full h-12 mt-4 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg transition-all shadow-md active:scale-[0.99]"
+        size="default"
+        className="w-full mt-4"
       >
         {isPending
           ? "Procesando..."
           : mode === "recovery"
-          ? "Restablecer Contraseña"
-          : "Finalizar y Acceder"}
-      </button>
+            ? "Restablecer Contraseña"
+            : "Finalizar y Acceder"}
+      </Button>
     </form>
   );
 };

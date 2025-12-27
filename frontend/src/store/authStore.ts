@@ -13,12 +13,11 @@ interface AuthState {
   updateUser: (user: Partial<Usuario>) => void;
   setLoading: (loading: boolean) => void;
   logout: () => void;
-  clearAuth: () => void;
 }
 
 /**
  * Store global de autenticación
- * 
+ *
  * IMPORTANTE: Los tokens JWT están en HttpOnly cookies (no accesibles desde JS)
  * Este store solo mantiene los datos del usuario para la UI
  */
@@ -70,13 +69,6 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         });
       },
-
-      /**
-       * Limpiar auth (por errores o sesión expirada)
-       */
-      clearAuth: () => {
-        get().logout();
-      },
     }),
     {
       name: "sires-auth-storage",
@@ -86,16 +78,6 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );
-
-// Selectores útiles
-export const useUser = () => useAuthStore((state) => state.user);
-export const useIsAuthenticated = () =>
-  useAuthStore((state) => state.isAuthenticated);
-export const useAuthLoading = () => useAuthStore((state) => state.isLoading);
-export const useUserRoles = () =>
-  useAuthStore((state) => state.user?.roles || []);
-export const useHasRole = (role: string) =>
-  useAuthStore((state) => state.user?.roles.includes(role) || false);
