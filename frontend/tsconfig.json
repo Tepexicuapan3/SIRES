@@ -27,12 +27,11 @@
       "@components/*": ["./src/components/*"],
       "@features/*": ["./src/features/*"],
       "@api/*": ["./src/api/*"],
-      "@hooks/*": ["./src/hooks/*"],
       "@lib/*": ["./src/lib/*"],
       "@store/*": ["./src/store/*"],
       "@config/*": ["./src/config/*"],
       "@routes/*": ["./src/routes/*"]
     }
   },
-"include": ["src"]
+  "include": ["src"]
 }

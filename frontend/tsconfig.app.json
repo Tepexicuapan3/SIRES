@@ -16,15 +16,17 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Path Aliases for Clean Architecture */
+    /* Path Aliases - synced with tsconfig.json and vite.config.ts */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@/core/*": ["./src/core/*"],
-      "@/features/*": ["./src/features/*"],
-      "@/shared/*": ["./src/shared/*"],
-      "@/infrastructure/*": ["./src/infrastructure/*"],
-      "@/app/*": ["./src/app/*"]
+      "@components/*": ["./src/components/*"],
+      "@features/*": ["./src/features/*"],
+      "@api/*": ["./src/api/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@store/*": ["./src/store/*"],
+      "@config/*": ["./src/config/*"],
+      "@routes/*": ["./src/routes/*"]
     },
 
     /* Linting */
