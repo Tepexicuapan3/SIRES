@@ -1,34 +1,22 @@
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { MainLayout } from "@/components/layouts/MainLayout";
-import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 
 // Lazy Imports
 const LoginPage = lazy(() =>
   import("@features/auth/components/LoginPage").then((m) => ({
     default: m.LoginPage,
-  }))
+  })),
 );
 const OnboardingPage = lazy(() =>
   import("@/features/auth/components/onboarding/OnboardingPage").then((m) => ({
     default: m.OnboardingPage,
-  }))
+  })),
 );
 const DashboardPage = lazy(
-  () => import("@features/dashboard/components/DashboardPage")
-);
-const ExpedientesPage = lazy(
-  () => import("@features/expedientes/components/ExpedientesPage")
-);
-
-// Wrapper Helper
-const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
-  <Suspense
-    fallback={<LoadingSpinner fullScreen={true} text="Cargando sistema..." />}
-  >
-    {children}
-  </Suspense>
+  () => import("@features/dashboard/components/DashboardPage"),
 );
 
 export const router = createBrowserRouter([
@@ -66,14 +54,6 @@ export const router = createBrowserRouter([
       {
         path: "/dashboard",
         element: <DashboardPage />,
-      },
-      {
-        path: "/expedientes",
-        element: (
-          <ProtectedRoute requiredRole="ROL_MEDICO">
-            <ExpedientesPage />
-          </ProtectedRoute>
-        ),
       },
     ],
   },
