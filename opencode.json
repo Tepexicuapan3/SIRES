@@ -61,6 +61,15 @@
         "REDIS_HOST": "{env:REDIS_HOST}",
         "REDIS_PORT": "{env:REDIS_PORT}"
       }
+    },
+
+    "testsprite": {
+      "type": "local",
+      "command": ["npx", "-y", "@testsprite/testsprite-mcp@latest"],
+      "enabled": true,
+      "environment": {
+        "API_KEY": "sk-user-bBkhLCKHiIJ_Y78k7enEKyqGUXM0I3pElenyfThmdoGohOc6uzbKJirO4x1FrXf8V6QEIHGWXDcTBhs6NNWKLMJ1knGS-plJ3D4wFjrnvdOqDF41ZfmdPYVoxYvGQuAs0LY"
+      }
     }
   },
 
@@ -210,6 +219,21 @@
         "glob": false,
         "grep": false
       }
+    },
+
+    "ui-designer": {
+      "description": "Crea/refactoriza componentes UI con shadcn adaptados a Metro CDMX",
+      "mode": "subagent",
+      "model": "github-copilot/claude-sonnet-4.5",
+      "prompt": "{file:./.opencode/prompts/ui-designer.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "read": true,
+        "glob": true,
+        "grep": true
+      }
     }
   },
 
@@ -266,6 +290,12 @@
       "template": "Fix the issue: $ARGUMENTS\n\nSteps:\n1. Understand the problem\n2. Locate relevant code\n3. Identify root cause\n4. Propose fix\n5. Implement if approved\n6. Verify fix works",
       "description": "Debug and fix an issue",
       "agent": "NEO"
+    },
+
+    "ui": {
+      "template": "Gestionar componentes UI del proyecto SIRES.\n\n$ARGUMENTS\n\n**Acciones disponibles:**\n\n- **create <component>**: Crear un componente nuevo usando shadcn/ui como base\n  Ejemplo: /ui create button\n\n- **refactor <path>**: Refactorizar componente existente para usar patrones shadcn\n  Ejemplo: /ui refactor frontend/src/components/ui/FormField.tsx\n\n- **audit**: Auditar todos los componentes UI del proyecto\n  - Verifica uso correcto de tokens Metro\n  - Detecta colores hardcodeados\n  - Revisa accesibilidad\n\n- **install <shadcn-component>**: Instalar y adaptar componente de shadcn\n  Ejemplo: /ui install button input label\n\n**Recordá:**\n- SIEMPRE usar tokens Metro (bg-brand, txt-body, status-critical)\n- NO usar colores hardcodeados (bg-orange-500)\n- Mantener accesibilidad (ARIA, keyboard nav, focus states)\n- Usar CVA para variantes\n- forwardRef en primitivos",
+      "description": "Crear/refactorizar componentes UI con shadcn + Metro",
+      "agent": "ui-designer"
     }
   },
 
