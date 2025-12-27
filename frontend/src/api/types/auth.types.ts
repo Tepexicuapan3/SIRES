@@ -8,12 +8,6 @@ export interface LoginRequest {
   clave: string;
 }
 
-// Note: With HttpOnly cookies, refresh is automatic via cookie - no body needed
-// Keeping for backwards compatibility with mock system
-export interface RefreshTokenRequest {
-  refresh_token?: string; // Deprecated: token comes from cookie
-}
-
 // ===== RESPONSE TYPES =====
 export interface Usuario {
   id_usuario: number;
@@ -33,14 +27,11 @@ export interface Usuario {
 
 /**
  * Login Response
- * With HttpOnly cookies migration:
+ * With HttpOnly cookies:
  * - Tokens are set via Set-Cookie header (not in body)
- * - Only user data and metadata come in response body
- * - access_token/refresh_token kept optional for mock compatibility
+ * - Only user data and metadata in response body
  */
 export interface LoginResponse {
-  access_token?: string; // Deprecated: now in HttpOnly cookie
-  refresh_token?: string; // Deprecated: now in HttpOnly cookie  
   token_type?: "Bearer";
   expires_in?: number;
   user: Usuario;
@@ -48,7 +39,6 @@ export interface LoginResponse {
 }
 
 export interface RefreshTokenResponse {
-  access_token?: string; // Deprecated: now in HttpOnly cookie
   token_type?: "Bearer";
   expires_in?: number;
 }
@@ -81,10 +71,9 @@ export interface VerifyResetCodeRequest {
 }
 
 // Respuesta exitosa de verificación
-// Note: reset_token now set via HttpOnly cookie, not in body
+// Note: reset_token set via HttpOnly cookie
 export interface VerifyResetCodeResponse {
   valid: boolean;
-  reset_token?: string; // Deprecated: now in HttpOnly cookie (kept for mock compat)
 }
 
 // Payload para cambiar la contraseña olvidada
@@ -109,7 +98,7 @@ export type CompleteOnboardingResponse = LoginResponse;
 /**
  * Interfaz que define el contrato de la API de autenticación.
  * Tanto la implementación real como los mocks deben cumplir esta interfaz.
- * 
+ *
  * Note: With HttpOnly cookies migration:
  * - Tokens are managed via cookies (Set-Cookie headers)
  * - No tokens in request/response bodies
@@ -117,12 +106,16 @@ export type CompleteOnboardingResponse = LoginResponse;
  */
 export interface IAuthAPI {
   login: (data: LoginRequest) => Promise<LoginResponse>;
-  completeOnboarding: (data: CompleteOnboardingRequest) => Promise<LoginResponse>;
+  completeOnboarding: (
+    data: CompleteOnboardingRequest,
+  ) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<RefreshTokenResponse>; // No param - token in cookie
   getCurrentUser: () => Promise<Usuario>;
   verifyToken: () => Promise<boolean>;
   requestResetCode: (data: RequestResetCodeRequest) => Promise<void>;
-  verifyResetCode: (data: VerifyResetCodeRequest) => Promise<VerifyResetCodeResponse>;
+  verifyResetCode: (
+    data: VerifyResetCodeRequest,
+  ) => Promise<VerifyResetCodeResponse>;
   resetPassword: (data: ResetPasswordRequest) => Promise<ResetPasswordResponse>;
 }
