@@ -64,13 +64,58 @@
 
     /* --- Sombras (Elevation) --- */
     /* Sistema de profundidad para jerarquizar capas */
-    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-float: 0 10px 15px -3px rgb(0 0 0 / 0.1),
-      0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-card:
+      0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-float:
+      0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    /* ========================================================================
+       3. BRIDGE SHADCN/UI → METRO CDMX
+       Mapeamos las variables que shadcn/ui espera a nuestros tokens semánticos.
+       Esto permite usar componentes shadcn sin modificar su código fuente.
+       ======================================================================== */
+
+    /* Bridge para componentes shadcn/ui (modo claro) */
+    --background: var(--bg-app);
+    --foreground: var(--text-body);
+
+    --card: var(--bg-paper);
+    --card-foreground: var(--text-body);
+
+    --popover: var(--bg-paper-lift);
+    --popover-foreground: var(--text-body);
+
+    --primary: var(--metro-orange-500);
+    --primary-foreground: var(--text-on-brand);
+
+    --secondary: var(--bg-subtle);
+    --secondary-foreground: var(--text-body);
+
+    --muted: var(--bg-subtle);
+    --muted-foreground: var(--text-muted);
+
+    --accent: var(--metro-orange-100);
+    --accent-foreground: var(--metro-orange-600);
+
+    --destructive: var(--clinical-critical);
+    --destructive-foreground: #ffffff;
+
+    --border: var(--border-struct);
+    --input: var(--border-struct);
+    --ring: var(--metro-orange-500);
+
+    --radius: 0.5rem; /* 8px - consistente con nuestro sistema */
+
+    /* Chart colors (para componentes de gráficas si los usamos) */
+    --chart-1: var(--line-pink);
+    --chart-2: var(--line-blue);
+    --chart-3: var(--line-olive);
+    --chart-4: var(--line-teal);
+    --chart-5: var(--clinical-info);
   }
 
   /* ========================================================================
-     3. TOKENS SEMÁNTICOS (MODO OSCURO - DARK MODE)
+     4. TOKENS SEMÁNTICOS (MODO OSCURO - DARK MODE)
      Redefinición automática para entornos de baja luz.
      ======================================================================== */
   :root.dark {
@@ -96,11 +141,23 @@
     /* La marca se mantiene, pero cuidado con el contraste */
     --action-main: #fe5000;
     --action-main-hover: #ff8547;
+
+    /* Bridge shadcn/ui para modo oscuro */
+    --background: var(--bg-app);
+    --foreground: var(--text-body);
+    --card: var(--bg-paper);
+    --card-foreground: var(--text-body);
+    --popover: var(--bg-paper-lift);
+    --popover-foreground: var(--text-body);
+    --muted: var(--bg-subtle);
+    --muted-foreground: var(--text-muted);
+    --border: var(--border-struct);
+    --input: var(--border-struct);
   }
 }
 
 /* ========================================================================
-   4. CONFIGURACIÓN DEL TEMA TAILWIND
+   5. CONFIGURACIÓN DEL TEMA TAILWIND
    Mapeo final para poder usar las clases en el HTML.
    ======================================================================== */
 @theme {
@@ -158,7 +215,7 @@
 }
 
 /* ============================================
-   5. DEFINICIÓN DE KEYFRAMES
+   6. DEFINICIÓN DE KEYFRAMES
    ============================================ */
 @keyframes fade-in-up {
   0% {
