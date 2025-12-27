@@ -423,7 +423,81 @@ export interface Usuario {
 
 ## 5. Componentes y Módulos Reutilizables
 
-### 5.1 UI base
+### 5.1 Sistema de Diseño: shadcn/ui + Metro CDMX
+
+El proyecto usa **shadcn/ui como librería de primitivos** (estructura + accesibilidad) adaptados al **sistema de diseño Metro CDMX** (colores + tipografía + identidad).
+
+**Filosofía:** shadcn provee componentes base robustos y accesibles. Nosotros los adaptamos a la identidad visual de Metro CDMX.
+
+#### Configuración
+
+- `components.json`: Ya configurado (style: `new-york`, TSX, Tailwind v4)
+- Variables bridge: `frontend/src/styles/theme.css` mapea tokens shadcn → Metro
+- CLI: `npx shadcn@latest add <component>`
+
+#### Tokens de Color (USAR SIEMPRE)
+
+```tsx
+// Marca Metro CDMX
+bg-brand, text-brand, border-brand, bg-brand-hover
+
+// Estados Clínicos
+status-critical  // Errores, alertas vitales
+status-alert     // Advertencias, pendientes
+status-stable    // Éxito, signos estables
+status-info      // Información administrativa
+
+// Texto
+txt-body, txt-muted, txt-hint, txt-inverse
+
+// Superficies
+bg-app, bg-paper, bg-paper-lift, bg-subtle
+
+// Bordes
+line-hairline, line-struct
+```
+
+**NO usar colores hardcodeados** (`bg-orange-500`, `text-gray-600`). Solo tokens semánticos.
+
+#### Componentes Disponibles
+
+| Componente | Instalación | Uso |
+|------------|-------------|-----|
+| `Button` | `npx shadcn add button` | Acciones primarias/secundarias |
+| `ScrollArea` | ✅ Ya instalado | Scroll personalizado |
+| `Toaster` | ✅ Ya configurado | Notificaciones toast |
+| `FormField` | Custom (Metro) | Inputs con validación |
+| `OtpInput` | Custom | OTP 6 dígitos |
+
+Ver: `frontend/src/components/ui/README.md` para documentación completa.
+
+#### Flujo de Trabajo
+
+1. Instalar componente shadcn: `npx shadcn add button`
+2. Adaptar tokens: Reemplazar `bg-primary` → `bg-brand`
+3. Documentar: Agregar ejemplo en `components/ui/README.md`
+
+**Ejemplo Button adaptado:**
+
+```tsx
+// ❌ shadcn default
+"bg-primary text-primary-foreground hover:bg-primary/90"
+
+// ✅ Adaptado a Metro
+"bg-brand text-txt-inverse hover:bg-brand-hover"
+```
+
+#### Subagente ui-designer
+
+Usá `/ui` para automatizar creación/refactorización:
+
+```bash
+/ui create dialog
+/ui refactor frontend/src/components/ui/FormField.tsx
+/ui audit
+```
+
+### 5.2 UI base (componentes custom)
 
 - `FormField` (input con label, icon, error styling, helper text)
 - `OtpInput` (OTP 6 dígitos, focus management, paste)
@@ -442,7 +516,7 @@ Ejemplo de `FormField`:
 />
 ```
 
-### 5.2 Providers
+### 5.3 Providers
 
 Centralización de providers:
 
@@ -456,7 +530,7 @@ Centralización de providers:
 </ThemeProvider>
 ```
 
-### 5.3 Helpers
+### 5.4 Helpers
 
 - `cn()` para mergear clases tailwind:
 
