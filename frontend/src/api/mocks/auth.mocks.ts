@@ -53,7 +53,7 @@ const createRateLimitError = (
   code: "TOO_MANY_REQUESTS" | "IP_BLOCKED" | "USER_LOCKED",
   message: string,
   status: number,
-  retryAfterSeconds: number
+  retryAfterSeconds: number,
 ) => {
   const error = new Error(message) as Error & {
     response: {
@@ -95,8 +95,6 @@ const createMockUser = (overrides: Partial<Usuario> = {}): Usuario => ({
  * Genera una respuesta de login exitosa
  */
 const createLoginResponse = (user: Usuario): LoginResponse => ({
-  access_token: `mock_token_${user.usuario}_${Date.now()}`,
-  refresh_token: `mock_refresh_${user.usuario}_${Date.now()}`,
   token_type: "Bearer",
   expires_in: 3600,
   user,
@@ -168,7 +166,7 @@ export const authMocks: IAuthAPI = {
         "USER_LOCKED",
         "Usuario bloqueado por demasiados intentos fallidos.",
         423,
-        300 // 5 minutos
+        300, // 5 minutos
       );
     }
 
@@ -178,7 +176,7 @@ export const authMocks: IAuthAPI = {
         "USER_LOCKED",
         "Usuario bloqueado por demasiados intentos fallidos.",
         423,
-        3600 // 1 hora
+        3600, // 1 hora
       );
     }
 
@@ -188,7 +186,7 @@ export const authMocks: IAuthAPI = {
         "USER_LOCKED",
         "Usuario bloqueado por demasiados intentos fallidos.",
         423,
-        86400 // 24 horas
+        86400, // 24 horas
       );
     }
 
@@ -198,7 +196,7 @@ export const authMocks: IAuthAPI = {
         "TOO_MANY_REQUESTS",
         "Demasiadas solicitudes desde tu dirección.",
         429,
-        60 // 1 minuto
+        60, // 1 minuto
       );
     }
 
@@ -208,7 +206,7 @@ export const authMocks: IAuthAPI = {
         "TOO_MANY_REQUESTS",
         "Demasiadas solicitudes desde tu dirección.",
         429,
-        300 // 5 minutos
+        300, // 5 minutos
       );
     }
 
@@ -218,7 +216,7 @@ export const authMocks: IAuthAPI = {
         "IP_BLOCKED",
         "Tu dirección IP ha sido bloqueada temporalmente.",
         403,
-        900 // 15 minutos
+        900, // 15 minutos
       );
     }
 
@@ -228,7 +226,7 @@ export const authMocks: IAuthAPI = {
         "IP_BLOCKED",
         "Tu dirección IP ha sido bloqueada temporalmente.",
         403,
-        3600 // 1 hora
+        3600, // 1 hora
       );
     }
 
@@ -238,7 +236,7 @@ export const authMocks: IAuthAPI = {
         "IP_BLOCKED",
         "Tu dirección IP ha sido bloqueada por actividad sospechosa.",
         403,
-        86400 // 24 horas
+        86400, // 24 horas
       );
     }
 
@@ -251,7 +249,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "USER_INACTIVE",
         "El usuario está deshabilitado administrativamente.",
-        403
+        403,
       );
     }
 
@@ -260,7 +258,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "USER_NOT_FOUND",
         "El usuario ingresado no existe en el sistema.",
-        404
+        404,
       );
     }
 
@@ -269,7 +267,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "INVALID_CREDENTIALS",
         "Usuario o contraseña incorrectos.",
-        401
+        401,
       );
     }
 
@@ -278,7 +276,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "INTERNAL_SERVER_ERROR",
         "Error de conexión con base de datos.",
-        500
+        500,
       );
     }
 
@@ -303,10 +301,8 @@ export const authMocks: IAuthAPI = {
         must_change_password: true,
       };
 
-      // Respuesta especial para onboarding: sin refresh_token
+      // Respuesta especial para onboarding
       return {
-        access_token: `mock_onboarding_token_${Date.now()}`,
-        refresh_token: "", // Sin refresh token en onboarding
         token_type: "Bearer",
         expires_in: 600, // 10 minutos para completar
         user,
@@ -326,7 +322,7 @@ export const authMocks: IAuthAPI = {
           expediente: "MED001",
           ing_perfil: "Médico General",
           roles: ["ROL_MEDICO"],
-        })
+        }),
       );
     }
 
@@ -343,7 +339,7 @@ export const authMocks: IAuthAPI = {
           expediente: "ENF001",
           ing_perfil: "Enfermero",
           roles: ["ROL_ENFERMERO"],
-        })
+        }),
       );
     }
 
@@ -351,7 +347,7 @@ export const authMocks: IAuthAPI = {
     return createLoginResponse(
       createMockUser({
         usuario: data.usuario,
-      })
+      }),
     );
   },
 
@@ -368,7 +364,7 @@ export const authMocks: IAuthAPI = {
    * - Cualquier otra → Éxito
    */
   completeOnboarding: async (
-    data: CompleteOnboardingRequest
+    data: CompleteOnboardingRequest,
   ): Promise<LoginResponse> => {
     await delay(NETWORK_DELAY);
 
@@ -379,7 +375,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "PASSWORD_TOO_SHORT",
         "La contraseña debe tener al menos 8 caracteres.",
-        400
+        400,
       );
     }
 
@@ -387,7 +383,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "PASSWORD_NO_UPPERCASE",
         "La contraseña debe incluir al menos una letra mayúscula.",
-        400
+        400,
       );
     }
 
@@ -395,7 +391,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "PASSWORD_NO_NUMBER",
         "La contraseña debe incluir al menos un número.",
-        400
+        400,
       );
     }
 
@@ -403,7 +399,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "PASSWORD_NO_SPECIAL",
         "La contraseña debe incluir al menos un carácter especial.",
-        400
+        400,
       );
     }
 
@@ -412,7 +408,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "INVALID_SCOPE",
         "Token no autorizado para completar onboarding. Inicia sesión nuevamente.",
-        403
+        403,
       );
     }
 
@@ -421,7 +417,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "ONBOARDING_NOT_REQUIRED",
         "El usuario ya completó el proceso de activación.",
-        400
+        400,
       );
     }
 
@@ -438,7 +434,7 @@ export const authMocks: IAuthAPI = {
         ing_perfil: "Médico",
         roles: ["ROL_MEDICO"],
         must_change_password: false,
-      })
+      }),
     );
   },
 
@@ -457,7 +453,6 @@ export const authMocks: IAuthAPI = {
   refreshToken: async (): Promise<RefreshTokenResponse> => {
     await delay(SHORT_DELAY);
     return {
-      access_token: `mock_refreshed_token_${Date.now()}`,
       token_type: "Bearer",
       expires_in: 3600,
     };
@@ -500,7 +495,7 @@ export const authMocks: IAuthAPI = {
    * - otro:   Código incorrecto
    */
   verifyResetCode: async (
-    data: VerifyResetCodeRequest
+    data: VerifyResetCodeRequest,
   ): Promise<VerifyResetCodeResponse> => {
     await delay(SHORT_DELAY);
 
@@ -509,7 +504,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "CODE_EXPIRED",
         "El código ha expirado. Solicita uno nuevo.",
-        400
+        400,
       );
     }
 
@@ -519,7 +514,7 @@ export const authMocks: IAuthAPI = {
         "TOO_MANY_REQUESTS",
         "Demasiados intentos de verificación.",
         429,
-        600 // 10 minutos
+        600, // 10 minutos
       );
     }
 
@@ -528,14 +523,13 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "INVALID_CODE",
         "El código ingresado es incorrecto.",
-        400
+        400,
       );
     }
 
     // Código válido
     return {
       valid: true,
-      reset_token: `mock_reset_token_${Date.now()}`,
     };
   },
 
@@ -550,17 +544,19 @@ export const authMocks: IAuthAPI = {
    * - "Expirado1@"     → Error INVALID_SCOPE (token expirado)
    * - Cualquier otra   → Éxito con tokens nuevos
    */
-  resetPassword: async (data: ResetPasswordRequest): Promise<ResetPasswordResponse> => {
+  resetPassword: async (
+    data: ResetPasswordRequest,
+  ): Promise<ResetPasswordResponse> => {
     await delay(NETWORK_DELAY);
-    
+
     const password = data.new_password;
-    
+
     // Simular errores de validación de contraseña
     if (password === "Corta1@") {
       throw createMockError(
         "PASSWORD_TOO_SHORT",
         "La contraseña debe tener al menos 8 caracteres.",
-        400
+        400,
       );
     }
 
@@ -568,7 +564,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "PASSWORD_NO_UPPERCASE",
         "La contraseña debe incluir al menos una letra mayúscula.",
-        400
+        400,
       );
     }
 
@@ -576,7 +572,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "PASSWORD_NO_NUMBER",
         "La contraseña debe incluir al menos un número.",
-        400
+        400,
       );
     }
 
@@ -584,7 +580,7 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "PASSWORD_NO_SPECIAL",
         "La contraseña debe incluir al menos un carácter especial.",
-        400
+        400,
       );
     }
 
@@ -593,12 +589,12 @@ export const authMocks: IAuthAPI = {
       throw createMockError(
         "INVALID_SCOPE",
         "Token no autorizado para restablecer contraseña. Solicita uno nuevo.",
-        403
+        403,
       );
     }
-    
+
     console.log("MOCK: Contraseña restablecida exitosamente");
-    
+
     // Éxito: Retornar respuesta completa con nuevos tokens (igual que login/onboarding)
     return createLoginResponse(
       createMockUser({
@@ -612,19 +608,13 @@ export const authMocks: IAuthAPI = {
         ing_perfil: "Usuario",
         roles: ["ROL_MEDICO"],
         must_change_password: false,
-      })
+      }),
     );
   },
 };
 
 // ==============================================================
-// EXPORTACIÓN DE HELPERS PARA TESTS
+// HELPERS INTERNOS (No exportados - uso solo dentro de este archivo)
 // ==============================================================
-
-export const mockHelpers = {
-  createMockError,
-  createRateLimitError,
-  createMockUser,
-  createLoginResponse,
-  delay,
-};
+// Si en el futuro necesitas estos helpers para tests, descomenta el export:
+// export const mockHelpers = { createMockError, createRateLimitError, createMockUser, createLoginResponse, delay };

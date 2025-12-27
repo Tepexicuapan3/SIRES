@@ -13,7 +13,7 @@ interface OtpInputProps {
 
 /**
  * OTP Input Component
- * 
+ *
  * Input de código OTP con cajas individuales separadas por un guión.
  * Soporta: auto-focus, navegación con teclado, paste, auto-submit.
  */
@@ -49,22 +49,25 @@ export const OtpInput = ({
     }
   }, [value, length, onComplete]);
 
-  const focusInput = useCallback((index: number) => {
-    const clampedIndex = Math.max(0, Math.min(index, length - 1));
-    inputRefs.current[clampedIndex]?.focus();
-  }, [length]);
+  const focusInput = useCallback(
+    (index: number) => {
+      const clampedIndex = Math.max(0, Math.min(index, length - 1));
+      inputRefs.current[clampedIndex]?.focus();
+    },
+    [length],
+  );
 
   const handleChange = (index: number, inputValue: string) => {
     // Solo permitir dígitos
     const digit = inputValue.replace(/\D/g, "").slice(-1);
-    
+
     if (!digit && inputValue !== "") return;
 
     // Construir nuevo valor
     const newDigits = [...digits];
     newDigits[index] = digit;
     const newValue = newDigits.join("");
-    
+
     onChange(newValue);
 
     // Mover al siguiente input si se ingresó un dígito
@@ -73,7 +76,10 @@ export const OtpInput = ({
     }
   };
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
     switch (e.key) {
       case "Backspace":
         e.preventDefault();
@@ -98,19 +104,23 @@ export const OtpInput = ({
         e.preventDefault();
         if (index < length - 1) focusInput(index + 1);
         break;
-      case "Delete":
+      case "Delete": {
         e.preventDefault();
         const newDigits = [...digits];
         newDigits[index] = "";
         onChange(newDigits.join(""));
         break;
+      }
     }
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
-    
+    const pastedData = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, length);
+
     if (pastedData) {
       onChange(pastedData);
       // Focus en el último dígito pegado o en el siguiente vacío
@@ -137,7 +147,9 @@ export const OtpInput = ({
       {digits.map((digit, index) => (
         <div key={index} className="flex items-center gap-2 sm:gap-3">
           <input
-            ref={(el) => { inputRefs.current[index] = el; }}
+            ref={(el) => {
+              inputRefs.current[index] = el;
+            }}
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -155,44 +167,46 @@ export const OtpInput = ({
               "w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold font-mono",
               "rounded-lg border-2 outline-none transition-all duration-200",
               "bg-paper",
-              
+
               // Estados
               disabled && "opacity-50 cursor-not-allowed bg-subtle",
-              
+
               // Error state
-              hasError && !disabled && [
-                "border-status-critical",
-                "text-status-critical",
-                "bg-status-critical/5",
-                "animate-pulse",
-              ],
-              
+              hasError &&
+                !disabled && [
+                  "border-status-critical",
+                  "text-status-critical",
+                  "bg-status-critical/5",
+                  "animate-pulse",
+                ],
+
               // Normal state (sin error)
-              !hasError && !disabled && [
-                // Con valor
-                digit && "border-brand/50 text-txt-body",
-                // Sin valor
-                !digit && "border-line-struct text-txt-body",
-                // Focus
-                focusedIndex === index && "border-brand ring-4 ring-brand/10",
-              ],
-              
+              !hasError &&
+                !disabled && [
+                  // Con valor
+                  digit && "border-brand/50 text-txt-body",
+                  // Sin valor
+                  !digit && "border-line-struct text-txt-body",
+                  // Focus
+                  focusedIndex === index && "border-brand ring-4 ring-brand/10",
+                ],
+
               // Placeholder styling
-              "placeholder:text-txt-hint/20"
+              "placeholder:text-txt-hint/20",
             )}
             placeholder="•"
           />
-          
+
           {/* Separador central (guión) */}
           {index === separatorIndex - 1 && (
-            <div 
+            <div
               className={cn(
                 "w-3 sm:w-4 h-0.5 rounded-full transition-colors duration-200",
-                hasError 
-                  ? "bg-status-critical/50" 
-                  : disabled 
+                hasError
+                  ? "bg-status-critical/50"
+                  : disabled
                     ? "bg-line-struct/50"
-                    : "bg-line-struct"
+                    : "bg-line-struct",
               )}
               aria-hidden="true"
             />

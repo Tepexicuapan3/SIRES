@@ -7,41 +7,41 @@ import {
   XOctagon,
   Loader2,
   MousePointerClick,
-  Settings2, // Icono para la nueva sección
+  Palette, // Icono para la sección de botones
 } from "lucide-react";
 import { useLogout } from "../../auth/hooks/useLogout";
 import { toast } from "sonner";
-import { ThemeToggle } from "../../settings/components/ThemeToggle"; // <--- 1. Importar el Toggle
+import { Button } from "@/components/ui/button";
 
 export const DashboardPage = () => {
   const { mutate: logout, isPending } = useLogout();
 
   const handlePromise = (shouldFail = false) => {
     const promise = () =>
-      new Promise((resolve, reject) =>
+      new Promise<{ name: string }>((resolve, reject) =>
         setTimeout(
           () => (shouldFail ? reject() : resolve({ name: "Expediente 402" })),
-          2000
-        )
+          2000,
+        ),
       );
 
     toast.promise(promise, {
       loading: "Sincronizando con base de datos...",
-      success: (data: any) => `${data.name} actualizado correctamente`,
+      success: (data) => `${data.name} actualizado correctamente`,
       error: "Error de conexión: No se pudo sincronizar",
     });
   };
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-10 animate-fade-in transition-colors duration-300">
+    <div className="min-h-screen bg-app p-6 md:p-10 animate-fade-in transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
         {/* === HEADER === */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-border pb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-line-struct pb-6">
           <div>
-            <h1 className="text-3xl font-bold font-display text-txt-body text-foreground tracking-tight">
+            <h1 className="text-3xl font-bold font-display text-txt-body tracking-tight">
               Dashboard / UI Kit
             </h1>
-            <p className="text-muted-foreground text-txt-body mt-1">
+            <p className="text-txt-muted mt-1">
               Entorno de pruebas y configuración del sistema
             </p>
           </div>
@@ -61,26 +61,11 @@ export const DashboardPage = () => {
         </div>
 
         {/* === CONTENIDO PRINCIPAL === */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* COLUMNA 1: CONFIGURACIÓN (NUEVA) */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* COLUMNA 1: ESTADO DEL SISTEMA */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Tarjeta de Apariencia */}
-            <div className="bg-paper border border-line-struct rounded-xl p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-brand/10 rounded-lg text-brand">
-                  <Settings2 size={20} />
-                </div>
-                <h2 className="text-lg font-semibold text-txt-body">
-                  Configuración
-                </h2>
-              </div>
-
-              {/* Aquí renderizamos tu componente */}
-              <ThemeToggle />
-            </div>
-
-            {/* Tarjeta de Info (Relleno visual) */}
-            <div className="bg-paper-lift border border-line-struct rounded-xl p-6 shadow-sm opacity-80">
+            {/* Tarjeta de Info */}
+            <div className="bg-paper-lift border border-line-struct rounded-xl p-6 shadow-sm">
               <h3 className="text-sm font-semibold text-txt-body mb-2">
                 Estado del Sistema
               </h3>
@@ -100,8 +85,8 @@ export const DashboardPage = () => {
             </div>
           </div>
 
-          {/* COLUMNA 2 y 3: NOTIFICACIONES (OCUPAN EL RESTO) */}
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* COLUMNA 2-4: NOTIFICACIONES (OCUPAN EL RESTO) */}
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Sección Notificaciones Básicas */}
             <div className="bg-paper border border-line-struct rounded-xl p-6 shadow-sm md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
@@ -219,6 +204,117 @@ export const DashboardPage = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* === SECCIÓN DE BOTONES shadcn/ui + Metro CDMX === */}
+        <div className="mt-8 bg-paper border border-line-struct rounded-xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-brand/10 rounded-lg text-brand">
+              <Palette size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-txt-body">
+                Sistema de Botones - Metro CDMX
+              </h2>
+              <p className="text-sm text-txt-muted">
+                Componentes shadcn/ui adaptados al sistema de diseño Metro
+              </p>
+            </div>
+          </div>
+
+          {/* Variantes */}
+          <div className="space-y-4 mb-6">
+            <div>
+              <p className="text-sm font-medium text-txt-body mb-3">
+                Variantes disponibles:
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="default">Default (Brand)</Button>
+                <Button variant="destructive">Destructive</Button>
+                <Button variant="outline">Outline</Button>
+                <Button variant="secondary">Secondary</Button>
+                <Button variant="ghost">Ghost</Button>
+                <Button variant="link">Link</Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tamaños */}
+          <div className="space-y-4 mb-6">
+            <div>
+              <p className="text-sm font-medium text-txt-body mb-3">
+                Tamaños disponibles:
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button size="sm" variant="default">
+                  Small
+                </Button>
+                <Button size="default" variant="default">
+                  Default
+                </Button>
+                <Button size="lg" variant="default">
+                  Large
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Con Iconos */}
+          <div className="space-y-4 mb-6">
+            <div>
+              <p className="text-sm font-medium text-txt-body mb-3">
+                Con iconos:
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="default">
+                  <Check className="mr-2 h-4 w-4" />
+                  Guardar
+                </Button>
+                <Button variant="destructive">
+                  <XOctagon className="mr-2 h-4 w-4" />
+                  Eliminar
+                </Button>
+                <Button variant="outline">
+                  <Info className="mr-2 h-4 w-4" />
+                  Información
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Estados */}
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-txt-body mb-3">Estados:</p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="default">Normal</Button>
+                <Button variant="default" disabled>
+                  Disabled
+                </Button>
+                <Button variant="outline">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading...
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Nota técnica */}
+          <div className="mt-6 p-4 bg-status-info/10 border border-status-info/30 rounded-lg">
+            <p className="text-xs text-txt-muted">
+              <strong className="text-status-info">Nota técnica:</strong> Estos
+              botones usan tokens semánticos Metro CDMX (
+              <code className="px-1 py-0.5 bg-paper rounded text-brand font-mono">
+                bg-brand
+              </code>
+              ,{" "}
+              <code className="px-1 py-0.5 bg-paper rounded text-status-critical font-mono">
+                status-critical
+              </code>
+              , etc.) y NO colores hardcodeados. Se adaptan automáticamente al
+              tema dark/light.
+            </p>
           </div>
         </div>
       </div>
