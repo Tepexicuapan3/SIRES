@@ -39,7 +39,9 @@ export const useLogout = () => {
       logout();
       navigate("/login");
 
-      console.error("Logout error:", error);
+      if (import.meta.env.DEV) {
+        console.error("Logout error:", error);
+      }
     },
   });
 };

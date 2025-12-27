@@ -2,8 +2,6 @@ import { Outlet } from "react-router-dom";
 import { Suspense } from "react";
 import { NavigationProgressBar } from "@/components/shared/NavigationProgressBar";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-// import { Sidebar } from "./Sidebar"; // <-- Importa tu Sidebar real
-// import { Header } from "./Header";   // <-- Importa tu Header real
 
 export const MainLayout = () => {
   return (

@@ -14,6 +14,17 @@ interface Props {
 
 const MAX_ATTEMPTS = 3;
 
+/**
+ * VerifyOtpForm - Verificación de código OTP para recovery de contraseña
+ *
+ * RATE LIMITING (Defense in Depth):
+ * - **Backend:** `verify_reset_code_usecase.py` valida intentos en DB (línea 22-24)
+ *   Si >= 3 intentos, borra el código y retorna error.
+ * - **Frontend (este componente):** Bloqueo UX enhancement para evitar spam.
+ *   NOTA: Este bloqueo es evadible (F5), la seguridad real está en backend.
+ *
+ * @see backend/src/use_cases/auth/verify_reset_code_usecase.py
+ */
 export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
   const [code, setCode] = useState("");
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -73,7 +84,7 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
         mutate(completedCode);
       }
     },
-    [isBlocked, isPending, mutate]
+    [isBlocked, isPending, mutate],
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -87,7 +98,7 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
   const obfuscatedEmail = email.replace(
     /(.{2})(.*)(@.*)/,
     (_, start, middle, end) =>
-      `${start}${"•".repeat(Math.min(middle.length, 6))}${end}`
+      `${start}${"•".repeat(Math.min(middle.length, 6))}${end}`,
   );
 
   return (
@@ -100,8 +111,8 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
             isBlocked
               ? "bg-status-critical/10 text-status-critical"
               : hasError
-              ? "bg-status-alert/10 text-status-alert animate-pulse"
-              : "bg-brand/10 text-brand"
+                ? "bg-status-alert/10 text-status-alert animate-pulse"
+                : "bg-brand/10 text-brand",
           )}
         >
           {isBlocked ? (
@@ -185,7 +196,7 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
             "w-full h-12 font-medium flex items-center justify-center gap-2 transition-all duration-200 rounded-lg",
             isBlocked
               ? "bg-brand text-white hover:bg-brand-hover shadow-md"
-              : "text-txt-muted hover:text-txt-body hover:bg-subtle"
+              : "text-txt-muted hover:text-txt-body hover:bg-subtle",
           )}
         >
           {isBlocked ? (

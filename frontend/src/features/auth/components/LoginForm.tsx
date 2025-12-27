@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
 import { useLogin } from "../hooks/useLogin";
 import { FormField } from "@/components/ui/FormField";
+import { Button } from "@/components/ui/button";
 
 // Schema
 const loginSchema = z.object({
@@ -65,7 +66,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
             setFocus("clave");
           }, 10);
         },
-      }
+      },
     );
   };
 
@@ -115,6 +116,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
           <div className="relative flex items-center">
             <input
               type="checkbox"
+              aria-label="Recordar mi usuario en este dispositivo"
               className="peer h-4 w-4 appearance-none rounded border border-line-struct bg-paper checked:bg-brand checked:border-brand focus:ring-2 focus:ring-brand/20 transition-all cursor-pointer"
               {...register("rememberMe")}
               disabled={isPending}
@@ -149,15 +151,11 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
       </div>
 
       {/* Botón Principal */}
-      <button
+      <Button
         type="submit"
         disabled={isPending}
-        className="
-          group relative w-full h-12 flex items-center justify-center gap-2 
-          bg-brand hover:bg-brand-hover active:scale-[0.99]
-          text-white font-semibold rounded-lg shadow-md hover:shadow-lg
-          transition-all duration-200 disabled:opacity-70 disabled:cursor-wait
-        "
+        className="w-full h-12"
+        size="lg"
       >
         {isPending ? (
           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -170,7 +168,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
             />
           </>
         )}
-      </button>
+      </Button>
     </form>
   );
 };

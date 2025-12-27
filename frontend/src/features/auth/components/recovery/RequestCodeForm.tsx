@@ -7,6 +7,7 @@ import { FormField } from "@/components/ui/FormField";
 import { useMutation } from "@tanstack/react-query";
 import { authAPI } from "@/api/resources/auth.api";
 import { toast } from "sonner";
+import { recoveryErrorMessages } from "@features/auth/utils/errorMessages";
 
 const schema = z.object({
   email: z.string().email("Ingresa un correo válido"),
@@ -34,11 +35,17 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
       });
       onSuccess(variables.email);
     },
-    onError: () => {
-      // Por seguridad, aunque falle (si el correo no existe),
-      // podrías querer simular éxito o mostrar error genérico.
-      // Aquí mostraremos error real para desarrollo.
-      toast.error("Error al enviar código");
+    onError: (error: Error & { response?: { data?: { code?: string } } }) => {
+      const errorCode = error.response?.data?.code;
+      const message = errorCode
+        ? recoveryErrorMessages[errorCode] || "Error al enviar el código"
+        : "Error al enviar el código";
+
+      toast.error("Error", { description: message });
+
+      if (import.meta.env.DEV) {
+        console.error("Request code error:", error);
+      }
     },
   });
 

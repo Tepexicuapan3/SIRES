@@ -5,6 +5,7 @@ import { authAPI } from "@api/resources/auth.api";
 import { useAuthStore } from "@store/authStore";
 import { LoginRequest } from "@api/types/auth.types";
 import { AxiosError } from "axios";
+import { loginErrorMessages } from "@features/auth/utils/errorMessages";
 
 interface LoginError {
   message: string;
@@ -27,7 +28,11 @@ export const useLogin = () => {
   const setAuth = useAuthStore((state) => state.setAuth);
 
   return useMutation({
-    mutationFn: async ({ rememberMe, ...credentials }: LoginMutationVariables) => {
+    mutationFn: async ({
+      rememberMe,
+      ...credentials
+    }: LoginMutationVariables) => {
+      // rememberMe solo se usa en onSuccess, no en la función de mutación
       void rememberMe;
       return authAPI.login(credentials);
     },
@@ -69,38 +74,40 @@ export const useLogin = () => {
         axiosError.response?.data?.message || "Error al iniciar sesión";
       const retryAfter = axiosError.response?.data?.retry_after;
 
-      // Errores de rate limiting
-      if (retryAfter && ["TOO_MANY_REQUESTS", "IP_BLOCKED", "USER_LOCKED"].includes(errorCode || "")) {
+      // Errores de rate limiting (solo toast informativo)
+      if (
+        retryAfter &&
+        ["TOO_MANY_REQUESTS", "IP_BLOCKED", "USER_LOCKED"].includes(
+          errorCode || "",
+        )
+      ) {
         const minutes = Math.ceil(retryAfter / 60);
-        const timeText = minutes >= 60 
-          ? `${Math.floor(minutes / 60)} hora${Math.floor(minutes / 60) > 1 ? 's' : ''}`
-          : `${minutes} minuto${minutes > 1 ? 's' : ''}`;
+        const timeText =
+          minutes >= 60
+            ? `${Math.floor(minutes / 60)} hora${Math.floor(minutes / 60) > 1 ? "s" : ""}`
+            : `${minutes} minuto${minutes > 1 ? "s" : ""}`;
 
         toast.error("Acceso bloqueado temporalmente", {
           description: `Por seguridad, espera ${timeText} antes de intentar nuevamente.`,
           duration: 6000,
         });
 
-        console.warn(`[Rate Limit] ${errorCode}: retry_after=${retryAfter}s`);
+        if (import.meta.env.DEV) {
+          console.warn(`[Rate Limit] ${errorCode}: retry_after=${retryAfter}s`);
+        }
         return;
       }
 
-      // Mensajes personalizados
-      const messages: Record<string, string> = {
-        INVALID_CREDENTIALS: "Usuario o contraseña incorrectos",
-        USER_INACTIVE: "Tu usuario está inactivo. Contacta al administrador",
-        USER_NOT_FOUND: "El usuario no existe",
-        USER_LOCKED: "Cuenta bloqueada temporalmente por seguridad",
-        TOO_MANY_REQUESTS: "Demasiados intentos. Espera unos minutos.",
-        IP_BLOCKED: "Tu IP ha sido bloqueada temporalmente",
-        default: errorMessage,
-      };
+      // Usar mensajes centralizados
+      const description = errorCode
+        ? loginErrorMessages[errorCode] || errorMessage
+        : errorMessage;
 
-      toast.error("Error de autenticación", {
-        description: messages[errorCode || "default"] || messages.default,
-      });
+      toast.error("Error de autenticación", { description });
 
-      console.error("Login error:", axiosError);
+      if (import.meta.env.DEV) {
+        console.error("Login error:", axiosError);
+      }
     },
   });
 };
