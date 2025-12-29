@@ -7,6 +7,12 @@ import os
 def create_app():
     app = Flask(__name__)
 
+    # ========== CONFIGURACIÓN GLOBAL ==========
+    # Prevenir redirects 308 por trailing slashes (causa errores CORS)
+    # Flask por defecto trata /users y /users/ como rutas distintas
+    # Con strict_slashes=False, ambas variantes funcionan sin redirect
+    app.url_map.strict_slashes = False
+
     # ========== CONFIGURACIÓN JWT ==========
     app.config["JWT_SECRET_KEY"] = os.getenv(
         "JWT_SECRET_KEY",
@@ -125,7 +131,12 @@ def create_app():
 
     # ========== REGISTRO DE BLUEPRINTS ==========
     from src.presentation.api.auth_routes import auth_bp
+    from src.presentation.api.permissions_routes import permissions_bp
+    from src.presentation.api.users_routes import users_bp
+    
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(permissions_bp, url_prefix="/api/v1/permissions")
+    app.register_blueprint(users_bp, url_prefix="/api/v1/users")
 
     # Health check endpoint
     @app.route("/api/health")
