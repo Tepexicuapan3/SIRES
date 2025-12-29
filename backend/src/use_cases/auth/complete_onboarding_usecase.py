@@ -16,6 +16,7 @@ from src.infrastructure.repositories.det_user_repository import DetUserRepositor
 from src.infrastructure.repositories.user_repository import UserRepository
 from src.infrastructure.security.password_hasher import PasswordHasher
 from src.infrastructure.audit.access_log_repository import AccessLogRepository
+from src.infrastructure.authorization.authorization_service import authorization_service
 
 
 class CompleteOnboardingUseCase:
@@ -99,6 +100,12 @@ class CompleteOnboardingUseCase:
         
         roles = self.user_repo.get_user_roles(user_id)
         
+        # Obtener permisos y landing route del usuario
+        auth_data = authorization_service.get_user_permissions(user_id)
+        permissions = auth_data.get("permissions", [])
+        landing_route = auth_data.get("landing_route", "/dashboard")
+        is_admin = auth_data.get("is_admin", False)
+        
         # 9. Actualizar IP y timestamp de conexion
         self.det_user_repo.update_on_success_login(det["id_detusr"], client_ip)
         
@@ -122,6 +129,9 @@ class CompleteOnboardingUseCase:
             "correo": user.get("correo", ""),
             "ing_perfil": "Usuario",
             "roles": roles,
+            "permissions": permissions,
+            "landing_route": landing_route,
+            "is_admin": is_admin,
             "must_change_password": False
         }
         

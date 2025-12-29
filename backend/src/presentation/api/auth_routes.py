@@ -100,6 +100,7 @@ def login():
     # Generar tokens con Flask-JWT-Extended
     user_id = str(user_data.get("id_usuario"))
     username = user_data.get("usuario")
+    roles = user_data.get("roles", [])  # Lista de códigos de roles
     
     if requires_onboarding:
         # Token limitado para onboarding (10 min, sin refresh)
@@ -107,7 +108,8 @@ def login():
             identity=user_id,
             additional_claims={
                 "scope": "onboarding",
-                "username": username
+                "username": username,
+                "roles": []  # Sin roles durante onboarding
             },
             expires_delta=timedelta(minutes=10)
         )
@@ -118,14 +120,16 @@ def login():
             identity=user_id,
             additional_claims={
                 "scope": "full_access",
-                "username": username
+                "username": username,
+                "roles": roles  # Incluir roles en JWT claims
             }
         )
         refresh_token = create_refresh_token(
             identity=user_id,
             additional_claims={
                 "scope": "refresh",
-                "username": username
+                "username": username,
+                "roles": roles  # Incluir roles en refresh token también
             }
         )
     
@@ -369,6 +373,7 @@ def reset_password():
         user_data = result.get("user", {})
         username = user_data.get("usuario")
         requires_onboarding = result.get("requires_onboarding", False)
+        roles = user_data.get("roles", [])  # Obtener roles
         
         # Si el usuario no ha aceptado T&C, debe completar onboarding
         if requires_onboarding:
@@ -377,7 +382,8 @@ def reset_password():
                 identity=str(user_id),
                 additional_claims={
                     "scope": "onboarding",
-                    "username": username
+                    "username": username,
+                    "roles": []  # Sin roles durante onboarding
                 },
                 expires_delta=timedelta(minutes=10)
             )
@@ -388,14 +394,16 @@ def reset_password():
                 identity=str(user_id),
                 additional_claims={
                     "scope": "full_access",
-                    "username": username
+                    "username": username,
+                    "roles": roles  # Incluir roles
                 }
             )
             refresh_token = create_refresh_token(
                 identity=str(user_id),
                 additional_claims={
                     "scope": "refresh",
-                    "username": username
+                    "username": username,
+                    "roles": roles  # Incluir roles
                 }
             )
         
@@ -492,19 +500,22 @@ def complete_onboarding():
         # Generar nuevos tokens con Flask-JWT-Extended
         user_data = result.get("user", {})
         username = user_data.get("usuario")
+        roles = user_data.get("roles", [])  # Obtener roles después de onboarding
         
         access_token = create_access_token(
             identity=str(user_id),
             additional_claims={
                 "scope": "full_access",
-                "username": username
+                "username": username,
+                "roles": roles  # Incluir roles en JWT claims
             }
         )
         refresh_token = create_refresh_token(
             identity=str(user_id),
             additional_claims={
                 "scope": "refresh",
-                "username": username
+                "username": username,
+                "roles": roles  # Incluir roles en refresh token
             }
         )
         
