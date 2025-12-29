@@ -166,3 +166,66 @@ class DetUserRepository:
         finally:
             close_db(conn, cursor)
 
+    def get_user_by_expediente(self, expediente: str):
+        """
+        Busca un usuario por su número de expediente.
+        
+        Args:
+            expediente: Número de expediente
+            
+        Returns:
+            dict | None: Datos del usuario o None si no existe
+        """
+        conn = get_db_connection()
+        if not conn:
+            return None
+        
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT su.id_usuario, su.usuario, su.expediente, su.nombre, su.paterno, su.materno
+                FROM sy_usuarios su
+                WHERE su.expediente = %s
+                LIMIT 1
+            """, (expediente,))
+            return cursor.fetchone()
+        finally:
+            close_db(conn, cursor)
+
+    def create_det_user(self, id_usuario: int, expediente: str, must_change_password: bool, created_by: int) -> bool:
+        """
+        Crea el registro de detalles de usuario (det_usuarios).
+        
+        Args:
+            id_usuario: ID del usuario en sy_usuarios
+            expediente: Número de expediente
+            must_change_password: Si el usuario debe cambiar su password
+            created_by: ID del usuario que crea el registro
+            
+        Returns:
+            True si se creó correctamente
+        """
+        conn = get_db_connection()
+        if not conn:
+            return False
+        
+        cursor = conn.cursor()
+        try:
+            cambiar_clave = 'T' if must_change_password else 'F'
+            
+            cursor.execute("""
+                INSERT INTO det_usuarios 
+                (id_usuario, expediente, terminos_acept, cambiar_clave, intentos_fallidos, usr_alta, fch_alta)
+                VALUES (%s, %s, 'F', %s, 0, %s, NOW())
+            """, (id_usuario, expediente, cambiar_clave, created_by))
+            
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error creating det_user: {e}")
+            conn.rollback()
+            return False
+        finally:
+            close_db(conn, cursor)
+
+

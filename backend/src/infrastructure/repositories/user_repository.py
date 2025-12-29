@@ -105,3 +105,90 @@ class UserRepository:
         finally:
             close_db(conn, cursor)
 
+    def create_user(
+        self,
+        usuario: str,
+        clave: str,
+        nombre: str,
+        paterno: str,
+        materno: str,
+        expediente: str,
+        curp: str,
+        correo: str,
+        created_by: int
+    ) -> int | None:
+        """
+        Crea un nuevo usuario en sy_usuarios.
+        
+        Args:
+            usuario: Nombre de usuario
+            clave: Password hasheado
+            nombre: Nombre(s)
+            paterno: Apellido paterno
+            materno: Apellido materno
+            expediente: Número de expediente
+            curp: CURP
+            correo: Email
+            created_by: ID del usuario que crea el registro
+            
+        Returns:
+            ID del usuario creado o None si falla
+        """
+        conn = get_db_connection()
+        if not conn:
+            return None
+        
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO sy_usuarios 
+                (usuario, clave, nombre, paterno, materno, expediente, curp, correo, est_usuario, usr_alta, fch_alta)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'A', %s, NOW())
+            """, (usuario, clave, nombre, paterno, materno, expediente, curp, correo, created_by))
+            
+            conn.commit()
+            return cursor.lastrowid
+        except Exception as e:
+            print(f"Error creating user: {e}")
+            conn.rollback()
+            return None
+        finally:
+            close_db(conn, cursor)
+
+    def assign_role_to_user(self, user_id: int, role_id: int, is_primary: bool, created_by: int) -> bool:
+        """
+        Asigna un rol a un usuario.
+        
+        Args:
+            user_id: ID del usuario
+            role_id: ID del rol
+            is_primary: Si es el rol primario del usuario
+            created_by: ID del usuario que crea la asignación
+            
+        Returns:
+            True si se asignó correctamente
+        """
+        conn = get_db_connection()
+        if not conn:
+            return False
+        
+        cursor = conn.cursor()
+        try:
+            is_primary_int = 1 if is_primary else 0
+            
+            cursor.execute("""
+                INSERT INTO users_roles 
+                (id_usuario, id_rol, is_primary, est_usr_rol, usr_alta, fch_alta)
+                VALUES (%s, %s, %s, 'A', %s, NOW())
+            """, (user_id, role_id, is_primary_int, created_by))
+            
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error assigning role to user: {e}")
+            conn.rollback()
+            return False
+        finally:
+            close_db(conn, cursor)
+
+
