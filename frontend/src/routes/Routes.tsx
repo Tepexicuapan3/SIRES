@@ -19,6 +19,20 @@ const DashboardPage = lazy(
   () => import("@features/dashboard/components/DashboardPage"),
 );
 
+// Landing Pages por Rol
+const AdminPage = lazy(() => import("@features/admin/components/AdminPage"));
+const ConsultasPage = lazy(
+  () => import("@features/consultas/components/ConsultasPage"),
+);
+
+// Páginas de Administración
+const PermissionsPage = lazy(
+  () => import("@features/admin/components/PermissionsPage"),
+);
+const CreateUserPage = lazy(
+  () => import("@features/admin/components/CreateUserPage"),
+);
+
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -54,6 +68,40 @@ export const router = createBrowserRouter([
       {
         path: "/dashboard",
         element: <DashboardPage />,
+      },
+      // Landing pages por rol
+      {
+        path: "/admin",
+        element: (
+          <ProtectedRoute requiredPermission="*">
+            <AdminPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/consultas",
+        element: (
+          <ProtectedRoute requiredPermission="consultas:read">
+            <ConsultasPage />
+          </ProtectedRoute>
+        ),
+      },
+      // Rutas de Administración
+      {
+        path: "/admin/permisos",
+        element: (
+          <ProtectedRoute requiredPermission="*">
+            <PermissionsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/usuarios/nuevo",
+        element: (
+          <ProtectedRoute requiredPermission="usuarios:create">
+            <CreateUserPage />
+          </ProtectedRoute>
+        ),
       },
     ],
   },
