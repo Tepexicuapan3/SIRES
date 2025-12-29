@@ -212,6 +212,241 @@ Agregar el componente a este README con ejemplos de uso.
 
 ---
 
+### Table
+
+Componente de tabla para listados de datos (roles, permisos, usuarios).
+
+**Instalación:**
+```bash
+npx shadcn@latest add table
+```
+
+**Uso básico:**
+```tsx
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+<Table>
+  <TableCaption>Lista de roles del sistema</TableCaption>
+  <TableHeader>
+    <TableRow>
+      <TableHead>Rol</TableHead>
+      <TableHead>Permisos</TableHead>
+      <TableHead>Usuarios</TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    <TableRow>
+      <TableCell>ROL_ADMIN</TableCell>
+      <TableCell>45</TableCell>
+      <TableCell>3</TableCell>
+    </TableRow>
+  </TableBody>
+</Table>
+```
+
+**Tokens usados:**
+- Bordes: `border-line-struct`
+- Hover: `hover:bg-subtle`
+- Footer: `bg-subtle`
+- Caption: `text-txt-muted`
+
+---
+
+### Dialog
+
+Modal para formularios, confirmaciones y asignación de permisos.
+
+**Instalación:**
+```bash
+npx shadcn@latest add dialog
+```
+
+**Uso básico:**
+```tsx
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+
+<Dialog>
+  <DialogTrigger asChild>
+    <Button>Abrir Modal</Button>
+  </DialogTrigger>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Asignar Permiso</DialogTitle>
+      <DialogDescription>
+        Seleccioná el permiso para este rol
+      </DialogDescription>
+    </DialogHeader>
+    {/* Contenido del formulario */}
+    <DialogFooter>
+      <Button variant="outline">Cancelar</Button>
+      <Button>Confirmar</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+**Tokens usados:**
+- Background: `bg-paper-lift`
+- Overlay: `bg-black/50`
+- Bordes: `border-line-struct`
+- Description: `text-txt-muted`
+- Focus: `focus:ring-brand`
+
+---
+
+### Select
+
+Dropdown para selección de roles y opciones.
+
+**Instalación:**
+```bash
+npx shadcn@latest add select
+```
+
+**Uso básico:**
+```tsx
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+<Select>
+  <SelectTrigger>
+    <SelectValue placeholder="Seleccioná un rol" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="ROL_ADMIN">Administrador</SelectItem>
+    <SelectItem value="ROL_MEDICO">Médico</SelectItem>
+    <SelectItem value="ROL_ENFERMERIA">Enfermería</SelectItem>
+  </SelectContent>
+</Select>
+```
+
+**Tokens usados:**
+- Borde: `border-line-struct`
+- Focus: `focus-visible:ring-brand/50`
+- Placeholder: `text-txt-hint`
+- Dropdown bg: `bg-paper-lift`
+- Item hover: `focus:bg-subtle`
+
+---
+
+### Badge
+
+Tags para mostrar estados, permisos y roles.
+
+**Instalación:**
+```bash
+npx shadcn@latest add badge
+```
+
+**Uso básico:**
+```tsx
+import { Badge } from "@/components/ui/badge";
+
+{/* Variante default (naranja Metro) */}
+<Badge>Activo</Badge>
+
+{/* Estados clínicos */}
+<Badge variant="critical">Bloqueado</Badge>
+<Badge variant="alert">Pendiente</Badge>
+<Badge variant="stable">Aprobado</Badge>
+<Badge variant="info">En Revisión</Badge>
+
+{/* Neutros */}
+<Badge variant="secondary">Inactivo</Badge>
+<Badge variant="outline">Heredado</Badge>
+```
+
+**Variantes disponibles:**
+- `default`: Marca Metro (naranja)
+- `critical`: Errores/alertas críticas
+- `alert`: Advertencias
+- `stable`: Éxito/confirmación
+- `info`: Información
+- `secondary`: Neutro con fondo
+- `outline`: Neutro con borde
+
+**Tokens usados:**
+- Default: `bg-brand`, `text-txt-inverse`
+- Critical: `bg-status-critical/10`, `text-status-critical`
+- Alert: `bg-status-alert/10`, `text-status-alert`
+- Stable: `bg-status-stable/10`, `text-status-stable`
+- Info: `bg-status-info/10`, `text-status-info`
+- Outline: `border-line-struct`
+
+---
+
+### Card
+
+Contenedor para secciones de información (dashboard, estadísticas).
+
+**Instalación:**
+```bash
+npx shadcn@latest add card
+```
+
+**Uso básico:**
+```tsx
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+<Card>
+  <CardHeader>
+    <CardTitle>Roles del Sistema</CardTitle>
+    <CardDescription>
+      Gestioná los roles y permisos
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p className="text-3xl font-bold">8</p>
+  </CardContent>
+  <CardFooter>
+    <Button variant="outline">Ver todos</Button>
+  </CardFooter>
+</Card>
+```
+
+**Tokens usados:**
+- Background: `bg-paper`
+- Bordes: `border-line-struct`
+- Description: `text-txt-muted`
+- Text: `text-txt-body`
+
+---
+
+## Ejemplos Completos
+
+Ver **[RBAC_EXAMPLES.md](./RBAC_EXAMPLES.md)** para ejemplos de uso completos con composiciones reales de estos componentes en páginas RBAC.
+
+---
+
 ## Componentes Recomendados para Instalar
 
 Para un sistema clínico como SIRES, estos componentes son útiles:
