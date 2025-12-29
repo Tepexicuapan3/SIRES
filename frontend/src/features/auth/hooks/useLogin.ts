@@ -63,8 +63,9 @@ export const useLogin = () => {
         description: "Has iniciado sesión correctamente",
       });
 
-      // Redirigir al dashboard
-      navigate("/dashboard");
+      // RBAC 2.0: Redirigir según landing_route del rol
+      const landingRoute = data.user.landing_route || "/dashboard";
+      navigate(landingRoute);
     },
 
     onError: (error: AxiosError<LoginError> | Error) => {

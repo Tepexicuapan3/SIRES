@@ -20,9 +20,13 @@ export interface Usuario {
   curp: string;
   correo: string;
   ing_perfil: string;
-  roles: string[]; // ['ROL', 'PERS', 'CC']
-  permisos?: string[]; // Opcional: permisos específicos`
+  roles: string[]; // ['ADMINISTRADOR', 'MEDICOS', etc.]
+  permisos?: string[]; // DEPRECATED - usar 'permissions'
   must_change_password: boolean;
+  // ===== RBAC 2.0 - Nuevos campos =====
+  permissions: string[]; // Permisos efectivos: ["expedientes:read", ...] o ["*"] para admin
+  landing_route: string; // Ruta post-login: "/admin", "/consultas", etc.
+  is_admin: boolean; // Flag de administrador (bypass de permisos)
 }
 
 /**
