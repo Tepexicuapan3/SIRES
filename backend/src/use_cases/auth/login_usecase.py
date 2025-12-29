@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash
 from src.infrastructure.audit.access_log_repository import AccessLogRepository
 from src.infrastructure.repositories.det_user_repository import DetUserRepository
 from src.infrastructure.repositories.user_repository import UserRepository
+from src.infrastructure.authorization.authorization_service import authorization_service
 
 
 class LoginUseCase:
@@ -83,6 +84,17 @@ class LoginUseCase:
         # Obtener roles (vacío si requiere onboarding)
         roles = [] if requires_onboarding else self.user_repo.get_user_roles(user["id_usuario"])
 
+        # Obtener permisos y landing route (solo si NO requiere onboarding)
+        permissions = []
+        landing_route = "/dashboard"  # default
+        is_admin = False
+        
+        if not requires_onboarding:
+            auth_data = authorization_service.get_user_permissions(user["id_usuario"])
+            permissions = auth_data.get("permissions", [])
+            landing_route = auth_data.get("landing_route", "/dashboard")
+            is_admin = auth_data.get("is_admin", False)
+
         user_data = {
             "id_usuario": user["id_usuario"],
             "usuario": user["usuario"],
@@ -95,6 +107,9 @@ class LoginUseCase:
             "correo": user.get("correo", ""),
             "ing_perfil": "Nuevo Usuario" if requires_onboarding else "Usuario",
             "roles": roles,
+            "permissions": permissions,
+            "landing_route": landing_route,
+            "is_admin": is_admin,
             "must_change_password": requires_onboarding,
         }
 
