@@ -8,13 +8,21 @@ import {
   Loader2,
   MousePointerClick,
   Palette, // Icono para la sección de botones
+  Shield, // Icono para RBAC
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useLogout } from "../../auth/hooks/useLogout";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@features/auth/hooks/usePermissions";
+import { PermissionGate } from "@/components/shared/PermissionGate";
+import { useAuthStore } from "@/store/authStore";
 
 export const DashboardPage = () => {
   const { mutate: logout, isPending } = useLogout();
+  const { hasPermission, isAdmin, permissions } = usePermissions();
+  const user = useAuthStore((state) => state.user);
 
   const handlePromise = (shouldFail = false) => {
     const promise = () =>
@@ -315,6 +323,161 @@ export const DashboardPage = () => {
               , etc.) y NO colores hardcodeados. Se adaptan automáticamente al
               tema dark/light.
             </p>
+          </div>
+        </div>
+
+        {/* === SECCIÓN RBAC 2.0 === */}
+        <div className="mt-8 bg-paper border border-line-struct rounded-xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-brand/10 rounded-lg text-brand">
+              <Shield size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-txt-body">
+                RBAC 2.0 - Sistema de Permisos
+              </h2>
+              <p className="text-sm text-txt-muted">
+                Control de acceso basado en roles y permisos granulares
+              </p>
+            </div>
+          </div>
+
+          {/* Info del usuario */}
+          <div className="mb-6 p-4 bg-subtle rounded-lg border border-line-hairline">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="text-txt-muted">Usuario:</span>
+                <p className="font-medium text-txt-body">
+                  {user?.nombre_completo}
+                </p>
+              </div>
+              <div>
+                <span className="text-txt-muted">Roles:</span>
+                <p className="font-medium text-txt-body">
+                  {user?.roles.join(", ")}
+                </p>
+              </div>
+              <div>
+                <span className="text-txt-muted">Admin:</span>
+                <p className="font-medium text-txt-body">
+                  {isAdmin() ? (
+                    <span className="text-status-stable">✓ Sí</span>
+                  ) : (
+                    <span className="text-txt-muted">✗ No</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-line-hairline">
+              <span className="text-txt-muted text-xs">
+                Permisos ({permissions.length}):
+              </span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {permissions.slice(0, 10).map((perm) => (
+                  <code
+                    key={perm}
+                    className="px-2 py-1 bg-paper text-xs rounded font-mono text-brand border border-line-hairline"
+                  >
+                    {perm}
+                  </code>
+                ))}
+                {permissions.length > 10 && (
+                  <span className="text-xs text-txt-muted self-center">
+                    +{permissions.length - 10} más
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Ejemplos de PermissionGate */}
+          <div className="space-y-6">
+            <div>
+              <p className="text-sm font-medium text-txt-body mb-3">
+                Ejemplo 1: Mostrar botón solo si tiene permiso
+              </p>
+              <div className="flex gap-3">
+                <PermissionGate permission="expedientes:create">
+                  <Button variant="default">
+                    <Check className="mr-2 h-4 w-4" />
+                    Crear Expediente
+                  </Button>
+                </PermissionGate>
+
+                <PermissionGate
+                  permission="expedientes:create"
+                  fallback={
+                    <Button variant="outline" disabled>
+                      <Lock className="mr-2 h-4 w-4" />
+                      Sin permiso
+                    </Button>
+                  }
+                >
+                  <Button variant="outline">
+                    <Unlock className="mr-2 h-4 w-4" />
+                    Con permiso
+                  </Button>
+                </PermissionGate>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-txt-body mb-3">
+                Ejemplo 2: Hook programático
+              </p>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    toast.info(
+                      hasPermission("usuarios:delete")
+                        ? "Tienes permiso para eliminar usuarios"
+                        : "No tienes permiso para eliminar usuarios",
+                    )
+                  }
+                >
+                  Verificar: usuarios:delete
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    toast.info(
+                      hasPermission("consultas:create")
+                        ? "Tienes permiso para crear consultas"
+                        : "No tienes permiso para crear consultas",
+                    )
+                  }
+                >
+                  Verificar: consultas:create
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-txt-body mb-3">
+                Ejemplo 3: Solo admins
+              </p>
+              <PermissionGate
+                requireAdmin
+                fallback={
+                  <div className="p-4 bg-status-alert/10 border border-status-alert/30 rounded-lg">
+                    <p className="text-sm text-txt-muted">
+                      🔒 Esta sección solo es visible para administradores
+                    </p>
+                  </div>
+                }
+              >
+                <div className="p-4 bg-status-stable/10 border border-status-stable/30 rounded-lg">
+                  <p className="text-sm text-txt-body font-medium">
+                    ✓ Panel de Administración
+                  </p>
+                  <p className="text-xs text-txt-muted mt-1">
+                    Sos admin, podés ver esto
+                  </p>
+                </div>
+              </PermissionGate>
+            </div>
           </div>
         </div>
       </div>
