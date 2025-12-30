@@ -1,16 +1,16 @@
 /**
  * ============================================
- * HEADER COMPONENT - Barra superior
+ * HEADER COMPONENT - DEPRECADO
  * ============================================
  *
- * Header minimalista con:
- * - Trigger del sidebar (mobile/desktop)
- * - Breadcrumb/título de la página actual
- * - (Opcional) acciones rápidas
+ * @deprecated Este componente está deprecado.
+ * La funcionalidad de header ahora vive en MainLayout.tsx
+ * con sidebar-08 integrado.
+ *
+ * TODO: Eliminar este archivo después de confirmar que no se usa.
  */
 
 import { useLocation } from "react-router-dom";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 
 /**
  * Mapeo de rutas a títulos legibles
@@ -33,26 +33,18 @@ const usePageTitle = () => {
 };
 
 /**
- * Componente Header
+ * Componente Header (DEPRECADO)
  */
 export const Header = () => {
   const pageTitle = usePageTitle();
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-line-hairline bg-paper px-4 sm:px-6">
-      {/* Trigger para mobile/desktop */}
-      <SidebarTrigger />
-
       {/* Título de la página */}
       <div className="flex-1">
         <h1 className="text-lg font-semibold text-txt-body sm:text-xl">
           {pageTitle}
         </h1>
-      </div>
-
-      {/* Espacio para acciones futuras (notificaciones, búsqueda, etc.) */}
-      <div className="flex items-center gap-2">
-        {/* Aquí pueden ir botones de acciones rápidas */}
       </div>
     </header>
   );

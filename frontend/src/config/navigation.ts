@@ -7,6 +7,9 @@
  * - Submenús colapsibles
  * - Navegación secundaria
  * - Filtrado dinámico por permisos
+ *
+ * NOTA: Los tipos NavMainItem y NavSecondaryItem se definirán
+ * cuando instalemos sidebar-08 oficial.
  */
 
 import {
@@ -16,10 +19,30 @@ import {
   Shield,
   HelpCircle,
   Settings,
+  type LucideIcon,
 } from "lucide-react";
 
-import type { NavMainItem } from "@/components/layouts/nav-main";
-import type { NavSecondaryItem } from "@/components/layouts/nav-secondary";
+/**
+ * TIPOS TEMPORALES (serán reemplazados por los oficiales de sidebar-08)
+ */
+export interface NavMainItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  permission?: string;
+  items?: {
+    title: string;
+    url: string;
+    permission?: string;
+  }[];
+}
+
+export interface NavSecondaryItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  permission?: string;
+}
 
 /**
  * Navegación principal (con submenús)
