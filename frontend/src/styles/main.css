@@ -17,16 +17,17 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Reseteo opcional para evitar el flash blanco en dark mode al cargar */
+html {
+  background-color: var(--bg-app);
+  color: var(--text-body);
+}
+
 @layer base {
   * {
-    border-color: var(--border);
-    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
-  }
-  html {
-    background-color: var(--bg-app);
-    color: var(--text-body);
+    border-color: var(--border-struct);
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-app text-txt-body;
   }
 }
