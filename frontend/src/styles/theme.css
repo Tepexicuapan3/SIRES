@@ -251,8 +251,8 @@
   --sidebar-primary: var(--metro-orange-500);
   --sidebar-primary-foreground: var(--text-on-brand);
 
-  /* Sidebar: Estados hover/focus */
-  --sidebar-accent: var(--bg-subtle);
+  /* Sidebar: Estados hover/focus - más visible en light mode */
+  --sidebar-accent: #e2e8f0;
   --sidebar-accent-foreground: var(--text-body);
 
   /* Sidebar: Bordes y divisores */
@@ -261,7 +261,8 @@
   /* Sidebar: Ring para focus-visible */
   --sidebar-ring: var(--metro-orange-500);
 
-  /* Sidebar: Ancho (sin importar modo) */
+  /* Sidebar: Ancho (sin importar modo) 
+     17rem = 272px - equilibrio entre espacio y legibilidad */
   --sidebar-width: 16rem;
   --sidebar-width-icon: 3rem;
   --sidebar-width-mobile: 18rem;

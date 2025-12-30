@@ -6,13 +6,15 @@ import { useAuthStore } from "@store/authStore";
 
 /**
  * Hook para manejar el logout de usuario
+ *
+ * Usa toast.promise para mostrar estado de carga durante el logout
  */
 export const useLogout = () => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
   const queryClient = useQueryClient();
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: () => authAPI.logout(),
 
     onSuccess: () => {
@@ -22,11 +24,6 @@ export const useLogout = () => {
 
       // Limpiar store
       logout();
-
-      // Mostrar mensaje
-      toast.info("Sesión cerrada", {
-        description: "Has cerrado sesión correctamente",
-      });
 
       // Redirigir a login
       navigate("/login");
@@ -44,4 +41,21 @@ export const useLogout = () => {
       }
     },
   });
+
+  /**
+   * Ejecuta el logout con notificación de progreso
+   * Muestra toast de carga → éxito/error automáticamente
+   */
+  const logoutWithToast = () => {
+    toast.promise(mutation.mutateAsync(), {
+      loading: "Cerrando sesión...",
+      success: "Sesión cerrada correctamente",
+      error: "Error al cerrar sesión",
+    });
+  };
+
+  return {
+    ...mutation,
+    logoutWithToast,
+  };
 };

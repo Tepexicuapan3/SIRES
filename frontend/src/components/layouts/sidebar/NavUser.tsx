@@ -70,7 +70,7 @@ export function NavUser() {
   const { isMobile } = useSidebar();
   const { user } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
-  const { mutate: logout } = useLogout();
+  const { logoutWithToast } = useLogout();
 
   if (!user) return null;
 
@@ -163,7 +163,7 @@ export function NavUser() {
             </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => logout()}
+              onClick={() => logoutWithToast()}
               className="text-status-critical cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />

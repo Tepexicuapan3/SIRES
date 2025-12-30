@@ -74,7 +74,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "focus:bg-subtle focus:text-txt-body hover:bg-subtle data-[variant=destructive]:text-status-critical data-[variant=destructive]:focus:bg-status-critical/10 dark:data-[variant=destructive]:focus:bg-status-critical/20 data-[variant=destructive]:focus:text-status-critical data-[variant=destructive]:*:[svg]:!text-status-critical [&_svg:not([class*='text-'])]:text-txt-muted relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none transition-colors duration-150 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-[#e2e8f0] dark:focus:bg-subtle focus:text-txt-body hover:bg-[#e2e8f0] dark:hover:bg-subtle data-[variant=destructive]:text-status-critical data-[variant=destructive]:focus:bg-status-critical/10 dark:data-[variant=destructive]:focus:bg-status-critical/20 data-[variant=destructive]:focus:text-status-critical data-[variant=destructive]:*:[svg]:!text-status-critical [&_svg:not([class*='text-'])]:text-txt-muted relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none transition-colors duration-150 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
@@ -92,7 +92,7 @@ function DropdownMenuCheckboxItem({
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-[#e2e8f0] dark:focus:bg-subtle focus:text-txt-body hover:bg-[#e2e8f0] dark:hover:bg-subtle relative flex cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 pl-8 text-sm outline-hidden select-none transition-colors duration-150 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       checked={checked}
@@ -128,7 +128,7 @@ function DropdownMenuRadioItem({
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-[#e2e8f0] dark:focus:bg-subtle focus:text-txt-body hover:bg-[#e2e8f0] dark:hover:bg-subtle relative flex cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 pl-8 text-sm outline-hidden select-none transition-colors duration-150 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
@@ -211,7 +211,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "focus:bg-subtle focus:text-txt-body hover:bg-subtle data-[state=open]:bg-subtle data-[state=open]:text-txt-body [&_svg:not([class*='text-'])]:text-txt-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none transition-colors duration-150 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-[#e2e8f0] dark:focus:bg-subtle focus:text-txt-body hover:bg-[#e2e8f0] dark:hover:bg-subtle data-[state=open]:bg-[#e2e8f0] dark:data-[state=open]:bg-subtle data-[state=open]:text-txt-body [&_svg:not([class*='text-'])]:text-txt-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none transition-colors duration-150 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}

@@ -20,7 +20,7 @@ import { PermissionGate } from "@/components/shared/PermissionGate";
 import { useAuthStore } from "@/store/authStore";
 
 export const DashboardPage = () => {
-  const { mutate: logout, isPending } = useLogout();
+  const { logoutWithToast, isPending } = useLogout();
   const { hasPermission, isAdmin, permissions } = usePermissions();
   const user = useAuthStore((state) => state.user);
 
@@ -55,7 +55,7 @@ export const DashboardPage = () => {
           </div>
 
           <button
-            onClick={() => logout()}
+            onClick={() => logoutWithToast()}
             disabled={isPending}
             className="flex items-center gap-2 px-4 py-2.5 bg-paper border border-line-struct rounded-lg text-status-critical font-medium hover:bg-status-critical/10 transition-all active:scale-95 disabled:opacity-50"
           >
