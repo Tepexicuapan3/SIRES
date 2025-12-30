@@ -74,6 +74,7 @@ const createRateLimitError = (
 
 /**
  * Genera un usuario mock con datos completos
+ * Incluye campos RBAC 2.0: permissions, landing_route, is_admin
  */
 const createMockUser = (overrides: Partial<Usuario> = {}): Usuario => ({
   id_usuario: 1,
@@ -88,6 +89,10 @@ const createMockUser = (overrides: Partial<Usuario> = {}): Usuario => ({
   ing_perfil: "Administrador",
   roles: ["ADMIN", "ROL_MEDICO"],
   must_change_password: false,
+  // ===== RBAC 2.0 - Campos obligatorios =====
+  permissions: ["*"], // Admin tiene wildcard (todos los permisos)
+  landing_route: "/admin", // Admins van a panel de administración
+  is_admin: true, // Flag de bypass de permisos
   ...overrides,
 });
 
@@ -104,27 +109,28 @@ const createLoginResponse = (user: Usuario): LoginResponse => ({
 // TABLA DE USUARIOS DE PRUEBA
 // ==============================================================
 /**
- * USUARIOS DE PRUEBA DISPONIBLES:
+ * USUARIOS DE PRUEBA DISPONIBLES (RBAC 2.0):
  *
- * | Usuario        | Contraseña | Resultado                              |
- * |----------------|------------|----------------------------------------|
- * | admin          | cualquiera | ✅ Login exitoso (rol ADMIN)           |
- * | medico         | cualquiera | ✅ Login exitoso (rol MEDICO)          |
- * | enfermero      | cualquiera | ✅ Login exitoso (rol ENFERMERO)       |
- * | nuevo          | cualquiera | ✅ Login + Onboarding requerido        |
- * | inactivo       | cualquiera | ❌ 403 USER_INACTIVE                   |
- * | noexiste       | cualquiera | ❌ 404 USER_NOT_FOUND                  |
- * | error          | cualquiera | ❌ 401 INVALID_CREDENTIALS             |
- * | cualquiera     | mal        | ❌ 401 INVALID_CREDENTIALS             |
- * | fail           | cualquiera | ❌ 500 INTERNAL_SERVER_ERROR           |
- * | bloqueado      | cualquiera | ❌ 423 USER_LOCKED (5 min)             |
- * | bloqueado1h    | cualquiera | ❌ 423 USER_LOCKED (1 hora)            |
- * | bloqueado24h   | cualquiera | ❌ 423 USER_LOCKED (24 horas)          |
- * | ratelimit      | cualquiera | ❌ 429 TOO_MANY_REQUESTS (1 min)       |
- * | ratelimit5     | cualquiera | ❌ 429 TOO_MANY_REQUESTS (5 min)       |
- * | ipblock        | cualquiera | ❌ 403 IP_BLOCKED (15 min)             |
- * | ipblock1h      | cualquiera | ❌ 403 IP_BLOCKED (1 hora)             |
- * | ipblock24h     | cualquiera | ❌ 403 IP_BLOCKED (24 horas)           |
+ * | Usuario        | Contraseña | Rol         | Permisos                                    | Landing       | Resultado                              |
+ * |----------------|------------|-------------|---------------------------------------------|---------------|----------------------------------------|
+ * | admin          | cualquiera | ADMIN       | ["*"] (wildcard)                            | /admin        | ✅ Login exitoso (acceso total)        |
+ * | medico         | cualquiera | ROL_MEDICO  | expedientes:*, consultas:*, pacientes:read  | /consultas    | ✅ Login exitoso (acceso médico)       |
+ * | enfermero      | cualquiera | ROL_ENFERMERO| expedientes:read, consultas:create/update   | /dashboard    | ✅ Login exitoso (acceso enfermería)   |
+ * | usuario        | cualquiera | ROL_USUARIO | expedientes:read, consultas:read            | /dashboard    | ✅ Login exitoso (solo lectura)        |
+ * | nuevo          | cualquiera | (ninguno)   | []                                          | /onboarding   | ✅ Login + Onboarding requerido        |
+ * | inactivo       | cualquiera | -           | -                                           | -             | ❌ 403 USER_INACTIVE                   |
+ * | noexiste       | cualquiera | -           | -                                           | -             | ❌ 404 USER_NOT_FOUND                  |
+ * | error          | cualquiera | -           | -                                           | -             | ❌ 401 INVALID_CREDENTIALS             |
+ * | cualquiera     | mal        | -           | -                                           | -             | ❌ 401 INVALID_CREDENTIALS             |
+ * | fail           | cualquiera | -           | -                                           | -             | ❌ 500 INTERNAL_SERVER_ERROR           |
+ * | bloqueado      | cualquiera | -           | -                                           | -             | ❌ 423 USER_LOCKED (5 min)             |
+ * | bloqueado1h    | cualquiera | -           | -                                           | -             | ❌ 423 USER_LOCKED (1 hora)            |
+ * | bloqueado24h   | cualquiera | -           | -                                           | -             | ❌ 423 USER_LOCKED (24 horas)          |
+ * | ratelimit      | cualquiera | -           | -                                           | -             | ❌ 429 TOO_MANY_REQUESTS (1 min)       |
+ * | ratelimit5     | cualquiera | -           | -                                           | -             | ❌ 429 TOO_MANY_REQUESTS (5 min)       |
+ * | ipblock        | cualquiera | -           | -                                           | -             | ❌ 403 IP_BLOCKED (15 min)             |
+ * | ipblock1h      | cualquiera | -           | -                                           | -             | ❌ 403 IP_BLOCKED (1 hora)             |
+ * | ipblock24h     | cualquiera | -           | -                                           | -             | ❌ 403 IP_BLOCKED (24 horas)           |
  *
  * CONTRASEÑAS DE PRUEBA PARA ONBOARDING Y RESET PASSWORD:
  * (Aplica tanto para onboarding como para recovery)
@@ -299,6 +305,10 @@ export const authMocks: IAuthAPI = {
         ing_perfil: "Nuevo Usuario",
         roles: [], // Sin roles hasta completar onboarding
         must_change_password: true,
+        // RBAC 2.0: Sin permisos hasta onboarding
+        permissions: [],
+        landing_route: "/onboarding",
+        is_admin: false,
       };
 
       // Respuesta especial para onboarding
@@ -309,7 +319,7 @@ export const authMocks: IAuthAPI = {
       };
     }
 
-    // Médico
+    // Médico - Permisos completos sobre expedientes y consultas
     if (username === "medico") {
       return createLoginResponse(
         createMockUser({
@@ -322,11 +332,25 @@ export const authMocks: IAuthAPI = {
           expediente: "MED001",
           ing_perfil: "Médico General",
           roles: ["ROL_MEDICO"],
+          // RBAC 2.0: Permisos de médico
+          permissions: [
+            "expedientes:create",
+            "expedientes:read",
+            "expedientes:update",
+            "expedientes:delete",
+            "consultas:create",
+            "consultas:read",
+            "consultas:update",
+            "pacientes:read",
+            "pacientes:update",
+          ],
+          landing_route: "/consultas",
+          is_admin: false,
         }),
       );
     }
 
-    // Enfermero
+    // Enfermero - Permisos limitados (lectura expedientes, edición consultas)
     if (username === "enfermero") {
       return createLoginResponse(
         createMockUser({
@@ -339,6 +363,37 @@ export const authMocks: IAuthAPI = {
           expediente: "ENF001",
           ing_perfil: "Enfermero",
           roles: ["ROL_ENFERMERO"],
+          // RBAC 2.0: Permisos de enfermería
+          permissions: [
+            "expedientes:read",
+            "consultas:create",
+            "consultas:read",
+            "consultas:update",
+            "pacientes:read",
+          ],
+          landing_route: "/dashboard",
+          is_admin: false,
+        }),
+      );
+    }
+
+    // Usuario genérico - Solo lectura
+    if (username === "usuario") {
+      return createLoginResponse(
+        createMockUser({
+          id_usuario: 4,
+          usuario: "usuario",
+          nombre: "Pedro",
+          paterno: "Martínez",
+          materno: "Torres",
+          nombre_completo: "Pedro Martínez Torres",
+          expediente: "USR001",
+          ing_perfil: "Usuario General",
+          roles: ["ROL_USUARIO"],
+          // RBAC 2.0: Solo lectura
+          permissions: ["expedientes:read", "consultas:read", "pacientes:read"],
+          landing_route: "/dashboard",
+          is_admin: false,
         }),
       );
     }
@@ -434,6 +489,17 @@ export const authMocks: IAuthAPI = {
         ing_perfil: "Médico",
         roles: ["ROL_MEDICO"],
         must_change_password: false,
+        // RBAC 2.0: Permisos asignados después de onboarding
+        permissions: [
+          "expedientes:create",
+          "expedientes:read",
+          "expedientes:update",
+          "consultas:create",
+          "consultas:read",
+          "pacientes:read",
+        ],
+        landing_route: "/consultas",
+        is_admin: false,
       }),
     );
   },
@@ -608,6 +674,15 @@ export const authMocks: IAuthAPI = {
         ing_perfil: "Usuario",
         roles: ["ROL_MEDICO"],
         must_change_password: false,
+        // RBAC 2.0: Permisos restaurados después de recovery
+        permissions: [
+          "expedientes:read",
+          "consultas:create",
+          "consultas:read",
+          "pacientes:read",
+        ],
+        landing_route: "/consultas",
+        is_admin: false,
       }),
     );
   },
