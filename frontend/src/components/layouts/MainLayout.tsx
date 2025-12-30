@@ -15,6 +15,7 @@ import { Suspense } from "react";
 
 import { NavigationProgressBar } from "@/components/shared/NavigationProgressBar";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { SkipToContent } from "@/components/shared/SkipToContent";
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -61,6 +62,9 @@ export const MainLayout = () => {
 
   return (
     <SidebarProvider>
+      {/* Skip link para accesibilidad de teclado */}
+      <SkipToContent />
+
       {/* Barra de progreso invisible que se activa al navegar */}
       <NavigationProgressBar />
 
@@ -69,9 +73,15 @@ export const MainLayout = () => {
 
       {/* Main Content Area - usa SidebarInset para el spacing correcto */}
       <SidebarInset>
-        {/* Header con trigger del sidebar + breadcrumbs */}
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-line-hairline px-4">
-          <SidebarTrigger className="-ml-1" />
+        {/* Header con trigger del sidebar + breadcrumbs - Sticky para acceso rápido */}
+        <header
+          role="banner"
+          className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-line-hairline bg-app/95 backdrop-blur-sm px-4"
+        >
+          <SidebarTrigger
+            className="-ml-1"
+            aria-label="Abrir/cerrar menú de navegación"
+          />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb>
             <BreadcrumbList>
@@ -82,7 +92,9 @@ export const MainLayout = () => {
                   <span key={crumb.path} className="flex items-center gap-2">
                     <BreadcrumbItem>
                       {isLast ? (
-                        <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                        <BreadcrumbPage aria-current="page">
+                          {crumb.label}
+                        </BreadcrumbPage>
                       ) : (
                         <BreadcrumbLink asChild>
                           <Link to={crumb.path}>{crumb.label}</Link>
@@ -98,11 +110,16 @@ export const MainLayout = () => {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6">
+        <main
+          id="main-content"
+          role="main"
+          className="flex-1 overflow-auto p-4 sm:p-6"
+          data-main-content
+        >
           <Suspense fallback={<LoadingSpinner fullScreen={false} />}>
             <Outlet />
           </Suspense>
-        </div>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

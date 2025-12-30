@@ -42,9 +42,9 @@
 
     /* --- Superficies (Backgrounds) --- */
     --bg-app: #f3f4f6; /* El fondo gris pálido detrás de todo el sistema */
-    --bg-paper: #ffffff; /* El "papel" de un expediente clínico (tarjetas) */
-    --bg-paper-lift: #ffffff; /* Elementos flotantes (modales, dropdowns) */
-    --bg-subtle: #f8fafc; /* Áreas secundarias dentro de una tarjeta (ej. footer) */
+    --bg-paper: #ffffff; /* El "papel" de un expediente clínico (tarjetas, sidebar) */
+    --bg-paper-lift: #ffffff; /* Dropdowns/modales - blanco puro, se diferencia por sombra */
+    --bg-subtle: #f1f5f9; /* Áreas secundarias, hovers (slate-100) */
 
     /* --- Texto y Legibilidad --- */
     --text-body: #111827; /* Casi negro, para lectura prolongada sin cansar */
@@ -121,9 +121,9 @@
   :root.dark {
     /* Ajuste de superficies para reducir fatiga visual */
     --bg-app: #0f172a; /* Azul noche profundo */
-    --bg-paper: #1e293b; /* Pizarra oscura */
-    --bg-paper-lift: #334155; /* Pizarra más clara para modales */
-    --bg-subtle: #1e293b;
+    --bg-paper: #1e293b; /* Pizarra oscura (sidebar, cards) */
+    --bg-paper-lift: #243244; /* Dropdowns/modales - sutilmente más claro que paper */
+    --bg-subtle: #2d3a4d; /* Hover visible en dark mode */
 
     /* Textos invertidos */
     --text-body: #f8fafc; /* Blanco humo */
@@ -262,7 +262,7 @@
   --sidebar-ring: var(--metro-orange-500);
 
   /* Sidebar: Ancho (sin importar modo) 
-     17rem = 272px - equilibrio entre espacio y legibilidad */
+     16rem = 256px - compacto pero legible */
   --sidebar-width: 16rem;
   --sidebar-width-icon: 3rem;
   --sidebar-width-mobile: 18rem;

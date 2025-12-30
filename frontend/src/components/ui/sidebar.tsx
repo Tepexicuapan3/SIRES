@@ -5,6 +5,7 @@ import { PanelLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_WIDTH = "16rem";
@@ -180,10 +181,12 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+            // Width fijo de 16rem
+            "flex h-full w-[16rem] flex-col bg-sidebar text-sidebar-foreground",
             className,
           )}
           ref={combinedRef}
+          role="navigation"
           {...props}
         >
           {children}
@@ -199,11 +202,13 @@ const Sidebar = React.forwardRef<
             openMobile ? "opacity-100" : "pointer-events-none opacity-0",
           )}
           onClick={() => setOpenMobile(false)}
+          aria-hidden={!openMobile}
         >
           <div
             ref={combinedRef}
             className={cn(
-              "fixed inset-y-0 z-50 flex h-full w-[--sidebar-width-mobile] flex-col bg-sidebar text-sidebar-foreground transition-transform",
+              // Width fijo de 18rem para mobile
+              "fixed inset-y-0 z-50 flex h-full w-[18rem] flex-col bg-sidebar text-sidebar-foreground transition-transform",
               side === "left" ? "left-0" : "right-0",
               openMobile
                 ? "translate-x-0"
@@ -213,6 +218,7 @@ const Sidebar = React.forwardRef<
               className,
             )}
             onClick={(e) => e.stopPropagation()}
+            role="navigation"
             {...props}
           >
             {children}
@@ -225,7 +231,8 @@ const Sidebar = React.forwardRef<
       <div
         ref={combinedRef}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground md:flex",
+          // Width fijo de 16rem (256px)
+          "fixed inset-y-0 z-10 hidden h-svh w-[16rem] flex-col bg-sidebar text-sidebar-foreground md:flex",
           // Animación suave con easing para entrada/salida
           "transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
           side === "left"
@@ -240,6 +247,7 @@ const Sidebar = React.forwardRef<
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
+        role="navigation"
         {...props}
       >
         {children}
@@ -323,17 +331,21 @@ SidebarSeparator.displayName = "SidebarSeparator";
 const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
->(({ className, ...props }, ref) => {
+>(({ className, children, ...props }, ref) => {
   return (
     <div
       ref={ref}
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex min-h-0 flex-1 flex-col gap-2 group-data-[collapsible=icon]:overflow-hidden",
         className,
       )}
       {...props}
-    />
+    >
+      <ScrollArea className="flex-1 px-2">
+        <div className="flex flex-col gap-2">{children}</div>
+      </ScrollArea>
+    </div>
   );
 });
 SidebarContent.displayName = "SidebarContent";

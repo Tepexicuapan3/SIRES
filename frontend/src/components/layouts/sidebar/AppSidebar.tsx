@@ -29,20 +29,42 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { sections, secondaryItems, isEmpty } = useNavigation();
 
   return (
-    <Sidebar variant="inset" collapsible="offcanvas" {...props}>
+    <Sidebar
+      variant="inset"
+      collapsible="offcanvas"
+      {...props}
+      aria-label="Menú de navegación principal"
+    >
       {/* ===== HEADER: Logo SIRES ===== */}
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 pt-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-app">
-            <img
-              src="/icons/metro-logo-borde.svg"
-              alt="SIRES Logo"
-              className="h-7 w-7"
-            />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-paper">
+            <svg
+              viewBox="0 0 100 100"
+              className="h-7 w-7 text-txt-body"
+              fill="currentColor"
+              role="img"
+              aria-label="Logo Metro CDMX"
+            >
+              <title>Logo Metro CDMX</title>
+              {/* Logo Metro CDMX - M estilizada con círculo */}
+              <circle
+                cx="50"
+                cy="50"
+                r="48"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                d="M25 70 L25 35 L50 55 L75 35 L75 70 L65 70 L65 50 L50 65 L35 50 L35 70 Z"
+                fill="currentColor"
+              />
+            </svg>
           </div>
           <div className="flex flex-col">
             <span className="text-xs font-display text-txt-body">SIRES</span>
-            <span className="text-xs text-txt-body">STC Metro CDMX</span>
+            <span className="text-xs text-txt-muted">STC Metro CDMX</span>
           </div>
         </div>
       </SidebarHeader>
