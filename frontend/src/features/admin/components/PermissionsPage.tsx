@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { Key, Shield, Plus, Trash2, Check, X } from "lucide-react";
+import { Key, Shield, Plus, Trash2, Check } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -87,8 +87,8 @@ export const PermissionsPage = () => {
     setSelectedPermission("");
   };
 
-  const handleRevokePermission = (roleId: number, permissionCode: string) => {
-    // Aquí iría la llamada a la API
+  const handleRevokePermission = (_roleId: number, permissionCode: string) => {
+    // TODO: Aquí iría la llamada a la API usando _roleId
     toast.success("Permiso revocado", {
       description: `${permissionCode} eliminado del rol`,
     });

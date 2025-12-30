@@ -11,7 +11,6 @@ import {
   Mail,
   User as UserIcon,
   IdCard,
-  Phone,
 } from "lucide-react";
 import {
   Card,
