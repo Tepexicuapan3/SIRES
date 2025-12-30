@@ -18,6 +18,7 @@ import {
   Moon,
   Sun,
   Monitor,
+  Check,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -83,11 +84,14 @@ export function NavUser() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="group data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={undefined} alt={user.usuario} />
-                <AvatarFallback className="rounded-lg bg-app text-brand font-semibold">
+                <AvatarImage src="" alt="" />
+                <AvatarFallback
+                  className="rounded-lg bg-app text-brand font-semibold"
+                  aria-label={`Usuario ${user.usuario}`}
+                >
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
@@ -97,7 +101,7 @@ export function NavUser() {
                   {user.roles?.[0] || "Usuario"}
                 </span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -109,8 +113,11 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={undefined} alt={user.usuario} />
-                  <AvatarFallback className="rounded-lg bg-app text-brand font-semibold">
+                  <AvatarImage src="" alt="" />
+                  <AvatarFallback
+                    className="rounded-lg bg-app text-brand font-semibold"
+                    aria-label={`Usuario ${user.usuario}`}
+                  >
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
@@ -150,14 +157,23 @@ export function NavUser() {
                 <DropdownMenuItem onClick={() => setTheme("light")}>
                   <Sun className="mr-2 h-4 w-4" />
                   Claro
+                  {theme === "light" && (
+                    <Check className="ml-auto h-4 w-4 text-brand" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setTheme("dark")}>
                   <Moon className="mr-2 h-4 w-4" />
                   Oscuro
+                  {theme === "dark" && (
+                    <Check className="ml-auto h-4 w-4 text-brand" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setTheme("system")}>
                   <Monitor className="mr-2 h-4 w-4" />
                   Sistema
+                  {theme === "system" && (
+                    <Check className="ml-auto h-4 w-4 text-brand" />
+                  )}
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>

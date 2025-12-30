@@ -42,7 +42,22 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "bg-paper text-txt-body border-line-struct data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-lg",
+          // Fondo diferenciado del sidebar (paper-lift es más claro)
+          "bg-paper-lift text-txt-body",
+          // Borde sutil pero visible
+          "border border-line-struct",
+          // Sombra prominente para efecto flotante
+          "shadow-xl shadow-black/10 dark:shadow-black/30",
+          // Animaciones
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
+          "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          // Layout
+          "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem]",
+          "origin-(--radix-dropdown-menu-content-transform-origin)",
+          "overflow-x-hidden overflow-y-auto rounded-lg p-1.5",
           className,
         )}
         {...props}
@@ -211,13 +226,22 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "focus:bg-[#e2e8f0] dark:focus:bg-subtle focus:text-txt-body hover:bg-[#e2e8f0] dark:hover:bg-subtle data-[state=open]:bg-[#e2e8f0] dark:data-[state=open]:bg-subtle data-[state=open]:text-txt-body [&_svg:not([class*='text-'])]:text-txt-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none transition-colors duration-150 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        // Hover y focus states
+        "focus:bg-[#e2e8f0] dark:focus:bg-subtle focus:text-txt-body",
+        "hover:bg-[#e2e8f0] dark:hover:bg-subtle",
+        "data-[state=open]:bg-[#e2e8f0] dark:data-[state=open]:bg-subtle data-[state=open]:text-txt-body",
+        // Base styles
+        "[&_svg:not([class*='text-'])]:text-txt-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none transition-colors duration-150",
+        "data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        // Animación de flecha cuando está abierto
+        "[&>svg.chevron-icon]:transition-transform [&>svg.chevron-icon]:duration-200",
+        "data-[state=open]:[&>svg.chevron-icon]:rotate-90",
         className,
       )}
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto size-4" />
+      <ChevronRightIcon className="chevron-icon ml-auto size-4" />
     </DropdownMenuPrimitive.SubTrigger>
   );
 }
@@ -230,7 +254,21 @@ function DropdownMenuSubContent({
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        "bg-paper text-txt-body border-line-struct data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg",
+        // Fondo diferenciado (paper-lift es más claro que sidebar)
+        "bg-paper-lift text-txt-body",
+        // Borde sutil pero visible
+        "border border-line-struct",
+        // Sombra prominente para efecto flotante
+        "shadow-xl shadow-black/10 dark:shadow-black/30",
+        // Animaciones
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
+        "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        // Layout
+        "z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin)",
+        "overflow-hidden rounded-lg p-1.5",
         className,
       )}
       {...props}
