@@ -3,13 +3,9 @@
  * CONFIGURACIÓN DE NAVEGACIÓN CON RBAC
  * ============================================
  *
- * Estructura sidebar-08 con soporte para:
- * - Submenús colapsibles
- * - Navegación secundaria
- * - Filtrado dinámico por permisos
- *
- * NOTA: Los tipos NavMainItem y NavSecondaryItem se definirán
- * cuando instalemos sidebar-08 oficial.
+ * Estructura de menús para SIRES con soporte RBAC.
+ * Los tipos NavMainItem y NavSecondaryItem serán importados
+ * desde los componentes oficiales de sidebar-08 después de la instalación.
  */
 
 import {
@@ -19,35 +15,12 @@ import {
   Shield,
   HelpCircle,
   Settings,
-  type LucideIcon,
 } from "lucide-react";
-
-/**
- * TIPOS TEMPORALES (serán reemplazados por los oficiales de sidebar-08)
- */
-export interface NavMainItem {
-  title: string;
-  url: string;
-  icon: LucideIcon;
-  permission?: string;
-  items?: {
-    title: string;
-    url: string;
-    permission?: string;
-  }[];
-}
-
-export interface NavSecondaryItem {
-  title: string;
-  url: string;
-  icon: LucideIcon;
-  permission?: string;
-}
 
 /**
  * Navegación principal (con submenús)
  */
-export const navigationConfig: NavMainItem[] = [
+export const navigationConfig = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -121,9 +94,9 @@ export const navigationConfig: NavMainItem[] = [
 ];
 
 /**
- * Navegación secundaria (mt-auto en sidebar)
+ * Navegación secundaria (soporte, configuración)
  */
-export const secondaryNavConfig: NavSecondaryItem[] = [
+export const secondaryNavConfig = [
   {
     title: "Soporte",
     url: "/soporte",
