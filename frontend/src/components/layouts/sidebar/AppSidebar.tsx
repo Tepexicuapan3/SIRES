@@ -47,7 +47,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </SidebarHeader>
 
-
       {/* ===== CONTENT: Navegación Principal ===== */}
       <SidebarContent>
         {isEmpty ? (
