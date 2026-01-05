@@ -36,6 +36,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Configurar permisos** | [RBAC 2.0](./architecture/rbac.md) | 20 min |
 | **Implementar login/auth** | [Autenticación](./architecture/authentication.md) | 20 min |
 | **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
+| **Implementar CRUD RBAC completo** | [RBAC CRUD Implementation](./guides/rbac-crud-implementation.md) | Plan detallado |
 | **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
 | **Testear código** | [Testing](./guides/testing.md) | 20 min |
 
