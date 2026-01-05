@@ -1,204 +1,291 @@
 # SIRES
 
-## 🚀 Requisitos Previos
+Sistema de Información de Registros Electrónicos de Salud - Metro CDMX
 
-- [Docker](https://www.docker.com/get-started) (v20.10 o superior)
-- **MySQL** instalado localmente
+---
 
-## ⚙️ Configuración Inicial
+## 🚀 Quick Start
 
-**Clonar el repositorio:**
+### Levantar el proyecto (5 minutos)
 
 ```bash
+# 1. Clonar repo
 git clone https://github.com/Luis-Ant/SIRES.git
 cd SIRES
-```
 
-## 🐳 Uso con Docker
-
-### Levantar todos los servicios
-
-```bash
-docker-compose up -d
-```
-
-Este comando iniciará:
-
-- **Backend (Flask)** en el puerto 5000
-- **Frontend (Vite)** en el puerto 5173
-
-### Ver logs
-
-```bash
-# Todos los servicios
-docker-compose logs -f
-
-# Servicio específico
-docker-compose logs -f backend
-docker-compose logs -f frontend
-```
-
-### Detener los servicios
-
-```bash
-docker-compose down
-```
-
-### Reconstruir las imágenes
-
-```bash
-docker-compose up -d --build
-```
-
-## 📦 Servicios
-
-### Backend (API Flask)
-
-- **URL:** http://localhost:5000
-- **Health Check:** http://localhost:5000/health
-- **Tecnologías:** Python, Flask, MySQL
-- **Conexión BD:** MySQL local en red (host.docker.internal)
-
-### Frontend (Vite + React)
-
-- **URL:** http://localhost:5173
-- **Tecnologías:** Node.js, Vite, React
-
-## 🔐 Variables de Entorno
-
-### Estructura de archivos .env
-
-El proyecto usa **tres niveles** de variables de entorno:
-
-1. **`.env`** (raíz) - Variables globales de Docker Compose
-   - Puertos de los servicios
-2. **`backend/.env`** - Variables específicas de Flask
-   - Configuración de Flask
-   - Conexión a MySQL local
-   - Secretos y tokens
-   - CORS
-3. **`frontend/.env`** - Variables específicas de Vite
-   - URL del API (VITE_API_URL)
-   - Configuración de la app
-   - ⚠️ Solo las variables con prefijo `VITE_` son accesibles en el navegador
-
-### Entornos: Desarrollo vs Producción
-
-Cada carpeta tiene tres archivos:
-
-- `.env.example` - Plantilla con documentación
-- `.env.development` - Valores para desarrollo
-- `.env.production` - Valores para producción
-
-**Para cambiar de entorno:**
-
-```bash
-# Desarrollo
+# 2. Configurar variables de entorno
 cp backend/.env.development backend/.env
 cp frontend/.env.development frontend/.env
 
-# Producción
-cp backend/.env.production backend/.env
-cp frontend/.env.production frontend/.env
+# 3. Levantar servicios (Docker Compose)
+docker-compose up -d
+
+# 4. Verificar
+curl http://localhost:5000/health  # Backend → {"status": "ok"}
+# Abrir http://localhost:5173/login en navegador
 ```
 
-## 🔧 Comandos Útiles
+**Requisitos:**
+- Docker v20.10+
+- MySQL 8+ (local o remoto)
 
-### Acceder al contenedor
+**¿Problemas?** Ver [Troubleshooting](./docs/getting-started/setup.md#troubleshooting)
+
+---
+
+## 📚 Documentación Completa
+
+👉 **[docs/README.md](./docs/README.md)** - Índice completo con guías por rol y tema
+
+### Guías Rápidas
+
+| Necesito... | Doc | Tiempo |
+|-------------|-----|--------|
+| Levantar el proyecto | [Setup](./docs/getting-started/setup.md) | 5 min |
+| Entender la arquitectura | [Overview](./docs/architecture/overview.md) | 15 min |
+| Agregar una feature | [Adding Feature](./docs/guides/adding-feature.md) | 30 min |
+| Configurar permisos | [RBAC 2.0](./docs/architecture/rbac.md) | 20 min |
+| Crear componentes UI | [UI Components](./docs/guides/ui-components.md) | 15 min |
+
+---
+
+## 🛠️ Stack Técnico
+
+### Backend
+- **Framework:** Flask (Python 3.11)
+- **Base de datos:** MySQL 8 + Redis
+- **Auth:** JWT en cookies HttpOnly + CSRF
+- **Patrón:** Clean Architecture (use_cases / repositories / routes)
+
+### Frontend
+- **Runtime:** Bun
+- **Framework:** React 19 + TypeScript
+- **Build:** Vite
+- **State:** TanStack Query + Zustand
+- **UI:** shadcn/ui + TailwindCSS 4
+- **Design:** Sistema Metro CDMX (naranja #fe5000)
+
+---
+
+## 📦 Servicios
+
+Cuando ejecutás `docker-compose up -d`:
+
+| Servicio | Puerto | URL |
+|----------|--------|-----|
+| **Backend** (Flask) | 5000 | http://localhost:5000 |
+| **Frontend** (Vite) | 5173 | http://localhost:5173 |
+| **Redis** | 6379 | localhost:6379 |
+
+**MySQL** corre fuera de Docker (local o remoto). Ver configuración en `backend/.env`.
+
+---
+
+## 🔐 Seguridad
+
+- ✅ **JWT en cookies HttpOnly** (XSS no puede leer tokens)
+- ✅ **CSRF protection** (double-submit cookie pattern)
+- ✅ **RBAC 2.0** (permisos granulares por recurso:acción)
+- ✅ **Passwords hasheadas** (werkzeug.security)
+- ✅ **Queries parametrizadas** (SQL injection prevention)
+
+**Detalles:** Ver [docs/architecture/authentication.md](./docs/architecture/authentication.md)
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+SIRES/
+├── backend/                    # API Flask
+│   ├── src/
+│   │   ├── presentation/api/   # Blueprints (routes)
+│   │   ├── use_cases/          # Lógica de negocio
+│   │   ├── infrastructure/     # DB, email, security
+│   │   └── domain/dto/         # Data Transfer Objects
+│   ├── .env.development        # Variables backend (dev)
+│   └── requirements.txt
+│
+├── frontend/                   # App React
+│   ├── src/
+│   │   ├── api/                # HTTP client + types
+│   │   ├── features/           # Módulos por dominio
+│   │   ├── components/         # UI compartidos
+│   │   ├── store/              # Zustand stores
+│   │   └── routes/             # React Router + guards
+│   ├── .env.development        # Variables frontend (dev)
+│   └── package.json
+│
+├── docs/                       # Documentación técnica
+│   ├── getting-started/
+│   ├── architecture/
+│   ├── guides/
+│   └── README.md               # Índice completo
+│
+├── docker-compose.yml          # Orquestación servicios
+├── AGENTS.md                   # Guía de agentes IA
+└── PROJECT_GUIDE.md            # Referencia técnica detallada
+```
+
+---
+
+## 🎯 Comandos Útiles
+
+### Docker
 
 ```bash
-# Backend
+# Levantar servicios
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f backend
+docker-compose logs -f frontend
+
+# Reconstruir imágenes
+docker-compose up -d --build
+
+# Detener servicios
+docker-compose down
+```
+
+### Backend
+
+```bash
+# Acceder al contenedor
 docker-compose exec backend sh
 
-# Frontend
-docker-compose exec frontend sh
+# Ejecutar script
+python run.py
+
+# Instalar dependencia
+pip install <paquete>
 ```
 
-### Instalar dependencias
+### Frontend
 
 ```bash
-# Backend (Python)
-docker-compose exec backend pip install <paquete>
+# Desarrollo local (sin Docker)
+cd frontend
+bun install
+bun dev
 
-# Frontend (Node)
-docker-compose exec frontend npm install <paquete>
+# Lint
+bun lint
+
+# Build producción
+bun build
+
+# Instalar componente shadcn
+npx shadcn@latest add button
 ```
 
-### Conectar a MySQL local
+---
 
-```bash
-mysql -u root -p -h localhost -P 3306
-USE sires_db;
-```
+## 🧪 Testing
 
-### Ejecutar migraciones (cuando estén configuradas)
+⚠️ **No hay suite de tests automatizados** (deuda técnica).
 
-```bash
-docker-compose exec backend flask db upgrade
-```
+Por ahora:
+- **Mocks en frontend:** Ver [docs/guides/testing.md](./docs/guides/testing.md)
+- **Testing manual:** Usuarios de prueba + endpoints curl
+- **Smoke tests:** Health checks + login flow
 
-## 🛠️ Desarrollo
+**Roadmap:** pytest (backend) + Vitest (frontend)
 
-### Modo de desarrollo
-
-El `docker-compose.yml` ya está configurado para desarrollo con:
-
-- **Hot-reload** automático en frontend (Vite) y backend (Flask)
-- Volúmenes montados para cambios en tiempo real
-- Variables de entorno separadas por servicio
-
-### Estructura de desarrollo
-
-Cada servicio (backend/frontend) debe tener:
-
-- `Dockerfile` - Para producción
-- `Dockerfile.dev` - Para desarrollo (opcional)
-- Archivos `.env` - Variables de entorno
-- Código fuente en sus respectivas carpetas
-
-### Conexión a MySQL local desde Docker
-
-Los contenedores Docker usan `host.docker.internal` para conectarse a servicios en tu máquina local (como MySQL). Esto ya está configurado en `backend/.env.development`.
-
-## 📝 Importante sobre Variables de Entorno
-
-### ✅ Buenas prácticas:
-
-1. **Nunca** subas archivos `.env` al repositorio (ya están en `.gitignore`)
-2. **Siempre** mantén actualizado el `.env.example` con nuevas variables
-3. **Backend:** Todas las variables son privadas y seguras
-4. **Frontend:** Solo las variables `VITE_*` son accesibles en el navegador
-   - ⚠️ NO pongas secrets o claves API con el prefijo `VITE_`
-5. **Producción:** Usa `.env.production` y cambia todos los secrets
-
-### Archivo activo por entorno:
-
-```bash
-# El archivo que Docker Compose lee es siempre: backend/.env y frontend/.env
-# Tú decides si copias el contenido desde .development o .production
-```
-
-```
+---
 
 ## 🤝 Contribución
 
-1. Crea una rama para tu feature: `git checkout -b feature/nueva-funcionalidad`
-2. Realiza tus cambios y commits: `git commit -am 'Agrega nueva funcionalidad'`
-3. Push a la rama: `git push origin feature/nueva-funcionalidad`
-4. Crea un Pull Request
+### Workflow
+
+1. Crear branch: `git checkout -b feature/nueva-funcionalidad`
+2. Hacer cambios siguiendo [docs/guides/adding-feature.md](./docs/guides/adding-feature.md)
+3. Commits con [Conventional Commits](https://www.conventionalcommits.org/):
+   ```
+   feat(frontend): add expedientes list page
+   fix(backend): resolve CSRF token validation
+   docs: update RBAC architecture
+   ```
+4. Push: `git push origin feature/nueva-funcionalidad`
+5. Crear Pull Request
+
+### Convenciones
+
+**Permisos (formato):**
+```
+{resource}:{action}
+```
+Ejemplos: `expedientes:create`, `usuarios:delete`, `*` (admin)
+
+**Tokens Metro CDMX (NO hardcodear colores):**
+```css
+bg-brand, text-brand          /* Naranja Metro */
+status-critical               /* Rojo clínico */
+txt-body, txt-muted           /* Texto */
+bg-paper, bg-subtle           /* Superficies */
+```
+
+---
+
+## 📖 Recursos Adicionales
+
+### Documentación Interna
+
+- **[AGENTS.md](./AGENTS.md)** - Guía de agentes IA (build, plan, ui-designer)
+- **[PROJECT_GUIDE.md](./PROJECT_GUIDE.md)** - Referencia técnica completa
+- **[docs/](./docs/)** - Guías organizadas por tema
+
+### Docs Externas
+
+- [Flask](https://flask.palletsprojects.com/)
+- [React 19](https://react.dev/)
+- [TanStack Query](https://tanstack.com/query/latest)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [TailwindCSS](https://tailwindcss.com/)
+
+---
+
+## 📝 Notas Importantes
+
+### Variables de Entorno
+
+El proyecto usa **tres niveles** de `.env`:
+
+1. **`.env`** (raíz) - Puertos de Docker Compose
+2. **`backend/.env`** - Config Flask (DB, JWT, CORS)
+3. **`frontend/.env`** - Config Vite (solo `VITE_*` son accesibles en browser)
+
+**⚠️ NUNCA** subir archivos `.env` al repo (ya están en `.gitignore`).
+
+### MySQL
+
+Backend se conecta a MySQL **fuera de Docker**:
+
+- **Desarrollo:** `MYSQL_HOST=host.docker.internal`
+- **Producción:** IP/hostname del servidor
+
+### CORS
+
+Si el frontend está en otro puerto:
+
+```env
+# backend/.env
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+```
+
+---
+
+## 👥 Autor
+
+Luis-Ant - [GitHub](https://github.com/Luis-Ant)
+
+---
 
 ## 📄 Licencia
 
 Este proyecto está bajo la licencia especificada en el archivo LICENSE.
 
-## 👥 Autor
-
-Luis-Ant
-
 ---
 
-**Notas importantes:**
-- Asegúrate de que **Docker Desktop** esté ejecutándose antes de usar cualquier comando de Docker
-- La **base de datos MySQL** debe estar corriendo en tu máquina local antes de levantar los contenedores
-- Verifica que el puerto **3306** (MySQL), **5000** (Backend) y **5173** (Frontend) estén disponibles
-```
+**Última actualización:** Enero 2026  
+**Versión:** 1.0.0
