@@ -53,6 +53,8 @@ def rate_limit_login(f):
     """
     Decorador para aplicar rate limiting al endpoint de login.
     
+    ⚠️ TEMPORALMENTE DESHABILITADO - Redis no disponible
+    
     Verifica:
     1. Rate limit por IP (sliding window de 1 minuto)
     2. Si la IP está bloqueada por intentos fallidos
@@ -69,25 +71,26 @@ def rate_limit_login(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        ip = get_client_ip()
+        # COMENTADO TEMP - Redis connection issue
+        # ip = get_client_ip()
 
-        # Verificar rate limit por IP
-        is_limited, remaining = rate_limiter.check_ip_rate_limit(ip)
-        if is_limited:
-            return jsonify({
-                "code": "TOO_MANY_REQUESTS",
-                "message": "Demasiadas solicitudes. Intenta en un minuto.",
-                "retry_after": rate_limiter.IP_RATE_WINDOW
-            }), 429
+        # # Verificar rate limit por IP
+        # is_limited, remaining = rate_limiter.check_ip_rate_limit(ip)
+        # if is_limited:
+        #     return jsonify({
+        #         "code": "TOO_MANY_REQUESTS",
+        #         "message": "Demasiadas solicitudes. Intenta en un minuto.",
+        #         "retry_after": rate_limiter.IP_RATE_WINDOW
+        #     }), 429
 
-        # Verificar si IP está bloqueada
-        if rate_limiter.is_ip_blocked(ip):
-            remaining_time = rate_limiter.get_ip_block_remaining(ip)
-            return jsonify({
-                "code": "IP_BLOCKED",
-                "message": "Tu dirección IP ha sido bloqueada temporalmente.",
-                "retry_after": remaining_time
-            }), 403
+        # # Verificar si IP está bloqueada
+        # if rate_limiter.is_ip_blocked(ip):
+        #     remaining_time = rate_limiter.get_ip_block_remaining(ip)
+        #     return jsonify({
+        #         "code": "IP_BLOCKED",
+        #         "message": "Tu dirección IP ha sido bloqueada temporalmente.",
+        #         "retry_after": remaining_time
+        #     }), 403
 
         return f(*args, **kwargs)
 
@@ -97,6 +100,8 @@ def rate_limit_login(f):
 def rate_limit_otp(f):
     """
     Decorador para aplicar rate limiting a endpoints de OTP.
+    
+    ⚠️ TEMPORALMENTE DESHABILITADO - Redis no disponible
     
     Límite más restrictivo: 5 requests por minuto.
     
@@ -108,16 +113,17 @@ def rate_limit_otp(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        ip = get_client_ip()
+        # COMENTADO TEMP - Redis connection issue
+        # ip = get_client_ip()
         
-        # Rate limit independiente para OTP/recovery (NO mezclar con login)
-        is_limited, remaining = rate_limiter.check_ip_rate_limit_otp(ip)
-        if is_limited:
-            return jsonify({
-                "code": "TOO_MANY_REQUESTS",
-                "message": "Demasiados intentos. Espera un momento.",
-                "retry_after": rate_limiter.OTP_RATE_WINDOW
-            }), 429
+        # # Rate limit independiente para OTP/recovery (NO mezclar con login)
+        # is_limited, remaining = rate_limiter.check_ip_rate_limit_otp(ip)
+        # if is_limited:
+        #     return jsonify({
+        #         "code": "TOO_MANY_REQUESTS",
+        #         "message": "Demasiados intentos. Espera un momento.",
+        #         "retry_after": rate_limiter.OTP_RATE_WINDOW
+        #     }), 429
 
         return f(*args, **kwargs)
 
@@ -127,6 +133,8 @@ def rate_limit_otp(f):
 def check_user_blocked(username: str) -> Tuple[bool, Optional[tuple]]:
     """
     Verifica si un usuario específico está bloqueado.
+    
+    ⚠️ TEMPORALMENTE DESHABILITADO - Redis no disponible
     
     Esta función se usa dentro del endpoint (no como decorador)
     porque necesita acceso al username del body.
@@ -142,12 +150,13 @@ def check_user_blocked(username: str) -> Tuple[bool, Optional[tuple]]:
         if blocked:
             return response
     """
-    if rate_limiter.is_user_blocked(username):
-        remaining_time = rate_limiter.get_user_block_remaining(username)
-        return True, (jsonify({
-            "code": "USER_LOCKED",
-            "message": "Usuario temporalmente bloqueado por seguridad.",
-            "retry_after": remaining_time
-        }), 423)
+    # COMENTADO TEMP - Redis connection issue
+    # if rate_limiter.is_user_blocked(username):
+    #     remaining_time = rate_limiter.get_user_block_remaining(username)
+    #     return True, (jsonify({
+    #         "code": "USER_LOCKED",
+    #         "message": "Usuario temporalmente bloqueado por seguridad.",
+    #         "retry_after": remaining_time
+    #     }), 423)
 
     return False, None
