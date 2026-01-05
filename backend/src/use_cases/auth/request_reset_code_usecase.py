@@ -1,37 +1,47 @@
-import random
 from src.infrastructure.repositories.user_repository import UserRepository
-from src.infrastructure.repositories.password_reset_repository import PasswordResetRepository
 from src.infrastructure.email.email_service import EmailService
+from src.use_cases.auth.otp_service import OTPService
 
 
 class RequestResetCodeUseCase:
+    """
+    Use case para solicitar código de recuperación de contraseña.
+    
+    Migrado a Redis: Ahora usa OTPService en lugar de PasswordResetRepository.
+    """
 
     def __init__(self):
         self.user_repo = UserRepository()
-        self.reset_repo = PasswordResetRepository()
         self.email_service = EmailService()
 
     def execute(self, email: str):
-
-        # busca usuario sin importar que exista
+        """
+        Genera y envía un código OTP al email del usuario.
+        
+        Args:
+            email: Email del usuario que solicita recuperación
+            
+        Returns:
+            Tuple[dict, int]: Mensaje genérico (no revela si el usuario existe)
+        """
+        # Busca usuario sin importar que exista
         user = self.user_repo.get_user_by_email(email)
 
         if user:
-            # genera codigo OTP en el rango
-            otp = f"{random.randint(100000, 999999)}"
+            # Genera código OTP con el servicio
+            otp = OTPService.generate_code()
 
-            # guarda el OTP en redis
-            saved = self.reset_repo.save_or_replace_code(email, otp)
+            # Guarda en Redis (reemplaza código anterior si existe)
+            OTPService.save_code(email, otp)
 
-            if saved:
-            # envia el correo
-                try:
-                    self.email_service.send_reset_code(email, otp)
-                    print(f"[OTP] enviado a {email}: {otp}")
-                except Exception as e:
-                    print("Error enviando correo:", e)
+            # Envía el correo
+            try:
+                self.email_service.send_reset_code(email, otp)
+                print(f"[OTP] enviado a {email}: {otp}")
+            except Exception as e:
+                print(f"[ERROR] Fallo envío de correo a {email}: {e}")
 
-        # respuesta generica 
+        # Respuesta genérica (no revela si el usuario existe - seguridad)
         return {
             "message": "Si el correo existe, se han enviado instrucciones"
         }, 200
