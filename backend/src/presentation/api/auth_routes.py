@@ -44,7 +44,7 @@ complete_onboarding_usecase = CompleteOnboardingUseCase()
 
 # ============= LOGIN =============
 @auth_bp.route("/login", methods=["POST"])
-@rate_limit_login  # Rate limiting por IP
+# @rate_limit_login  # Rate limiting por IP (COMENTADO TEMP PARA TESTING - Redis issue)
 def login():
     """
     Autentica al usuario y setea cookies HttpOnly con los tokens.
@@ -70,16 +70,18 @@ def login():
     ip = get_client_ip()
 
     # Verificar si el usuario está bloqueado (por intentos fallidos previos)
-    blocked, response = check_user_blocked(usuario)
-    if blocked:
-        return response
+    # COMENTADO TEMP PARA TESTING - Redis issue
+    # blocked, response = check_user_blocked(usuario)
+    # if blocked:
+    #     return response
 
     result, error = login_usecase.execute(usuario, clave, ip)
 
     if error:
         # Registrar intento fallido en Redis (solo para credenciales inválidas)
-        if error in ["INVALID_CREDENTIALS", "USER_NOT_FOUND"]:
-            rate_limiter.record_failed_attempt(ip, usuario)
+        # COMENTADO TEMP PARA TESTING - Redis issue
+        # if error in ["INVALID_CREDENTIALS", "USER_NOT_FOUND"]:
+        #     rate_limiter.record_failed_attempt(ip, usuario)
         
         mapping = {
             "INVALID_CREDENTIALS": (401, "Usuario o contraseña incorrectos"),
@@ -91,7 +93,8 @@ def login():
         return jsonify({"code": error, "message": msg}), status
     
     # Login exitoso - resetear intentos fallidos del usuario
-    rate_limiter.reset_user_attempts(usuario)
+    # COMENTADO TEMP PARA TESTING - Redis issue
+    # rate_limiter.reset_user_attempts(usuario)
 
     # Extraer datos del resultado
     user_data = result.get("user", {})
