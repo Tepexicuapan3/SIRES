@@ -133,7 +133,12 @@ SELECT code, description FROM cat_permissions WHERE category = 'SISTEMA' AND res
 
 **Asignación inicial:** Todos estos permisos al rol `Admin` (id_rol = 1).
 
-**Estado:** [ ] Pendiente | [ ] En Progreso | [ ] Completado
+**Cambios adicionales:**
+- Se agregó columna `is_system` a `cat_permissions` para marcar permisos protegidos
+- Todos los permisos existentes se marcaron como `is_system = TRUE`
+- Los nuevos permisos RBAC también son `is_system = TRUE`
+
+**Estado:** [X] Completado (2026-01-05)
 
 ---
 
@@ -1537,7 +1542,7 @@ Antes de considerar la feature **COMPLETADA**:
 | Fecha | Fase | Estado | Notas |
 |-------|------|--------|-------|
 | 2026-01-05 | Documento creado | ✅ | Plan inicial creado |
-| | Fase 0 | [ ] Pendiente | Migración de permisos |
+| 2026-01-05 | Fase 0 | ✅ Completado | Migración 006 creada con permisos RBAC + columna is_system |
 | | Fase 1 | [ ] Pendiente | CRUD Roles |
 | | Fase 2 | [ ] Pendiente | CRUD Permisos |
 | | Fase 3 | [ ] Pendiente | Multi-rol |
@@ -1549,7 +1554,31 @@ Antes de considerar la feature **COMPLETADA**:
 
 ## 📝 Notas del Implementador
 
-(Espacio para anotar decisiones, problemas encontrados, etc.)
+### Fase 0 - Migración de Permisos (2026-01-05)
+
+**Decisión:** Se agregó columna `is_system` a `cat_permissions`.
+
+**Razón:** 
+- Necesitamos proteger permisos del sistema de edición/eliminación accidental
+- Los permisos de gestión RBAC (`roles:*`, `permisos:*`) son críticos
+- Todos los permisos existentes se marcaron como `is_system = TRUE`
+
+**Cambios en migración 006:**
+1. ALTER TABLE para agregar `is_system BOOLEAN DEFAULT FALSE`
+2. UPDATE para marcar permisos existentes como `is_system = TRUE`
+3. INSERT de 9 permisos nuevos con `is_system = TRUE`
+4. Asignación automática al rol Admin (id_rol = 1)
+
+**Validación requerida al ejecutar:**
+```sql
+-- Debe retornar 9
+SELECT COUNT(*) FROM cat_permissions WHERE resource IN ('roles', 'permisos');
+
+-- Debe retornar 9
+SELECT COUNT(*) FROM role_permissions rp
+INNER JOIN cat_permissions p ON rp.id_permission = p.id_permission
+WHERE rp.id_rol = 1 AND p.resource IN ('roles', 'permisos');
+```
 
 ---
 
