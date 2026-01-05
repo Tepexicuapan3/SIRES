@@ -110,7 +110,8 @@ frontend/src/
 **Objetivo:** Crear los permisos necesarios para gestionar el propio sistema RBAC.
 
 **Archivos:**
-- `backend/migrations/006_rbac_management_permissions.sql` - CREAR
+- `backend/migrations/007_rbac_management_permissions.sql` - CREAR
+  - **Nota:** Originalmente era 006, pero se renombró a 007 porque la migración 006 es `cleanup_mysql_otp.sql` (traída de `feature/integration-login`)
 
 **Permisos a agregar:**
 
@@ -1563,11 +1564,16 @@ Antes de considerar la feature **COMPLETADA**:
 - Los permisos de gestión RBAC (`roles:*`, `permisos:*`) son críticos
 - Todos los permisos existentes se marcaron como `is_system = TRUE`
 
-**Cambios en migración 006:**
+**Cambios en migración 007:**
 1. ALTER TABLE para agregar `is_system BOOLEAN DEFAULT FALSE`
 2. UPDATE para marcar permisos existentes como `is_system = TRUE`
 3. INSERT de 9 permisos nuevos con `is_system = TRUE`
 4. Asignación automática al rol Admin (id_rol = 1)
+
+**Nota sobre numeración:** 
+- Originalmente era migración 006, pero se renombró a 007
+- La migración 006 es `cleanup_mysql_otp.sql` (traída del merge con `feature/integration-login`)
+- Orden correcto: 001-005 (RBAC base) → 006 (OTP cleanup) → 007 (RBAC management)
 
 **Validación requerida al ejecutar:**
 ```sql

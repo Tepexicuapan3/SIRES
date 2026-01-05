@@ -1,5 +1,5 @@
 -- =====================================================
--- MIGRATION 006: RBAC 2.0 - Management Permissions
+-- MIGRATION 007: RBAC 2.0 - Management Permissions
 -- =====================================================
 -- Descripción: Permisos para gestionar el propio sistema RBAC
 -- Autor: SIRES Dev Team
@@ -9,7 +9,7 @@
 -- IMPORTANTE:
 -- 1. Este script agrega permisos para gestionar roles y permisos
 -- 2. Permite CRUD completo del sistema RBAC
--- 3. Ejecutar DESPUÉS de migration 005
+-- 3. Ejecutar DESPUÉS de migration 006 (cleanup_mysql_otp)
 -- =====================================================
 
 USE SIRES;
@@ -139,7 +139,7 @@ AND p.resource IN ('roles', 'permisos');
 --    ya existen en migration 003 y son complementarios
 
 -- =====================================================
--- FIN DE MIGRATION 006
+-- FIN DE MIGRATION 007
 -- =====================================================
 -- Próximos pasos:
 -- 1. Implementar endpoints CRUD para roles
