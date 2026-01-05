@@ -38,6 +38,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
 | **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
 | **Testear código** | [Testing](./guides/testing.md) | 20 min |
+| **Implementar RBAC frontend** | [RBAC Frontend](./guides/rbac-frontend.md) | 25 min |
 
 ---
 
@@ -56,14 +57,17 @@ docs/
 ├── guides/
 │   ├── adding-feature.md           # Checklist backend → frontend
 │   ├── ui-components.md            # shadcn + Metro CDMX
+│   ├── rbac-frontend.md            # 🆕 Ejemplos RBAC en componentes
 │   └── testing.md                  # Mocks + estrategias
 │
 ├── adr/                            # Architecture Decision Records
 │   ├── 001-jwt-cookies-httponly.md # JWT en cookies HttpOnly (no localStorage)
-│   └── 002-wizard-onboarding.md    # Wizard 2 pasos (terms → password)
+│   ├── 002-wizard-onboarding.md    # Wizard 2 pasos (terms → password)
+│   └── 003-rbac-2-migration.md     # 🆕 Migración a RBAC 2.0 (permisos granulares)
 │
 ├── api/
-│   └── endpoints.md                # Referencia de API
+│   ├── endpoints.md                # Referencia general de API
+│   └── auth-endpoints.md           # 🆕 Contratos auth detallados
 │
 └── templates/                      # Templates para crear docs nuevos
     ├── guide-template.md           # Template guías
@@ -75,7 +79,7 @@ docs/
 
 ## 🎯 Por Rol
 
-### Sos Backend Developer
+### Eres Backend Developer
 
 1. [Setup](./getting-started/setup.md) → Levantar MySQL + backend
 2. [Architecture](./architecture/overview.md) → Entender capas (use_cases / repos / routes)
@@ -87,7 +91,7 @@ docs/
 - Clean Architecture (use cases / infrastructure / presentation)
 - Flask-JWT-Extended (cookies HttpOnly)
 
-### Sos Frontend Developer
+### Eres Frontend Developer
 
 1. [Setup](./getting-started/setup.md) → Levantar frontend
 2. [Architecture](./architecture/overview.md) → Entender flujo (TanStack Query + Zustand)
@@ -100,7 +104,7 @@ docs/
 - Zod + React Hook Form (forms)
 - shadcn/ui + Tailwind 4
 
-### Sos Full-Stack
+### Eres Full-Stack
 
 Seguí el orden:
 1. Setup → Architecture → Adding Feature → RBAC → UI Components
@@ -366,37 +370,21 @@ Ver [`AGENTS.md`](../AGENTS.md) para la lista completa.
 
 ---
 
-## 📋 Próximos Pasos Recomendados
-
-### Si sos nuevo
-
-1. ✅ Leer [Setup](./getting-started/setup.md)
-2. ✅ Leer [Architecture Overview](./architecture/overview.md)
-3. ✅ Seguir tutorial [Adding Feature](./guides/adding-feature.md)
-4. ✅ Explorar código en `frontend/src/features/auth/`
-
-### Si ya conocés el proyecto
-
-1. Ver [RBAC](./architecture/rbac.md) para permisos granulares
-2. Ver [UI Components](./guides/ui-components.md) para componentes nuevos
-3. Ver [Testing](./guides/testing.md) cuando haya suite configurada
-
----
-
 ## 🗺️ Roadmap de Documentación
 
 ### ✅ Completado (Enero 2026)
 
 - Setup inicial
 - Architecture overview
-- RBAC 2.0
-- Authentication (JWT + CSRF)
+- RBAC 2.0 (arquitectura + frontend + ADR)
+- Authentication (JWT + CSRF + contratos API)
 - Adding feature guide
-- UI components guide
+- UI components guide (shadcn + Metro CDMX)
+- Testing guide con mocks RBAC 2.0
 
 ### 🚧 En Progreso
 
-- Testing guide (completar suite vitest + pytest)
+- Testing suite (completar vitest + pytest)
 
 ### 📋 Pendiente
 
@@ -404,46 +392,6 @@ Ver [`AGENTS.md`](../AGENTS.md) para la lista completa.
 - Deployment guide (producción)
 - Performance optimization
 - Monitoring y logs
-
----
-
-## 📝 Contribuir a la Documentación
-
-### Crear documentación nueva
-
-**Regla de oro:** Solo crear docs que alguien va a **usar** y que no se pueden inferir del código.
-
-**Usar comando `/doc`:**
-
-```bash
-# Crear nueva guía
-opencode run --command doc "create nombre-guia"
-
-# Crear nuevo ADR (Architecture Decision Record)
-opencode run --command doc "adr titulo-decision"
-
-# Actualizar documentación existente
-opencode run --command doc "update docs/guides/testing.md"
-
-# Auditar docs (encontrar obsoletos/redundantes)
-opencode run --command doc "audit"
-```
-
-**Templates disponibles:**
-- [`docs/templates/guide-template.md`](./templates/guide-template.md) - Para guías paso a paso
-- [`docs/templates/adr-template.md`](./templates/adr-template.md) - Para decisiones arquitectónicas
-- [`docs/templates/README.md`](./templates/README.md) - Cómo usar templates
-
-**Reglas:**
-- ✅ Máximo 500 líneas por archivo (split si crece)
-- ✅ Solo información esencial (no fluff)
-- ✅ Ejemplos copy/paste funcionales
-- ✅ Linkear desde este README
-- ❌ NO duplicar contenido existente
-- ❌ NO documentar código autoexplicativo
-- ❌ NO crear docs para debugging temporales
-
-Ver más detalles en [`AGENTS.md - Documentación`](../AGENTS.md#-estrategia-de-documentación-crítico-para-agentes)
 
 ---
 
