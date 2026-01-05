@@ -1,0 +1,108 @@
+{% extends './base.html' %} <!--Encabezado-->
+
+{% block title %}Login{% endblock %}
+
+{% block customCSS %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+<style>
+    .divider:after,
+    .divider:before {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #eee;
+    }
+
+    .h-custom {
+        height: calc(100% - 73px);
+    }
+
+    .custom-btn {
+        background-color: #ff5000;
+        color: white;
+    }
+
+    @media (max-width: 450px) {
+        .h-custom {
+            height: 50%;
+        }
+    }
+</style>
+{% endblock %}
+{% block body %}
+<main class="vh-100 w-100">
+    <form class="vh-100 w-100" method="POST" class="text-center">
+        <div class="container-fluid h-custom">
+            <div class="row d-flex justify-content-center align-items-center h-100">
+                <div class="col-md-9 col-lg-6 col-xl-5">
+                    <img src="{{ url_for('static', filename='img/SIRESLOGIN.png') }}" class="img-fluid"
+                        alt="Sample image">
+                </div>
+                <div class="col-md-8 col-lg-6 col-xl-4 offset-xl-1 text-center">
+                    <div
+                        class="d-none d-lg-flex flex-row align-items-center justify-content-center justify-content-lg-start">
+                        <img class="imglogo" src="https://i.ibb.co/BT9774z/MI-Metro.png" alt="MISTC"
+                            style="height: 6em; margin-left: 4px; margin-right: 15px;">
+                        <h5 class="fontcontenido stc">
+                            Sistema de Información de Registro Electrónico para la Salud
+                        </h5>
+                    </div>
+                    <!--Mensajes-->
+                    {% include 'mensajes.html' %}
+
+                    <div class="divider d-flex align-items-center my-4"></div>
+                    {{ form.hidden_tag() }}
+                    <div class="form-floating stc fontcontenido">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="{{ form.username.label.text }}" required />
+                        <label for="username">{{ form.username.label.text }}</label>
+                    </div>
+                    <br>
+                    <div class="form-floating stc fontcontenido">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="{{ form.password.label.text }}" required />
+                        <label for="password">{{ form.password.label.text }}</label>
+                    </div>
+                    <div class="text-center text-lg-start mt-4 pt-2 stc">
+                        <button type="submit" class="btn btn-lg"
+                            style="padding-left: 2.5rem; padding-right: 2.5rem; background-color: #ff5000; color: white;">
+                            Iniciar Sesión
+                        </button>
+                        <p class="small fw-bold mt-2 pt-1 mb-0 stc fonttext">Olvidó su contraseña?
+                            <br>
+                            <a href="{{ url_for('users.solicitar_cambio_contrasena') }}" class="link-danger">Solicitar cambio de contraseña</a>
+                        </p>
+                        <br>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="d-none d-lg-flex flex-column flex-md-row text-center text-md-start justify-content-between py-4 px-4 px-xl-5 bg"
+            style="background-color: #ff5000; color: white;">
+            <!-- Copyright -->
+            <div class="text-white mb-3 mb-md-0 stc">
+                STC © 2024.
+            </div>
+            <!-- Copyright -->
+
+            <!-- Right -->
+            <div class="text-white mb-3 mb-md-0 fontmsg stc">
+                Para cualquier duda o aclaración, favor de comunicarse a la Gerencia de Organización y Sistemas (GOS).
+            </div>
+            <!-- Right -->
+        </div>
+    </form>
+</main>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var autoDismissAlerts = document.querySelectorAll('[data-auto-dismiss]');
+        
+        autoDismissAlerts.forEach(function (alert) {
+            var duration = parseInt(alert.getAttribute('data-auto-dismiss'));
+            
+            setTimeout(function () {
+                alert.style.display = 'none';
+            }, duration);
+        });
+    });
+</script>
+{% endblock %}
