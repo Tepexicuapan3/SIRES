@@ -12,9 +12,19 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.infrastructure.authorization.decorators import admin_required, requires_permission
 from src.use_cases.users.create_user_usecase import CreateUserUseCase
+from src.use_cases.users.list_users_usecase import ListUsersUseCase
+from src.use_cases.users.get_user_usecase import GetUserUseCase
+from src.use_cases.users.update_user_usecase import UpdateUserUseCase
+from src.use_cases.users.change_role_usecase import ChangeUserRoleUseCase
+from src.use_cases.users.toggle_user_status_usecase import ToggleUserStatusUseCase
 
 users_bp = Blueprint("users", __name__)
 create_user_usecase = CreateUserUseCase()
+list_users_usecase = ListUsersUseCase()
+get_user_usecase = GetUserUseCase()
+update_user_usecase = UpdateUserUseCase()
+change_role_usecase = ChangeUserRoleUseCase()
+toggle_status_usecase = ToggleUserStatusUseCase()
 
 
 # ============= CREATE USER (Admin only) =============
@@ -122,4 +132,406 @@ def create_user():
         return jsonify({
             "code": "SERVER_ERROR",
             "message": f"Error al crear usuario: {str(e)}"
+        }), 500
+
+
+# ============= LIST USERS (requiere permiso usuarios:read) =============
+@users_bp.route("", methods=["GET"], strict_slashes=False)
+@jwt_required()
+@requires_permission("usuarios:read")
+def list_users():
+    """
+    Lista usuarios con paginación y filtros.
+    Requiere permiso 'usuarios:read'.
+    
+    Query params:
+        - page (int, default=1): Número de página
+        - page_size (int, default=20): Registros por página
+        - search (str, opcional): Búsqueda por usuario/nombre/expediente/CURP/correo
+        - estado (str, opcional): 'A' (activo) o 'B' (baja)
+        - rol_id (int, opcional): Filtrar por rol específico
+    
+    Response 200:
+        {
+            "items": [{ id_usuario, usuario, nombre, ... }],
+            "page": 1,
+            "page_size": 20,
+            "total": 150
+        }
+    
+    Errors:
+        - 400 INVALID_REQUEST: Parámetros de paginación inválidos
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        # Obtener query params
+        page = int(request.args.get("page", 1))
+        page_size = int(request.args.get("page_size", 20))
+        search_query = request.args.get("search", "").strip()
+        estado = request.args.get("estado", "").strip()
+        rol_id_str = request.args.get("rol_id", "").strip()
+        
+        # Validación básica
+        if page < 1:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El número de página debe ser mayor a 0"
+            }), 400
+        
+        if page_size < 1 or page_size > 200:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El tamaño de página debe estar entre 1 y 200"
+            }), 400
+        
+        if estado and estado not in ("A", "B"):
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El estado debe ser 'A' (activo) o 'B' (baja)"
+            }), 400
+        
+        # Construir filtros
+        filters = {}
+        if search_query:
+            filters["search_query"] = search_query
+        if estado:
+            filters["estado"] = estado
+        if rol_id_str:
+            try:
+                filters["rol_id"] = int(rol_id_str)
+            except ValueError:
+                return jsonify({
+                    "code": "INVALID_REQUEST",
+                    "message": "El rol_id debe ser un número entero"
+                }), 400
+        
+        # Ejecutar use case
+        result, error = list_users_usecase.execute(page, page_size, filters)
+        
+        if error:
+            error_mapping = {
+                "INVALID_PAGINATION": (400, "Parámetros de paginación inválidos"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        return jsonify(result), 200
+    
+    except ValueError as e:
+        return jsonify({
+            "code": "INVALID_REQUEST",
+            "message": f"Parámetros inválidos: {str(e)}"
+        }), 400
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al listar usuarios: {str(e)}"
+        }), 500
+
+
+# ============= GET USER BY ID (requiere permiso usuarios:read) =============
+@users_bp.route("/<int:user_id>", methods=["GET"])
+@jwt_required()
+@requires_permission("usuarios:read")
+def get_user(user_id: int):
+    """
+    Obtiene detalles completos de un usuario por su ID.
+    Requiere permiso 'usuarios:read'.
+    
+    Path params:
+        - user_id (int): ID del usuario
+    
+    Response 200:
+        {
+            "user": {
+                "id_usuario": 123,
+                "usuario": "jperez",
+                "nombre": "Juan",
+                "paterno": "Pérez",
+                "materno": "García",
+                "expediente": "12345678",
+                "curp": "PEGJ950101HDFRZN01",
+                "correo": "jperez@metro.cdmx.gob.mx",
+                "img_perfil": null,
+                "est_usuario": "A",
+                "usr_alta": 1,
+                "fch_alta": "2025-01-15 10:30:00",
+                "usr_modf": null,
+                "fch_modf": null,
+                "terminos_acept": true,
+                "cambiar_clave": false,
+                "last_conexion": "2025-01-20 14:25:00",
+                "ip_ultima": "10.15.15.100"
+            },
+            "roles": [
+                {
+                    "id_rol": 2,
+                    "rol": "ROL_MEDICO",
+                    "desc_rol": "Médico Residente",
+                    "is_primary": true
+                }
+            ]
+        }
+    
+    Errors:
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        result, error = get_user_usecase.execute(user_id)
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        # Separar roles del resto de datos del usuario
+        roles = result.pop("roles", [])
+        
+        return jsonify({
+            "user": result,
+            "roles": roles
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al obtener usuario: {str(e)}"
+        }), 500
+
+
+# ============= UPDATE USER (requiere permiso usuarios:update) =============
+@users_bp.route("/<int:user_id>", methods=["PATCH"])
+@jwt_required()
+@requires_permission("usuarios:update")
+def update_user(user_id: int):
+    """
+    Actualiza datos de perfil de un usuario.
+    Requiere permiso 'usuarios:update'.
+    
+    Campos actualizables: nombre, paterno, materno, correo
+    Campos NO actualizables: usuario, expediente, curp, clave (usar endpoints específicos)
+    
+    Path params:
+        - user_id (int): ID del usuario a actualizar
+    
+    Body (todos opcionales, al menos uno requerido):
+        {
+            "nombre": "Juan",
+            "paterno": "Pérez",
+            "materno": "García",
+            "correo": "jperez@metro.cdmx.gob.mx"
+        }
+    
+    Response 200:
+        {
+            "message": "Usuario actualizado correctamente",
+            "user": {
+                "id_usuario": 123,
+                "usuario": "jperez",
+                "nombre": "Juan",
+                "paterno": "Pérez",
+                "materno": "García",
+                "correo": "jperez@metro.cdmx.gob.mx",
+                "usr_modf": 1,
+                "fch_modf": "2025-01-20 15:30:00",
+                ...
+            }
+        }
+    
+    Errors:
+        - 400 NO_FIELDS_TO_UPDATE: No se enviaron campos para actualizar
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 409 EMAIL_DUPLICATE: El correo ya está en uso por otro usuario
+        - 422 INVALID_EMAIL: Formato de correo inválido
+        - 500 UPDATE_FAILED: Error al ejecutar la actualización
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        data = request.get_json() or {}
+        
+        # Ejecutar use case
+        result, error = update_user_usecase.execute(user_id, data, current_user_id)
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "NO_FIELDS_TO_UPDATE": (400, "No se enviaron campos para actualizar"),
+                "EMAIL_DUPLICATE": (409, "El correo ya está en uso por otro usuario"),
+                "INVALID_EMAIL": (422, "Formato de correo inválido"),
+                "UPDATE_FAILED": (500, "No se pudo actualizar el usuario"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        return jsonify({
+            "message": "Usuario actualizado correctamente",
+            "user": result
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al actualizar usuario: {str(e)}"
+        }), 500
+
+
+# ============= CHANGE USER ROLE (Admin only) =============
+@users_bp.route("/<int:user_id>/role", methods=["PATCH"])
+@jwt_required()
+@admin_required()
+def change_user_role(user_id: int):
+    """
+    Cambia el rol primario de un usuario.
+    Solo administradores.
+    
+    Path params:
+        - user_id (int): ID del usuario
+    
+    Body:
+        {
+            "id_rol": 2
+        }
+    
+    Response 200:
+        {
+            "message": "Rol actualizado correctamente",
+            "user": {
+                "id_usuario": 14,
+                "usuario": "testmedico",
+                "nombre": "...",
+                ...
+            },
+            "roles": [
+                {
+                    "id_rol": 2,
+                    "rol": "ROL_MEDICO",
+                    "desc_rol": "Médico Residente",
+                    "is_primary": 1
+                }
+            ]
+        }
+    
+    Errors:
+        - 400 INVALID_REQUEST: Falta id_rol en el body
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 404 ROLE_NOT_FOUND: Rol no existe o está inactivo
+        - 409 SAME_ROLE: El usuario ya tiene ese rol como primario
+        - 500 CHANGE_FAILED: Error al ejecutar el cambio
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        data = request.get_json() or {}
+        
+        # Validación de campo requerido
+        if "id_rol" not in data:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El campo 'id_rol' es requerido"
+            }), 400
+        
+        try:
+            new_role_id = int(data["id_rol"])
+        except (ValueError, TypeError):
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El campo 'id_rol' debe ser un número entero"
+            }), 400
+        
+        # Ejecutar use case
+        result, error = change_role_usecase.execute(user_id, new_role_id, current_user_id)
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "ROLE_NOT_FOUND": (404, "Rol no encontrado o inactivo"),
+                "SAME_ROLE": (409, "El usuario ya tiene ese rol como primario"),
+                "CHANGE_FAILED": (500, "No se pudo cambiar el rol"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        # Separar roles del usuario
+        roles = result.pop("roles", [])
+        
+        return jsonify({
+            "message": "Rol actualizado correctamente",
+            "user": result,
+            "roles": roles
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al cambiar rol: {str(e)}"
+        }), 500
+
+
+# ============= DEACTIVATE USER (Admin only) =============
+@users_bp.route("/<int:user_id>/deactivate", methods=["PATCH"])
+@jwt_required()
+@admin_required()
+def deactivate_user(user_id: int):
+    """Desactiva un usuario (est_usuario = 'B')"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        result, error = toggle_status_usecase.execute(user_id, activate=False, modified_by=current_user_id)
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "TOGGLE_FAILED": (500, "No se pudo desactivar el usuario"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        return jsonify({
+            "message": "Usuario desactivado correctamente",
+            "user": result
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al desactivar usuario: {str(e)}"
+        }), 500
+
+
+# ============= ACTIVATE USER (Admin only) =============
+@users_bp.route("/<int:user_id>/activate", methods=["PATCH"])
+@jwt_required()
+@admin_required()
+def activate_user(user_id: int):
+    """Reactiva un usuario (est_usuario = 'A')"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        result, error = toggle_status_usecase.execute(user_id, activate=True, modified_by=current_user_id)
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "TOGGLE_FAILED": (500, "No se pudo activar el usuario"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        return jsonify({
+            "message": "Usuario activado correctamente",
+            "user": result
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al activar usuario: {str(e)}"
         }), 500
