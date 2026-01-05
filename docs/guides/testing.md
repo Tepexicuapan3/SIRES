@@ -15,137 +15,245 @@ Esto es **deuda técnica alta**. Por ahora usamos:
 
 ---
 
-## Usuarios de Prueba (Mocks)
+## Sistema de Mocks
+
+> **Documentación completa:** Ver [`frontend/src/mocks/README.md`](../../frontend/src/mocks/README.md)
 
 ### Activar Mocks (Frontend)
 
-**Archivo:** `frontend/src/api/client.ts`
+**Variable de entorno:**
 
-```ts
-// MODO MOCK (desarrollo sin backend)
-const USE_MOCKS = true;
-
-// MODO REAL (conecta al backend)
-const USE_MOCKS = false;
+```bash
+# frontend/.env.local
+VITE_USE_MOCKS=true
 ```
 
-### 1. Admin (Acceso Total)
+**Patrón Strategy en código:**
+
+```typescript
+// frontend/src/api/resources/auth.api.ts
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
+export const authAPI = USE_MOCKS ? authMocks : realAuthAPI;
+```
+
+---
+
+## Usuarios de Prueba RBAC 2.0
+
+### Tabla de Credenciales
+
+| Usuario | Password | Rol | Landing Route | Permisos Clave |
+|---------|----------|-----|---------------|----------------|
+| `admin` | `Admin123!` | ADMINISTRADOR | `/admin` | `["*"]` (wildcard) |
+| `dr.garcia` | `Doc123!` | MEDICOS | `/consultas` | Consultas, expedientes, recetas, laboratorio |
+| `dra.lopez` | `Esp123!` | ESPECIALISTAS | `/consultas` | Igual que MEDICOS + supervisión |
+| `recep01` | `Recep123!` | RECEPCION | `/recepcion` | Citas, expedientes (lectura) |
+| `farm01` | `Farm123!` | FARMACIA | `/farmacia` | Recetas, dispensar medicamentos |
+| `urg01` | `Urg123!` | URGENCIAS | `/urgencias` | Urgencias, triage, consultas |
+| `coord.hosp` | `Hosp123!` | HOSP-COORDINACION | `/hospital` | Coordinación hospitalaria |
+| `gerente01` | `Ger123!` | GERENCIA | `/reportes` | Reportes, auditoría |
+| `jefe.clinica` | `Jefe123!` | JEFATURA CLINICA | `/consultas` | Supervisión médica |
+| `trans01` | `Trans123!` | TRANS-RECETA | `/farmacia` | Transcripción de recetas |
+
+---
+
+### Permisos Detallados por Rol
+
+#### 1. ADMINISTRADOR (`admin`)
+
+#### 1. ADMINISTRADOR (`admin`)
 
 ```
 Usuario: admin
-Password: cualquiera
+Password: Admin123!
 ```
 
 **Permisos:**
-- `permissions: ["*"]` (wildcard)
+- `permissions: ["*"]` (wildcard - acceso total)
 - `landing_route: "/admin"`
 - `is_admin: true`
-- Roles: `["ADMIN", "ROL_MEDICO"]`
 
 **Puede:**
 - ✅ TODO (crear, leer, actualizar, eliminar)
 - ✅ Gestión de usuarios
 - ✅ Configuración del sistema
+- ✅ Acceso a todas las secciones
 
 ---
 
-### 2. Médico (Permisos Clínicos Completos)
+#### 2. MEDICOS (`dr.garcia`)
+
+#### 2. MEDICOS (`dr.garcia`)
 
 ```
-Usuario: medico
-Password: cualquiera
+Usuario: dr.garcia
+Password: Doc123!
 ```
 
 **Permisos:**
-- `expedientes:create`, `expedientes:read`, `expedientes:update`, `expedientes:delete`
-- `consultas:create`, `consultas:read`, `consultas:update`
-- `pacientes:read`, `pacientes:update`
+- Expedientes: `read`, `update`, `search`, `print`
+- Consultas: `create`, `read`, `update`, `sign`, `export`
+- Recetas: `create`, `read`, `print`
+- Citas: `read`
+- Laboratorio: `create`, `read`, `print`
 - `landing_route: "/consultas"`
-- `is_admin: false`
 
 **Puede:**
-- ✅ Crear/modificar/eliminar expedientes
 - ✅ Crear/modificar consultas
-- ✅ Ver/actualizar pacientes
+- ✅ Ver/actualizar expedientes (NO eliminar)
+- ✅ Prescribir medicamentos
+- ✅ Solicitar estudios de laboratorio
 - ❌ NO gestionar usuarios
-- ❌ NO acceder a `/admin`
+- ❌ NO acceder a reportes gerenciales
+
+**Sidebar visible:** Consultas, Expedientes, Laboratorio
 
 ---
 
-### 3. Enfermero (Permisos Limitados)
+#### 3. RECEPCION (`recep01`)
+
+#### 3. RECEPCION (`recep01`)
 
 ```
-Usuario: enfermero
-Password: cualquiera
+Usuario: recep01
+Password: Recep123!
 ```
 
 **Permisos:**
-- `expedientes:read`
-- `consultas:create`, `consultas:read`, `consultas:update`
-- `pacientes:read`
-- `landing_route: "/dashboard"`
+- Expedientes: `create`, `read`, `search`
+- Citas: `create`, `read`, `update`, `delete`, `confirm`, `reschedule`, `export`
+- `landing_route: "/recepcion"`
 
 **Puede:**
-- ✅ VER expedientes (solo lectura)
-- ✅ Crear/modificar consultas
-- ✅ Ver pacientes
-- ❌ NO crear/eliminar expedientes
-- ❌ NO modificar pacientes
+- ✅ Crear expedientes nuevos
+- ✅ Gestionar citas (crear, modificar, confirmar, reagendar)
+- ✅ Buscar expedientes
+- ❌ NO modificar expedientes
+- ❌ NO acceder a consultas médicas
+
+**Sidebar visible:** Recepción, Expedientes (lectura)
 
 ---
 
-### 4. Usuario Genérico (Solo Lectura)
+#### 4. FARMACIA (`farm01`)
 
 ```
-Usuario: usuario
-Password: cualquiera
+Usuario: farm01
+Password: Farm123!
 ```
 
 **Permisos:**
-- `expedientes:read`, `consultas:read`, `pacientes:read`
-- `landing_route: "/dashboard"`
+- Recetas: `read`, `print`
+- Medicamentos: `dispense`, `read`, `update_stock`
+- Expedientes: `read`, `search`
+- `landing_route: "/farmacia"`
 
 **Puede:**
-- ✅ VER todo
-- ❌ NO crear/modificar/eliminar NADA
+- ✅ Dispensar medicamentos
+- ✅ Actualizar stock de medicamentos
+- ✅ Imprimir recetas
+- ✅ Ver expedientes (solo lectura)
+- ❌ NO prescribir medicamentos
+
+**Sidebar visible:** Farmacia, Expedientes (lectura)
 
 ---
 
-### 5. Usuario Nuevo (Onboarding)
+### Usuarios de Prueba para Errores
 
+Estos usuarios simulan casos de error para testing:
+
+| Usuario | Error | Status | Descripción |
+|---------|-------|--------|-------------|
+| `inactivo` | `USER_INACTIVE` | 403 | Usuario deshabilitado |
+| `noexiste` | `USER_NOT_FOUND` | 404 | Usuario inexistente |
+| `error` | `INVALID_CREDENTIALS` | 401 | Credenciales inválidas |
+| cualquiera + `mal` | `INVALID_CREDENTIALS` | 401 | Password incorrecta |
+
+**Uso en tests:**
+
+```typescript
+// Test de error 403
+const response = await authAPI.login({ usuario: "inactivo", clave: "cualquiera" });
+expect(response).rejects.toThrow("USER_INACTIVE");
+
+// Test de error 404
+const response = await authAPI.login({ usuario: "noexiste", clave: "cualquiera" });
+expect(response).rejects.toThrow("USER_NOT_FOUND");
 ```
-Usuario: nuevo
-Password: cualquiera
-```
-
-**Características:**
-- `permissions: []`
-- `must_change_password: true`
-- `landing_route: "/onboarding"`
-
-**Flujo esperado:**
-1. Login exitoso
-2. Redirect automático a `/onboarding`
-3. DEBE aceptar términos y cambiar password
-4. Después se asignan permisos
 
 ---
 
-## Testing de Errores
+### Escenarios de Testing RBAC
 
-### Errores de Auth
+#### Escenario 1: Admin ve todo el sidebar
 
-| Usuario | Contraseña | Error | Status | Descripción |
-|---------|------------|-------|--------|-------------|
-| `inactivo` | cualquiera | `USER_INACTIVE` | 403 | Usuario deshabilitado |
-| `noexiste` | cualquiera | `USER_NOT_FOUND` | 404 | Usuario inexistente |
-| `error` | cualquiera | `INVALID_CREDENTIALS` | 401 | Credenciales inválidas |
-| cualquiera | `mal` | `INVALID_CREDENTIALS` | 401 | Password incorrecta |
+```typescript
+// Login: admin / Admin123!
+// Esperado: Sidebar muestra todas las secciones
+// Puede: Acceder a cualquier ruta
+```
 
-**Esperado en UI:**
-- Toast de error con mensaje descriptivo
-- NO redirect
-- Form limpio (o conservar usuario)
+#### Escenario 2: Médico ve solo secciones clínicas
+
+```typescript
+// Login: dr.garcia / Doc123!
+// Esperado: Sidebar muestra Consultas, Expedientes, Laboratorio
+// NO muestra: Administración, Hospital, Farmacia, Reportes
+// Al intentar navegar a /admin → redirect o 403
+```
+
+#### Escenario 3: Recepcionista sin acceso a consultas
+
+```typescript
+// Login: recep01 / Recep123!
+// Esperado: Sidebar muestra Recepción, Expedientes
+// Al intentar navegar a /consultas → redirect o 403
+// Puede: Crear expedientes, NO puede modificarlos
+```
+
+#### Escenario 4: Gerente solo reportes
+
+```typescript
+// Login: gerente01 / Ger123!
+// Esperado: Sidebar muestra Reportes + sección de auditoría
+// NO puede: Crear/editar expedientes (solo lectura)
+```
+
+---
+
+### Importar Mocks en Tests
+
+```typescript
+// frontend/src/__tests__/mocks/auth.test.ts
+import { MOCK_USERS_DB, mockLoginResponse, validateMockCredentials } from "@/mocks/users.mock";
+
+describe("Mock Users", () => {
+  it("valida credenciales correctas", () => {
+    const isValid = validateMockCredentials("admin", "Admin123!");
+    expect(isValid).toBe(true);
+  });
+  
+  it("rechaza credenciales incorrectas", () => {
+    const isValid = validateMockCredentials("admin", "wrongpass");
+    expect(isValid).toBe(false);
+  });
+  
+  it("retorna permisos del médico", () => {
+    const response = mockLoginResponse("dr.garcia");
+    expect(response?.user.permissions).toContain("consultas:create");
+    expect(response?.user.permissions).not.toContain("*");
+  });
+  
+  it("admin tiene wildcard", () => {
+    const response = mockLoginResponse("admin");
+    expect(response?.user.permissions).toContain("*");
+    expect(response?.user.is_admin).toBe(true);
+  });
+});
+```
+
+**Ver más:** [`frontend/src/mocks/README.md`](../../frontend/src/mocks/README.md)
 
 ---
 

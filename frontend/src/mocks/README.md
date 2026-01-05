@@ -1,221 +1,130 @@
-# 🧪 Mock Users - Sistema RBAC 2.0
+# Mocks - Usuarios de Prueba RBAC 2.0
 
-Este directorio contiene usuarios mock para testing del sistema de autenticación y autorización (RBAC) de SIRES.
+> **Documentación completa:** [docs/guides/testing.md](../../../docs/guides/testing.md#usuarios-de-prueba-rbac-20)
 
----
-
-## 📋 Credenciales de Testing
-
-### Usuarios Disponibles
-
-| Usuario | Password | Rol | Landing Route | Descripción |
-|---------|----------|-----|---------------|-------------|
-| `admin` | `Admin123!` | ADMINISTRADOR | `/admin` | Acceso total al sistema |
-| `dr.garcia` | `Doc123!` | MEDICOS | `/consultas` | Médico general |
-| `dra.lopez` | `Esp123!` | ESPECIALISTAS | `/consultas` | Médico especialista |
-| `recep01` | `Recep123!` | RECEPCION | `/recepcion` | Recepcionista |
-| `farm01` | `Farm123!` | FARMACIA | `/farmacia` | Farmacéutico |
-| `urg01` | `Urg123!` | URGENCIAS | `/urgencias` | Médico de urgencias |
-| `coord.hosp` | `Hosp123!` | HOSP-COORDINACION | `/hospital` | Coordinador hospitalario |
-| `gerente01` | `Ger123!` | GERENCIA | `/reportes` | Gerente - reportes |
-| `jefe.clinica` | `Jefe123!` | JEFATURA CLINICA | `/consultas` | Jefe de clínica |
-| `trans01` | `Trans123!` | TRANS-RECETA | `/farmacia` | Transcriptor de recetas |
+Este directorio contiene usuarios mock para testing del sistema de autenticación y autorización (RBAC 2.0) de SIRES.
 
 ---
 
-## 🔐 Permisos por Rol
+## Quick Start
 
-### ADMINISTRADOR
-- **Permisos:** `["*"]` (acceso total)
-- **Sidebar visible:** Todas las secciones
-
-### MEDICOS
-- **Permisos:** 
-  - Expedientes: `read`, `update`, `search`, `print`
-  - Consultas: `create`, `read`, `update`, `sign`, `export`
-  - Recetas: `create`, `read`, `print`
-  - Citas: `read`
-  - Laboratorio: `create`, `read`, `print`
-- **Sidebar visible:** Consultas, Expedientes, Laboratorio
-
-### ESPECIALISTAS
-- **Permisos adicionales a MEDICOS:**
-  - `consultas:read_others` (leer consultas de otros médicos)
-- **Sidebar visible:** Igual que MEDICOS + supervisión
-
-### RECEPCION
-- **Permisos:**
-  - Expedientes: `create`, `read`, `search`
-  - Citas: `create`, `read`, `update`, `delete`, `confirm`, `reschedule`, `export`
-- **Sidebar visible:** Recepción, Expedientes
-
-### FARMACIA
-- **Permisos:**
-  - Recetas: `read`, `print`
-  - Medicamentos: `dispense`, `read`, `update_stock`
-  - Expedientes: `read`, `search`
-- **Sidebar visible:** Farmacia, Expedientes (lectura)
-
-### URGENCIAS
-- **Permisos:**
-  - Expedientes: `read`, `update`, `search`
-  - Urgencias: `create`, `read`, `update`, `triage`
-  - Consultas: `create`, `read`, `update`, `sign`
-  - Recetas: `create`, `read`
-  - Laboratorio: `create`, `read`
-- **Sidebar visible:** Urgencias, Consultas, Expedientes
-
-### HOSP-COORDINACION
-- **Permisos:**
-  - Expedientes: `read`, `search`
-  - Hospital: `coordinacion`, `admision`
-  - Reportes: `hospital`
-- **Sidebar visible:** Hospital, Reportes
-
-### GERENCIA
-- **Permisos:**
-  - Reportes: `consultas`, `citas`, `farmacia`, `hospital`, `export`
-  - Sistema: `audit_logs`
-  - Expedientes: `read`, `search`, `export`
-  - Consultas: `read`, `export`
-  - Usuarios: `read`
-- **Sidebar visible:** Reportes, Administración (auditoría)
-
-### JEFATURA CLINICA
-- **Permisos:**
-  - Todos los de MEDICOS +
-  - Expedientes: `export`
-  - Consultas: `read_others` (supervisión)
-  - Reportes: `consultas`, `citas`, `export`
-- **Sidebar visible:** Consultas, Expedientes, Reportes
-
-### TRANS-RECETA
-- **Permisos:**
-  - Recetas: `transcribe`, `read`, `print`
-  - Expedientes: `read`, `search`
-- **Sidebar visible:** Farmacia (transcripción)
-
----
-
-## 🧪 Cómo Usar los Mocks
-
-### 1. Testing Manual en Dev Server
+### Activar Mocks
 
 ```bash
-# Iniciar servidor de desarrollo
-cd frontend
-bun dev
+# frontend/.env.local
+VITE_USE_MOCKS=true
 ```
 
-Navegar a `http://localhost:5173/login` y usar cualquier credencial de la tabla.
+### Credenciales Principales
 
-### 2. Importar en Tests Unitarios
+| Usuario | Password | Rol | Permisos |
+|---------|----------|-----|----------|
+| `admin` | `Admin123!` | ADMINISTRADOR | `["*"]` (todos) |
+| `dr.garcia` | `Doc123!` | MEDICOS | Consultas + Expedientes + Recetas |
+| `recep01` | `Recep123!` | RECEPCION | Citas + Expedientes (crear) |
+| `farm01` | `Farm123!` | FARMACIA | Dispensar medicamentos |
 
-```typescript
-import { MOCK_USERS_DB, mockLoginResponse } from "@/mocks/users.mock";
+**Ver tabla completa:** [docs/guides/testing.md#tabla-de-credenciales](../../../docs/guides/testing.md#tabla-de-credenciales)
 
-// Simular login exitoso
-const loginResponse = mockLoginResponse("admin");
-expect(loginResponse?.user.is_admin).toBe(true);
+---
 
-// Obtener usuario específico
-const medico = MOCK_USERS_DB["dr.garcia"];
-expect(medico.permissions).toContain("consultas:create");
+## Estructura del Directorio
+
 ```
-
-### 3. Mock de API (MSW o similar)
-
-```typescript
-import { validateMockCredentials, mockLoginResponse } from "@/mocks/users.mock";
-
-// Handler de login
-rest.post("/api/v1/auth/login", async (req, res, ctx) => {
-  const { usuario, clave } = await req.json();
-  
-  if (validateMockCredentials(usuario, clave)) {
-    const response = mockLoginResponse(usuario);
-    return res(ctx.json(response));
-  }
-  
-  return res(ctx.status(401), ctx.json({ code: "INVALID_CREDENTIALS" }));
-});
+mocks/
+├── users.mock.ts          # Base de datos de usuarios mock
+├── auth.mocks.ts          # Implementación mock de auth API
+└── README.md              # Este archivo
 ```
 
 ---
 
-## 🎯 Escenarios de Testing
+## Uso en Tests
 
-### Escenario 1: Admin ve todo el sidebar
+### Importar usuarios mock
+
 ```typescript
-// Login: admin / Admin123!
-// Esperado: Sidebar muestra 7 secciones (todas)
+import { MOCK_USERS_DB, mockLoginResponse, validateMockCredentials } from "@/mocks/users.mock";
+
+// Validar credenciales
+const isValid = validateMockCredentials("admin", "Admin123!");
+
+// Obtener respuesta de login
+const response = mockLoginResponse("admin");
+console.log(response?.user.permissions); // ["*"]
 ```
 
-### Escenario 2: Médico ve solo secciones clínicas
+### Testing de permisos
+
+```typescript
+import { getMockUser } from "@/mocks/users.mock";
+
+const medico = getMockUser("dr.garcia");
+expect(medico.permissions).toContain("consultas:create");
+expect(medico.permissions).not.toContain("*");
+```
+
+---
+
+## Escenarios de Testing
+
+### Escenario: Médico ve solo secciones clínicas
+
 ```typescript
 // Login: dr.garcia / Doc123!
-// Esperado: Sidebar muestra Consultas, Expedientes, Laboratorio
-// NO muestra: Administración, Hospital, Farmacia, Reportes
+// Esperado:
+// - Sidebar muestra: Consultas, Expedientes, Laboratorio
+// - NO muestra: Administración, Hospital, Farmacia
+// - Al navegar a /admin → redirect 403
 ```
 
-### Escenario 3: Recepcionista sin acceso a consultas
+### Escenario: Admin ve todo
+
 ```typescript
-// Login: recep01 / Recep123!
-// Esperado: Sidebar muestra Recepción, Expedientes
-// Al intentar navegar a /consultas → redirect o 403
+// Login: admin / Admin123!
+// Esperado:
+// - permissions: ["*"]
+// - is_admin: true
+// - Sidebar muestra todas las secciones
+// - Puede acceder a cualquier ruta
 ```
 
-### Escenario 4: Gerente solo reportes
+**Ver más ejemplos:** [docs/guides/testing.md#escenarios-de-testing-rbac](../../../docs/guides/testing.md#escenarios-de-testing-rbac)
+
+---
+
+## Usuarios de Error
+
+Para testing de manejo de errores:
+
+| Usuario | Error | Status |
+|---------|-------|--------|
+| `inactivo` | `USER_INACTIVE` | 403 |
+| `noexiste` | `USER_NOT_FOUND` | 404 |
+| `error` | `INVALID_CREDENTIALS` | 401 |
+
+---
+
+## Patrón Strategy
+
+El sistema usa el patrón **Strategy** para alternar entre API real y mocks:
+
 ```typescript
-// Login: gerente01 / Ger123!
-// Esperado: Sidebar muestra Reportes + sección de auditoría
-// NO puede crear/editar expedientes (solo lectura)
+// frontend/src/api/resources/auth.api.ts
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
+export const authAPI = USE_MOCKS ? authMocks : realAuthAPI;
 ```
 
 ---
 
-## 🔍 Validación de RBAC
-
-### Checklist de Testing
-
-- [ ] **Sidebar filtering:** Cada usuario ve solo las secciones permitidas
-- [ ] **Route protection:** Navegar a ruta sin permiso → redirect o error
-- [ ] **Permisos atómicos:** Usuario solo puede ejecutar acciones permitidas
-- [ ] **Landing route:** Después del login, redirige a la ruta correcta
-- [ ] **Wildcard admin:** Admin con `permissions: ["*"]` accede a todo
-- [ ] **Multi-rol:** Si un usuario tiene múltiples roles, combina permisos
-
-### Comandos de Verificación
-
-```bash
-# Ver estructura de usuario en consola
-import { getMockUser } from "@/mocks/users.mock";
-console.log(getMockUser("admin"));
-
-# Listar todos los usuarios
-import { listAllMockUsers } from "@/mocks/users.mock";
-console.table(listAllMockUsers());
-```
-
----
-
-## ⚠️ Notas Importantes
-
-1. **NO usar en producción:** Estos mocks son solo para desarrollo/testing
-2. **Passwords hardcodeadas:** Solo para ambiente local
-3. **Sincronización con BD:** Los permisos están basados en `backend/migrations/004_rbac_assign_permissions.sql`
-4. **Tokens en cookies:** El login real usa HttpOnly cookies, los mocks simulan el objeto `user` en la respuesta
-
----
-
-## 🔧 Mantenimiento
+## Mantenimiento
 
 ### Agregar nuevo usuario mock
 
-1. Agregar credencial en `MOCK_CREDENTIALS`
+1. Agregar credencial en `MOCK_CREDENTIALS` (en `users.mock.ts`)
 2. Crear entrada en `MOCK_USERS_DB` con estructura `Usuario`
-3. Asignar `permissions` según rol (consultar migrations SQL)
-4. Actualizar esta documentación
+3. Asignar `permissions` según rol (consultar `backend/migrations/004_rbac_2_0.sql`)
+4. Actualizar docs en [docs/guides/testing.md](../../../docs/guides/testing.md)
 
 ### Sincronizar con backend
 
@@ -226,9 +135,13 @@ Cuando se actualicen permisos en `backend/migrations/`:
 
 ---
 
-## 📚 Referencias
+## Referencias
 
-- **Tipos:** `frontend/src/api/types/auth.types.ts`
-- **Migraciones:** `backend/migrations/004_rbac_assign_permissions.sql`
-- **Nav Config:** `frontend/src/components/layouts/sidebar/nav-config.ts`
-- **Protected Route:** `frontend/src/routes/ProtectedRoute.tsx`
+- **Documentación completa:** [docs/guides/testing.md](../../../docs/guides/testing.md)
+- **Tipos TypeScript:** `frontend/src/api/types/auth.types.ts`
+- **Migraciones backend:** `backend/migrations/004_rbac_2_0.sql`
+- **Guía RBAC Frontend:** [docs/guides/rbac-frontend.md](../../../docs/guides/rbac-frontend.md)
+
+---
+
+**Última actualización:** Enero 2026

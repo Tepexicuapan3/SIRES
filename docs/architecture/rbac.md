@@ -558,12 +558,4 @@ INSERT INTO role_permissions (id_rol, id_permission) VALUES
 
 ---
 
-## Próximos Pasos
-
-1. **Agregar overrides UI:** Página para asignar ALLOW/DENY a usuarios
-2. **Logs de auditoría:** Registrar cambios de permisos
-3. **Permisos granulares:** `expedientes:read:own` (solo sus propios expedientes)
-
----
-
 **Última actualización:** Enero 2026

@@ -59,19 +59,6 @@ MYSQL_PASSWORD=tu_password
 MYSQL_DATABASE=SIRES
 ```
 
-**Opción B: MySQL remoto**
-
-Cambiá `MYSQL_HOST` a la IP/hostname del servidor.
-
-**Crear la BD:**
-
-```sql
-CREATE DATABASE SIRES CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-CREATE USER 'sires'@'%' IDENTIFIED BY 'tu_password';
-GRANT ALL PRIVILEGES ON SIRES.* TO 'sires'@'%';
-FLUSH PRIVILEGES;
-```
-
 ### 4. Levantar servicios
 
 ```bash
@@ -286,10 +273,10 @@ bun dev
 
 ## Próximos Pasos
 
-1. **Entender la arquitectura:** Ver `docs/architecture/overview.md`
-2. **Explorar RBAC:** Ver `docs/architecture/rbac.md`
-3. **Crear tu primera feature:** Ver `docs/guides/adding-feature.md`
-4. **Componentes UI:** Ver `docs/guides/ui-components.md`
+1. **[Entender la arquitectura](/docs/architecture/overview.md)**
+2. **[Explorar RBAC](/docs/architecture/rbac.md)**
+3. **[Crear tu primera feature](/docs/guides/adding-feature.md)**
+4. **[Componentes UI](/docs/guides/ui-components.md)**
 
 ---
 

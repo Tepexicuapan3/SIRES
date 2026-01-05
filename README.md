@@ -232,7 +232,6 @@ bg-paper, bg-subtle           /* Superficies */
 ### Documentación Interna
 
 - **[AGENTS.md](./AGENTS.md)** - Guía de agentes IA (build, plan, ui-designer)
-- **[PROJECT_GUIDE.md](./PROJECT_GUIDE.md)** - Referencia técnica completa
 - **[docs/](./docs/)** - Guías organizadas por tema
 
 ### Docs Externas
@@ -272,18 +271,6 @@ Si el frontend está en otro puerto:
 # backend/.env
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
-
----
-
-## 👥 Autor
-
-Luis-Ant - [GitHub](https://github.com/Luis-Ant)
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo la licencia especificada en el archivo LICENSE.
 
 ---
 
