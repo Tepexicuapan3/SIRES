@@ -330,6 +330,123 @@ Después de completar las migraciones:
 
 ---
 
-**Versión:** 1.0.0  
-**Fecha:** 2025-12-29  
+---
+
+## 🧹 Migración 006: Cleanup MySQL OTP Table
+
+**Fecha:** 2026-01-05  
+**Estado:** ⏳ Pendiente de aplicar  
+**Tipo:** Cleanup (no rompe nada, elimina código legacy)
+
+### ¿Qué hace?
+
+Elimina la tabla `redis.codigos_otp` de MySQL que ya no se usa.
+
+### Contexto: Migración OTP a Redis
+
+El sistema de códigos OTP (One-Time Password) para recuperación de contraseña fue migrado completamente de MySQL a Redis:
+
+**Antes (MySQL):**
+- Tabla `redis.codigos_otp` con queries SQL
+- Requiere job de limpieza para códigos expirados
+- ~5-50ms por operación (query + índices)
+- Clase `PasswordResetRepository` (112 líneas)
+
+**Ahora (Redis):**
+- Key-value `otp:<email>` con TTL automático
+- Redis maneja expiración automáticamente
+- <1ms por operación (in-memory)
+- Clase `OTPService` (180 líneas, más features)
+
+### Archivos de código modificados
+
+| Archivo | Cambio | Líneas |
+|---------|--------|--------|
+| `password_reset_repository.py` | **ELIMINADO** | -112 |
+| `request_reset_code_usecase.py` | Usa `OTPService` (Redis) | ±10 |
+| `verify_reset_code_usecase.py` | Usa `OTPService.verify_code()` | ±15 |
+
+### Instalación
+
+```bash
+# Con Docker
+docker-compose exec mysql mysql -u sires -p SIRES < backend/migrations/006_cleanup_mysql_otp.sql
+
+# Sin Docker
+mysql -h 10.15.15.76 -u sires -p SIRES < backend/migrations/006_cleanup_mysql_otp.sql
+```
+
+### ¿Es seguro aplicarla?
+
+**Sí, completamente seguro:**
+- La tabla ya no se usa en el código (desde el refactor)
+- El sistema OTP funciona 100% con Redis
+- Es solo limpieza de código legacy
+
+### ¿Qué pasa si NO la aplico?
+
+**Nada malo:**
+- El sistema funciona igual (ya usa Redis)
+- Solo queda una tabla vacía sin uso
+- Puedes aplicarla después sin problemas
+
+### Verificación Post-Migración
+
+```bash
+# 1. Verificar que la tabla fue eliminada
+docker-compose exec mysql mysql -u sires -p112233 SIRES -sse \
+  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'redis' AND table_name = 'codigos_otp';"
+# Debe retornar: 0
+
+# 2. Verificar que Redis funciona
+docker-compose exec redis redis-cli PING
+# Debe retornar: PONG
+
+# 3. Probar flujo OTP completo
+curl -X POST http://localhost:5000/api/auth/request-reset-code \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@metro.cdmx.gob.mx"}'
+
+# 4. Ver código en Redis
+docker-compose exec redis redis-cli
+> KEYS otp:*
+> GET otp:test@metro.cdmx.gob.mx
+> TTL otp:test@metro.cdmx.gob.mx  # ~600 segundos
+
+# 5. Verificar código (usar el del log del backend)
+curl -X POST http://localhost:5000/api/auth/verify-reset-code \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@metro.cdmx.gob.mx", "code": "123456"}'
+
+# 6. Verificar que se eliminó tras uso
+docker-compose exec redis redis-cli
+> GET otp:test@metro.cdmx.gob.mx  # Debe retornar: (nil)
+```
+
+### Rollback (No recomendado)
+
+Si por alguna razón necesitas recrear la tabla (aunque el código no la usa):
+
+```sql
+CREATE TABLE IF NOT EXISTS `redis`.`codigos_otp` (
+    `email` VARCHAR(255) PRIMARY KEY,
+    `otp_code` VARCHAR(6) NOT NULL,
+    `expires_at` DATETIME NOT NULL,
+    `attempts` INT DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Nota:** Esto NO hace que el código vuelva a usarla. El código ya fue refactorizado para usar Redis exclusivamente.
+
+### Documentación Relacionada
+
+- **Diseño OTP Redis:** `docs/architecture/otp-redis.md`
+- **Código OTPService:** `backend/src/use_cases/auth/otp_service.py`
+- **Migración SQL:** `backend/migrations/006_cleanup_mysql_otp.sql`
+
+---
+
+**Versión:** 1.1.0  
+**Fecha:** 2026-01-05  
 **Autor:** SIRES Dev Team
