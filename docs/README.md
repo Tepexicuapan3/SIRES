@@ -35,6 +35,8 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Entender la arquitectura** | [Overview](./architecture/overview.md) | 15 min |
 | **Configurar permisos** | [RBAC 2.0](./architecture/rbac.md) | 20 min |
 | **Implementar login/auth** | [Autenticación](./architecture/authentication.md) | 20 min |
+| **Configurar rate limiting** | [Rate Limiting](./architecture/rate-limiting.md) | 25 min |
+| **Implementar OTP/Recovery** | [OTP con Redis](./architecture/otp-redis.md) | 20 min |
 | **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
 | **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
 | **Testear código** | [Testing](./guides/testing.md) | 20 min |
@@ -52,7 +54,9 @@ docs/
 ├── architecture/
 │   ├── overview.md                 # Capas, stack, flujo general
 │   ├── rbac.md                     # Roles, permisos, guards
-│   └── authentication.md           # JWT, cookies, CSRF, refresh
+│   ├── authentication.md           # JWT, cookies, CSRF, refresh
+│   ├── rate-limiting.md            # 🆕 Rate limiting 3 niveles + Redis
+│   └── otp-redis.md                # 🆕 Sistema OTP para password recovery
 │
 ├── guides/
 │   ├── adding-feature.md           # Checklist backend → frontend
@@ -378,6 +382,8 @@ Ver [`AGENTS.md`](../AGENTS.md) para la lista completa.
 - Architecture overview
 - RBAC 2.0 (arquitectura + frontend + ADR)
 - Authentication (JWT + CSRF + contratos API)
+- Rate limiting (3 niveles + Redis)
+- OTP system (password recovery con Redis)
 - Adding feature guide
 - UI components guide (shadcn + Metro CDMX)
 - Testing guide con mocks RBAC 2.0
@@ -388,10 +394,10 @@ Ver [`AGENTS.md`](../AGENTS.md) para la lista completa.
 
 ### 📋 Pendiente
 
-- Rate limiting implementation
 - Deployment guide (producción)
 - Performance optimization
 - Monitoring y logs
+- ADR-004: Decisión de usar Redis para rate limiting
 
 ---
 
