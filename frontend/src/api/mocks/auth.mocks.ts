@@ -12,6 +12,9 @@ import type {
   IAuthAPI,
 } from "../types/auth.types";
 
+// ===== INTEGRACIÓN CON SISTEMA RBAC 2.0 =====
+import { validateMockCredentials, mockLoginResponse } from "@/mocks";
+
 // ==============================================================
 // CONFIGURACION DE MOCKS
 // ==============================================================
@@ -106,34 +109,47 @@ const createLoginResponse = (user: Usuario): LoginResponse => ({
 });
 
 // ==============================================================
-// TABLA DE USUARIOS DE PRUEBA
+// TABLA DE USUARIOS DE PRUEBA (RBAC 2.0)
 // ==============================================================
 /**
- * USUARIOS DE PRUEBA DISPONIBLES (RBAC 2.0):
+ * USUARIOS DE PRUEBA DISPONIBLES (sincronizados con @/mocks/users.mock.ts):
  *
- * | Usuario        | Contraseña | Rol         | Permisos                                    | Landing       | Resultado                              |
- * |----------------|------------|-------------|---------------------------------------------|---------------|----------------------------------------|
- * | admin          | cualquiera | ADMIN       | ["*"] (wildcard)                            | /admin        | ✅ Login exitoso (acceso total)        |
- * | medico         | cualquiera | ROL_MEDICO  | expedientes:*, consultas:*, pacientes:read  | /consultas    | ✅ Login exitoso (acceso médico)       |
- * | enfermero      | cualquiera | ROL_ENFERMERO| expedientes:read, consultas:create/update   | /dashboard    | ✅ Login exitoso (acceso enfermería)   |
- * | usuario        | cualquiera | ROL_USUARIO | expedientes:read, consultas:read            | /dashboard    | ✅ Login exitoso (solo lectura)        |
- * | nuevo          | cualquiera | (ninguno)   | []                                          | /onboarding   | ✅ Login + Onboarding requerido        |
- * | inactivo       | cualquiera | -           | -                                           | -             | ❌ 403 USER_INACTIVE                   |
- * | noexiste       | cualquiera | -           | -                                           | -             | ❌ 404 USER_NOT_FOUND                  |
- * | error          | cualquiera | -           | -                                           | -             | ❌ 401 INVALID_CREDENTIALS             |
- * | cualquiera     | mal        | -           | -                                           | -             | ❌ 401 INVALID_CREDENTIALS             |
- * | fail           | cualquiera | -           | -                                           | -             | ❌ 500 INTERNAL_SERVER_ERROR           |
- * | bloqueado      | cualquiera | -           | -                                           | -             | ❌ 423 USER_LOCKED (5 min)             |
- * | bloqueado1h    | cualquiera | -           | -                                           | -             | ❌ 423 USER_LOCKED (1 hora)            |
- * | bloqueado24h   | cualquiera | -           | -                                           | -             | ❌ 423 USER_LOCKED (24 horas)          |
- * | ratelimit      | cualquiera | -           | -                                           | -             | ❌ 429 TOO_MANY_REQUESTS (1 min)       |
- * | ratelimit5     | cualquiera | -           | -                                           | -             | ❌ 429 TOO_MANY_REQUESTS (5 min)       |
- * | ipblock        | cualquiera | -           | -                                           | -             | ❌ 403 IP_BLOCKED (15 min)             |
- * | ipblock1h      | cualquiera | -           | -                                           | -             | ❌ 403 IP_BLOCKED (1 hora)             |
- * | ipblock24h     | cualquiera | -           | -                                           | -             | ❌ 403 IP_BLOCKED (24 horas)           |
+ * Ver documentación completa en: frontend/src/mocks/README.md
+ *
+ * USUARIOS REALES (permisos sincronizados con backend/migrations/004_rbac_assign_permissions.sql):
+ *
+ * | Usuario       | Contraseña  | Rol Principal          | Permisos | Landing       | Descripción                    |
+ * |---------------|-------------|------------------------|----------|---------------|--------------------------------|
+ * | admin         | Admin123!   | ADMINISTRADOR          | ["*"]    | /admin        | Acceso total al sistema        |
+ * | drgarcia      | Doc123!     | MEDICOS                | 15       | /consultas    | Médico general                 |
+ * | drlopez       | Esp123!     | ESPECIALISTAS          | 16       | /consultas    | Médico especialista            |
+ * | recep01       | Recep123!   | RECEPCION              | 10       | /recepcion    | Recepcionista                  |
+ * | farm01        | Farm123!    | FARMACIA               | 6        | /farmacia     | Farmacéutico                   |
+ * | urg01         | Urg123!     | URGENCIAS              | 13       | /urgencias    | Médico de urgencias            |
+ * | coordhosp     | Hosp123!    | HOSP-COORDINACION      | 5        | /hospital     | Coordinador hospitalización    |
+ * | gerente01     | Ger123!     | GERENCIA               | 11       | /reportes     | Gerente/director               |
+ * | jefeclinica   | Jefe123!    | JEFATURA CLINICA       | 20       | /consultas    | Jefe de área clínica           |
+ * | trans01       | Trans123!   | TRANS-RECETA           | 5        | /farmacia     | Transcriptor de recetas        |
+ *
+ * USUARIOS DE ERROR (para testing de casos edge):
+ *
+ * | Usuario       | Contraseña  | Resultado                                     |
+ * |---------------|-------------|-----------------------------------------------|
+ * | inactivo      | cualquiera  | ❌ 403 USER_INACTIVE                          |
+ * | noexiste      | cualquiera  | ❌ 404 USER_NOT_FOUND                         |
+ * | error         | cualquiera  | ❌ 401 INVALID_CREDENTIALS                    |
+ * | cualquiera    | mal         | ❌ 401 INVALID_CREDENTIALS                    |
+ * | fail          | cualquiera  | ❌ 500 INTERNAL_SERVER_ERROR                  |
+ * | bloqueado     | cualquiera  | ❌ 423 USER_LOCKED (5 min)                    |
+ * | bloqueado1h   | cualquiera  | ❌ 423 USER_LOCKED (1 hora)                   |
+ * | bloqueado24h  | cualquiera  | ❌ 423 USER_LOCKED (24 horas)                 |
+ * | ratelimit     | cualquiera  | ❌ 429 TOO_MANY_REQUESTS (1 min)              |
+ * | ratelimit5    | cualquiera  | ❌ 429 TOO_MANY_REQUESTS (5 min)              |
+ * | ipblock       | cualquiera  | ❌ 403 IP_BLOCKED (15 min)                    |
+ * | ipblock1h     | cualquiera  | ❌ 403 IP_BLOCKED (1 hora)                    |
+ * | ipblock24h    | cualquiera  | ❌ 403 IP_BLOCKED (24 horas)                  |
  *
  * CONTRASEÑAS DE PRUEBA PARA ONBOARDING Y RESET PASSWORD:
- * (Aplica tanto para onboarding como para recovery)
  *
  * | Contraseña       | Resultado                                |
  * |------------------|------------------------------------------|
@@ -142,7 +158,7 @@ const createLoginResponse = (user: Usuario): LoginResponse => ({
  * | SinNumero@       | ❌ 400 PASSWORD_NO_NUMBER                |
  * | SinEspecial1     | ❌ 400 PASSWORD_NO_SPECIAL               |
  * | Expirado1@       | ❌ 403 INVALID_SCOPE                     |
- * | YaActivo1@       | ❌ 400 ONBOARDING_NOT_REQUIRED (solo onboarding) |
+ * | YaActivo1@       | ❌ 400 ONBOARDING_NOT_REQUIRED           |
  * | Cualquier otra   | ✅ Éxito + auto-login                    |
  */
 
@@ -152,9 +168,11 @@ const createLoginResponse = (user: Usuario): LoginResponse => ({
 
 export const authMocks: IAuthAPI = {
   /**
-   * 1. SIMULACIÓN DE LOGIN
+   * 1. SIMULACIÓN DE LOGIN (RBAC 2.0)
    *
-   * Prueba diferentes escenarios según el usuario ingresado.
+   * Usa el sistema de usuarios sincronizado con la BD real (MOCK_USERS_DB).
+   * Soporta usuarios de error para testing de edge cases.
+   *
    * Ver tabla de usuarios arriba para todos los casos disponibles.
    */
   login: async (data: LoginRequest): Promise<LoginResponse> => {
@@ -162,8 +180,10 @@ export const authMocks: IAuthAPI = {
 
     const username = data.usuario.toLowerCase();
 
+    console.log(`🧪 [MOCK AUTH] Intento de login: ${username}`);
+
     // =========================================================
-    // ERRORES DE RATE LIMITING (Nuevos)
+    // ERRORES DE RATE LIMITING (Usuarios de prueba)
     // =========================================================
 
     // Usuario bloqueado por intentos fallidos - 5 minutos
@@ -247,7 +267,7 @@ export const authMocks: IAuthAPI = {
     }
 
     // =========================================================
-    // ERRORES DE AUTENTICACIÓN (Existentes)
+    // ERRORES DE AUTENTICACIÓN (Usuarios de prueba)
     // =========================================================
 
     // Usuario inactivo
@@ -268,7 +288,7 @@ export const authMocks: IAuthAPI = {
       );
     }
 
-    // Credenciales inválidas
+    // Credenciales inválidas (trigger explícito)
     if (username === "error" || data.clave === "mal") {
       throw createMockError(
         "INVALID_CREDENTIALS",
@@ -287,123 +307,43 @@ export const authMocks: IAuthAPI = {
     }
 
     // =========================================================
-    // CASOS DE ÉXITO
+    // USUARIOS REALES (Sistema RBAC 2.0)
     // =========================================================
 
-    // Usuario nuevo - requiere onboarding (token limitado)
-    if (username === "nuevo") {
-      const user: Usuario = {
-        id_usuario: 99,
-        usuario: "nuevo",
-        nombre: "Usuario",
-        paterno: "Nuevo",
-        materno: "Sistema",
-        nombre_completo: "Usuario Nuevo Sistema",
-        expediente: "12345",
-        curp: "",
-        correo: "nuevo@metro.cdmx.gob.mx",
-        ing_perfil: "Nuevo Usuario",
-        roles: [], // Sin roles hasta completar onboarding
-        must_change_password: true,
-        // RBAC 2.0: Sin permisos hasta onboarding
-        permissions: [],
-        landing_route: "/onboarding",
-        is_admin: false,
-      };
+    // Validar credenciales usando el sistema RBAC 2.0
+    const isValid = validateMockCredentials(data.usuario, data.clave);
 
-      // Respuesta especial para onboarding
-      return {
-        token_type: "Bearer",
-        expires_in: 600, // 10 minutos para completar
-        user,
-      };
-    }
-
-    // Médico - Permisos completos sobre expedientes y consultas
-    if (username === "medico") {
-      return createLoginResponse(
-        createMockUser({
-          id_usuario: 2,
-          usuario: "medico",
-          nombre: "María",
-          paterno: "González",
-          materno: "Ramírez",
-          nombre_completo: "María González Ramírez",
-          expediente: "MED001",
-          ing_perfil: "Médico General",
-          roles: ["ROL_MEDICO"],
-          // RBAC 2.0: Permisos de médico
-          permissions: [
-            "expedientes:create",
-            "expedientes:read",
-            "expedientes:update",
-            "expedientes:delete",
-            "consultas:create",
-            "consultas:read",
-            "consultas:update",
-            "pacientes:read",
-            "pacientes:update",
-          ],
-          landing_route: "/consultas",
-          is_admin: false,
-        }),
+    if (!isValid) {
+      console.log(`🧪 [MOCK AUTH] Credenciales inválidas para: ${username}`);
+      throw createMockError(
+        "INVALID_CREDENTIALS",
+        "Usuario o contraseña incorrectos.",
+        401,
       );
     }
 
-    // Enfermero - Permisos limitados (lectura expedientes, edición consultas)
-    if (username === "enfermero") {
-      return createLoginResponse(
-        createMockUser({
-          id_usuario: 3,
-          usuario: "enfermero",
-          nombre: "Carlos",
-          paterno: "Hernández",
-          materno: "Silva",
-          nombre_completo: "Carlos Hernández Silva",
-          expediente: "ENF001",
-          ing_perfil: "Enfermero",
-          roles: ["ROL_ENFERMERO"],
-          // RBAC 2.0: Permisos de enfermería
-          permissions: [
-            "expedientes:read",
-            "consultas:create",
-            "consultas:read",
-            "consultas:update",
-            "pacientes:read",
-          ],
-          landing_route: "/dashboard",
-          is_admin: false,
-        }),
+    // Obtener respuesta del mock usando el helper RBAC 2.0
+    const response = mockLoginResponse(data.usuario);
+
+    if (!response) {
+      console.log(
+        `🧪 [MOCK AUTH] Usuario no encontrado en MOCK_USERS_DB: ${username}`,
+      );
+      throw createMockError(
+        "USER_NOT_FOUND",
+        "El usuario ingresado no existe en el sistema.",
+        404,
       );
     }
 
-    // Usuario genérico - Solo lectura
-    if (username === "usuario") {
-      return createLoginResponse(
-        createMockUser({
-          id_usuario: 4,
-          usuario: "usuario",
-          nombre: "Pedro",
-          paterno: "Martínez",
-          materno: "Torres",
-          nombre_completo: "Pedro Martínez Torres",
-          expediente: "USR001",
-          ing_perfil: "Usuario General",
-          roles: ["ROL_USUARIO"],
-          // RBAC 2.0: Solo lectura
-          permissions: ["expedientes:read", "consultas:read", "pacientes:read"],
-          landing_route: "/dashboard",
-          is_admin: false,
-        }),
-      );
-    }
+    console.log(`🧪 [MOCK AUTH] Login exitoso:`, {
+      usuario: response.user.usuario,
+      roles: response.user.roles,
+      permissions: response.user.permissions.length,
+      landing: response.user.landing_route,
+    });
 
-    // Login exitoso por defecto (Admin)
-    return createLoginResponse(
-      createMockUser({
-        usuario: data.usuario,
-      }),
-    );
+    return response;
   },
 
   /**
@@ -525,10 +465,39 @@ export const authMocks: IAuthAPI = {
   },
 
   /**
-   * 5. SIMULACIÓN DE OBTENER USUARIO ACTUAL
+   * 5. SIMULACIÓN DE OBTENER USUARIO ACTUAL (RBAC 2.0)
+   *
+   * Retorna el usuario guardado en Zustand authStore.
+   * Si no hay usuario en authStore, simula un usuario admin por defecto.
    */
   getCurrentUser: async (): Promise<Usuario> => {
     await delay(SHORT_DELAY);
+
+    console.log("🧪 [MOCK AUTH] getCurrentUser llamado");
+
+    // En modo mock, Zustand persiste el usuario en localStorage
+    // El key es "sires-auth-storage" (ver authStore.ts línea 74)
+    const storedAuth = localStorage.getItem("sires-auth-storage");
+
+    if (storedAuth) {
+      try {
+        const parsed = JSON.parse(storedAuth);
+        if (parsed.state?.user) {
+          console.log(
+            "🧪 [MOCK AUTH] Usuario encontrado en localStorage:",
+            parsed.state.user.usuario,
+          );
+          return parsed.state.user;
+        }
+      } catch (e) {
+        console.warn("🧪 [MOCK AUTH] Error parseando localStorage", e);
+      }
+    }
+
+    // Fallback: retornar admin por defecto
+    console.log(
+      "🧪 [MOCK AUTH] No hay usuario en localStorage, retornando admin por defecto",
+    );
     return createMockUser();
   },
 
