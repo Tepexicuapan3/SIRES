@@ -397,3 +397,367 @@ export { Button, buttonVariants };
 
 **Pro tip:** Usá el agente `ui-designer` con `/ui` para automatizar la creación/adaptación de componentes.
 
+---
+
+## 📚 Estrategia de Documentación (CRÍTICO para Agentes)
+
+> **Filosofía:** Documentación es una herramienta, NO un objetivo. Solo creá documentación que alguien va a **usar** y que no se puede inferir del código mismo.
+
+### Cuándo Documentar (Checklist para Agentes)
+
+#### ✅ SÍ documentar en estos casos:
+
+1. **Decisiones arquitectónicas no obvias**
+   - ¿Por qué usamos JWT en cookies HttpOnly y no en localStorage?
+   - ¿Por qué el onboarding es un wizard de 2 pasos?
+   - → **Destino:** `docs/adr/` (Architecture Decision Records)
+
+2. **Nuevos features complejos** (3+ archivos, 2+ capas)
+   - Feature que toca backend + frontend + DB
+   - Flows con múltiples estados (ej: reset password con OTP)
+   - → **Destino:** `docs/guides/` o actualizar existentes
+
+3. **Patrones de implementación repetibles**
+   - "Cómo agregar un endpoint protegido con RBAC"
+   - "Cómo crear un componente UI con shadcn + Metro"
+   - → **Destino:** `docs/guides/`
+
+4. **Contratos de API** (si cambian endpoints/tipos)
+   - → **Destino:** `docs/api/endpoints.md`
+
+5. **Decisiones de seguridad**
+   - Cambios en auth, CSRF, validación
+   - → **Destino:** `docs/adr/` + actualizar `docs/architecture/authentication.md`
+
+#### ❌ NO documentar en estos casos:
+
+1. **Bug fixes** → Va solo en commit message + código
+2. **Refactors que no cambian comportamiento** → Commit message
+3. **Debugging sessions temporales** → Borrá logs después
+4. **Código autoexplicativo** → Si tiene buenos nombres, no necesita docs
+5. **Duplicación de información** → Si ya está en código/tipos, no lo repitas
+
+### Dónde Poner la Documentación (Árbol de Decisión)
+
+```
+¿Qué estoy documentando?
+│
+├─ ¿Es una decisión arquitectónica importante?
+│  └─ SÍ → docs/adr/###-titulo-decision.md
+│
+├─ ¿Es una guía para implementar algo?
+│  └─ SÍ → docs/guides/nombre-guia.md
+│
+├─ ¿Es sobre cómo funciona el sistema?
+│  └─ SÍ → docs/architecture/subsistema.md
+│
+├─ ¿Es referencia de API endpoints?
+│  └─ SÍ → docs/api/endpoints.md
+│
+├─ ¿Es setup inicial o troubleshooting?
+│  └─ SÍ → docs/getting-started/setup.md
+│
+├─ ¿Es específico de un componente/función?
+│  └─ SÍ → Comentario inline en el código (JSDoc/docstring)
+│
+└─ ¿No encaja en ninguna categoría?
+   └─ PREGUNTÁ antes de crear archivo nuevo
+```
+
+### Cómo Documentar (Reglas de Formato)
+
+#### Regla 1: Máximo 500 líneas por archivo
+
+Si superás las 500 líneas, **dividí el archivo**. Nadie lee docs de 1000+ líneas.
+
+**Ejemplo:**
+- ❌ `docs/authentication-everything.md` (1500 líneas)
+- ✅ `docs/architecture/authentication.md` (500 líneas)
+- ✅ `docs/adr/001-jwt-cookies-httponly.md` (200 líneas)
+- ✅ `docs/guides/adding-protected-endpoint.md` (300 líneas)
+
+#### Regla 2: Información esencial ÚNICAMENTE
+
+Preguntate: **"¿Esto ayuda a alguien a hacer su trabajo MÁS RÁPIDO?"**
+
+- ✅ Ejemplos copy/paste
+- ✅ Checklists
+- ✅ Comandos exactos
+- ✅ Diagramas de flujo
+- ❌ Explicaciones filosóficas largas
+- ❌ Historia de cómo llegamos a esto (solo si es ADR)
+- ❌ Múltiples formas de hacer lo mismo (elegí UNA)
+
+#### Regla 3: Estructura predecible
+
+Todos los docs deben seguir esta estructura (usá templates):
+
+```markdown
+# Título Claro y Descriptivo
+
+> **TL;DR:** Resumen en 1-2 oraciones de qué problema resuelve este doc.
+
+## Problema / Contexto
+[Por qué existe este doc, qué problema resuelve]
+
+## Solución / Implementación
+[Cómo se resuelve, con ejemplos concretos]
+
+## Ejemplos
+[Código copy/paste, comandos, checklists]
+
+## Referencias
+[Links a otros docs relevantes, NO externos sin contexto]
+```
+
+#### Regla 4: Ejemplos funcionales (copy/paste ready)
+
+**Malo:**
+```markdown
+Creá un use case que retorne un error si algo falla.
+```
+
+**Bueno:**
+```python
+# backend/src/use_cases/auth/ejemplo_usecase.py
+class EjemploUseCase:
+    def execute(self, param: str):
+        if not param:
+            return None, "INVALID_PARAM"
+        
+        try:
+            result = self.repo.do_something(param)
+            return result, None
+        except Exception:
+            return None, "SERVER_ERROR"
+```
+
+### Comandos de Documentación (para Agentes)
+
+Usá estos comandos para gestionar docs:
+
+```bash
+# Crear nueva guía
+opencode run --command doc "create adding-rbac-endpoint"
+
+# Crear nuevo ADR (Architecture Decision Record)
+opencode run --command doc "adr rate-limiting-strategy"
+
+# Actualizar documentación existente
+opencode run --command doc "update docs/guides/testing.md"
+
+# Auditar documentación (encontrar docs obsoletos/redundantes)
+opencode run --command doc "audit"
+```
+
+### Template: ADR (Architecture Decision Record)
+
+Archivo: `docs/adr/###-titulo-corto.md`
+
+```markdown
+# ADR-### Título de la Decisión
+
+**Estado:** Aceptado | Propuesto | Deprecado  
+**Fecha:** YYYY-MM-DD  
+**Autores:** @usuario / AI Agent
+
+## Contexto y Problema
+
+[Qué problema estamos resolviendo. Por qué es importante.]
+
+## Decisión
+
+[Qué decidimos hacer.]
+
+## Alternativas Consideradas
+
+### Opción 1: [Nombre]
+- **Pros:** ...
+- **Contras:** ...
+
+### Opción 2: [Nombre]
+- **Pros:** ...
+- **Contras:** ...
+
+## Consecuencias
+
+### Positivas
+- ...
+
+### Negativas (Trade-offs)
+- ...
+
+## Implementación
+
+[Cómo se implementa esto en el código. Referencias a archivos.]
+
+## Referencias
+
+- Documentos relacionados
+- Issues/PRs relevantes
+```
+
+### Template: Guía de Implementación
+
+Archivo: `docs/guides/nombre-guia.md`
+
+```markdown
+# Nombre de la Guía
+
+> **TL;DR:** [Qué vas a aprender en 1 línea]
+
+## Prerequisitos
+
+- [Qué necesitás saber antes]
+- [Dependencias/setup necesario]
+
+## Paso a Paso
+
+### 1. [Primer Paso]
+
+[Explicación breve]
+
+**Código:**
+```[lenguaje]
+[código copy/paste]
+```
+
+### 2. [Segundo Paso]
+
+...
+
+## Checklist Final
+
+Antes de dar por terminado, verificá:
+
+- [ ] Item 1
+- [ ] Item 2
+- [ ] Item 3
+
+## Troubleshooting
+
+**Problema:** [Error común]  
+**Solución:** [Cómo resolverlo]
+
+## Referencias
+
+- [Docs relacionados]
+```
+
+### Anti-Patrones de Documentación (Evitar)
+
+#### 🚫 Anti-Patrón 1: "Documentation Dumping"
+
+**Malo:**
+Crear archivo `FRONTEND_DIAGNOSTICO.md` con 800 líneas de debugging session.
+
+**Bueno:**
+- Si encontraste un bug → commit message + fix
+- Si descubriste un patrón → agregar a guía existente (1 sección, 50 líneas)
+
+#### 🚫 Anti-Patrón 2: "README Inception"
+
+**Malo:**
+Crear `frontend/src/components/ui/README.md`, `frontend/src/components/layouts/README.md`, `frontend/src/components/shared/README.md` (cada uno explicando lo mismo).
+
+**Bueno:**
+- UN solo `docs/guides/ui-components.md` con índice y secciones
+
+#### 🚫 Anti-Patrón 3: "Future Maybe Documentation"
+
+**Malo:**
+Crear `docs/future/rate-limiting-proposal.md` con 1500 líneas de diseño que nunca se implementa.
+
+**Bueno:**
+- Si es propuesta NO implementada → Issue de GitHub o ADR con estado "Propuesto"
+- Si se implementa → ADR con estado "Aceptado" + código real
+
+#### 🚫 Anti-Patrón 4: "Copy/Paste de Docs Externas"
+
+**Malo:**
+Copiar toda la doc de Flask-JWT-Extended o shadcn/ui al repo.
+
+**Bueno:**
+- Link a docs oficiales
+- Documentar **solo las decisiones específicas del proyecto** (qué configuración elegimos y por qué)
+
+### Workflow: Creando Documentación Nueva
+
+#### Paso 1: Preguntate (Antes de crear archivo)
+
+1. **¿Esto ya está documentado?** → Buscar con grep antes de duplicar
+2. **¿Es realmente necesario?** → Si el código es claro, NO documentes
+3. **¿Quién lo va a usar y cuándo?** → Si no sabés responder, NO lo crees
+4. **¿Dónde va esto?** → Usar árbol de decisión de arriba
+
+#### Paso 2: Elegir Template
+
+- Decisión arquitectónica → Template ADR
+- Guía de implementación → Template Guía
+- API reference → Actualizar `docs/api/endpoints.md`
+- Setup/troubleshooting → Actualizar `docs/getting-started/setup.md`
+
+#### Paso 3: Escribir (Máximo 500 líneas)
+
+- Arrancá con TL;DR
+- Solo información esencial
+- Ejemplos copy/paste
+- NO explicaciones filosóficas
+
+#### Paso 4: Validar
+
+- [ ] ¿Tiene menos de 500 líneas?
+- [ ] ¿Tiene ejemplos funcionales?
+- [ ] ¿Está en la carpeta correcta?
+- [ ] ¿Está linkeado desde `docs/README.md`?
+- [ ] ¿No duplica contenido existente?
+
+#### Paso 5: Linkear desde `docs/README.md`
+
+Siempre agregá el nuevo doc al índice principal para que sea descubrible.
+
+### Mantenimiento de Docs (Agentes: Revisar al tocar código)
+
+Cuando modificás código que tiene documentación asociada:
+
+1. **¿Cambió el comportamiento?** → Actualizar doc relacionado
+2. **¿Se agregó endpoint?** → Actualizar `docs/api/endpoints.md`
+3. **¿Cambió flujo de auth?** → Actualizar `docs/architecture/authentication.md`
+4. **¿Nueva decisión importante?** → Crear ADR
+
+**Comando para auditar:**
+```bash
+opencode run --command doc "audit"
+```
+
+Esto revisa:
+- Docs que referencian archivos borrados
+- Docs con >500 líneas
+- Docs que no están linkeados desde `docs/README.md`
+- Duplicación de contenido
+
+---
+
+## 🎯 Resumen para Agentes (Copy/Paste Mental)
+
+### Antes de Crear Documentación
+
+**Preguntá:**
+1. ¿Es una decisión arquitectónica importante? → ADR
+2. ¿Es una guía repetible? → docs/guides/
+3. ¿Ya está documentado en otro lado? → NO duplicar
+4. ¿Se puede inferir del código? → NO documentar
+
+**Si la respuesta es "documentar", seguí:**
+1. Elegir template (ADR o Guía)
+2. Escribir <500 líneas
+3. Solo info esencial + ejemplos copy/paste
+4. Linkear desde docs/README.md
+
+**Nunca crear:**
+- Debugging logs como docs permanentes
+- Docs de "futuras ideas"
+- Duplicación de docs externas
+- Explicaciones de código autoexplicativo
+
+
