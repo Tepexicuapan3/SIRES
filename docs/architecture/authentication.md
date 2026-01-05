@@ -2,6 +2,10 @@
 
 Sistema de autenticación basado en cookies HttpOnly con protección CSRF.
 
+> **TL;DR:** Tokens en cookies HttpOnly (XSS no puede robarlos) + header CSRF en mutaciones (protección double-submit). Access token expira en 15 min, refresh automático con interceptor.
+
+> **Ver también:** [Contratos de API Auth](../api/auth-endpoints.md) - Referencia detallada de endpoints, tipos TypeScript y códigos de error.
+
 ---
 
 ## Arquitectura de Seguridad
