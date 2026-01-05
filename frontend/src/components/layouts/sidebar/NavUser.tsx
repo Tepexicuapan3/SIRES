@@ -78,7 +78,7 @@ export function NavUser() {
   const userInitials = getInitials(user.usuario || "U");
 
   return (
-    <SidebarMenu>
+    <SidebarMenu className="px-2">
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -89,7 +89,7 @@ export function NavUser() {
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src="" alt="" />
                 <AvatarFallback
-                  className="rounded-lg bg-app text-brand font-semibold"
+                  className="rounded-lg bg-brand text-white font-display text-xs"
                   aria-label={`Usuario ${user.usuario}`}
                 >
                   {userInitials}
@@ -115,7 +115,7 @@ export function NavUser() {
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src="" alt="" />
                   <AvatarFallback
-                    className="rounded-lg bg-app text-brand font-semibold"
+                    className="rounded-lg bg-brand text-white font-display text-xs"
                     aria-label={`Usuario ${user.usuario}`}
                   >
                     {userInitials}
