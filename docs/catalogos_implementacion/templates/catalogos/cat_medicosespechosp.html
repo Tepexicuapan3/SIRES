@@ -1,0 +1,514 @@
+{% extends './menu.html' %}
+{% block title %}MÉDICOS ESPECIALISTAS (HOSPITALES){% endblock %}
+{% block customCSS %}
+{% endblock %}
+<style>
+    .fa-bars,
+    .fa-xmark {
+        transition: transform 0.5s ease;
+        /* Ajusta el tiempo de la transición aquí */
+    }
+
+    /* Pantallas grandes */
+    @media (min-width: 576px) {
+        .d-block {
+            display: block !important;
+        }
+
+        .d-sm-none {
+            display: none !important;
+        }
+    }
+
+    /* Pantallas pequeñas */
+    @media (max-width: 575.98px) {
+        .d-block {
+            display: none !important;
+        }
+
+        .d-sm-none {
+            display: block !important;
+        }
+    }
+</style>
+{% block contenido %}
+{% include 'mensajes.html' %}
+    <div class="page-header pt-3 stc">
+        <h3 id="nom_rep">MÉDICOS ESPECIALISTAS</h3>
+    </div>
+    <p class="lead stc" style="font-size: 75%;">
+        Este catálogo está enfocado en gestionar y organizar las CIE 10 atendidas por los profesionales médicos y clínicos en el sistema de salud.
+    </p>
+    <hr>
+    <div class="container py-5 stc">
+        <div class="row justify-content-center">
+            <div class="col-lg-12">
+                <!-- Card -->
+                <div class="card text-bg-secondary bg-opacity-10" style="font-size: small;">
+                    <div class="card-header text-dark">
+                        Realice las acciones necesarias en el siguiente catálogo. 
+                    </div>
+                    <!-- Card body -->
+                    <div class="card-body">
+                        <!-- Form inputs within a row -->
+                        <form name="formulario" id="miFormulario" action="{{url_for('catalogos.cat_medicosespechosp')}}" method="post">
+                            {{ form.hidden_tag() }}
+                            <div class="new-registro" style="display: none;">
+                                <div class="row mb-4">
+                                    <div class="col-1">
+                                        <div class="form-outline mdb-input">
+                                            {{ form.txtId(class="form-control form-control-sm input-form input_readonly", id="txtId") }}
+                                            <label class="form-label" for="txtId">{{ form.txtId.label }}</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <br>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-2">                         
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtCve(class="form-control form-control-sm input-form", id="txtCve", autocomplete="off") }}
+                                        <label class="form-label" for="txtCve">{{ form.txtCve.label }}</label>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtUsuario(class="form-control form-control-sm input-form", id="txtUsuario", autocomplete="off", list="usuariosLista") }}
+                                        <label class="form-label" for="txtUsuario">{{ form.txtUsuario.label }}</label>
+                                        <datalist id="usuariosLista"></datalist>
+                                    </div>
+                                </div>
+                                <div class="col-2">
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtTpMed(class="form-control form-control-sm input-form", id="txtTpMed", autocomplete="off", list="rolesLista") }}
+                                        <label class="form-label" for="txtTpMed">{{ form.txtTpMed.label }}</label>
+                                        <datalist id="rolesLista"></datalist>
+                                    </div>
+                                </div>
+                                <div class="col-2">
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtSexo(class="form-control form-control-sm input-form", id="txtSexo") }}
+                                        <label class="form-label" for="txtSexo">{{ form.txtSexo.label }}</label>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtFchNac(class="form-control form-control-sm input-form", type="date", id="txtFchNac") }}
+                                        <label class="form-label" for="txtFchNac">{{ form.txtFchNac.label }}</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <div class="row mb-4">                           
+                                <div class="col-2">
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtCedula(class="form-control form-control-sm input-form", id="txtCedula") }}
+                                        <label class="form-label" for="txtCedula">{{ form.txtCedula.label }}</label>
+                                    </div>
+                                </div>
+                                <div class="col-5">
+                                    {{ form.txtIdEscuela(class="input-form", id="txtIdEscuela") }}
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtEscuela(class="form-control form-control-sm input-form", id="txtEscuela", autocomplete="off", list="escuelasLista") }}
+                                        <label class="form-label" for="txtEscuela">{{ form.txtEscuela.label }}</label>
+                                        <datalist id="escuelasLista"></datalist>
+                                    </div>                                
+                                </div>
+                                <div class="col-5">
+                                    {{ form.txtIdEspecialidad(class="input-form", id="txtIdEspecialidad") }}
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtEspecialidad(id="txtEspecialidad", class="form-control form-control-sm input-form", list="especialidadesLista", autocomplete="off") }}
+                                        <label class="form-label" for="txtEspecialidad">{{ form.txtEspecialidad.label }}</label>
+                                        <datalist id="especialidadesLista"></datalist>
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <div class="row mb-5">                        
+                                <div class="col-6">
+                                    {{ form.txtIdServiciosClin(class="input-form", id="txtIdServiciosClin") }}
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtServiciosClin(id="txtServiciosClin", class="form-control form-control-sm input-form", list="serviciosLista", autocomplete="off") }}
+                                        <label class="form-label" for="txtServiciosClin">{{ form.txtServiciosClin.label }}</label>
+                                        <datalist id="serviciosLista"></datalist>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    {{ form.txtIdClinica(class="input-form", id="txtIdClinica") }}
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtClinica(class="form-control form-control-sm input-form", id="txtClinica", autocomplete="off", list="clinicasLista") }}
+                                        <label class="form-label" for="txtClinica">{{ form.txtClinica.label }}</label>
+                                        <datalist id="clinicasLista"></datalist>
+                                    </div>
+                                </div>   
+                            </div>
+                            <div class="row mb-8">
+                                <div class="col-5">
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtTelefono(class="form-control form-control-sm input-form", id="txtTelefono") }}
+                                        <label class="form-label" for="txtTelefono">{{ form.txtTelefono.label }}</label>
+                                    </div>
+                                </div>
+                                <div class="col-7">
+                                    <div class="form-outline mdb-input"> 
+                                        <textarea class="form-control form-control-sm input-form" id="txtDireccion" name="{{ form.txtDireccion.name }}" autocomplete="on" style="resize: none; height: 75px;" required></textarea>
+                                        <label class="form-label" for="txtDireccion">{{ form.txtDireccion.label }}</label>
+                                    </div>
+                                </div>
+                            </div>                                                                               
+                            {{ form.opcion(id="opcion", class="input-form") }} 
+                        </form>                        
+                        <br>
+                        <div class="row">
+                            <div class="col-md-12 d-flex justify-content-center">
+                                <table>
+                                    <tr>
+                                        <th class="registro">
+                                            <button name="boton" type="button" onclick="enviarFormulario(153)" title="Registrar" class="btn btn-success btn-rounded">
+                                                <i class="bi bi-upload"></i>
+                                                <span class="d-none d-sm-inline">Registrar</span>
+                                            </button>
+                                        </th>
+                                        <th class="modificacion" style="display: none; margin-right: 2.5px;">
+                                            <button name="boton" type="button" onclick="enviarFormulario(154)" title="Modificar" class="btn btn-warning btn-rounded">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span class="d-none d-sm-inline">Modificar</span>
+                                            </button>
+                                            <button name="boton" type="button" onclick="enviarFormulario(155)" title="Cambiar Estatus" class="btn btn-info btn-rounded">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span class="d-none d-sm-inline">Desactivar</span>
+                                            </button>
+                                        </th>
+                                        <th class="mod_estatus" style="display: none; margin-right: 2.5px;">
+                                            <button name="boton" type="button" onclick="enviarFormulario(155)" title="Cambiar Estatus" class="btn btn-info btn-rounded">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span class="d-none d-sm-inline">Activar</span>
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" title="Limpiar" value="Limpiar" class="btn btn-dark btn-rounded" onclick="limpiarFormulario()">
+                                                <i class="bi bi-backspace-reverse"></i>
+                                                <span class="d-none d-sm-inline">Limpiar</span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!--Input de Busqueda y boton imprimir-->
+    <form name="formulario" id="formImpresion" action="{{url_for('catalogos.reporte_nuevo')}}" method="post">
+        <div class="row d-flex justify-content-center p-3 stc">
+            <div class="col-3"></div>
+            <div class="col-3" style="text-align: center;">
+                <div data-mdb-input-init class="form-outline">
+                    <input type="text" id="busqueda" name="busqueda" class="form-control form-control-sm" style="background-color: white;" />
+                    <label class="form-label" for="busqueda">Buscar</label>
+                </div>
+            </div>
+            <div class="col-4" style="text-align: left;">
+                <!-- Agregar un campo oculto para el número de catálogo -->
+                <input type="hidden" id="cat" name="cat" value="medicosespechosp">
+                <button type="button" title="Imprimir" class="btn btn-primary btn-sm btn-rounded" onclick="imprimir()">
+                    <i class="bi bi-printer-fill"></i>
+                    <span class="d-none d-sm-inline">Imprimir</span>
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!--Tabla-->
+    <div class="row d-flex justify-content-center p-3 stc">
+        <div class="text-center" style="position: relative; width: 90%;">
+            <div class="table-responsive" style="height: 300px;">
+                <!-- Contenido de la tabla aquí -->
+                {% if medicsespec %}
+                    <table id="titulo" class="table table-hover fonthead table-bordered table-sm" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                        <thead class="table-dark">
+                            <tr id="encabezado">
+                            <th class="no-visible">REGISTRO</th>
+                            <th class="no-visible">ID USUARIO</th>
+                            <th class="no-visible">CLAVE MÉDICO ESPECIALISTA</th>
+                            <th class="visible">MÉDICO ESPECIALISTA</th>
+                            <th class="visible"></th>
+                            <th class="visible">SEXO</th>
+                            <th class="visible">FECHA NACIMIENTO</th>
+                            <th class="visible">CÉDULA</th>
+                            <th class="no-visible">ID ESCUELA</th>
+                            <th class="visible">ESCUELA</th>
+                            <th class="no-visible">ID ESPECIALIDAD</th>
+                            <th class="visible">ESPECIALIDAD</th>
+                            <th class="no-visible">ID SERVICIO</th>                            
+                            <th class="visible">SERVICIO</th>
+                            <th class="no-visible">ID CLÍNICA</th>
+                            <th class="visible">CLÍNICA</th>
+                            <th class="visible">TELÉFONO</th>
+                            <th class="visible">DIRECCIÓN</th>
+                            <th class="visible">ESTATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="datos" style="font-size: 80%;">
+                            {% for medicoespec, escuela, sigls_esc, especialidad, serviciosclin, expediente, folio_clin, clinica, nombres, apellidoPaterno, apellidoMaterno in medicsespec %}
+                            <tr id="{{ medicoespec.id_medespec }}">
+                                <td name="txtId" class="no-visible text-center input-form">{{ medicoespec.id_medespec }}</td>
+                                <td name="txtIdUser" class="no-visible text-center input-form">{{ medicoespec.id_usuario }}</td>
+                                <td name="txtUsuario" class="visible text-center input-form">{{ 'h{}: {} {} {}'.format (expediente, nombres, apellidoPaterno, apellidoMaterno) }}</td>
+                                <td name="txtSexo" class="no-visible texto-largo input-form">{{ medicoespec.sexo }}</td>
+                                <td class="visible">
+                                    {% if medicoespec.sexo == 'M' %}
+                                        MASCULINO
+                                    {% else %}
+                                        FEMENINO
+                                    {% endif %}
+                                </td>
+                                <td name="txtFchNac" class="visible texto-largo input-form">{{ medicoespec.fch_nac.strftime('%Y-%m-%d') }}</td>
+                                <td name="txtCedula" class="visible texto-largo input-form">{{ medicoespec.cedula }}</td>
+                                <td name="txtIdEscuela" class="no-visible text-center input-form">{{ medicoespec.id_esc }}</td>
+                                <td name="txtEscuela" class="visible texto-largo input-form">{{'{}: {}'.format(sigls_esc, escuela) }}</td>
+                                <td name="txtIdEspecialidad" class="no-visible texto-largo input-form">{{ medicoespec.id_espec }}</td>
+                                <td name="txtEspecialidad" class="visible texto-largo input-form">{{ medicoespec.especialidad }}</td>
+                                <td name="txtIdServiciosClin" class="no-visible texto-largo input-form">{{ medicoespec.id_serviciosclin }}</td>
+                                <td name="txtServiciosClin" class="visible texto-largo input-form">{{ medicoespec.serviciosclin }}</td>
+                                <td name="txtIdClinica" class="no-visible texto-largo input-form">{{ medicoespec.id_clin }}</td>
+                                <td name="txtClinica" class="visible texto-largo input-form">{{ medicoespec.clinica }}</td>
+                                <td name="txtTelefono" class="visible texto-largo input-form">{{ medicoespec.telefono }}</td>
+                                <td name="txtDireccion" class="visible texto-largo input-form">{{ medicoespec.direccion }}</td>                             
+                                <td name="txtEstatus" class="visible texto-largo {% if medicoespec.est_medclin == 'A' %}table-success{% elif medicoespec.est_medclin == 'B' %}table-danger{% endif %}">
+                                    {% if medicoespec.est_medclin == 'A' %}
+                                        ACTIVO
+                                    {% elif medicoespec.est_medclin == 'B' %}
+                                        INACTIVO
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <center>
+                        <h3 class="text-center metro" style="color:#970000;">
+                            <b> NO <span style="padding-left:40px;"> </span> HAY <span style="padding-left:40px;"> </span> REGISTROS </b>
+                        </h3>
+                    </center>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#txtUsuario').on('input', function() {
+                var query = $(this).val(); // Obtiene el valor ingresado
+                buscarUsuario(query);
+            });
+        });
+
+        function buscarUsuario(query) {
+            $.ajax({
+                url: "{{ url_for('catalogos.buscar_usuario') }}",
+                type: "GET",
+                data: { query: query },
+                dataType: "json",
+                success: function(data) {
+                    var datalist = $('#usuariosLista');
+                    datalist.empty();  // Limpia las opciones actuales
+
+                    // Almacena los resultados en el campo de entrada para su posterior uso
+                    $('#txtUsuario').data('usuarios', data);
+                    
+                    // Llena el datalist con las opciones encontradas
+                    data.forEach(function(usuario) {
+                        var option = $('<option></option>').val(usuario.usuario);
+                        datalist.append(option);
+                    });
+
+                }
+            });
+        }
+
+
+        $(document).ready(function() {
+            $('#txtEscuela').on('input', function() {
+                var query = $(this).val(); // Obtiene el valor ingresado
+                buscarEscuela(query);
+            });
+        });
+
+        function buscarEscuela(query) {
+            $.ajax({
+                url: "{{ url_for('catalogos.buscar_escuela') }}",
+                type: "GET",
+                data: { query: query },
+                dataType: "json",
+                success: function(data) {
+                    var datalist = $('#escuelasLista');
+                    datalist.empty();  // Limpia las opciones actuales
+
+                    // Almacena los resultados en el campo de entrada para su posterior uso
+                    $('#txtEscuela').data('escuela', data);
+                    
+                    // Llena el datalist con las opciones encontradas
+                    data.forEach(function(escuela) {
+                        var option = $('<option></option>').val(escuela.escuela);
+                        datalist.append(option);
+                    });
+
+                    if (data.length == 1 && query.toUpperCase() == data[0].escuela.toUpperCase()) {
+                        var escuela = data[0];
+                        $('#txtIdEscuela').val(escuela.id);
+                    } else {
+                        // Si hay más de un usuario, limpia los campos
+                        $('#txtIdEscuela').val('');
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            $('#txtEspecialidad').on('input', function() {
+                var query = $(this).val(); // Obtiene el valor ingresado
+                buscarEspecialidad(query);
+            });
+        });
+
+        function buscarEspecialidad(query) {
+            $.ajax({
+                url: "{{ url_for('catalogos.buscar_especialidad') }}",
+                type: "GET",
+                data: { query: query },
+                dataType: "json",
+                success: function(data) {
+                    var datalist = $('#especialidadesLista');
+                    datalist.empty();  // Limpia las opciones actuales
+
+                    // Almacena los resultados en el campo de entrada para su posterior uso
+                    $('#txtEspecialidad').data('especialidades', data);
+                    
+                    // Llena el datalist con las opciones encontradas
+                    data.forEach(function(especialidad) {
+                        var option = $('<option></option>').val(especialidad.especialidad);
+                        datalist.append(option);
+                    });
+
+                    if (data.length == 1 && query.toUpperCase() == data[0].especialidad.toUpperCase()) {
+                        var especialidad = data[0];
+                        $('#txtIdEspecialidad').val(especialidad.id);
+                    } else {
+                        // Si hay más de un usuario, limpia los campos
+                        $('#txtIdEspecialidad').val('');
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            $('#txtServiciosClin').on('input', function() {
+                var query = $(this).val(); // Obtiene el valor ingresado
+                buscarServicio(query);
+            });
+        });
+
+        function buscarServicio(query) {
+            $.ajax({
+                url: "{{ url_for('catalogos.buscar_servicio') }}",
+                type: "GET",
+                data: { query: query },
+                dataType: "json",
+                success: function(data) {
+                    var datalist = $('#serviciosLista');
+                    datalist.empty();  // Limpia las opciones actuales
+
+                    // Almacena los resultados en el campo de entrada para su posterior uso
+                    $('#txtServiciosClin').data('servicios', data);
+                    
+                    // Llena el datalist con las opciones encontradas
+                    data.forEach(function(servicio) {
+                        var option = $('<option></option>').val(servicio.servicio);
+                        datalist.append(option);
+                    });
+
+                    if (data.length == 1 && query.toUpperCase() == data[0].servicio.toUpperCase()) {
+                        var servicio = data[0];
+                        $('#txtIdServiciosClin').val(servicio.id);
+                    } else {
+                        // Si hay más de un usuario, limpia los campos
+                        $('#txtIdServiciosClin').val('');
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            $('#txtClinica').on('input', function() {
+                var query = $(this).val(); // Obtiene el valor ingresado
+                buscarClinica(query);
+            });
+        });
+
+        function buscarClinica(query) {
+            $.ajax({
+                url: "{{ url_for('catalogos.buscar_clinica') }}",
+                type: "GET",
+                data: { query: query },
+                dataType: "json",
+                success: function(data) {
+                    var datalist = $('#clinicasLista');
+                    datalist.empty();  // Limpia las opciones actuales
+
+                    // Almacena los resultados en el campo de entrada para su posterior uso
+                    $('#txtClinica').data('clinicas', data);
+                    
+                    // Llena el datalist con las opciones encontradas
+                    data.forEach(function(clinica) {
+                        var option = $('<option></option>').val(clinica.clinica);
+                        datalist.append(option);
+                    });
+
+                    if (data.length == 1 && query.toUpperCase() == data[0].clinica.toUpperCase()) {
+                        var clinica = data[0];
+                        $('#txtIdClinica').val(clinica.id);
+                    } else {
+                        // Si hay más dse un usuario, limpia los campos
+                        $('#txtIdClinica').val('');
+                    }
+                }
+            });
+        }
+        
+        function buscarRoles(query) {
+            $.ajax({
+                url: "{{ url_for('catalogos.buscar_rol') }}",
+                type: "GET",
+                data: { query: query },
+                dataType: "json",
+                success: function(data) {
+                    var datalist = $('#rolesLista');
+                    datalist.empty();  // Limpia las opciones actuales
+
+                    // Almacena los resultados en el campo de entrada para su posterior uso
+                    $('#txtTpMed').data('rol', data);
+                    
+                    // Llena el datalist con las opciones encontradas
+                    data.forEach(function(rol) {
+                        var option = $('<option></option>').val(rol.rol);
+                        datalist.append(option);
+                    });
+
+                    if (data.length == 1 && query.toUpperCase() == data[0].rol.toUpperCase()) {
+                        var rol = data[0];
+                        $('#txtIdRol').val(escuela.id);
+                    } else {
+                        // Si hay más de un usuario, limpia los campos
+                        $('#txtIdRol').val('');
+                    }
+                }
+            });
+        }
+    </script>
+    <script src="{{ url_for ('static', filename='js/catalogos.js') }}"></script>
+{% endblock %}

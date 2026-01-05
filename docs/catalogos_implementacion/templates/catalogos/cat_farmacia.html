@@ -1,0 +1,419 @@
+{% extends './menu.html' %}
+{% block title %}FARMACIA MEDICAMENTOS SIRES{% endblock %}
+{% block customCSS %}
+{% endblock %}
+<style>
+    .fa-bars,
+    .fa-xmark {
+        transition: transform 0.5s ease;
+        /* Ajusta el tiempo de la transición aquí */
+    }
+
+    /* Pantallas grandes */
+    @media (min-width: 576px) {
+        .d-block {
+            display: block !important;
+        }
+
+        .d-sm-none {
+            display: none !important;
+        }
+    }
+
+    /* Pantallas pequeñas */
+    @media (max-width: 575.98px) {
+        .d-block {
+            display: none !important;
+        }
+
+        .d-sm-none {
+            display: block !important;
+        }
+    }
+</style>
+{% block contenido %}
+{% include 'mensajes.html' %}
+    <div class="container py-5 pt-0 stc">
+        <div class="row justify-content-center">
+            <div class="col-lg-12">
+                <!-- Card -->
+                <div class="card text-bg-secondary bg-opacity-10" style="font-size: small;">
+                    <div class="card-header text-dark">
+                        <div class="page-header pt-3 stc">
+                            <h3 id="nom_rep">FARMACIA MEDICAMENTOS</h3>
+                        </div>
+                        <p class="lead stc" style="font-size: 90%;">
+                            Este catálogo permite gestionar los diferentes medicamentos de acuerdo a su grupo y existencia en inventario.
+                        </p>    
+                    </div>
+
+                    <!-- Card body -->
+                    <div class="card-body">
+                        {% if not datos_cargados %}
+                        <!-- Form inputs within a row -->
+                        <form name="formulario" id="miFormulario" action="{{url_for('catalogos.cat_cies')}}" method="post" enctype="multipart/form-data">
+                            {{ form.hidden_tag() }}
+                            <div class="row mb-4 justify-content-center">
+                                <div class="col-7">
+                                    <div class="file-select form-outline mdb-input">
+                                        <input type="file" name="file" id="file" accept=".xlsx, .xls" class="form-control form-control-sm input-form" required>
+                                        <br />
+                                    </div>
+                                </div>                        
+                                <!-- First name input -->
+                                <div class="col-3">
+                                    <div class="file-select form-outline mdb-input">
+                                        {{ form.txtCve(class="form-control form-control-sm input-form", id="txtCve", autocomplete="off", placeholder="VERSIÓN CIE") }}
+                                        <label class="form-label" for="txtCve">{{ form.txtCve.label }}</label>
+                                    </div>
+                                </div>
+                                {{ form.opcion(id="opcion", class="input-form") }}
+                            </div>
+                        </form>
+                        <!--Tabla-->
+                        <div class="row">
+                            <div class="col-md-12 d-flex justify-content-center">
+                                <table>
+                                    <tr>
+                                        <th class="previsualizacion">
+                                            <button name="boton" type="button" onclick="cargarArchivo(event)" title="Pre-visualizar Información" class="btn btn-success btn-rounded">
+                                                <i class="bi bi-eye"></i>
+                                                <span class="d-none d-sm-inline">Pre-visualizar Información</span>
+                                            </button>
+                                        </th>
+                                        <th class="loading" style="display: none; margin-right: 2.5px;">
+                                            <button class="btn btn-info btn-rounded" type="button" disabled>
+                                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                Cargando...
+                                            </button>
+                                        </th>
+                                        <th class="cargar" style="display: none; margin-right: 2.5px;">
+                                            <button name="boton" type="button" onclick="enviarFormulario(153)" title="Importar al Catálogo de Enfermedades" class="btn btn-info btn-rounded">
+                                                <i class="fa-solid fa-file-import"></i>
+                                                <span class="d-none d-sm-inline">Importar al Catálogo de Enfermedades</span>
+                                            </button>
+                                        </th>
+                                        <th class="mod_estatus" style="display: none; margin-right: 2.5px;">
+                                            <button name="boton" type="button" onclick="enviarFormulario(155)" title="Cambiar Estatus" class="btn btn-info btn-rounded">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span class="d-none d-sm-inline">Activar</span>
+                                            </button>
+                                        </th>
+                                        <th class="limpiar">
+                                            <button type="button" title="Limpiar" value="Limpiar" class="btn btn-dark btn-rounded" onclick="limpiarFormulario()">
+                                                <i class="bi bi-backspace-reverse"></i>
+                                                <span class="d-none d-sm-inline">Limpiar</span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div id="tabla-container" class="d-none">
+                            <div class="row d-flex justify-content-center p-3 pb-0 stc">   
+                                {% if not datos_cargados %}
+                                    <div id="mensaje-datos" role="alert">
+                                    </div>
+                                {% else %}
+                                    {% if total_datos == total_cargados %}
+                                        <div id="mensaje-datos" class="alert alert-success" role="alert">
+                                            <i class="bi bi-check2-circle"></i> <b>¡Bien hecho!</b> {{ total_cargados }} {% if total_cargados == 1 %} registro fue cargado {% else %} registros fueron cargados {% endif %} de forma correcta.
+                                        </div>
+                                    {% elif total_cargados == 0 %}
+                                        <div id="mensaje-datos" class="alert alert-danger" role="alert">
+                                            <i class="bi bi-exclamation-circle"></i> No fue posible realizar ningún movimiento. Puede descargar el Excel o verificar en la tabla el tipo de error en cada registro.
+                                        </div>
+                                    {% else %}
+                                        <div id="mensaje-datos" class="alert alert-danger" role="alert">
+                                            <i class="bi bi-exclamation-circle"></i> {% if total_cargados == 1 %} Se cargo <b>1 registro</b> {% else %} Se cargaron <b>{{ total_cargados }} registros</b> {% endif %} (de {{ total_datos }}) de forma correcta. Puede descargar el Excel o verificar en la tabla el tipo de error en cada registro.
+                                        </div>
+                                    {% endif %}
+                                {% endif %}  
+                                <form name="formulario" id="formImpresion" action="{{url_for('catalogos.download_errors')}}" method="get">
+                                    <div class="row d-flex justify-content-center pb-2 stc">
+                                        <div class="d-flex justify-content-end px-0">
+                                            <button type="submit" title="Descargar Excel" class="btn btn-primary btn-sm btn-rounded">
+                                                <i class="bi bi-file-earmark-arrow-down"></i>
+                                                <span class="d-none d-sm-inline">Descargar Excel</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div id="tabla-datos" class="table-responsive p-0 mb-2" style="height: auto !important; overflow-y: hidden; overflow-x: scroll; box-sizing: content-box;">
+                                    <table id="titulo" class="table table-hover table-bordered table-sm" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                                        <thead class="table-dark" style="font-size: 70% !important;">
+                                            <tr id="encabezado">
+                                                <th class="visible text-center">CLAVE</th>
+                                                <th class="visible">DESCRIPCIÓN DE ENFERMEDAD</th>
+                                                <th class="visible text-center">VERSIÓN CIE</th>
+                                                <th class="visible text-center">TIPO DE ERROR</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="datos" style="font-size: 70% !important;">
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <nav id="paginacion-datos" aria-label="Page navigation">
+                                    <ul class="pagination justify-content-center m-0">
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form action="{{url_for('catalogos.cat_enfermedades')}}" method="get" target="_blank">
+        <div class="row d-flex justify-content-center p-0 stc">
+            <div class="text-center" style="position: relative; width: 90%;">
+                <button type="submit" title="Ir al Catálogo de Enfermedades" class="btn btn-primary btn-sm btn-rounded">
+                    <span class="d-none d-sm-inline">Ir al Catálogo</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </form> 
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        function fetchPage(page) {
+            $.getJSON('{{url_for("catalogos.get_data")}}', { page: page }, function(data) {
+                if (data.error) {
+                    $('#datos').html('<tr><td colspan="4" class="text-center alert alert-danger">' + data.error + '</td></tr>');
+                } else {
+                    renderTable(data);
+                    renderPagination(data);
+                }
+            });
+        }
+
+        function renderTable(data) {
+            let html = '';
+            data.rows.forEach(row => {
+                html += `
+                    <tr class="${row.error ? 'table-danger' : ''}">
+                        <td class="visible text-center input-form">${row.col0}</td>
+                        <td class="visible text-start input-form">${row.col1}</td>
+                        <td class="visible text-center input-form">${data.version}</td>
+                        <td class="visible text-center input-form">${row.error}</td>
+                    </tr>
+                `;
+            });
+            $('#datos').html(html);
+        }
+
+        function renderPagination(data) {
+            let html = '';
+            const { total_pages, current_page } = data;
+
+            if (total_pages > 1) {
+                // Botón "Primera"
+                if (current_page > 1) {
+                    html += `<li class="page-item"><a class="page-link" onclick="fetchPage(1)">&laquo;&laquo;</a></li>`;
+                }
+
+                // Botón "Anterior"
+                if (current_page > 1) {
+                    html += `<li class="page-item"><a class="page-link" onclick="fetchPage(${current_page - 1})">&laquo;</a></li>`;
+                }
+
+                // Enlaces de página
+                const maxPagesToShow = 5;
+                let startPage = Math.max(1, current_page - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(total_pages, startPage + maxPagesToShow - 1);
+
+                if (endPage - startPage + 1 < maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                for (let p = startPage; p <= endPage; p++) {
+                    html += `<li class="page-item ${p === current_page ? 'active' : ''}"><a class="page-link" onclick="fetchPage(${p})">${p}</a></li>`;
+                }
+
+                // Botón "Siguiente"
+                if (current_page < total_pages) {
+                    html += `<li class="page-item"><a class="page-link" onclick="fetchPage(${current_page + 1})">&raquo;</a></li>`;
+                }
+
+                // Botón "Última"
+                if (current_page < total_pages) {
+                    html += `<li class="page-item"><a class="page-link" onclick="fetchPage(${total_pages})">&raquo;&raquo;</a></li>`;
+                }
+            }
+
+            $('#paginacion-datos ul').html(html);
+        }
+    </script>
+    {% if datos_cargados %}
+    <script>
+        document.getElementById('tabla-container').classList.remove('d-none');
+        fetchPage(1);
+    </script>
+    {% else %}
+    <script>
+        document.getElementById('file').addEventListener('change', function() {
+            const input = this;
+            if (input.files.length > 0) {
+                input.classList.add('has-file');
+                input.classList.remove('no-file');
+            } else {
+                input.classList.add('no-file');
+                input.classList.remove('has-file');
+            }
+        });
+
+        // Inicializar el estado del input cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('file');
+            if (input.files.length > 0) {
+                input.classList.add('has-file');
+            } else {
+                input.classList.add('no-file');
+            }
+        });
+
+        function cambiarEstatus(id_cie, estatus) {
+            $.post('/cat_cies', {
+                ve_opcion: '155',
+                ve_id_cie: id_cie,
+                ve_est_cie: estatus,
+                ve_id_usr: 'ID_DEL_USUARIO'
+            }, function(response) {
+                alert(response.vs_dsc_resp);
+                location.reload();
+            });
+        }
+
+        function cargarArchivo(event) {
+            formulario = document.getElementById('miFormulario');
+            var inputs = formulario.querySelectorAll('.input-form');
+            document.getElementById('opcion').value = "";
+
+            for (var i = 0; i < inputs.length; i++) {
+                if (inputs[i].type !== 'file') {
+                    var valor = inputs[i].value.trim();
+                    
+                    if (valor === '') {
+                        inputs[i].value = valor;
+                    }
+                    else {
+                        valor = valor.replace(/\s+/g, ' ');
+                        inputs[i].value = valor;
+                    }
+                }
+            }
+
+            if (!formulario.checkValidity()) {
+                formulario.reportValidity();
+                return;
+            }
+            else {
+                for (var i = 0; i < inputs.length; i++) {
+                    var valor = inputs[i].classList.add("input_readonly");
+                }
+                document.querySelector('.previsualizacion').style.display = "none";
+                document.querySelector('.loading').style.display = "block";
+            }
+
+            var archivo = document.getElementById('file').files[0];
+            var version = document.getElementById("txtCve").value;
+            
+            if (!archivo) {
+                console.error('No se seleccionó ningún archivo');
+                return;
+            }
+            
+            // Crear objeto FormData y agregar el archivo
+            var formData = new FormData();
+            formData.append('file', archivo);
+            formData.append('version', version);
+            
+            
+            // Realizar solicitud POST a la ruta de Flask para procesar el archivo
+            fetch('{{url_for("catalogos.upload_file")}}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())  // Convertir respuesta a texto
+            .then(data => {
+                document.getElementById('tabla-container').classList.remove('d-none');
+                if (data.error) {
+                    document.getElementById('paginacion-datos').classList.add('d-none');
+                    document.getElementById('tabla-datos').classList.add('d-none');
+                    document.getElementById('formImpresion').classList.add('d-none');
+                    document.querySelector('.cargar button').disabled = true;
+                    $('#mensaje-datos').html(data.error);
+                } else {
+                    renderTable(data);
+                    renderPagination(data);
+                    
+
+                    if (data.total_errores == data.total_records){
+                        document.getElementById('mensaje-datos').className = 'alert alert-danger';
+                        $('#mensaje-datos').html('<i class="bi bi-exclamation-circle"></i> ' + 
+                        "No es posible continuar con el proceso. Puede descargar el Excel o verificar en la tabla el tipo de error en cada registro."); 
+                        document.querySelector('.cargar button').disabled = true;
+                    } else if (data.total_errores == 0){
+                        document.getElementById('mensaje-datos').className = 'alert alert-warning';
+                        $('#mensaje-datos').html('<i class="bi bi-exclamation-circle"></i> ' + 
+                        "Si continuas con el proceso se " + (data.total_records == 1 ? ("importara <b>" + data.total_records + " registro</b>") : ("importarán <b>" + data.total_records + " registros</b>")) + " al Catálogo de Enfermedades. Puede descargar el Excel o verificar en la tabla que la información sea correcta.");
+                        document.querySelector('.cargar button').disabled = false;
+                    } else {
+                        var diferencia = data.total_records - data.total_errores
+                        document.getElementById('mensaje-datos').className = 'alert alert-danger';
+                        $('#mensaje-datos').html('<i class="bi bi-exclamation-circle"></i> ' + 
+                        (data.total_errores == 1 ? "Se detecto <b>1 error</b>."  : ("Se detectaron <b>" + data.total_errores + " errores</b>.")) + " Si continuas con el proceso se " + (diferencia == 1 ? ("importara 1 registro</b>") : ("importarán <b>" + diferencia + " registros</b>")) + " al Catálogo de Enfermedades. Puede descargar el Excel o verificar en la tabla el tipo de error en cada registro.");
+                        document.querySelector('.cargar button').disabled = false;
+                    }                                      
+                }
+                document.querySelector('.loading').style.display = "none";
+                document.querySelector('.cargar').style.display = "block";
+            })
+            .catch(error => console.error('Error al cargar archivo:', error));
+        }
+
+        function limpiarFormulario() {
+            location.reload();
+        }
+
+        function enviarFormulario(value) {
+            formulario = document.getElementById('miFormulario');
+            formulario.submit();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var inputs = document.getElementById('miFormulario').querySelectorAll('.input-form');
+
+            Array.prototype.forEach.call(inputs, function (input) {
+                input.addEventListener('keydown', function(event) {
+                    formulario = document.getElementById('miFormulario');
+                    var inputs = formulario.querySelectorAll('.input-form')
+                    if (event.key === 'Enter') {
+                        for (var i = 0; i < inputs.length; i++) {
+                            if (inputs[i].type !== 'file') {
+                                var valor = inputs[i].value.trim();
+                                
+                                if (valor === '') {
+                                    inputs[i].value = valor;
+                                }
+                                else {
+                                    valor = valor.replace(/\s+/g, ' ');
+                                    inputs[i].value = valor;
+                                }
+                            }
+                        }
+
+                        if (!formulario.checkValidity() ) {
+                            formulario.reportValidity();
+                        } 
+                        else {
+                            event.preventDefault();
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+    {% endif %}
+{% endblock %}

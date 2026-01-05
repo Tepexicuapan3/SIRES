@@ -1,0 +1,181 @@
+{% extends './menu.html' %}
+{% block title %}Tipos de autorización{% endblock %}
+{% block customCSS %}
+{% endblock %}
+<style>
+    .fa-bars,
+    .fa-xmark {
+        transition: transform 0.5s ease;
+        /* Ajusta el tiempo de la transición aquí */
+    }
+
+    /* Pantallas grandes */
+    @media (min-width: 576px) {
+        .d-block {
+            display: block !important;
+        }
+
+        .d-sm-none {
+            display: none !important;
+        }
+    }
+
+    /* Pantallas pequeñas */
+    @media (max-width: 575.98px) {
+        .d-block {
+            display: none !important;
+        }
+
+        .d-sm-none {
+            display: block !important;
+        }
+    }
+</style>
+{% block contenido %}
+{% include 'mensajes.html' %}
+    <div class="page-header pt-3 stc">
+        <h3 id="nom_rep">CATÁLOGO DE TIPOS DE AUTORIZACIÓN</h3>
+    </div>
+    <p class="lead stc" style="font-size: 75%;">
+        Este catálogo está enfocado en gestionar y organizar los tipos de autorización atendidos por los profesionales médicos y clínicos en el sistema de salud.
+    </p>
+    <hr>
+    <div class="container py-5 stc">
+        <div class="row justify-content-center">
+            <div class="col-lg-12">
+                <!-- Card -->
+                <div class="card text-bg-secondary bg-opacity-10" style="font-size: small;">
+                    <div class="card-header text-dark">
+                        Realice las acciones necesarias en el siguiente catálogo. 
+                    </div>
+                    <!-- Card body -->
+                    <div class="card-body">
+                        <!-- Form inputs within a row -->
+                        <form name="formulario" id="miFormulario" action="{{url_for('catalogos.cat_tpautorizacion')}}" method="post">
+                            {{ form.hidden_tag() }}
+                            <div class="row mb-4 justify-content-center">
+                                {{ form.txtId(id="txtId", class="input-form") }}
+                                <div class="col-2">
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtCve(class="form-control form-control-sm input-form", id="txtCve") }}
+                                        <label class="form-label" for="txtCve">{{ form.txtCve.label }}</label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-outline mdb-input">
+                                        {{ form.txtTpAutorizacion(class="form-control form-control-sm input-form", id="txtTpAutorizacion") }}
+                                        <label class="form-label" for="txtTpAutorizacion">{{ form.txtTpAutorizacion.label }}</label>
+                                    </div>
+                                </div>
+                                {{ form.opcion(id="opcion", class="input-form") }}
+                            </div>
+                        </form>
+                        <br>
+                        <div class="row">
+                            <div class="col-md-12 d-flex justify-content-center">
+                                <table>
+                                    <tr>
+                                        <th class="registro">
+                                            <button name="boton" type="button" onclick="enviarFormulario(153)" title="Registrar" class="btn btn-success btn-rounded">
+                                                <i class="bi bi-upload"></i>
+                                                <span class="d-none d-sm-inline">Registrar</span>
+                                            </button>
+                                        </th>
+                                        <th class="modificacion" style="display: none; margin-right: 2.5px;">
+                                            <button name="boton" type="button" onclick="enviarFormulario(154)" title="Modificar" class="btn btn-warning btn-rounded">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span class="d-none d-sm-inline">Modificar</span>
+                                            </button>
+                                            <button name="boton" type="button" onclick="enviarFormulario(155)" title="Cambiar Estatus" class="btn btn-info btn-rounded">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span class="d-none d-sm-inline">Desactivar</span>
+                                            </button>
+                                        </th>
+                                        <th class="mod_estatus" style="display: none; margin-right: 2.5px;">
+                                            <button name="boton" type="button" onclick="enviarFormulario(155)" title="Cambiar Estatus" class="btn btn-info btn-rounded">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <span class="d-none d-sm-inline">Activar</span>
+                                            </button>
+                                        </th>
+                                        <th>
+                                            <button type="button" title="Limpiar" value="Limpiar" class="btn btn-dark btn-rounded" onclick="limpiarFormulario()">
+                                                <i class="bi bi-backspace-reverse"></i>
+                                                <span class="d-none d-sm-inline">Limpiar</span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!--Input de Busqueda y boton imprimir-->
+    <form name="formulario" id="formImpresion" action="{{url_for('catalogos.reporte_nuevo')}}" method="post">
+        <div class="row d-flex justify-content-center p-3 stc">
+            <div class="col-3"></div>
+            <div class="col-3" style="text-align: center;">
+                <div data-mdb-input-init class="form-outline">
+                    <input type="text" id="busqueda" name="busqueda" class="form-control form-control-sm" style="background-color: white;" />
+                    <label class="form-label" for="busqueda">Buscar</label>
+                </div>
+            </div>
+            <div class="col-4" style="text-align: left;">
+                <!-- Agregar un campo oculto para el número de catálogo -->
+                <input type="hidden" id="cat" name="cat" value="tpautorizacion">
+                <button type="button" title="Imprimir" class="btn btn-primary btn-sm btn-rounded" onclick="imprimir()">
+                    <i class="bi bi-printer-fill"></i>
+                    <span class="d-none d-sm-inline">Imprimir</span>
+                </button>
+            </div>
+        </div>
+    </form>
+    <!--Tabla-->
+    <div class="row d-flex justify-content-center p-3 stc">
+        <div class="text-center" style="position: relative; width: 90%;">
+            <div class="table-responsive" style="height: 300px;">
+                <!-- Contenido de la tabla aquí -->
+                {% if tpautorizacion %}
+                    <table id="titulo" class="table table-hover fonthead table-bordered table-sm" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                        <thead class="table-dark">
+                            <tr id="encabezado">
+                                <th class="no-visible">REGISTRO</th>
+                                <th class="visible">CLAVE</th>
+                                <th class="visible">TIPO DE AUTORIZACIÓN</th>
+                                <th class="visible">ESTATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="datos" style="font-size: 80%;">
+                            {% for tp in tpautorizacion %}
+                            <tr id="{{ tp.id_tpautorizacion}}">
+                                <td name="txtId" class="no-visible text-center input-form">{{ tp.id_tpautorizacion }}</td>
+                                <td name="txtCve" class="visible texto-largo input-form">{{ tp.cve_tpautorizacion }}</td>
+                                <td name="txtTpAutorizacion" class="visible texto-largo input-form">{{ tp.tpautorizacion }}</td>
+                                <td name="txtEstatus" class="visible texto-largo {% if tp.est_tpautorizacion == 'A' %}table-success{% elif tp.est_tpautorizacion == 'B' %}table-danger{% endif %}">
+                                    {% if tp.est_tpautorizacion == 'A' %}
+                                        ACTIVO
+                                    {% elif tp.est_tpautorizacion == 'B' %}
+                                        INACTIVO
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <center>
+                        <h3 class="text-center metro" style="color:#970000;">
+                            <b> NO <span style="padding-left:40px;"> </span> HAY <span style="padding-left:40px;"> </span> REGISTROS </b>
+                        </h3>
+                    </center>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="{{ url_for ('static', filename='js/catalogos.js') }}"></script>
+{% endblock %}
