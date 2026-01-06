@@ -39,6 +39,8 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Implementar OTP/Recovery** | [OTP con Redis](./architecture/otp-redis.md) | 20 min |
 | **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
 | **Implementar CRUD RBAC completo** | [RBAC CRUD Implementation](./guides/rbac-crud-implementation.md) | Plan detallado |
+| **Usar sistema RBAC CRUD** | [RBAC CRUD User Guide](./guides/rbac-crud-user-guide.md) | Guía completa |
+| **Arquitectura Frontend RBAC** | [RBAC Frontend Architecture](./architecture/rbac-frontend.md) | 30 min |
 | **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
 | **Testear código** | [Testing](./guides/testing.md) | 20 min |
 | **Implementar RBAC frontend** | [RBAC Frontend](./guides/rbac-frontend.md) | 25 min |
@@ -55,14 +57,17 @@ docs/
 ├── architecture/
 │   ├── overview.md                 # Capas, stack, flujo general
 │   ├── rbac.md                     # Roles, permisos, guards
+│   ├── rbac-frontend.md            # 🆕 Arquitectura frontend RBAC CRUD
 │   ├── authentication.md           # JWT, cookies, CSRF, refresh
-│   ├── rate-limiting.md            # 🆕 Rate limiting 3 niveles + Redis
-│   └── otp-redis.md                # 🆕 Sistema OTP para password recovery
+│   ├── rate-limiting.md            # Rate limiting 3 niveles + Redis
+│   └── otp-redis.md                # Sistema OTP para password recovery
 │
 ├── guides/
 │   ├── adding-feature.md           # Checklist backend → frontend
+│   ├── rbac-crud-implementation.md # 🆕 Plan implementación RBAC CRUD completo
+│   ├── rbac-crud-user-guide.md     # 🆕 Guía de uso sistema RBAC CRUD
 │   ├── ui-components.md            # shadcn + Metro CDMX
-│   ├── rbac-frontend.md            # 🆕 Ejemplos RBAC en componentes
+│   ├── rbac-frontend.md            # Ejemplos RBAC en componentes
 │   └── testing.md                  # Mocks + estrategias
 │
 ├── adr/                            # Architecture Decision Records
@@ -382,6 +387,10 @@ Ver [`AGENTS.md`](../AGENTS.md) para la lista completa.
 - Setup inicial
 - Architecture overview
 - RBAC 2.0 (arquitectura + frontend + ADR)
+- **RBAC CRUD completo (backend + frontend + docs)**
+  - Plan de implementación (7 fases)
+  - Guía de uso para administradores
+  - Arquitectura frontend detallada
 - Authentication (JWT + CSRF + contratos API)
 - Rate limiting (3 niveles + Redis)
 - OTP system (password recovery con Redis)
