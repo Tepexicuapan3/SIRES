@@ -49,7 +49,7 @@
         "MYSQL_PORT": "3306",
         "MYSQL_USER": "sires",
         "MYSQL_PASSWORD": "112233",
-        "MYSQL_DATABASE": "SIRES"
+        "MYSQL_DATABASE": "dbsisem"
       }
     },
 

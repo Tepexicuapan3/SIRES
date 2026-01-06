@@ -12,7 +12,7 @@
 -- 3. Ejecutar DESPUÉS de migration 006 (cleanup_mysql_otp)
 -- =====================================================
 
-USE SIRES;
+USE dbsisem;
 
 -- =====================================================
 -- PASO 1: Agregar columna is_system a cat_permissions

@@ -14,7 +14,7 @@
 --   - docs/architecture/otp-redis.md
 -- =====================================================
 
-USE SIRES;
+USE dbsisem;
 
 -- Eliminar tabla de OTP en MySQL (migrada a Redis)
 -- Verifica primero si existe para evitar errores
