@@ -133,10 +133,12 @@ def create_app():
     from src.presentation.api.auth_routes import auth_bp
     from src.presentation.api.permissions_routes import permissions_bp
     from src.presentation.api.users_routes import users_bp
+    from src.presentation.api.roles_routes import roles_bp
     
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
     app.register_blueprint(permissions_bp, url_prefix="/api/v1/permissions")
     app.register_blueprint(users_bp, url_prefix="/api/v1/users")
+    app.register_blueprint(roles_bp, url_prefix="/api/v1/roles")
 
     # Health check endpoint
     @app.route("/api/health")
