@@ -34,6 +34,9 @@ from src.use_cases.permissions.update_permission import UpdatePermissionUseCase
 from src.use_cases.permissions.delete_permission import DeletePermissionUseCase
 from src.use_cases.permissions.get_permissions import GetPermissionsUseCase
 from src.use_cases.permissions.assign_permissions_to_role import AssignPermissionsToRoleUseCase
+from src.use_cases.permissions.add_user_permission_override import AddUserPermissionOverrideUseCase
+from src.use_cases.permissions.remove_user_permission_override import RemoveUserPermissionOverrideUseCase
+from src.use_cases.permissions.get_user_effective_permissions import GetUserEffectivePermissionsUseCase
 
 permissions_bp = Blueprint("permissions", __name__)
 permission_repo = PermissionRepository()
@@ -45,12 +48,10 @@ delete_permission_uc = DeletePermissionUseCase(permission_repo)
 get_permissions_uc = GetPermissionsUseCase(permission_repo)
 assign_permissions_uc = AssignPermissionsToRoleUseCase(permission_repo, authorization_service)
 
-# Inicializar use cases
-create_permission_uc = CreatePermissionUseCase(permission_repo)
-update_permission_uc = UpdatePermissionUseCase(permission_repo)
-delete_permission_uc = DeletePermissionUseCase(permission_repo)
-get_permissions_uc = GetPermissionsUseCase(permission_repo)
-assign_permissions_uc = AssignPermissionsToRoleUseCase(permission_repo, authorization_service)
+# Inicializar use cases (Fase 4)
+add_override_uc = AddUserPermissionOverrideUseCase()
+remove_override_uc = RemoveUserPermissionOverrideUseCase()
+get_effective_permissions_uc = GetUserEffectivePermissionsUseCase()
 
 
 # ============= GET USER PERMISSIONS (Public para el usuario autenticado) =============
@@ -747,3 +748,242 @@ def revoke_permission_from_role_endpoint(role_id: int, permission_id: int):
             "code": "SERVER_ERROR",
             "message": f"Error al revocar permiso: {str(e)}"
         }), 500
+
+
+# ============= USER PERMISSION OVERRIDES (FASE 4) =============
+
+@permissions_bp.route("/users/<int:user_id>/overrides", methods=["POST"])
+@jwt_required()
+@requires_permission("usuarios:update")
+def add_user_permission_override(user_id: int):
+    """
+    Agrega un override de permiso a un usuario.
+    
+    Body:
+        {
+            "permission_code": "expedientes:delete",
+            "effect": "ALLOW",  # o "DENY"
+            "expires_at": "2026-12-31T23:59:59"  # Opcional (ISO format)
+        }
+    
+    Response 201:
+        {
+            "message": "Override de permiso agregado correctamente",
+            "user_id": 45,
+            "permission_code": "expedientes:delete",
+            "effect": "ALLOW",
+            "expires_at": "2026-12-31T23:59:59"
+        }
+    
+    Errors:
+        - 400 INVALID_REQUEST: Faltan campos requeridos
+        - 400 INVALID_EFFECT: Effect debe ser ALLOW o DENY
+        - 400 INVALID_EXPIRATION_DATE: Formato de fecha inválido
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 404 PERMISSION_NOT_FOUND: Permiso no existe
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        current_user = get_jwt_identity()
+        data = request.get_json()
+        
+        # Validación de campos requeridos
+        if not data or "permission_code" not in data or "effect" not in data:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "Los campos 'permission_code' y 'effect' son requeridos"
+            }), 400
+        
+        permission_code = data["permission_code"]
+        effect = data["effect"]
+        expires_at = data.get("expires_at")  # Opcional
+        
+        # Ejecutar use case
+        result, error = add_override_uc.execute(
+            user_id=user_id,
+            permission_code=permission_code,
+            effect=effect,
+            expires_at=expires_at,
+            usr_alta=str(current_user)
+        )
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "PERMISSION_NOT_FOUND": (404, "Permiso no encontrado"),
+                "INVALID_EFFECT": (400, "Effect debe ser ALLOW o DENY"),
+                "INVALID_EXPIRATION_DATE": (400, "Formato de fecha de expiración inválido (usar ISO format)"),
+                "DB_CONNECTION_FAILED": (500, "Error de conexión a la base de datos"),
+                "OVERRIDE_CREATION_FAILED": (500, "Error al crear override de permiso"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        # Si llegamos aquí, result no es None (error fue manejado arriba)
+        assert result is not None
+        return jsonify({
+            "message": "Override de permiso agregado correctamente",
+            "user_id": result["user_id"],
+            "permission_code": result["permission_code"],
+            "effect": result["effect"],
+            "expires_at": result.get("expires_at")
+        }), 201
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al agregar override: {str(e)}"
+        }), 500
+
+
+@permissions_bp.route("/users/<int:user_id>/overrides", methods=["GET"])
+@jwt_required()
+@requires_permission("usuarios:read")
+def get_user_permission_overrides(user_id: int):
+    """
+    Obtiene lista de overrides activos de un usuario.
+    
+    Response 200:
+        {
+            "user_id": 45,
+            "overrides": [
+                {
+                    "id_user_permission_override": 1,
+                    "permission_code": "expedientes:delete",
+                    "permission_description": "Eliminar expedientes",
+                    "effect": "DENY",
+                    "expires_at": "2026-12-31T23:59:59",
+                    "is_expired": false
+                }
+            ]
+        }
+    
+    Errors:
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        # Obtener overrides directamente del repository
+        overrides = permission_repo.get_user_permission_overrides_list(user_id)
+        
+        return jsonify({
+            "user_id": user_id,
+            "overrides": overrides
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al obtener overrides: {str(e)}"
+        }), 500
+
+
+@permissions_bp.route("/users/<int:user_id>/overrides/<string:permission_code>", methods=["DELETE"])
+@jwt_required()
+@requires_permission("usuarios:update")
+def remove_user_permission_override(user_id: int, permission_code: str):
+    """
+    Elimina un override de permiso de un usuario.
+    
+    Response 200:
+        {
+            "message": "Override de permiso eliminado correctamente",
+            "user_id": 45,
+            "permission_code": "expedientes:delete"
+        }
+    
+    Errors:
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 404 PERMISSION_NOT_FOUND: Permiso no existe
+        - 404 OVERRIDE_NOT_FOUND: Override no existe
+        - 400 OVERRIDE_ALREADY_DELETED: Override ya fue eliminado
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        current_user = get_jwt_identity()
+        
+        # Ejecutar use case
+        result, error = remove_override_uc.execute(
+            user_id=user_id,
+            permission_code=permission_code,
+            usr_baja=str(current_user)
+        )
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "PERMISSION_NOT_FOUND": (404, "Permiso no encontrado"),
+                "OVERRIDE_NOT_FOUND": (404, "Override de permiso no encontrado"),
+                "OVERRIDE_ALREADY_DELETED": (400, "El override ya fue eliminado anteriormente"),
+                "DB_CONNECTION_FAILED": (500, "Error de conexión a la base de datos"),
+                "OVERRIDE_DELETION_FAILED": (500, "Error al eliminar override de permiso"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        # Si llegamos aquí, result no es None (error fue manejado arriba)
+        assert result is not None
+        return jsonify({
+            "message": "Override de permiso eliminado correctamente",
+            "user_id": result["user_id"],
+            "permission_code": result["permission_code"]
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al eliminar override: {str(e)}"
+        }), 500
+
+
+@permissions_bp.route("/users/<int:user_id>/effective", methods=["GET"])
+@jwt_required()
+@requires_permission("usuarios:read")
+def get_user_effective_permissions(user_id: int):
+    """
+    Obtiene permisos efectivos de un usuario (roles + overrides aplicados).
+    
+    Response 200:
+        {
+            "user_id": 45,
+            "permissions": ["expedientes:read", "expedientes:create", ...],
+            "is_admin": false,
+            "roles": [
+                {"id_rol": 1, "rol": "MEDICOS", "desc_rol": "Médicos", ...}
+            ],
+            "landing_route": "/consultas",
+            "overrides": [
+                {
+                    "permission_code": "expedientes:delete",
+                    "effect": "DENY",
+                    "expires_at": null,
+                    "is_expired": false
+                }
+            ]
+        }
+    
+    Errors:
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        # Ejecutar use case
+        result, error = get_effective_permissions_uc.execute(user_id=user_id)
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        return jsonify(result), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al obtener permisos efectivos: {str(e)}"
+        }), 500
+
