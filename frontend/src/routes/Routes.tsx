@@ -31,6 +31,14 @@ const RolesPage = lazy(() =>
     default: m.RolesPage,
   })),
 );
+const PermissionsPage = lazy(() =>
+  import("@features/admin/components/permissions").then((m) => ({
+    default: m.PermissionsPage,
+  })),
+);
+const UsersListPage = lazy(
+  () => import("@features/admin/components/UsersListPage"),
+);
 const CatalogosPage = lazy(
   () => import("@features/admin/components/CatalogosPage"),
 );
