@@ -45,11 +45,11 @@
       "command": ["npx", "-y", "@benborla29/mcp-server-mysql"],
       "enabled": true,
       "environment": {
-        "MYSQL_HOST": "{env:MYSQL_HOST}",
-        "MYSQL_PORT": "{env:MYSQL_PORT}",
-        "MYSQL_USER": "{env:MYSQL_USER}",
-        "MYSQL_PASSWORD": "{env:MYSQL_PASSWORD}",
-        "MYSQL_DATABASE": "{env:MYSQL_DATABASE}"
+        "MYSQL_HOST": "10.15.15.76",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "sires",
+        "MYSQL_PASSWORD": "112233",
+        "MYSQL_DATABASE": "SIRES"
       }
     },
 
