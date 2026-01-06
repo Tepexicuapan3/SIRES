@@ -17,6 +17,9 @@ from src.use_cases.users.get_user_usecase import GetUserUseCase
 from src.use_cases.users.update_user_usecase import UpdateUserUseCase
 from src.use_cases.users.change_role_usecase import ChangeUserRoleUseCase
 from src.use_cases.users.toggle_user_status_usecase import ToggleUserStatusUseCase
+from src.use_cases.users.assign_roles_to_user import AssignRolesToUserUseCase
+from src.use_cases.users.set_primary_role import SetPrimaryRoleUseCase
+from src.use_cases.users.revoke_role_from_user import RevokeRoleFromUserUseCase
 
 users_bp = Blueprint("users", __name__)
 create_user_usecase = CreateUserUseCase()
@@ -25,6 +28,9 @@ get_user_usecase = GetUserUseCase()
 update_user_usecase = UpdateUserUseCase()
 change_role_usecase = ChangeUserRoleUseCase()
 toggle_status_usecase = ToggleUserStatusUseCase()
+assign_roles_usecase = AssignRolesToUserUseCase()
+set_primary_role_usecase = SetPrimaryRoleUseCase()
+revoke_role_usecase = RevokeRoleFromUserUseCase()
 
 
 # ============= CREATE USER (Admin only) =============
@@ -535,3 +541,211 @@ def activate_user(user_id: int):
             "code": "SERVER_ERROR",
             "message": f"Error al activar usuario: {str(e)}"
         }), 500
+
+
+# ============= MULTI-ROL MANAGEMENT (FASE 3) =============
+
+@users_bp.route("/<int:user_id>/roles", methods=["POST"])
+@jwt_required()
+@requires_permission("usuarios:update")
+def assign_roles_to_user(user_id: int):
+    """
+    Asigna múltiples roles a un usuario.
+    
+    Body:
+        {
+            "role_ids": [1, 3, 5]
+        }
+    
+    Response 200:
+        {
+            "message": "Roles asignados correctamente",
+            "assigned_count": 2,
+            "user_id": 45,
+            "role_ids": [1, 3, 5]
+        }
+    
+    Errors:
+        - 400 INVALID_REQUEST: Faltan campos requeridos
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 404 ROLE_NOT_FOUND: Algún rol no existe
+        - 400 EMPTY_ROLE_LIST: Lista de roles vacía
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        data = request.get_json()
+        
+        # Validación de campos requeridos
+        if not data or "role_ids" not in data:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El campo 'role_ids' es requerido"
+            }), 400
+        
+        role_ids = data["role_ids"]
+        
+        # Validar que sea una lista
+        if not isinstance(role_ids, list):
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "'role_ids' debe ser una lista de IDs"
+            }), 400
+        
+        # Ejecutar use case
+        result, error = assign_roles_usecase.execute(
+            user_id=user_id,
+            role_ids=role_ids,
+            modified_by=current_user_id
+        )
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "EMPTY_ROLE_LIST": (400, "La lista de roles no puede estar vacía"),
+                "ROLE_NOT_FOUND": (404, "Uno o más roles no existen"),
+                "DB_CONNECTION_FAILED": (500, "Error de conexión a la base de datos"),
+                "ROLE_ASSIGNMENT_FAILED": (500, "Error al asignar roles"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        return jsonify({
+            "message": "Roles asignados correctamente",
+            **result
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al asignar roles: {str(e)}"
+        }), 500
+
+
+@users_bp.route("/<int:user_id>/roles/primary", methods=["PUT"])
+@jwt_required()
+@requires_permission("usuarios:update")
+def set_primary_role(user_id: int):
+    """
+    Cambia el rol primario de un usuario.
+    
+    Body:
+        {
+            "role_id": 3
+        }
+    
+    Response 200:
+        {
+            "message": "Rol primario actualizado correctamente",
+            "user_id": 45,
+            "role_id": 3
+        }
+    
+    Errors:
+        - 400 INVALID_REQUEST: Faltan campos requeridos
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 400 ROLE_NOT_ASSIGNED: El rol no está asignado al usuario
+        - 400 ROLE_INACTIVE: El rol está revocado
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        data = request.get_json()
+        
+        # Validación de campos requeridos
+        if not data or "role_id" not in data:
+            return jsonify({
+                "code": "INVALID_REQUEST",
+                "message": "El campo 'role_id' es requerido"
+            }), 400
+        
+        role_id = data["role_id"]
+        
+        # Ejecutar use case
+        result, error = set_primary_role_usecase.execute(
+            user_id=user_id,
+            role_id=role_id,
+            modified_by=current_user_id
+        )
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "ROLE_NOT_ASSIGNED": (400, "El rol no está asignado al usuario"),
+                "ROLE_INACTIVE": (400, "El rol está inactivo o revocado"),
+                "DB_CONNECTION_FAILED": (500, "Error de conexión a la base de datos"),
+                "SET_PRIMARY_FAILED": (500, "Error al cambiar rol primario"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        return jsonify({
+            "message": "Rol primario actualizado correctamente",
+            **result
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al cambiar rol primario: {str(e)}"
+        }), 500
+
+
+@users_bp.route("/<int:user_id>/roles/<int:role_id>", methods=["DELETE"])
+@jwt_required()
+@requires_permission("usuarios:update")
+def revoke_role_from_user(user_id: int, role_id: int):
+    """
+    Revoca un rol de un usuario.
+    
+    Response 200:
+        {
+            "message": "Rol revocado correctamente",
+            "user_id": 45,
+            "role_id": 3,
+            "reassigned_primary": true
+        }
+    
+    Errors:
+        - 404 USER_NOT_FOUND: Usuario no existe
+        - 400 CANNOT_REVOKE_LAST_ROLE: No se puede revocar el único rol
+        - 400 ROLE_NOT_ASSIGNED: El rol no está asignado al usuario
+        - 400 ROLE_ALREADY_REVOKED: El rol ya está revocado
+        - 500 SERVER_ERROR: Error interno
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        # Ejecutar use case
+        result, error = revoke_role_usecase.execute(
+            user_id=user_id,
+            role_id=role_id,
+            modified_by=current_user_id
+        )
+        
+        if error:
+            error_mapping = {
+                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+                "CANNOT_REVOKE_LAST_ROLE": (400, "No se puede revocar el único rol del usuario"),
+                "ROLE_NOT_ASSIGNED": (400, "El rol no está asignado al usuario"),
+                "ROLE_ALREADY_REVOKED": (400, "El rol ya fue revocado anteriormente"),
+                "DB_CONNECTION_FAILED": (500, "Error de conexión a la base de datos"),
+                "REVOKE_ROLE_FAILED": (500, "Error al revocar rol"),
+                "SERVER_ERROR": (500, "Error interno del servidor"),
+            }
+            status, message = error_mapping.get(error, (500, "Error desconocido"))
+            return jsonify({"code": error, "message": message}), status
+        
+        return jsonify({
+            "message": "Rol revocado correctamente",
+            **result
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "code": "SERVER_ERROR",
+            "message": f"Error al revocar rol: {str(e)}"
+        }), 500
+

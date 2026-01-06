@@ -18,7 +18,8 @@ class UserRepository:
             """, (usuario,))
             return cursor.fetchone()
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def get_user_by_email(self, email):
         conn = get_db_connection()
@@ -35,7 +36,8 @@ class UserRepository:
             """, (email,))
             return cursor.fetchone()
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
 
     def get_user_roles(self, id_usuario):
@@ -53,7 +55,8 @@ class UserRepository:
             roles = cursor.fetchall()
             return [r["rol"] for r in roles]
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
             
 
     def get_user_by_id(self, user_id: int):
@@ -80,7 +83,8 @@ class UserRepository:
             """, (user_id,))
             return cursor.fetchone()
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def update_password_by_id(self, user_id, hashed_password):
         conn = get_db_connection()
@@ -103,7 +107,8 @@ class UserRepository:
             return False
 
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def create_user(
         self,
@@ -153,7 +158,8 @@ class UserRepository:
             conn.rollback()
             return None
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def assign_role_to_user(self, user_id: int, role_id: int, is_primary: bool, created_by: int) -> bool:
         """
@@ -189,7 +195,8 @@ class UserRepository:
             conn.rollback()
             return False
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def count_users(self, filters: dict) -> int:
         """
@@ -251,7 +258,8 @@ class UserRepository:
             return result[0] if result else 0
             
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def list_users(self, page: int, page_size: int, filters: dict) -> list[dict]:
         """
@@ -340,7 +348,8 @@ class UserRepository:
             return cursor.fetchall()
             
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def get_user_by_id_with_audit(self, user_id: int) -> dict | None:
         """
@@ -386,7 +395,8 @@ class UserRepository:
             """, (user_id,))
             return cursor.fetchone()
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def get_user_roles_with_details(self, user_id: int) -> list[dict]:
         """
@@ -420,7 +430,8 @@ class UserRepository:
             """, (user_id,))
             return cursor.fetchall()
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def email_exists_for_other_user(self, email: str, exclude_user_id: int) -> bool:
         """
@@ -448,7 +459,8 @@ class UserRepository:
             result = cursor.fetchone()
             return result[0] > 0 if result else False
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def update_user(self, user_id: int, data: dict, modified_by: int) -> bool:
         """
@@ -510,7 +522,8 @@ class UserRepository:
             conn.rollback()
             return False
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def get_role_by_id(self, role_id: int) -> dict | None:
         """
@@ -536,7 +549,8 @@ class UserRepository:
             """, (role_id,))
             return cursor.fetchone()
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def change_user_primary_role(self, user_id: int, new_role_id: int, modified_by: int) -> bool:
         """
@@ -603,7 +617,8 @@ class UserRepository:
             conn.rollback()
             return False
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def deactivate_user(self, user_id: int, modified_by: int) -> bool:
         """
@@ -637,7 +652,8 @@ class UserRepository:
             conn.rollback()
             return False
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
 
     def activate_user(self, user_id: int, modified_by: int) -> bool:
         """
@@ -671,7 +687,319 @@ class UserRepository:
             conn.rollback()
             return False
         finally:
-            close_db(conn, cursor)
+            if cursor:
+                close_db(conn, cursor)
+
+    # ========== MÉTODOS PARA GESTIÓN MULTI-ROL (FASE 3) ==========
+
+    def user_has_role(self, user_id: int, role_id: int) -> bool:
+        """
+        Verifica si un usuario tiene un rol específico asignado (activo).
+        
+        Args:
+            user_id: ID del usuario
+            role_id: ID del rol
+            
+        Returns:
+            True si el usuario tiene el rol asignado y activo
+        """
+        conn = get_db_connection()
+        if not conn:
+            return False
+        
+        cursor = None
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM users_roles
+                WHERE id_usuario = %s AND id_rol = %s AND est_usr_rol = 'A'
+            """, (user_id, role_id))
+            result = cursor.fetchone()
+            return result[0] > 0 if result else False
+        finally:
+            if cursor:
+                close_db(conn, cursor)
+
+    def count_active_roles_for_user(self, user_id: int) -> int:
+        """
+        Cuenta cuántos roles activos tiene un usuario.
+        
+        Args:
+            user_id: ID del usuario
+            
+        Returns:
+            Número de roles activos del usuario
+        """
+        conn = get_db_connection()
+        if not conn:
+            return 0
+        
+        cursor = None
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM users_roles
+                WHERE id_usuario = %s AND est_usr_rol = 'A'
+            """, (user_id,))
+            result = cursor.fetchone()
+            return result[0] if result else 0
+        finally:
+            if cursor:
+                close_db(conn, cursor)
+
+    def assign_roles_to_user(self, user_id: int, role_ids: list[int], modified_by: int) -> tuple[int, str | None]:
+        """
+        Asigna múltiples roles a un usuario de forma transaccional.
+        
+        Lógica:
+        - Si el usuario NO tiene roles, el primer rol de la lista se marca como primario
+        - Si ya tiene roles, los nuevos se asignan como secundarios
+        - No duplica asignaciones (verifica antes de insertar)
+        
+        Args:
+            user_id: ID del usuario
+            role_ids: Lista de IDs de roles a asignar
+            modified_by: ID del usuario que realiza la asignación
+            
+        Returns:
+            Tupla (cantidad_asignados, error_code)
+            - cantidad_asignados: Número de roles efectivamente asignados (0 si ya los tenía todos)
+            - error_code: None si OK, código de error si falla
+        """
+        if not role_ids:
+            return 0, "EMPTY_ROLE_LIST"
+        
+        conn = get_db_connection()
+        if not conn:
+            return 0, "DB_CONNECTION_FAILED"
+        
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+            conn.start_transaction()
+            
+            # 1. Verificar si el usuario tiene roles activos
+            cursor.execute("""
+                SELECT COUNT(*) as total
+                FROM users_roles
+                WHERE id_usuario = %s AND est_usr_rol = 'A'
+            """, (user_id,))
+            has_roles = cursor.fetchone()['total'] > 0
+            
+            assigned_count = 0
+            
+            for idx, role_id in enumerate(role_ids):
+                # Verificar si ya tiene el rol
+                cursor.execute("""
+                    SELECT id_usr_roles, est_usr_rol
+                    FROM users_roles
+                    WHERE id_usuario = %s AND id_rol = %s
+                    LIMIT 1
+                """, (user_id, role_id))
+                
+                existing = cursor.fetchone()
+                
+                if existing:
+                    # Ya existe: si está inactivo, reactivarlo
+                    if existing['est_usr_rol'] == 'B':
+                        cursor.execute("""
+                            UPDATE users_roles
+                            SET est_usr_rol = 'A', usr_modf = %s, fch_modf = NOW()
+                            WHERE id_usr_roles = %s
+                        """, (modified_by, existing['id_usr_roles']))
+                        assigned_count += 1
+                else:
+                    # No existe: insertar nuevo
+                    is_primary = 1 if (not has_roles and idx == 0) else 0
+                    
+                    cursor.execute("""
+                        INSERT INTO users_roles 
+                        (id_usuario, id_rol, is_primary, tp_asignacion, est_usr_rol, usr_alta, fch_alta)
+                        VALUES (%s, %s, %s, 'ROL', 'A', %s, NOW())
+                    """, (user_id, role_id, is_primary, modified_by))
+                    assigned_count += 1
+                    
+                    # Actualizar flag para siguientes iteraciones
+                    if is_primary:
+                        has_roles = True
+            
+            conn.commit()
+            return assigned_count, None
+            
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"Error assigning roles to user: {e}")
+            return 0, "ROLE_ASSIGNMENT_FAILED"
+        finally:
+            if cursor:
+                close_db(conn, cursor)
+
+    def set_primary_role(self, user_id: int, role_id: int, modified_by: int) -> tuple[bool, str | None]:
+        """
+        Marca un rol como primario para un usuario.
+        
+        Prerequisito: El rol YA debe estar asignado al usuario.
+        
+        Operaciones:
+        1. Desmarca el rol primario actual (is_primary = 0)
+        2. Marca el nuevo rol como primario (is_primary = 1)
+        
+        Args:
+            user_id: ID del usuario
+            role_id: ID del rol a marcar como primario
+            modified_by: ID del usuario que realiza el cambio
+            
+        Returns:
+            Tupla (success, error_code)
+            - success: True si se cambió correctamente
+            - error_code: None si OK, código de error si falla
+        """
+        conn = get_db_connection()
+        if not conn:
+            return False, "DB_CONNECTION_FAILED"
+        
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+            conn.start_transaction()
+            
+            # 1. Verificar que el usuario tiene el rol asignado
+            cursor.execute("""
+                SELECT id_usr_roles, est_usr_rol
+                FROM users_roles
+                WHERE id_usuario = %s AND id_rol = %s
+                LIMIT 1
+            """, (user_id, role_id))
+            
+            target_role = cursor.fetchone()
+            
+            if not target_role:
+                conn.rollback()
+                return False, "ROLE_NOT_ASSIGNED"
+            
+            if target_role['est_usr_rol'] == 'B':
+                conn.rollback()
+                return False, "ROLE_INACTIVE"
+            
+            # 2. Desmarcar rol primario actual
+            cursor.execute("""
+                UPDATE users_roles
+                SET is_primary = 0, usr_modf = %s, fch_modf = NOW()
+                WHERE id_usuario = %s AND is_primary = 1
+            """, (modified_by, user_id))
+            
+            # 3. Marcar nuevo rol como primario
+            cursor.execute("""
+                UPDATE users_roles
+                SET is_primary = 1, usr_modf = %s, fch_modf = NOW()
+                WHERE id_usr_roles = %s
+            """, (modified_by, target_role['id_usr_roles']))
+            
+            conn.commit()
+            return True, None
+            
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"Error setting primary role: {e}")
+            return False, "SET_PRIMARY_FAILED"
+        finally:
+            if cursor:
+                close_db(conn, cursor)
+
+    def revoke_role_from_user(self, user_id: int, role_id: int, modified_by: int) -> tuple[bool, str | None]:
+        """
+        Revoca un rol de un usuario (soft delete: marca est_usr_rol = 'B').
+        
+        Validaciones:
+        - No permite revocar si es el ÚNICO rol activo del usuario
+        - Si se revoca el rol primario, asigna automáticamente otro como primario
+        
+        Args:
+            user_id: ID del usuario
+            role_id: ID del rol a revocar
+            modified_by: ID del usuario que realiza la revocación
+            
+        Returns:
+            Tupla (success, error_code)
+            - success: True si se revocó correctamente
+            - error_code: None si OK, código de error si falla
+        """
+        conn = get_db_connection()
+        if not conn:
+            return False, "DB_CONNECTION_FAILED"
+        
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+            conn.start_transaction()
+            
+            # 1. Verificar cuántos roles activos tiene el usuario
+            cursor.execute("""
+                SELECT COUNT(*) as total
+                FROM users_roles
+                WHERE id_usuario = %s AND est_usr_rol = 'A'
+            """, (user_id,))
+            
+            active_roles_count = cursor.fetchone()['total']
+            
+            if active_roles_count <= 1:
+                conn.rollback()
+                return False, "CANNOT_REVOKE_LAST_ROLE"
+            
+            # 2. Verificar si existe el rol asignado y si es primario
+            cursor.execute("""
+                SELECT id_usr_roles, is_primary, est_usr_rol
+                FROM users_roles
+                WHERE id_usuario = %s AND id_rol = %s
+                LIMIT 1
+            """, (user_id, role_id))
+            
+            target_role = cursor.fetchone()
+            
+            if not target_role:
+                conn.rollback()
+                return False, "ROLE_NOT_ASSIGNED"
+            
+            if target_role['est_usr_rol'] == 'B':
+                conn.rollback()
+                return False, "ROLE_ALREADY_REVOKED"
+            
+            was_primary = target_role['is_primary'] == 1
+            
+            # 3. Revocar el rol (soft delete)
+            cursor.execute("""
+                UPDATE users_roles
+                SET est_usr_rol = 'B', usr_modf = %s, fch_modf = NOW()
+                WHERE id_usr_roles = %s
+            """, (modified_by, target_role['id_usr_roles']))
+            
+            # 4. Si era primario, asignar otro rol como primario
+            if was_primary:
+                cursor.execute("""
+                    UPDATE users_roles
+                    SET is_primary = 1, usr_modf = %s, fch_modf = NOW()
+                    WHERE id_usuario = %s 
+                      AND est_usr_rol = 'A'
+                      AND id_usr_roles != %s
+                    ORDER BY fch_alta ASC
+                    LIMIT 1
+                """, (modified_by, user_id, target_role['id_usr_roles']))
+            
+            conn.commit()
+            return True, None
+            
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"Error revoking role from user: {e}")
+            return False, "REVOKE_ROLE_FAILED"
+        finally:
+            if cursor:
+                close_db(conn, cursor)
 
 
 
