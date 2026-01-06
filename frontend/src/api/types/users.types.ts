@@ -4,6 +4,23 @@
  * Contracts for user management
  */
 
+/**
+ * User entity
+ * Represents a user in the system
+ */
+export interface User {
+  id_usuario: number;
+  usuario: string;
+  nombre: string;
+  apellido_paterno: string;
+  apellido_materno: string;
+  numero_expediente: string | null;
+  correo: string;
+  activo: boolean;
+  ultimo_acceso: string | null;
+  roles?: UserRole[]; // Populated when fetching with roles
+}
+
 export interface CreateUserRequest {
   usuario: string;
   expediente: string;
@@ -33,11 +50,11 @@ export interface CreateUserResponse {
  */
 export interface UserRole {
   id_rol: number;
-  cod_rol: string;
-  nom_rol: string;
+  nombre: string; // Nombre del rol (ej: "ADMIN", "MÉDICO")
   is_primary: boolean;
-  assigned_at: string;
-  assigned_by: string;
+  priority: number; // Prioridad del rol
+  assigned_at?: string;
+  assigned_by?: string;
 }
 
 /**

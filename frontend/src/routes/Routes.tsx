@@ -36,8 +36,10 @@ const PermissionsPage = lazy(() =>
     default: m.PermissionsPage,
   })),
 );
-const UsersListPage = lazy(
-  () => import("@features/admin/components/UsersListPage"),
+const UsersPage = lazy(() =>
+  import("@features/admin/components/users").then((m) => ({
+    default: m.UsersPage,
+  })),
 );
 const CatalogosPage = lazy(
   () => import("@features/admin/components/CatalogosPage"),
@@ -132,7 +134,7 @@ export const router = createBrowserRouter([
         path: "/admin/usuarios",
         element: (
           <ProtectedRoute requiredPermission="usuarios:read">
-            <UsersListPage />
+            <UsersPage />
           </ProtectedRoute>
         ),
       },
