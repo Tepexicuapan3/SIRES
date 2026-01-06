@@ -42,7 +42,7 @@
 
     "mysql": {
       "type": "local",
-      "command": ["npx", "-y", "@benborla29/mcp-server-mysql"],
+      "command": ["npx", "-y", "@liangshanli/mcp-server-mysql"],
       "enabled": true,
       "environment": {
         "MYSQL_HOST": "10.15.15.76",
