@@ -806,3 +806,241 @@ class PermissionRepository:
             return False, f"DATABASE_ERROR: {str(e)}"
         finally:
             close_db(conn, cursor)
+
+    # ========== MÉTODOS PARA USER PERMISSION OVERRIDES (FASE 4) ==========
+
+    def add_user_permission_override(
+        self,
+        user_id: int,
+        permission_id: int,
+        effect: str,  # 'ALLOW' o 'DENY'
+        expires_at: str | None,  # DateTime string o None
+        usr_alta: str
+    ) -> tuple[bool, str | None]:
+        """
+        Agrega un override de permiso para un usuario.
+
+        Args:
+            user_id: ID del usuario
+            permission_id: ID del permiso
+            effect: 'ALLOW' o 'DENY'
+            expires_at: Fecha de expiración (ISO format) o None
+            usr_alta: Usuario que crea el override
+
+        Returns:
+            Tupla (success, error_code)
+        """
+        conn = get_db_connection()
+        if conn is None:
+            return False, "DB_CONNECTION_FAILED"
+
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+            conn.start_transaction()
+
+            # Verificar si ya existe un override para este usuario+permiso
+            cursor.execute(
+                """
+                SELECT id_user_permission_override, fch_baja
+                FROM user_permission_overrides
+                WHERE id_usuario = %s AND id_permission = %s
+                """,
+                (user_id, permission_id)
+            )
+            existing = cursor.fetchone()
+
+            if existing:
+                # Si existe pero está dado de baja, reactivarlo y actualizar
+                if existing["fch_baja"] is not None:
+                    cursor.execute(
+                        """
+                        UPDATE user_permission_overrides
+                        SET effect = %s, expires_at = %s, fch_baja = NULL, usr_baja = NULL
+                        WHERE id_user_permission_override = %s
+                        """,
+                        (effect, expires_at, existing["id_user_permission_override"])
+                    )
+                else:
+                    # Ya existe y está activo, solo actualizar effect y expires_at
+                    cursor.execute(
+                        """
+                        UPDATE user_permission_overrides
+                        SET effect = %s, expires_at = %s
+                        WHERE id_user_permission_override = %s
+                        """,
+                        (effect, expires_at, existing["id_user_permission_override"])
+                    )
+            else:
+                # Insertar nuevo override
+                cursor.execute(
+                    """
+                    INSERT INTO user_permission_overrides
+                    (id_usuario, id_permission, effect, expires_at, usr_alta, fch_alta)
+                    VALUES (%s, %s, %s, %s, %s, NOW())
+                    """,
+                    (user_id, permission_id, effect, expires_at, usr_alta)
+                )
+
+            conn.commit()
+            return True, None
+
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"Error adding user permission override: {e}")
+            return False, "OVERRIDE_CREATION_FAILED"
+        finally:
+            if cursor:
+                close_db(conn, cursor)
+
+    def remove_user_permission_override(
+        self,
+        user_id: int,
+        permission_id: int,
+        usr_baja: str
+    ) -> tuple[bool, str | None]:
+        """
+        Elimina (soft delete) un override de permiso de un usuario.
+
+        Args:
+            user_id: ID del usuario
+            permission_id: ID del permiso
+            usr_baja: Usuario que elimina el override
+
+        Returns:
+            Tupla (success, error_code)
+        """
+        conn = get_db_connection()
+        if conn is None:
+            return False, "DB_CONNECTION_FAILED"
+
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+
+            # Verificar que existe y está activo
+            cursor.execute(
+                """
+                SELECT id_user_permission_override, fch_baja
+                FROM user_permission_overrides
+                WHERE id_usuario = %s AND id_permission = %s
+                """,
+                (user_id, permission_id)
+            )
+            existing = cursor.fetchone()
+
+            if not existing:
+                return False, "OVERRIDE_NOT_FOUND"
+
+            if existing["fch_baja"] is not None:
+                return False, "OVERRIDE_ALREADY_DELETED"
+
+            # Soft delete
+            cursor.execute(
+                """
+                UPDATE user_permission_overrides
+                SET fch_baja = NOW(), usr_baja = %s
+                WHERE id_user_permission_override = %s
+                """,
+                (usr_baja, existing["id_user_permission_override"])
+            )
+
+            conn.commit()
+            return True, None
+
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"Error removing user permission override: {e}")
+            return False, "OVERRIDE_DELETION_FAILED"
+        finally:
+            if cursor:
+                close_db(conn, cursor)
+
+    def get_user_permission_overrides_list(self, user_id: int) -> list[dict]:
+        """
+        Obtiene la lista de overrides activos de un usuario con información detallada.
+
+        Args:
+            user_id: ID del usuario
+
+        Returns:
+            Lista de diccionarios con información de overrides:
+            [{
+                "id_user_permission_override": int,
+                "permission_code": str,
+                "permission_description": str,
+                "effect": "ALLOW"/"DENY",
+                "expires_at": datetime | None,
+                "is_expired": bool
+            }, ...]
+        """
+        conn = get_db_connection()
+        if conn is None:
+            return []
+
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(
+                """
+                SELECT 
+                    upo.id_user_permission_override,
+                    upo.effect,
+                    upo.expires_at,
+                    cp.code as permission_code,
+                    cp.description as permission_description,
+                    CASE 
+                        WHEN upo.expires_at IS NOT NULL AND upo.expires_at < NOW() THEN 1
+                        ELSE 0
+                    END as is_expired
+                FROM user_permission_overrides upo
+                INNER JOIN cat_permissions cp ON upo.id_permission = cp.id_permission
+                WHERE upo.id_usuario = %s 
+                  AND upo.fch_baja IS NULL
+                ORDER BY upo.effect DESC, cp.code ASC
+                """,
+                (user_id,)
+            )
+            return cursor.fetchall()
+
+        finally:
+            if cursor:
+                close_db(conn, cursor)
+
+    def user_has_permission_override(self, user_id: int, permission_id: int) -> bool:
+        """
+        Verifica si un usuario tiene un override específico (activo).
+
+        Args:
+            user_id: ID del usuario
+            permission_id: ID del permiso
+
+        Returns:
+            True si existe override activo, False si no
+        """
+        conn = get_db_connection()
+        if conn is None:
+            return False
+
+        cursor = None
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COUNT(*) 
+                FROM user_permission_overrides
+                WHERE id_usuario = %s 
+                  AND id_permission = %s 
+                  AND fch_baja IS NULL
+                """,
+                (user_id, permission_id)
+            )
+            result = cursor.fetchone()
+            return result[0] > 0 if result else False
+
+        finally:
+            if cursor:
+                close_db(conn, cursor)
+
