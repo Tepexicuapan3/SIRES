@@ -23,15 +23,13 @@ const DashboardPage = lazy(
 // MÓDULO: ADMINISTRACIÓN
 // ============================================================
 const AdminPage = lazy(() => import("@features/admin/components/AdminPage"));
-const UsersListPage = lazy(
-  () => import("@features/admin/components/UsersListPage"),
-);
 const CreateUserPage = lazy(
   () => import("@features/admin/components/CreateUserPage"),
 );
-const RolesPage = lazy(() => import("@features/admin/components/RolesPage"));
-const PermissionsPage = lazy(
-  () => import("@features/admin/components/PermissionsPage"),
+const RolesPage = lazy(() =>
+  import("@features/admin/components/roles").then((m) => ({
+    default: m.RolesPage,
+  })),
 );
 const CatalogosPage = lazy(
   () => import("@features/admin/components/CatalogosPage"),
