@@ -227,7 +227,7 @@ class PermissionRepository:
         Útil para UIs de administración de permisos.
         
         Returns:
-            Lista de permisos con: id_permission, code, resource, action, description, category
+            Lista de permisos con: id_permission, code, resource, action, description, category, is_system
         """
         conn = get_db_connection()
         if conn is None:
@@ -242,7 +242,8 @@ class PermissionRepository:
                     resource,
                     action,
                     description,
-                    category
+                    category,
+                    is_system
                 FROM cat_permissions
                 WHERE est_permission = 'A'
                 ORDER BY category, resource, action
@@ -412,5 +413,396 @@ class PermissionRepository:
             """
             cursor.execute(query, (role_id,))
             return cursor.fetchall()
+        finally:
+            close_db(conn, cursor)
+
+    # ========== MÉTODOS CRUD DE PERMISOS (Fase 2) ==========
+
+    def create_permission(
+        self,
+        code: str,
+        resource: str,
+        action: str,
+        description: Optional[str] = None,
+        category: Optional[str] = None,
+        usr_alta: str = "system"
+    ) -> tuple[Optional[Dict], Optional[str]]:
+        """
+        Crea un nuevo permiso custom (is_system=FALSE).
+        
+        Args:
+            code: Código único del permiso (ej: "expedientes:read")
+            resource: Recurso (ej: "expedientes")
+            action: Acción (ej: "read")
+            description: Descripción del permiso
+            category: Categoría para agrupar (ej: "Gestión de Expedientes")
+            usr_alta: Usuario que crea
+            
+        Returns:
+            tuple: (permission_dict, error_code)
+            - permission_dict con datos del permiso creado
+            - error_code: None si éxito, string si error
+        """
+        conn = get_db_connection()
+        if conn is None:
+            return None, "DB_CONNECTION_FAILED"
+
+        cursor = conn.cursor(dictionary=True)
+        try:
+            # Verificar que el código no exista
+            cursor.execute(
+                "SELECT id_permission FROM cat_permissions WHERE code = %s",
+                (code,)
+            )
+            if cursor.fetchone():
+                return None, "PERMISSION_CODE_EXISTS"
+
+            # Insertar permiso (is_system=FALSE por defecto)
+            cursor.execute(
+                """
+                INSERT INTO cat_permissions 
+                (code, resource, action, description, category, is_system, usr_alta, fch_alta, est_permission)
+                VALUES (%s, %s, %s, %s, %s, FALSE, %s, NOW(), 'A')
+                """,
+                (code, resource, action, description, category, usr_alta)
+            )
+            
+            permission_id = cursor.lastrowid
+            conn.commit()
+
+            # Retornar el permiso creado
+            cursor.execute(
+                """
+                SELECT id_permission, code, resource, action, description, category, is_system, est_permission
+                FROM cat_permissions
+                WHERE id_permission = %s
+                """,
+                (permission_id,)
+            )
+            return cursor.fetchone(), None
+
+        except Exception as e:
+            conn.rollback()
+            return None, f"DATABASE_ERROR: {str(e)}"
+        finally:
+            close_db(conn, cursor)
+
+    def update_permission(
+        self,
+        permission_id: int,
+        description: Optional[str] = None,
+        category: Optional[str] = None,
+        usr_modf: str = "system"
+    ) -> tuple[Optional[Dict], Optional[str]]:
+        """
+        Actualiza un permiso custom (solo descripción y categoría).
+        NO permite editar permisos del sistema (is_system=TRUE).
+        
+        Args:
+            permission_id: ID del permiso
+            description: Nueva descripción
+            category: Nueva categoría
+            usr_modf: Usuario que modifica
+            
+        Returns:
+            tuple: (permission_dict, error_code)
+        """
+        conn = get_db_connection()
+        if conn is None:
+            return None, "DB_CONNECTION_FAILED"
+
+        cursor = conn.cursor(dictionary=True)
+        try:
+            # Verificar que existe y no es del sistema
+            cursor.execute(
+                """
+                SELECT id_permission, is_system 
+                FROM cat_permissions 
+                WHERE id_permission = %s AND est_permission = 'A'
+                """,
+                (permission_id,)
+            )
+            perm = cursor.fetchone()
+            
+            if not perm:
+                return None, "PERMISSION_NOT_FOUND"
+            
+            if perm["is_system"]:
+                return None, "PERMISSION_SYSTEM_PROTECTED"
+
+            # Actualizar solo campos permitidos
+            updates = []
+            params = []
+            
+            if description is not None:
+                updates.append("description = %s")
+                params.append(description)
+            
+            if category is not None:
+                updates.append("category = %s")
+                params.append(category)
+            
+            if not updates:
+                # No hay nada que actualizar, retornar actual
+                cursor.execute(
+                    """
+                    SELECT id_permission, code, resource, action, description, category, is_system, est_permission
+                    FROM cat_permissions
+                    WHERE id_permission = %s
+                    """,
+                    (permission_id,)
+                )
+                return cursor.fetchone(), None
+
+            # Agregar auditoría
+            updates.append("usr_modf = %s")
+            updates.append("fch_modf = NOW()")
+            params.append(usr_modf)
+            params.append(permission_id)
+
+            query = f"""
+                UPDATE cat_permissions 
+                SET {', '.join(updates)}
+                WHERE id_permission = %s
+            """
+            cursor.execute(query, params)
+            conn.commit()
+
+            # Retornar permiso actualizado
+            cursor.execute(
+                """
+                SELECT id_permission, code, resource, action, description, category, is_system, est_permission
+                FROM cat_permissions
+                WHERE id_permission = %s
+                """,
+                (permission_id,)
+            )
+            return cursor.fetchone(), None
+
+        except Exception as e:
+            conn.rollback()
+            return None, f"DATABASE_ERROR: {str(e)}"
+        finally:
+            close_db(conn, cursor)
+
+    def delete_permission(
+        self,
+        permission_id: int,
+        usr_baja: str = "system"
+    ) -> tuple[bool, Optional[str]]:
+        """
+        Elimina un permiso custom (baja lógica).
+        NO permite eliminar permisos del sistema (is_system=TRUE).
+        NO permite eliminar permisos asignados a roles.
+        
+        Args:
+            permission_id: ID del permiso
+            usr_baja: Usuario que elimina
+            
+        Returns:
+            tuple: (success, error_code)
+        """
+        conn = get_db_connection()
+        if conn is None:
+            return False, "DB_CONNECTION_FAILED"
+
+        cursor = conn.cursor(dictionary=True)
+        try:
+            # Verificar que existe y no es del sistema
+            cursor.execute(
+                """
+                SELECT id_permission, is_system 
+                FROM cat_permissions 
+                WHERE id_permission = %s AND est_permission = 'A'
+                """,
+                (permission_id,)
+            )
+            perm = cursor.fetchone()
+            
+            if not perm:
+                return False, "PERMISSION_NOT_FOUND"
+            
+            if perm["is_system"]:
+                return False, "PERMISSION_SYSTEM_PROTECTED"
+
+            # Verificar que no esté asignado a ningún rol
+            cursor.execute(
+                """
+                SELECT COUNT(*) as count
+                FROM role_permissions
+                WHERE id_permission = %s AND fch_baja IS NULL
+                """,
+                (permission_id,)
+            )
+            count = cursor.fetchone()["count"]
+            
+            if count > 0:
+                return False, "PERMISSION_IN_USE"
+
+            # Baja lógica
+            cursor.execute(
+                """
+                UPDATE cat_permissions
+                SET est_permission = 'B', usr_baja = %s, fch_baja = NOW()
+                WHERE id_permission = %s
+                """,
+                (usr_baja, permission_id)
+            )
+            conn.commit()
+            return True, None
+
+        except Exception as e:
+            conn.rollback()
+            return False, f"DATABASE_ERROR: {str(e)}"
+        finally:
+            close_db(conn, cursor)
+
+    def get_permission_by_id(self, permission_id: int) -> Optional[Dict]:
+        """
+        Obtiene un permiso por ID.
+        
+        Args:
+            permission_id: ID del permiso
+            
+        Returns:
+            Dict con datos del permiso o None si no existe
+        """
+        conn = get_db_connection()
+        if conn is None:
+            raise RuntimeError("DB_CONNECTION_FAILED")
+
+        cursor = conn.cursor(dictionary=True)
+        try:
+            query = """
+                SELECT 
+                    id_permission, code, resource, action, 
+                    description, category, is_system, est_permission,
+                    usr_alta, fch_alta, usr_modf, fch_modf
+                FROM cat_permissions
+                WHERE id_permission = %s AND est_permission = 'A'
+            """
+            cursor.execute(query, (permission_id,))
+            return cursor.fetchone()
+        finally:
+            close_db(conn, cursor)
+
+    def permission_code_exists(self, code: str, exclude_id: Optional[int] = None) -> bool:
+        """
+        Verifica si un código de permiso ya existe.
+        
+        Args:
+            code: Código del permiso
+            exclude_id: ID a excluir de la búsqueda (útil para updates)
+            
+        Returns:
+            True si existe, False si no
+        """
+        conn = get_db_connection()
+        if conn is None:
+            raise RuntimeError("DB_CONNECTION_FAILED")
+
+        cursor = conn.cursor(dictionary=True)
+        try:
+            if exclude_id:
+                cursor.execute(
+                    "SELECT id_permission FROM cat_permissions WHERE code = %s AND id_permission != %s",
+                    (code, exclude_id)
+                )
+            else:
+                cursor.execute(
+                    "SELECT id_permission FROM cat_permissions WHERE code = %s",
+                    (code,)
+                )
+            return cursor.fetchone() is not None
+        finally:
+            close_db(conn, cursor)
+
+    def assign_permissions_to_role(
+        self,
+        role_id: int,
+        permission_ids: List[int],
+        usr_alta: str = "system"
+    ) -> tuple[bool, Optional[str]]:
+        """
+        Asigna múltiples permisos a un rol (operación transaccional).
+        
+        Args:
+            role_id: ID del rol
+            permission_ids: Lista de IDs de permisos
+            usr_alta: Usuario que asigna
+            
+        Returns:
+            tuple: (success, error_code)
+        """
+        conn = get_db_connection()
+        if conn is None:
+            return False, "DB_CONNECTION_FAILED"
+
+        cursor = conn.cursor(dictionary=True)
+        try:
+            # Verificar que el rol existe
+            cursor.execute(
+                "SELECT id_rol FROM cat_roles WHERE id_rol = %s AND est_rol = 'A'",
+                (role_id,)
+            )
+            if not cursor.fetchone():
+                return False, "ROLE_NOT_FOUND"
+
+            # Verificar que todos los permisos existen
+            if permission_ids:
+                placeholders = ", ".join(["%s"] * len(permission_ids))
+                cursor.execute(
+                    f"""
+                    SELECT COUNT(*) as count 
+                    FROM cat_permissions 
+                    WHERE id_permission IN ({placeholders}) AND est_permission = 'A'
+                    """,
+                    tuple(permission_ids)
+                )
+                count = cursor.fetchone()["count"]
+                if count != len(permission_ids):
+                    return False, "INVALID_PERMISSIONS"
+
+            # Asignar cada permiso (usando el método existente)
+            for perm_id in permission_ids:
+                # Verificar si ya existe
+                cursor.execute(
+                    """
+                    SELECT id_role_permission, fch_baja 
+                    FROM role_permissions 
+                    WHERE id_rol = %s AND id_permission = %s
+                    """,
+                    (role_id, perm_id)
+                )
+                existing = cursor.fetchone()
+
+                if existing:
+                    # Si existe pero está dado de baja, reactivar
+                    if existing["fch_baja"] is not None:
+                        cursor.execute(
+                            """
+                            UPDATE role_permissions 
+                            SET fch_baja = NULL, usr_baja = NULL 
+                            WHERE id_role_permission = %s
+                            """,
+                            (existing["id_role_permission"],)
+                        )
+                    # Si ya existe y está activo, no hacer nada
+                else:
+                    # Insertar nuevo
+                    cursor.execute(
+                        """
+                        INSERT INTO role_permissions (id_rol, id_permission, usr_alta, fch_alta)
+                        VALUES (%s, %s, %s, NOW())
+                        """,
+                        (role_id, perm_id, usr_alta)
+                    )
+
+            conn.commit()
+            return True, None
+
+        except Exception as e:
+            conn.rollback()
+            return False, f"DATABASE_ERROR: {str(e)}"
         finally:
             close_db(conn, cursor)
