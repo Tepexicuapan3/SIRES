@@ -65,7 +65,7 @@ export const RoleForm = ({ role, onSuccess, onCancel }: RoleFormProps) => {
     resolver: zodResolver(roleFormSchema),
     defaultValues: {
       nombre: role?.nom_rol || "",
-      descripcion: role?.landing_route || "", // TODO: Agregar campo descripcion a backend
+      descripcion: "", // Campo vacío hasta que backend tenga este campo
       landing_route: role?.landing_route || "/inicio",
       priority: role?.priority || 100,
       is_admin: role?.is_admin === 1,

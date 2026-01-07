@@ -142,12 +142,24 @@ export function UsersPage() {
 
       {/* Vista condicional según modo */}
       {mode === "list" && (
-        <UsersList
-          users={users}
-          isLoading={isLoading}
-          error={error}
-          onViewUser={handleViewUser}
-        />
+        <>
+          {/* Manejo de error en parent component */}
+          {error && (
+            <div className="rounded-lg border border-status-critical bg-status-critical/10 p-4">
+              <p className="text-status-critical">
+                Error al cargar usuarios:{" "}
+                {error instanceof Error ? error.message : "Error desconocido"}
+              </p>
+            </div>
+          )}
+
+          <UsersList
+            users={users}
+            isLoading={isLoading}
+            error={error}
+            onViewUser={handleViewUser}
+          />
+        </>
       )}
 
       {mode === "detail" && selectedUserId && (
