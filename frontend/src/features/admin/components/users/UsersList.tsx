@@ -79,6 +79,13 @@ export function UsersList({
     if (!dateString) return "Nunca";
 
     const date = new Date(dateString);
+
+    // Validar que la fecha sea válida
+    if (isNaN(date.getTime())) {
+      console.warn(`Fecha inválida recibida: ${dateString}`);
+      return "Fecha inválida";
+    }
+
     return new Intl.DateTimeFormat("es-MX", {
       day: "2-digit",
       month: "2-digit",
@@ -111,7 +118,7 @@ export function UsersList({
     return (
       <div className="bg-status-critical/10 border border-status-critical text-status-critical px-4 py-3 rounded-lg">
         <p className="font-semibold">Error al cargar usuarios</p>
-        <p className="text-sm mt-1">{error.message}</p>
+        <p className="text-sm mt-1">{error?.message || "Error desconocido"}</p>
       </div>
     );
   }

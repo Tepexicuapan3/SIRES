@@ -50,9 +50,17 @@ export function PermissionsPage() {
 
   /**
    * Transición: list → edit
-   * @param permission - Permiso a editar (viene de PermissionsList)
+   * @param permissionId - ID del permiso a editar (viene de PermissionsList)
    */
-  const handleEdit = (permission: PermissionResponse) => {
+  const handleEdit = (permissionId: number) => {
+    const permission = permissions.find(
+      (p) => p.id_permission === permissionId,
+    );
+    if (!permission) {
+      // No debería pasar, pero por si acaso
+      console.error(`Permiso ${permissionId} no encontrado`);
+      return;
+    }
     setSelectedPermission(permission);
     setMode("edit");
   };
@@ -118,12 +126,23 @@ export function PermissionsPage() {
 
       {/* Vista condicional según modo */}
       {mode === "list" && (
-        <PermissionsList
-          permissions={permissions}
-          isLoading={isLoading}
-          error={error}
-          onEdit={handleEdit}
-        />
+        <>
+          {/* Manejo de error en parent component */}
+          {error && (
+            <div className="rounded-lg border border-status-critical bg-status-critical/10 p-4">
+              <p className="text-status-critical">
+                Error al cargar permisos:{" "}
+                {error instanceof Error ? error.message : "Error desconocido"}
+              </p>
+            </div>
+          )}
+
+          <PermissionsList
+            permissions={permissions}
+            isLoading={isLoading}
+            onEdit={handleEdit}
+          />
+        </>
       )}
 
       {mode === "create" && (
