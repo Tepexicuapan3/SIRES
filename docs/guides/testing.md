@@ -61,8 +61,6 @@ export const authAPI = USE_MOCKS ? authMocks : realAuthAPI;
 
 #### 1. ADMINISTRADOR (`admin`)
 
-#### 1. ADMINISTRADOR (`admin`)
-
 ```
 Usuario: admin
 Password: Admin123!
@@ -109,8 +107,6 @@ Password: Doc123!
 **Sidebar visible:** Consultas, Expedientes, Laboratorio
 
 ---
-
-#### 3. RECEPCION (`recep01`)
 
 #### 3. RECEPCION (`recep01`)
 

@@ -23,8 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir -r requirements.txt --proxy=http://10.15.15.56:3128
+RUN pip install --no-cache-dir -r requirements-dev.txt --proxy=http://10.15.15.56:3128
 
 COPY . .
 
