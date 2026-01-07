@@ -15,13 +15,13 @@ RUN echo "[install]" > bunfig.toml && \
 
 WORKDIR /app
 
-# Copiar dependencias
-COPY package.json bun.lock ./
+# Copiar solo package.json y bun.lock para aprovechar caché de Docker
+COPY package.json bun.lock* ./
 
-# Instalar dependencias
+# Instalar dependencias (esto se cachea si package.json no cambió)
 RUN bun install --frozen-lockfile
 
-# Copiar el resto del código fuente
+# Copiar el resto del código (esto NO invalida el cache de node_modules)
 COPY . .
 
 # Exponer el puerto de Vite
