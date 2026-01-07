@@ -43,12 +43,28 @@ pip install -r requirements.txt  # Instalar dependencias
 ```
 
 ### Docker (Recomendado)
+
 ```bash
-docker-compose up -d        # Iniciar todos los servicios
-docker-compose logs -f       # Ver logs en tiempo real
-docker-compose down          # Detener servicios
-docker-compose exec backend sh # Acceder al contenedor backend
+# Limpiar contenedores y volúmenes anteriores
+docker-compose down -v
+
+# Levantar servicios (rebuild automático si hay cambios en Dockerfile/package.json)
+docker-compose up --build
+
+# O en modo background:
+docker-compose up --build -d
+
+# Ver logs en tiempo real
+docker-compose logs -f
+
+# Acceder al contenedor backend
+docker-compose exec backend sh
 ```
+
+**Cómo funciona:**
+- El `Dockerfile` instala dependencias dentro del contenedor (se cachea si `package.json` no cambia)
+- El volumen `./frontend:/app` sincroniza tu código, pero `/app/node_modules` usa el del contenedor
+- Cambios en código → hot reload automático. Cambios en `package.json` → rebuild necesario
 
 ---
 

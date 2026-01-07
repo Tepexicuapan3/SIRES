@@ -32,14 +32,27 @@ class RequestResetCodeUseCase:
             otp = OTPService.generate_code()
 
             # Guarda en Redis (reemplaza código anterior si existe)
-            OTPService.save_code(email, otp)
+            # Protección: Si Redis falla, loggear y retornar error
+            try:
+                OTPService.save_code(email, otp)
+            except Exception as e:
+                print(f"[ERROR CRÍTICO] Redis no disponible: {e}")
+                return {
+                    "code": "SERVICE_UNAVAILABLE",
+                    "message": "El servicio de recuperación no está disponible. Intenta más tarde."
+                }, 503
 
             # Envía el correo
+            # Protección: Si el email falla, loggear pero NO retornar error
+            # (por seguridad, no revelamos si el email existe)
             try:
                 self.email_service.send_reset_code(email, otp)
-                print(f"[OTP] enviado a {email}: {otp}")
+                print(f"[OTP] Código enviado a {email}: {otp}")
             except Exception as e:
                 print(f"[ERROR] Fallo envío de correo a {email}: {e}")
+                print(f"[ERROR] Detalles del error SMTP: {type(e).__name__}")
+                # No retornamos error para no revelar si el usuario existe
+                # El código quedó guardado en Redis, pero el usuario no lo recibirá
 
         # Respuesta genérica (no revela si el usuario existe - seguridad)
         return {
