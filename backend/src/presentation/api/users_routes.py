@@ -8,18 +8,18 @@ Responsabilidades:
 """
 
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
-
-from src.infrastructure.authorization.decorators import admin_required, requires_permission
-from src.use_cases.users.create_user_usecase import CreateUserUseCase
-from src.use_cases.users.list_users_usecase import ListUsersUseCase
-from src.use_cases.users.get_user_usecase import GetUserUseCase
-from src.use_cases.users.update_user_usecase import UpdateUserUseCase
-from src.use_cases.users.change_role_usecase import ChangeUserRoleUseCase
-from src.use_cases.users.toggle_user_status_usecase import ToggleUserStatusUseCase
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from src.infrastructure.authorization.decorators import requires_permission
 from src.use_cases.users.assign_roles_to_user import AssignRolesToUserUseCase
-from src.use_cases.users.set_primary_role import SetPrimaryRoleUseCase
+from src.use_cases.users.change_role_usecase import ChangeUserRoleUseCase
+from src.use_cases.users.create_user_usecase import CreateUserUseCase
+from src.use_cases.users.get_user_usecase import GetUserUseCase
+from src.use_cases.users.list_users_usecase import ListUsersUseCase
 from src.use_cases.users.revoke_role_from_user import RevokeRoleFromUserUseCase
+from src.use_cases.users.set_primary_role import SetPrimaryRoleUseCase
+from src.use_cases.users.toggle_user_status_usecase import \
+    ToggleUserStatusUseCase
+from src.use_cases.users.update_user_usecase import UpdateUserUseCase
 
 users_bp = Blueprint("users", __name__)
 create_user_usecase = CreateUserUseCase()
@@ -33,10 +33,10 @@ set_primary_role_usecase = SetPrimaryRoleUseCase()
 revoke_role_usecase = RevokeRoleFromUserUseCase()
 
 
-# ============= CREATE USER (Admin only) =============
+# ============= CREATE USER =============
 @users_bp.route("", methods=["POST"], strict_slashes=False)
 @jwt_required()
-@admin_required()
+@requires_permission("usuarios:create")
 def create_user():
     """
     Crea un nuevo usuario en el sistema.
@@ -388,10 +388,10 @@ def update_user(user_id: int):
         }), 500
 
 
-# ============= CHANGE USER ROLE (Admin only) =============
+# ============= CHANGE USER ROLE =============
 @users_bp.route("/<int:user_id>/role", methods=["PATCH"])
 @jwt_required()
-@admin_required()
+@requires_permission("usuarios:assign_roles")
 def change_user_role(user_id: int):
     """
     Cambia el rol primario de un usuario.
@@ -481,10 +481,10 @@ def change_user_role(user_id: int):
         }), 500
 
 
-# ============= DEACTIVATE USER (Admin only) =============
+# ============= DEACTIVATE USER =============
 @users_bp.route("/<int:user_id>/deactivate", methods=["PATCH"])
 @jwt_required()
-@admin_required()
+@requires_permission("usuarios:update")
 def deactivate_user(user_id: int):
     """Desactiva un usuario (est_usuario = 'B')"""
     try:
@@ -512,10 +512,10 @@ def deactivate_user(user_id: int):
         }), 500
 
 
-# ============= ACTIVATE USER (Admin only) =============
+# ============= ACTIVATE USER =============
 @users_bp.route("/<int:user_id>/activate", methods=["PATCH"])
 @jwt_required()
-@admin_required()
+@requires_permission("usuarios:update")
 def activate_user(user_id: int):
     """Reactiva un usuario (est_usuario = 'A')"""
     try:
