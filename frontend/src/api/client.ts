@@ -1,12 +1,16 @@
 import axios from "axios";
-import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
+import type {
+  AxiosInstance,
+  AxiosError,
+  InternalAxiosRequestConfig,
+} from "axios";
 
 import { env } from "@/config/env";
 import { getCookie } from "@/lib/utils";
 
 /**
  * Cliente Axios configurado para la API de SIRES
- * 
+ *
  * IMPORTANTE: Usa HttpOnly cookies para autenticación
  * - Los tokens NO se almacenan en localStorage (vulnerabilidad XSS)
  * - Las cookies se envían automáticamente con withCredentials: true
@@ -31,8 +35,11 @@ apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Agregar CSRF token para métodos que lo requieren
     const methodsRequiringCsrf = ["POST", "PUT", "PATCH", "DELETE"];
-    
-    if (config.method && methodsRequiringCsrf.includes(config.method.toUpperCase())) {
+
+    if (
+      config.method &&
+      methodsRequiringCsrf.includes(config.method.toUpperCase())
+    ) {
       const csrfToken = getCookie("csrf_access_token");
       if (csrfToken && config.headers) {
         config.headers["X-CSRF-TOKEN"] = csrfToken;
@@ -43,7 +50,7 @@ apiClient.interceptors.request.use(
   },
   (error: AxiosError) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -60,15 +67,19 @@ apiClient.interceptors.response.use(
     };
 
     const apiError = {
-      code: (error.response?.data as Record<string, unknown>)?.code as string || "UNKNOWN_ERROR",
-      message: (error.response?.data as Record<string, unknown>)?.message as string || "Ocurrió un error inesperado",
+      code:
+        ((error.response?.data as Record<string, unknown>)?.code as string) ||
+        "UNKNOWN_ERROR",
+      message:
+        ((error.response?.data as Record<string, unknown>)
+          ?.message as string) || "Ocurrió un error inesperado",
       status: error.response?.status || 500,
     };
 
     // Si el error 401 viene de login, logout o refresh, NO reintentar
     const noRetryEndpoints = ["/auth/login", "/auth/logout", "/auth/refresh"];
-    const shouldNotRetry = noRetryEndpoints.some(endpoint => 
-      originalRequest.url?.includes(endpoint)
+    const shouldNotRetry = noRetryEndpoints.some((endpoint) =>
+      originalRequest.url?.includes(endpoint),
     );
 
     if (shouldNotRetry) {
@@ -85,7 +96,7 @@ apiClient.interceptors.response.use(
         await axios.post(
           `${env.apiUrl}/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         // Si el refresh fue exitoso, reintentar la petición original
@@ -100,7 +111,8 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(apiError);
-  }
+  },
 );
 
 export default apiClient;
+export { apiClient as api };

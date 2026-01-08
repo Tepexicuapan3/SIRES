@@ -27,6 +27,7 @@ from src.infrastructure.authorization.decorators import (
     requires_any_permission, requires_permission)
 from src.infrastructure.repositories.permission_repository import \
     PermissionRepository
+from src.infrastructure.repositories.role_repository import RoleRepository
 from src.use_cases.permissions.add_user_permission_override import \
     AddUserPermissionOverrideUseCase
 from src.use_cases.permissions.assign_permissions_to_role import \
@@ -42,6 +43,7 @@ from src.use_cases.permissions.update_permission import UpdatePermissionUseCase
 
 permissions_bp = Blueprint("permissions", __name__)
 permission_repo = PermissionRepository()
+role_repo = RoleRepository()
 
 # Inicializar use cases (Fase 2)
 create_permission_uc = CreatePermissionUseCase(permission_repo)
@@ -155,6 +157,14 @@ def assign_permission_to_role(role_id: int):
         
         permission_id = data["permission_id"]
         
+        # Validar que el rol existe antes de intentar asignar
+        role = role_repo.get_by_id(role_id)
+        if not role:
+            return jsonify({
+                "code": "ROLE_NOT_FOUND",
+                "message": f"Rol con ID {role_id} no encontrado o inactivo"
+            }), 404
+        
         success = permission_repo.assign_permission_to_role(
             role_id=role_id,
             permission_id=permission_id,
@@ -173,7 +183,7 @@ def assign_permission_to_role(role_id: int):
         else:
             return jsonify({
                 "code": "ASSIGNMENT_FAILED",
-                "message": "No se pudo asignar el permiso"
+                "message": "No se pudo asignar el permiso al rol"
             }), 500
     
     except Exception as e:
@@ -280,8 +290,8 @@ def get_all_roles():
         [
             {
                 "id_rol": 1,
-                "cod_rol": "ADMINISTRADOR",
-                "nom_rol": "Administradores del Sistema",
+"rol": "ADMINISTRADOR",
+                "desc_rol": "Administradores del Sistema",
                 "landing_route": "/admin",
                 "priority": 1,
                 "is_admin": 1,

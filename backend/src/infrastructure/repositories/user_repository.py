@@ -1,5 +1,11 @@
 # src/infrastructure/repositories/user_repository.py
-from src.infrastructure.database.mysql_connection import get_db_connection, close_db
+import logging
+
+from src.infrastructure.database.mysql_connection import (close_db,
+                                                          get_db_connection)
+
+logger = logging.getLogger(__name__)
+
 
 class UserRepository:
 
@@ -103,7 +109,7 @@ class UserRepository:
             return cursor.rowcount > 0
 
         except Exception as e:
-            print("Error updating password by ID:", e)
+            logger.error(f"Error updating password by ID: {e}", exc_info=True)
             return False
 
         finally:
@@ -154,7 +160,7 @@ class UserRepository:
             conn.commit()
             return cursor.lastrowid
         except Exception as e:
-            print(f"Error creating user: {e}")
+            logger.error(f"Error creating user: {e}", exc_info=True)
             conn.rollback()
             return None
         finally:
@@ -172,14 +178,23 @@ class UserRepository:
             created_by: ID del usuario que crea la asignación
             
         Returns:
-            True si se asignó correctamente
+            True si se asignó correctamente, False si el rol no existe/inactivo o error
         """
         conn = get_db_connection()
         if not conn:
             return False
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         try:
+            # Validar que el rol existe y está activo
+            cursor.execute("""
+                SELECT id_rol FROM cat_roles 
+                WHERE id_rol = %s AND est_rol = 'A'
+            """, (role_id,))
+            
+            if not cursor.fetchone():
+                return False  # Rol no existe o está inactivo
+            
             is_primary_int = 1 if is_primary else 0
             
             cursor.execute("""
@@ -191,7 +206,7 @@ class UserRepository:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error assigning role to user: {e}")
+            logger.error(f"Error assigning role to user: {e}", exc_info=True)
             conn.rollback()
             return False
         finally:
@@ -518,7 +533,7 @@ class UserRepository:
             return cursor.rowcount > 0
             
         except Exception as e:
-            print(f"Error updating user: {e}")
+            logger.error(f"Error updating user: {e}", exc_info=True)
             conn.rollback()
             return False
         finally:
@@ -554,6 +569,17 @@ class UserRepository:
 
     def change_user_primary_role(self, user_id: int, new_role_id: int, modified_by: int) -> bool:
         """
+        DEPRECATED: Usar set_primary_role() en su lugar.
+        
+        Este método será eliminado en v3.0. La diferencia es que set_primary_role()
+        requiere que el rol ya esté asignado, mientras que este método lo asigna
+        automáticamente si no existe.
+        
+        Si necesitás asignar Y cambiar el primario en una operación, usá:
+        1. assign_roles_to_user() para asignar el rol
+        2. set_primary_role() para marcarlo como primario
+        
+        ---
         Cambia el rol primario de un usuario.
         
         Operaciones:
@@ -613,7 +639,7 @@ class UserRepository:
             return True
             
         except Exception as e:
-            print(f"Error changing user primary role: {e}")
+            logger.error(f"Error changing user primary role: {e}", exc_info=True)
             conn.rollback()
             return False
         finally:
@@ -648,7 +674,7 @@ class UserRepository:
             conn.commit()
             return cursor.rowcount > 0
         except Exception as e:
-            print(f"Error deactivating user: {e}")
+            logger.error(f"Error deactivating user: {e}", exc_info=True)
             conn.rollback()
             return False
         finally:
@@ -683,7 +709,7 @@ class UserRepository:
             conn.commit()
             return cursor.rowcount > 0
         except Exception as e:
-            print(f"Error activating user: {e}")
+            logger.error(f"Error activating user: {e}", exc_info=True)
             conn.rollback()
             return False
         finally:
@@ -831,7 +857,7 @@ class UserRepository:
         except Exception as e:
             if conn:
                 conn.rollback()
-            print(f"Error assigning roles to user: {e}")
+            logger.error(f"Error assigning roles to user: {e}", exc_info=True)
             return 0, "ROLE_ASSIGNMENT_FAILED"
         finally:
             if cursor:
@@ -904,7 +930,7 @@ class UserRepository:
         except Exception as e:
             if conn:
                 conn.rollback()
-            print(f"Error setting primary role: {e}")
+            logger.error(f"Error setting primary role: {e}", exc_info=True)
             return False, "SET_PRIMARY_FAILED"
         finally:
             if cursor:
@@ -995,7 +1021,7 @@ class UserRepository:
         except Exception as e:
             if conn:
                 conn.rollback()
-            print(f"Error revoking role from user: {e}")
+            logger.error(f"Error revoking role from user: {e}", exc_info=True)
             return False, "REVOKE_ROLE_FAILED"
         finally:
             if cursor:

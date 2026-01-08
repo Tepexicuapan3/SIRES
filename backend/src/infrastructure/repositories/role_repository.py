@@ -7,10 +7,13 @@ Responsabilidades:
 - NO contiene lógica de negocio (eso va en Use Cases)
 """
 
+import logging
 from typing import Dict, List, Optional, Tuple
 
 from src.infrastructure.database.mysql_connection import (close_db,
                                                           get_db_connection)
+
+logger = logging.getLogger(__name__)
 
 
 class RoleRepository:
@@ -89,6 +92,7 @@ class RoleRepository:
 
         except Exception as e:
             conn.rollback()
+            logger.error(f"Error creating role: {e}", exc_info=True)
             return None, f"DATABASE_ERROR: {str(e)}"
         finally:
             close_db(conn, cursor)
@@ -182,6 +186,7 @@ class RoleRepository:
 
         except Exception as e:
             conn.rollback()
+            logger.error(f"Error updating role: {e}", exc_info=True)
             return None, f"DATABASE_ERROR: {str(e)}"
         finally:
             close_db(conn, cursor)
@@ -240,6 +245,7 @@ class RoleRepository:
 
         except Exception as e:
             conn.rollback()
+            logger.error(f"Error deleting role: {e}", exc_info=True)
             return False, f"DATABASE_ERROR: {str(e)}"
         finally:
             close_db(conn, cursor)
