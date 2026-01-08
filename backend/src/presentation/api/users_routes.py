@@ -11,7 +11,6 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from src.infrastructure.authorization.decorators import requires_permission
 from src.use_cases.users.assign_roles_to_user import AssignRolesToUserUseCase
-from src.use_cases.users.change_role_usecase import ChangeUserRoleUseCase
 from src.use_cases.users.create_user_usecase import CreateUserUseCase
 from src.use_cases.users.get_user_usecase import GetUserUseCase
 from src.use_cases.users.list_users_usecase import ListUsersUseCase
@@ -26,7 +25,6 @@ create_user_usecase = CreateUserUseCase()
 list_users_usecase = ListUsersUseCase()
 get_user_usecase = GetUserUseCase()
 update_user_usecase = UpdateUserUseCase()
-change_role_usecase = ChangeUserRoleUseCase()
 toggle_status_usecase = ToggleUserStatusUseCase()
 assign_roles_usecase = AssignRolesToUserUseCase()
 set_primary_role_usecase = SetPrimaryRoleUseCase()
@@ -385,111 +383,6 @@ def update_user(user_id: int):
         return jsonify({
             "code": "SERVER_ERROR",
             "message": f"Error al actualizar usuario: {str(e)}"
-        }), 500
-
-
-# ============= CHANGE USER ROLE =============
-@users_bp.route("/<int:user_id>/role", methods=["PATCH"])
-@jwt_required()
-@requires_permission("usuarios:assign_roles")
-def change_user_role(user_id: int):
-    """
-    DEPRECATED: Usar PUT /<user_id>/roles/primary en su lugar.
-    Este endpoint será eliminado en v3.0.
-    
-    La diferencia es que el nuevo endpoint requiere que el rol ya esté
-    asignado al usuario. Si necesitás asignar un rol nuevo como primario,
-    primero usá POST /<user_id>/roles para asignarlo.
-    
-    ---
-    Cambia el rol primario de un usuario.
-    Solo administradores.
-    
-    Path params:
-        - user_id (int): ID del usuario
-    
-    Body:
-        {
-            "id_rol": 2
-        }
-    
-    Response 200:
-        {
-            "message": "Rol actualizado correctamente",
-            "user": {
-                "id_usuario": 14,
-                "usuario": "testmedico",
-                "nombre": "...",
-                ...
-            },
-            "roles": [
-                {
-                    "id_rol": 2,
-                    "rol": "ROL_MEDICO",
-                    "desc_rol": "Médico Residente",
-                    "is_primary": 1
-                }
-            ]
-        }
-    
-    Errors:
-        - 400 INVALID_REQUEST: Falta id_rol en el body
-        - 404 USER_NOT_FOUND: Usuario no existe
-        - 404 ROLE_NOT_FOUND: Rol no existe o está inactivo
-        - 409 SAME_ROLE: El usuario ya tiene ese rol como primario
-        - 500 CHANGE_FAILED: Error al ejecutar el cambio
-        - 500 SERVER_ERROR: Error interno
-    """
-    try:
-        current_user_id = int(get_jwt_identity())
-        data = request.get_json() or {}
-        
-        # Validación de campo requerido
-        if "id_rol" not in data:
-            return jsonify({
-                "code": "INVALID_REQUEST",
-                "message": "El campo 'id_rol' es requerido"
-            }), 400
-        
-        try:
-            new_role_id = int(data["id_rol"])
-        except (ValueError, TypeError):
-            return jsonify({
-                "code": "INVALID_REQUEST",
-                "message": "El campo 'id_rol' debe ser un número entero"
-            }), 400
-        
-        # Ejecutar use case
-        result, error = change_role_usecase.execute(user_id, new_role_id, current_user_id)
-        
-        if error:
-            error_mapping = {
-                "USER_NOT_FOUND": (404, "Usuario no encontrado"),
-                "ROLE_NOT_FOUND": (404, "Rol no encontrado o inactivo"),
-                "SAME_ROLE": (409, "El usuario ya tiene ese rol como primario"),
-                "CHANGE_FAILED": (500, "No se pudo cambiar el rol"),
-                "SERVER_ERROR": (500, "Error interno del servidor"),
-            }
-            status, message = error_mapping.get(error, (500, "Error desconocido"))
-            return jsonify({"code": error, "message": message}), status
-        
-        # Separar roles del usuario
-        roles = result.pop("roles", [])
-        
-        response = jsonify({
-            "message": "Rol actualizado correctamente",
-            "user": result,
-            "roles": roles
-        })
-        response.headers['Deprecation'] = 'true'
-        response.headers['Sunset'] = '2027-01-01'
-        response.headers['Link'] = f'</api/v1/users/{user_id}/roles/primary>; rel="successor-version"'
-        return response, 200
-    
-    except Exception as e:
-        return jsonify({
-            "code": "SERVER_ERROR",
-            "message": f"Error al cambiar rol: {str(e)}"
         }), 500
 
 
