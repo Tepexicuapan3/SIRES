@@ -7,8 +7,10 @@ Responsabilidades:
 - NO contiene lógica de negocio (eso va en Use Cases)
 """
 
-from typing import Optional, Dict, List, Tuple
-from src.infrastructure.database.mysql_connection import get_db_connection, close_db
+from typing import Dict, List, Optional, Tuple
+
+from src.infrastructure.database.mysql_connection import (close_db,
+                                                          get_db_connection)
 
 
 class RoleRepository:
@@ -116,15 +118,15 @@ class RoleRepository:
         try:
             # Verificar que el rol existe
             cursor.execute(
-                "SELECT id_rol, rol, is_admin FROM cat_roles WHERE id_rol = %s AND est_rol = 'A'",
+                "SELECT id_rol, rol, is_admin, is_system FROM cat_roles WHERE id_rol = %s AND est_rol = 'A'",
                 (role_id,)
             )
             existing_role = cursor.fetchone()
             if not existing_role:
                 return None, "ROLE_NOT_FOUND"
 
-            # Proteger roles del sistema (id 0-22 son del sistema)
-            if role_id <= 22:
+            # Proteger roles del sistema (basado en campo is_system)
+            if existing_role.get('is_system', False):
                 return None, "ROLE_SYSTEM_PROTECTED"
 
             # Si se cambia el nombre, verificar que no exista otro con ese nombre
@@ -207,15 +209,15 @@ class RoleRepository:
         try:
             # Verificar que el rol existe
             cursor.execute(
-                "SELECT id_rol, is_admin FROM cat_roles WHERE id_rol = %s AND est_rol = 'A'",
+                "SELECT id_rol, is_admin, is_system FROM cat_roles WHERE id_rol = %s AND est_rol = 'A'",
                 (role_id,)
             )
             existing_role = cursor.fetchone()
             if not existing_role:
                 return False, "ROLE_NOT_FOUND"
 
-            # Proteger roles del sistema (id 0-22)
-            if role_id <= 22:
+            # Proteger roles del sistema (basado en campo is_system)
+            if existing_role.get('is_system', False):
                 return False, "ROLE_SYSTEM_PROTECTED"
 
             # Verificar que no tenga usuarios asignados

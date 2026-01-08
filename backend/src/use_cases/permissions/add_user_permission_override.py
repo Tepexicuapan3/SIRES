@@ -14,25 +14,30 @@ Reglas de Negocio:
 - Effect debe ser 'ALLOW' o 'DENY'
 - Fecha de expiración es opcional
 - Permisos requeridos: usuarios:update
+
+Migración (Fase 5 - CRIT-08):
+- ANTES: Invalidaba cache directamente en Redis
+- DESPUÉS: Usa AuthorizationService.invalidate_cache() (centralizado)
 """
 
-from typing import Optional, Tuple
 from datetime import datetime
-from src.infrastructure.repositories.permission_repository import PermissionRepository
+from typing import Optional, Tuple
+
+from src.infrastructure.authorization.authorization_service import \
+    authorization_service
+from src.infrastructure.repositories.permission_repository import \
+    PermissionRepository
 from src.infrastructure.repositories.user_repository import UserRepository
-from src.infrastructure.cache.redis_manager import RedisManager
 
 
 class AddUserPermissionOverrideUseCase:
     def __init__(
         self,
         permission_repo: Optional[PermissionRepository] = None,
-        user_repo: Optional[UserRepository] = None,
-        redis: Optional[RedisManager] = None
+        user_repo: Optional[UserRepository] = None
     ):
         self.permission_repo = permission_repo or PermissionRepository()
         self.user_repo = user_repo or UserRepository()
-        self.redis = redis or RedisManager()
 
     def execute(
         self,
@@ -99,8 +104,9 @@ class AddUserPermissionOverrideUseCase:
         if error:
             return None, error
 
-        # Invalidar cache de permisos del usuario
-        self._invalidate_user_permissions_cache(user_id)
+        # Invalidar cache de permisos del usuario (centralizado en AuthorizationService)
+        # Esto invalida cache en TODAS las instancias del backend (Redis compartido)
+        authorization_service.invalidate_cache(user_id)
 
         return {
             "user_id": user_id,
@@ -109,15 +115,3 @@ class AddUserPermissionOverrideUseCase:
             "expires_at": expires_at
         }, None
 
-    def _invalidate_user_permissions_cache(self, user_id: int):
-        """
-        Invalida el cache de permisos del usuario en Redis.
-
-        Args:
-            user_id: ID del usuario
-        """
-        try:
-            cache_key = f"user_permissions:{user_id}"
-            self.redis.delete_pattern(cache_key)
-        except Exception as e:
-            print(f"Warning: Could not invalidate cache for user {user_id}: {e}")

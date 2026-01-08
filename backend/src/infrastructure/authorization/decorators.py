@@ -15,11 +15,12 @@ Principios:
 """
 
 from functools import wraps
+from typing import Callable, List
+
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-from typing import List, Callable
-
-from src.infrastructure.authorization.authorization_service import authorization_service
+from src.infrastructure.authorization.authorization_service import \
+    authorization_service
 
 
 def requires_permission(permission: str):
@@ -147,17 +148,43 @@ def requires_all_permissions(permissions: List[str]):
 
 def admin_required():
     """
-    Decorator que verifica si el usuario es administrador.
-    Útil para endpoints críticos que solo admins pueden ejecutar.
+    ⚠️ DEPRECATED: Usar @requires_permission() en su lugar.
+    
+    Este decorator bypasea el sistema de permisos granulares y es un antipatrón.
+    Solo usuarios con rol ADMINISTRADOR pueden ejecutar la acción, 
+    sin verificar permisos específicos.
+    
+    Razones de deprecación:
+    - No es auditable (no sabemos QUÉ permiso específico se usó)
+    - No es flexible (si querés que otro rol acceda, tenés que modificar código)
+    - Viola Principle of Least Privilege (da acceso total en vez de específico)
+    
+    Migración recomendada:
+        ❌ @admin_required()
+        ✅ @requires_permission("recurso:accion")
     
     Ejemplo:
-        @admin_required()
-        def delete_all_data():
-            ...
+        ❌ @admin_required()
+           def invalidate_cache():
+               ...
+        
+        ✅ @requires_permission("sistema:cache")
+           def invalidate_cache():
+               ...
+    
+    Este decorator será eliminado en versiones futuras.
     
     Returns:
         403 si no es administrador
     """
+    import warnings
+    warnings.warn(
+        "@admin_required() está deprecado y será eliminado. "
+        "Usar @requires_permission() con un permiso específico.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    
     def decorator(fn: Callable):
         @wraps(fn)
         def wrapper(*args, **kwargs):
