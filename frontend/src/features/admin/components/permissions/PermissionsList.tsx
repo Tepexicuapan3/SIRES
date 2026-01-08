@@ -222,7 +222,7 @@ export const PermissionsList = ({
       {/* Dialog de confirmación */}
       <AlertDialog
         open={permissionToDelete !== null}
-        onOpenChange={(open) => !open && setPermissionToDelete(null)}
+        onOpenChange={(open: boolean) => !open && setPermissionToDelete(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

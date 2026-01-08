@@ -80,9 +80,9 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
   const { data: allRoles = [] } = useRoles();
 
   // Mutations
-  const assignRolesMutation = useAssignRoles();
-  const setPrimaryRoleMutation = useSetPrimaryRole();
-  const revokeRoleMutation = useRevokeRole();
+  const assignRolesMutation = useAssignRoles(userId);
+  const setPrimaryRoleMutation = useSetPrimaryRole(userId);
+  const revokeRoleMutation = useRevokeRole(userId);
 
   // ============================================================
   // COMPUTED VALUES
@@ -135,8 +135,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
 
     try {
       await assignRolesMutation.mutateAsync({
-        userId,
-        roleIds: selectedRoleIds,
+        role_ids: selectedRoleIds,
       });
 
       toast.success(
@@ -166,8 +165,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
 
     try {
       await setPrimaryRoleMutation.mutateAsync({
-        userId,
-        roleId: newPrimaryRoleId,
+        role_id: newPrimaryRoleId,
       });
 
       toast.success("Rol primario actualizado");
@@ -198,10 +196,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
     }
 
     try {
-      await revokeRoleMutation.mutateAsync({
-        userId,
-        roleId: roleToRevoke.id_rol,
-      });
+      await revokeRoleMutation.mutateAsync(roleToRevoke.id_rol);
 
       toast.success(`Rol "${roleToRevoke.nombre}" revocado`);
       setRoleToRevoke(null);
@@ -368,12 +363,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
                     htmlFor={`role-${role.id_rol}`}
                     className="flex-1 cursor-pointer"
                   >
-                    <div className="font-medium">{role.nombre}</div>
-                    {role.descripcion && (
-                      <div className="text-sm text-txt-muted mt-1">
-                        {role.descripcion}
-                      </div>
-                    )}
+                    <div className="font-medium">{role.nom_rol}</div>
                   </Label>
                   <Badge variant="secondary">Prioridad {role.priority}</Badge>
                 </div>

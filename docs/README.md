@@ -44,6 +44,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
 | **Testear código** | [Testing](./guides/testing.md) | 20 min |
 | **Implementar RBAC frontend** | [RBAC Frontend](./guides/rbac-frontend.md) | 25 min |
+| **Contratos API RBAC** | [RBAC API Contracts](./api/rbac-api-contracts.md) | Referencia |
 
 ---
 
@@ -77,7 +78,8 @@ docs/
 │
 ├── api/
 │   ├── endpoints.md                # Referencia general de API
-│   └── auth-endpoints.md           # 🆕 Contratos auth detallados
+│   ├── auth-endpoints.md           # Contratos auth detallados
+│   └── rbac-api-contracts.md       # 🆕 Contratos RBAC para frontend
 │
 └── templates/                      # Templates para crear docs nuevos
     ├── guide-template.md           # Template guías

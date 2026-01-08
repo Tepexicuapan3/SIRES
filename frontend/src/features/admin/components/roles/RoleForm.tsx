@@ -44,7 +44,7 @@ const roleFormSchema = z.object({
     .max(50, "Máximo 50 caracteres"),
   descripcion: z.string().optional(),
   landing_route: z.string().optional(),
-  priority: z.coerce.number().int().min(1).max(999).optional(),
+  priority: z.number().int().min(1).max(999).default(100),
   is_admin: z.boolean().optional(),
 });
 
@@ -61,7 +61,7 @@ export const RoleForm = ({ role, onSuccess, onCancel }: RoleFormProps) => {
   const createRoleMutation = useCreateRole();
   const updateRoleMutation = useUpdateRole(role?.id_rol || 0);
 
-  const form = useForm<RoleFormValues>({
+  const form = useForm({
     resolver: zodResolver(roleFormSchema),
     defaultValues: {
       nombre: role?.nom_rol || "",
