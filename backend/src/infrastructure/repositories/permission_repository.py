@@ -8,8 +8,10 @@ Responsabilidades:
 - NO contiene lógica de negocio (eso va en AuthorizationService)
 """
 
-from typing import List, Dict, Optional
-from src.infrastructure.database.mysql_connection import get_db_connection, close_db
+from typing import Dict, List, Optional
+
+from src.infrastructure.database.mysql_connection import (close_db,
+                                                          get_db_connection)
 
 
 class PermissionRepository:
@@ -23,7 +25,7 @@ class PermissionRepository:
             user_id: ID del usuario
             
         Returns:
-            Lista de dicts con: id_rol, cod_rol, nom_rol, is_primary, landing_route, is_admin
+            Lista de dicts con: id_rol, rol, desc_rol, is_primary, landing_route, is_admin
         """
         conn = get_db_connection()
         if conn is None:
@@ -34,8 +36,8 @@ class PermissionRepository:
             query = """
                 SELECT 
                     cr.id_rol,
-                    cr.rol as cod_rol,
-                    cr.desc_rol as nom_rol,
+                    cr.rol,
+                    cr.desc_rol,
                     cr.landing_route,
                     cr.priority,
                     cr.is_admin,
@@ -352,7 +354,7 @@ class PermissionRepository:
         Útil para UIs de administración de roles/permisos.
         
         Returns:
-            Lista de roles con: id_rol, cod_rol, nom_rol, landing_route, priority, is_admin, permissions_count
+            Lista de roles con: id_rol, rol, desc_rol, landing_route, priority, is_admin, permissions_count
         """
         conn = get_db_connection()
         if conn is None:
@@ -363,8 +365,8 @@ class PermissionRepository:
             query = """
                 SELECT 
                     cr.id_rol,
-                    cr.rol as cod_rol,
-                    cr.desc_rol as nom_rol,
+                    cr.rol,
+                    cr.desc_rol,
                     cr.landing_route,
                     cr.priority,
                     cr.is_admin,
@@ -682,6 +684,35 @@ class PermissionRepository:
                 WHERE id_permission = %s AND est_permission = 'A'
             """
             cursor.execute(query, (permission_id,))
+            return cursor.fetchone()
+        finally:
+            close_db(conn, cursor)
+
+    def get_permission_by_code(self, code: str) -> Optional[Dict]:
+        """
+        Obtiene un permiso por su código único.
+        
+        Args:
+            code: Código del permiso (ej: "expedientes:read")
+            
+        Returns:
+            Dict con datos del permiso o None si no existe
+        """
+        conn = get_db_connection()
+        if conn is None:
+            raise RuntimeError("DB_CONNECTION_FAILED")
+
+        cursor = conn.cursor(dictionary=True)
+        try:
+            query = """
+                SELECT 
+                    id_permission, code, resource, action, 
+                    description, category, is_system, est_permission,
+                    usr_alta, fch_alta, usr_modf, fch_modf
+                FROM cat_permissions
+                WHERE code = %s AND est_permission = 'A'
+            """
+            cursor.execute(query, (code,))
             return cursor.fetchone()
         finally:
             close_db(conn, cursor)

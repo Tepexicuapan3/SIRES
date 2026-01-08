@@ -20,23 +20,25 @@ Endpoints implementados:
 """
 
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
-
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from src.infrastructure.authorization.authorization_service import \
+    authorization_service
 from src.infrastructure.authorization.decorators import (
-    requires_permission,
-    requires_any_permission,
-    admin_required
-)
-from src.infrastructure.authorization.authorization_service import authorization_service
-from src.infrastructure.repositories.permission_repository import PermissionRepository
+    requires_any_permission, requires_permission)
+from src.infrastructure.repositories.permission_repository import \
+    PermissionRepository
+from src.use_cases.permissions.add_user_permission_override import \
+    AddUserPermissionOverrideUseCase
+from src.use_cases.permissions.assign_permissions_to_role import \
+    AssignPermissionsToRoleUseCase
 from src.use_cases.permissions.create_permission import CreatePermissionUseCase
-from src.use_cases.permissions.update_permission import UpdatePermissionUseCase
 from src.use_cases.permissions.delete_permission import DeletePermissionUseCase
 from src.use_cases.permissions.get_permissions import GetPermissionsUseCase
-from src.use_cases.permissions.assign_permissions_to_role import AssignPermissionsToRoleUseCase
-from src.use_cases.permissions.add_user_permission_override import AddUserPermissionOverrideUseCase
-from src.use_cases.permissions.remove_user_permission_override import RemoveUserPermissionOverrideUseCase
-from src.use_cases.permissions.get_user_effective_permissions import GetUserEffectivePermissionsUseCase
+from src.use_cases.permissions.get_user_effective_permissions import \
+    GetUserEffectivePermissionsUseCase
+from src.use_cases.permissions.remove_user_permission_override import \
+    RemoveUserPermissionOverrideUseCase
+from src.use_cases.permissions.update_permission import UpdatePermissionUseCase
 
 permissions_bp = Blueprint("permissions", __name__)
 permission_repo = PermissionRepository()
@@ -59,69 +61,44 @@ get_effective_permissions_uc = GetUserEffectivePermissionsUseCase()
 @jwt_required()
 def get_my_permissions():
     """
-    Obtiene permisos, roles y landing route del usuario autenticado.
+    Obtiene permisos efectivos del usuario autenticado (incluyendo overrides).
+    
+    Nota: Este endpoint es equivalente a GET /users/{user_id}/effective pero no requiere
+    permiso especial ya que el usuario solo consulta sus propios datos.
     
     Response:
         {
             "user_id": 123,
             "is_admin": false,
-            "roles": [...],
-            "permissions_count": 25,
+            "roles": [
+                {"id_rol": 2, "rol": "MEDICOS", "desc_rol": "Médicos", ...}
+            ],
             "permissions": ["expedientes:read", "consultas:create", ...],
             "landing_route": "/consultas",
-            "cached": true
+            "overrides": [
+                {
+                    "permission_code": "expedientes:delete",
+                    "effect": "DENY",
+                    "expires_at": null,
+                    "is_expired": false
+                }
+            ]
         }
     """
     user_id = int(get_jwt_identity())
-    summary = authorization_service.get_permission_summary(user_id)
     
-    return jsonify(summary), 200
-
-
-# ============= LIST ALL PERMISSIONS (Admin only) =============
-@permissions_bp.route("/catalog", methods=["GET"])
-@jwt_required()
-@admin_required()
-def get_permissions_catalog():
-    """
-    Obtiene el catálogo completo de permisos disponibles.
-    Solo administradores pueden ver esto.
+    # Usar el mismo use case que /effective para consistencia
+    result, error = get_effective_permissions_uc.execute(user_id=user_id)
     
-    Response:
-        [
-            {
-                "id_permission": 1,
-                "code": "expedientes:create",
-                "resource": "expedientes",
-                "action": "create",
-                "description": "Crear nuevo expediente",
-                "category": "EXPEDIENTES"
-            },
-            ...
-        ]
-    """
-    try:
-        permissions = permission_repo.get_all_permissions()
-        
-        # Agrupar por categoría (opcional)
-        by_category = {}
-        for perm in permissions:
-            category = perm.get("category", "OTHER")
-            if category not in by_category:
-                by_category[category] = []
-            by_category[category].append(perm)
-        
-        return jsonify({
-            "total": len(permissions),
-            "permissions": permissions,
-            "by_category": by_category
-        }), 200
+    if error:
+        error_mapping = {
+            "USER_NOT_FOUND": (404, "Usuario no encontrado"),
+            "SERVER_ERROR": (500, "Error interno del servidor"),
+        }
+        status, message = error_mapping.get(error, (500, "Error desconocido"))
+        return jsonify({"code": error, "message": message}), status
     
-    except Exception as e:
-        return jsonify({
-            "code": "SERVER_ERROR",
-            "message": f"Error al obtener catálogo de permisos: {str(e)}"
-        }), 500
+    return jsonify(result), 200
 
 
 # ============= GET USER PERMISSIONS BY ID (Requires permission) =============
@@ -152,14 +129,14 @@ def get_user_permissions(user_id: int):
         }), 500
 
 
-# ============= ASSIGN PERMISSION TO ROLE (Admin only) =============
+# ============= ASSIGN PERMISSION TO ROLE (Requires permisos:assign) =============
 @permissions_bp.route("/role/<int:role_id>/assign", methods=["POST"])
 @jwt_required()
-@admin_required()
+@requires_permission("permisos:assign")
 def assign_permission_to_role(role_id: int):
     """
     Asigna un permiso a un rol.
-    Solo administradores.
+    Requiere permiso: permisos:assign
     
     Body:
         {
@@ -206,14 +183,14 @@ def assign_permission_to_role(role_id: int):
         }), 500
 
 
-# ============= REVOKE PERMISSION FROM ROLE (Admin only) =============
+# ============= REVOKE PERMISSION FROM ROLE (Requires permisos:assign) =============
 @permissions_bp.route("/role/<int:role_id>/revoke", methods=["POST"])
 @jwt_required()
-@admin_required()
+@requires_permission("permisos:assign")
 def revoke_permission_from_role(role_id: int):
     """
     Revoca un permiso de un rol.
-    Solo administradores.
+    Requiere permiso: permisos:assign
     
     Body:
         {
@@ -260,14 +237,15 @@ def revoke_permission_from_role(role_id: int):
         }), 500
 
 
-# ============= INVALIDATE CACHE (Admin only) =============
+# ============= INVALIDATE CACHE (Requires sistema:cache) =============
 @permissions_bp.route("/cache/invalidate", methods=["POST"])
 @jwt_required()
-@admin_required()
+@requires_permission("sistema:cache")
 def invalidate_permissions_cache():
     """
     Invalida el cache de permisos.
     Útil después de modificar permisos masivamente.
+    Requiere permiso: sistema:cache
     """
     try:
         data = request.get_json() or {}
@@ -289,14 +267,14 @@ def invalidate_permissions_cache():
         }), 500
 
 
-# ============= GET ALL ROLES (Admin only) =============
+# ============= GET ALL ROLES (Requires roles:read) =============
 @permissions_bp.route("/roles", methods=["GET"])
 @jwt_required()
-@admin_required()
+@requires_permission("roles:read")
 def get_all_roles():
     """
     Obtiene todos los roles con sus counts de permisos.
-    Solo administradores.
+    Requiere permiso: roles:read
     
     Response:
         [
@@ -327,14 +305,14 @@ def get_all_roles():
         }), 500
 
 
-# ============= GET ROLE PERMISSIONS (Admin only) =============
+# ============= GET ROLE PERMISSIONS (Requires roles:read) =============
 @permissions_bp.route("/role/<int:role_id>", methods=["GET"])
 @jwt_required()
-@admin_required()
+@requires_permission("roles:read")
 def get_role_permissions_endpoint(role_id: int):
     """
     Obtiene todos los permisos asignados a un rol específico.
-    Solo administradores.
+    Requiere permiso: roles:read
     
     Response:
         {

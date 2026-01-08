@@ -2,43 +2,57 @@
 Authorization Service - Lógica de autorización RBAC 2.0
 
 Responsabilidades:
-- Resolver permisos efectivos de usuarios (con cache opcional)
+- Resolver permisos efectivos de usuarios (con cache en Redis)
 - Validar si un usuario tiene un permiso específico
 - Proveer metadata de autorización (roles, landing route, is_admin)
-- Cache de permisos en memoria (puede extenderse a Redis)
+- Invalidación de cache distribuida (múltiples instancias)
 
 Principios aplicados:
 - Single Responsibility: Solo se encarga de autorización, no de autenticación
-- Dependency Injection: Recibe repository (facilita testing)
+- Dependency Injection: Recibe repository y redis manager (facilita testing)
+- Single Source of Truth: Redis es la única fuente de cache (no memoria local)
+- Graceful Degradation: Si Redis falla, consulta directo a BD
+
+Migración (Fase 5 - CRIT-08):
+- ANTES: Cache en memoria local (self._cache) → problema con múltiples instancias
+- DESPUÉS: Cache en Redis compartido → consistencia entre instancias
 """
 
+import json
 from typing import Dict, List, Optional
-from datetime import datetime, timedelta
-from src.infrastructure.repositories.permission_repository import PermissionRepository
+
+from src.infrastructure.cache.redis_manager import RedisManager
+from src.infrastructure.repositories.permission_repository import \
+    PermissionRepository
 
 
 class AuthorizationService:
-    """Servicio de autorización con cache en memoria"""
+    """Servicio de autorización con cache distribuido en Redis"""
 
-    def __init__(self, permission_repo: Optional[PermissionRepository] = None):
+    def __init__(
+        self, 
+        permission_repo: Optional[PermissionRepository] = None,
+        redis_manager: Optional[RedisManager] = None
+    ):
         """
         Args:
             permission_repo: Repository de permisos (inyectado para facilitar testing)
+            redis_manager: Manager de Redis para cache (inyectado para facilitar testing)
         """
         self.repo = permission_repo or PermissionRepository()
+        self.redis = redis_manager or RedisManager()
         
-        # Cache en memoria: {user_id: {"permissions": [...], "cached_at": datetime, ...}}
-        # En producción: considerar Redis con TTL
-        self._cache: Dict[int, Dict] = {}
-        self._cache_ttl_seconds = 300  # 5 minutos (balance entre seguridad y performance)
+        # TTL de cache: 5 minutos (balance entre seguridad y performance)
+        # Mismo valor que usaban los use cases para consistencia
+        self._cache_ttl_seconds = 300
 
     def get_user_permissions(self, user_id: int, use_cache: bool = True) -> Dict:
         """
-        Obtiene permisos efectivos de un usuario (con cache).
+        Obtiene permisos efectivos de un usuario (con cache en Redis).
         
         Args:
             user_id: ID del usuario
-            use_cache: Si usar cache (False para forzar refresh)
+            use_cache: Si usar cache (False para forzar refresh desde BD)
             
         Returns:
             {
@@ -47,29 +61,33 @@ class AuthorizationService:
                 "roles": [...],
                 "landing_route": "/consultas"
             }
-        """
-        # Verificar cache
-        if use_cache and user_id in self._cache:
-            cached_data = self._cache[user_id]
-            cached_at = cached_data.get("cached_at")
             
-            if cached_at and (datetime.now() - cached_at).total_seconds() < self._cache_ttl_seconds:
-                # Cache válido
-                return {
-                    "permissions": cached_data["permissions"],
-                    "is_admin": cached_data["is_admin"],
-                    "roles": cached_data["roles"],
-                    "landing_route": cached_data["landing_route"]
-                }
+        Comportamiento:
+            1. Si use_cache=True: Intenta leer de Redis
+            2. Si cache miss o expirado: Consulta BD y guarda en Redis
+            3. Si Redis falla: Consulta BD directamente (graceful degradation)
+        """
+        cache_key = f"user_permissions:{user_id}"
+        
+        # Intentar leer de cache
+        if use_cache:
+            try:
+                cached_data = self.redis.get(cache_key)
+                if cached_data:
+                    # Cache hit → deserializar JSON
+                    return json.loads(cached_data)
+            except Exception as e:
+                # Redis falló → log warning y continuar sin cache
+                print(f"[AuthorizationService] Redis error (graceful degradation): {e}")
 
-        # Cache miss o expirado → consultar DB
+        # Cache miss o use_cache=False → consultar DB
         effective = self.repo.get_user_effective_permissions(user_id)
 
-        # Guardar en cache
-        self._cache[user_id] = {
-            **effective,
-            "cached_at": datetime.now()
-        }
+        # Guardar en cache (best-effort, no falla si Redis está caído)
+        try:
+            self.redis.set(cache_key, json.dumps(effective), ttl=self._cache_ttl_seconds)
+        except Exception as e:
+            print(f"[AuthorizationService] Could not cache permissions for user {user_id}: {e}")
 
         return effective
 
@@ -172,16 +190,31 @@ class AuthorizationService:
 
     def invalidate_cache(self, user_id: Optional[int] = None):
         """
-        Invalida el cache de permisos.
+        Invalida el cache de permisos en Redis.
         Llamar cuando se modifican roles/permisos de un usuario.
         
         Args:
-            user_id: Si se especifica, solo invalida ese usuario. Si es None, limpia todo el cache.
+            user_id: Si se especifica, solo invalida ese usuario. 
+                     Si es None, limpia TODOS los permisos cacheados.
+                     
+        Comportamiento:
+            - Si user_id especificado: DELETE user_permissions:{user_id}
+            - Si user_id=None: DELETE user_permissions:* (todos los usuarios)
+            
+        Nota:
+            Esto invalida cache en TODAS las instancias del backend (Redis compartido).
+            Los use cases ya no necesitan invalidar cache manualmente.
         """
-        if user_id is not None:
-            self._cache.pop(user_id, None)
-        else:
-            self._cache.clear()
+        try:
+            if user_id is not None:
+                # Invalidar usuario específico
+                cache_key = f"user_permissions:{user_id}"
+                self.redis.delete(cache_key)
+            else:
+                # Invalidar TODOS los permisos
+                self.redis.delete_pattern("user_permissions:*")
+        except Exception as e:
+            print(f"[AuthorizationService] Could not invalidate cache: {e}")
 
     def get_permission_summary(self, user_id: int) -> Dict:
         """
@@ -203,7 +236,14 @@ class AuthorizationService:
             }
         """
         user_perms = self.get_user_permissions(user_id)
-        is_cached = user_id in self._cache
+        
+        # Verificar si está cacheado en Redis
+        is_cached = False
+        try:
+            cache_key = f"user_permissions:{user_id}"
+            is_cached = self.redis.exists(cache_key)
+        except Exception:
+            pass  # Si Redis falla, asumimos no cacheado
 
         return {
             "user_id": user_id,
