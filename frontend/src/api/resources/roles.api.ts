@@ -6,7 +6,6 @@
 
 import apiClient from "@api/client";
 import type {
-  Role,
   RoleWithCount,
   RolesListResponse,
   RoleDetailResponse,

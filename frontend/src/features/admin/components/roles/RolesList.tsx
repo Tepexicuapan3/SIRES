@@ -201,7 +201,7 @@ export const RolesList = ({
       {/* Confirmación de eliminación */}
       <AlertDialog
         open={roleToDelete !== null}
-        onOpenChange={(open) => !open && setRoleToDelete(null)}
+        onOpenChange={(open: boolean) => !open && setRoleToDelete(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

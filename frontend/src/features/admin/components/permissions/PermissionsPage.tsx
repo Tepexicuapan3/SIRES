@@ -148,7 +148,6 @@ export function PermissionsPage() {
       {mode === "create" && (
         <div className="bg-white rounded-lg shadow-sm border border-line-struct p-6">
           <PermissionForm
-            mode="create"
             onSuccess={handleBackToList}
             onCancel={handleBackToList}
           />
@@ -158,7 +157,6 @@ export function PermissionsPage() {
       {mode === "edit" && selectedPermission && (
         <div className="bg-white rounded-lg shadow-sm border border-line-struct p-6">
           <PermissionForm
-            mode="edit"
             permission={selectedPermission}
             onSuccess={handleBackToList}
             onCancel={handleBackToList}

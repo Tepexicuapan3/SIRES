@@ -100,8 +100,10 @@ export function UserPermissionOverrides({
   // TANSTACK QUERY HOOKS
   // ============================================================
 
-  const { data: overrides = [], isLoading: isLoadingOverrides } =
+  const { data: overridesData, isLoading: isLoadingOverrides } =
     useUserOverrides(userId);
+  const overrides = overridesData?.overrides || [];
+
   const { data: effectivePermissions, isLoading: isLoadingEffective } =
     useUserEffectivePermissions(userId);
 
@@ -111,8 +113,28 @@ export function UserPermissionOverrides({
   const allPermissions = catalogData?.permissions || [];
 
   // Mutations
-  const addOverrideMutation = useAddUserOverride();
-  const removeOverrideMutation = useRemoveUserOverride();
+  const addOverrideMutation = useAddUserOverride(userId);
+  const removeOverrideMutation = useRemoveUserOverride(userId);
+
+  // ============================================================
+  // PERMISOS EFECTIVOS - Separados por tipo
+  // ============================================================
+
+  /**
+   * Permisos concedidos (ROLE + OVERRIDE_ALLOW)
+   */
+  const grantedPermissions =
+    effectivePermissions?.permissions.filter(
+      (p) => p.source !== "OVERRIDE_DENY",
+    ) || [];
+
+  /**
+   * Permisos denegados (OVERRIDE_DENY)
+   */
+  const deniedPermissions =
+    effectivePermissions?.permissions.filter(
+      (p) => p.source === "OVERRIDE_DENY",
+    ) || [];
 
   // ============================================================
   // FORMATEO DE DATOS
@@ -183,10 +205,9 @@ export function UserPermissionOverrides({
 
     try {
       await addOverrideMutation.mutateAsync({
-        userId,
-        permissionCode: selectedPermissionCode,
+        permission_code: selectedPermissionCode,
         effect,
-        expiresAt: expiresAt || null,
+        expires_at: expiresAt || undefined,
       });
 
       toast.success(
@@ -216,10 +237,9 @@ export function UserPermissionOverrides({
     if (!overrideToDelete) return;
 
     try {
-      await removeOverrideMutation.mutateAsync({
-        userId,
-        permissionCode: overrideToDelete.permission_code,
-      });
+      await removeOverrideMutation.mutateAsync(
+        overrideToDelete.permission_code,
+      );
 
       toast.success("Override eliminado correctamente");
       setOverrideToDelete(null);
@@ -429,7 +449,9 @@ export function UserPermissionOverrides({
               <Label>Efecto</Label>
               <RadioGroup
                 value={effect}
-                onValueChange={(value) => setEffect(value as "ALLOW" | "DENY")}
+                onValueChange={(value: string) =>
+                  setEffect(value as "ALLOW" | "DENY")
+                }
                 className="mt-2 space-y-2"
               >
                 <div className="flex items-center gap-3 p-3 border border-line-struct rounded-lg hover:bg-subtle transition-colors">
@@ -529,21 +551,22 @@ export function UserPermissionOverrides({
               <div>
                 <h4 className="font-semibold text-txt-body mb-2 flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-status-stable" />
-                  Permisos Concedidos (
-                  {effectivePermissions?.granted.length || 0})
+                  Permisos Concedidos ({grantedPermissions.length})
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {effectivePermissions?.granted.map((permission) => (
-                    <div
-                      key={permission.code}
-                      className="p-2 bg-status-stable/10 border border-status-stable/30 rounded text-sm"
-                    >
-                      <code className="font-mono">{permission.code}</code>
-                      <div className="text-xs text-txt-muted mt-1">
-                        Origen: {permission.source}
+                  {grantedPermissions.length > 0 ? (
+                    grantedPermissions.map((permission) => (
+                      <div
+                        key={permission.code}
+                        className="p-2 bg-status-stable/10 border border-status-stable/30 rounded text-sm"
+                      >
+                        <code className="font-mono">{permission.code}</code>
+                        <div className="text-xs text-txt-muted mt-1">
+                          Origen: {permission.source}
+                        </div>
                       </div>
-                    </div>
-                  )) || (
+                    ))
+                  ) : (
                     <p className="col-span-2 text-txt-muted text-sm">
                       No hay permisos concedidos
                     </p>
@@ -555,21 +578,22 @@ export function UserPermissionOverrides({
               <div>
                 <h4 className="font-semibold text-txt-body mb-2 flex items-center gap-2">
                   <XCircle className="h-5 w-5 text-status-critical" />
-                  Permisos Denegados ({effectivePermissions?.denied.length || 0}
-                  )
+                  Permisos Denegados ({deniedPermissions.length})
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {effectivePermissions?.denied.map((permission) => (
-                    <div
-                      key={permission.code}
-                      className="p-2 bg-status-critical/10 border border-status-critical/30 rounded text-sm"
-                    >
-                      <code className="font-mono">{permission.code}</code>
-                      <div className="text-xs text-txt-muted mt-1">
-                        Override DENY
+                  {deniedPermissions.length > 0 ? (
+                    deniedPermissions.map((permission) => (
+                      <div
+                        key={permission.code}
+                        className="p-2 bg-status-critical/10 border border-status-critical/30 rounded text-sm"
+                      >
+                        <code className="font-mono">{permission.code}</code>
+                        <div className="text-xs text-txt-muted mt-1">
+                          Override DENY
+                        </div>
                       </div>
-                    </div>
-                  )) || (
+                    ))
+                  ) : (
                     <p className="col-span-2 text-txt-muted text-sm">
                       No hay permisos denegados
                     </p>
