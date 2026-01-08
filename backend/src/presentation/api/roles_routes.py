@@ -10,16 +10,13 @@ Endpoints protegidos por permisos:
 """
 
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
-
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from src.infrastructure.authorization.authorization_service import \
+    authorization_service
 from src.infrastructure.authorization.decorators import requires_permission
-from src.infrastructure.authorization.authorization_service import authorization_service
-from src.use_cases.roles import (
-    CreateRoleUseCase,
-    UpdateRoleUseCase,
-    DeleteRoleUseCase,
-    GetRolesUseCase
-)
+from src.presentation.api.error_helpers import get_error_message
+from src.use_cases.roles import (CreateRoleUseCase, DeleteRoleUseCase,
+                                 GetRolesUseCase, UpdateRoleUseCase)
 
 roles_bp = Blueprint("roles", __name__)
 
@@ -61,13 +58,13 @@ def create_role():
         
         # Validar datos mínimos
         if not data:
-            return jsonify({"error": "INVALID_REQUEST", "message": "Body es requerido"}), 400
+            return jsonify({"code": "INVALID_REQUEST", "message": "Body es requerido"}), 400
         
         if not data.get("rol"):
-            return jsonify({"error": "ROLE_NAME_REQUIRED", "message": "El nombre del rol es requerido"}), 400
+            return jsonify({"code": "ROLE_NAME_REQUIRED", "message": "El nombre del rol es requerido"}), 400
         
         if not data.get("desc_rol"):
-            return jsonify({"error": "ROLE_DESCRIPTION_REQUIRED", "message": "La descripción del rol es requerida"}), 400
+            return jsonify({"code": "ROLE_DESCRIPTION_REQUIRED", "message": "La descripción del rol es requerida"}), 400
         
         # Ejecutar use case
         use_case = CreateRoleUseCase()
@@ -89,7 +86,7 @@ def create_role():
             elif error == "ROLE_NAME_DUPLICATE":
                 status_code = 409  # Conflict
             
-            return jsonify({"error": error, "message": _get_error_message(error)}), status_code
+            return jsonify({"code": error, "message": get_error_message(error)}), status_code
         
         # Invalidar cache de permisos (aunque crear rol no afecta permisos directamente,
         # es buena práctica invalidar cuando se modifica estructura RBAC)
@@ -99,7 +96,7 @@ def create_role():
     
     except Exception as e:
         return jsonify({
-            "error": "SERVER_ERROR",
+            "code": "SERVER_ERROR",
             "message": f"Error al crear rol: {str(e)}"
         }), 500
 
@@ -148,7 +145,7 @@ def get_all_roles():
     
     except Exception as e:
         return jsonify({
-            "error": "SERVER_ERROR",
+            "code": "SERVER_ERROR",
             "message": f"Error al obtener roles: {str(e)}"
         }), 500
 
@@ -171,7 +168,7 @@ def get_role_by_id(role_id: int):
         }
     
     Response 404:
-        { "error": "ROLE_NOT_FOUND" }
+        { "code": "ROLE_NOT_FOUND" }
     """
     try:
         use_case = GetRolesUseCase()
@@ -179,7 +176,7 @@ def get_role_by_id(role_id: int):
         
         if not role:
             return jsonify({
-                "error": "ROLE_NOT_FOUND",
+                "code": "ROLE_NOT_FOUND",
                 "message": f"Rol con ID {role_id} no encontrado"
             }), 404
         
@@ -187,7 +184,7 @@ def get_role_by_id(role_id: int):
     
     except Exception as e:
         return jsonify({
-            "error": "SERVER_ERROR",
+            "code": "SERVER_ERROR",
             "message": f"Error al obtener rol: {str(e)}"
         }), 500
 
@@ -222,7 +219,7 @@ def update_role(role_id: int):
         data = request.get_json()
         
         if not data:
-            return jsonify({"error": "INVALID_REQUEST", "message": "Body es requerido"}), 400
+            return jsonify({"code": "INVALID_REQUEST", "message": "Body es requerido"}), 400
         
         # Filtrar campos permitidos
         allowed_fields = ['rol', 'desc_rol', 'tp_rol', 'landing_route', 'priority']
@@ -230,7 +227,7 @@ def update_role(role_id: int):
         
         if not update_data:
             return jsonify({
-                "error": "NO_FIELDS_TO_UPDATE",
+                "code": "NO_FIELDS_TO_UPDATE",
                 "message": "No se proporcionó ningún campo válido para actualizar"
             }), 400
         
@@ -254,7 +251,7 @@ def update_role(role_id: int):
             elif error == "ROLE_NAME_DUPLICATE":
                 status_code = 409  # Conflict
             
-            return jsonify({"error": error, "message": _get_error_message(error)}), status_code
+            return jsonify({"code": error, "message": get_error_message(error)}), status_code
         
         # Invalidar cache de permisos
         authorization_service.invalidate_cache()
@@ -263,7 +260,7 @@ def update_role(role_id: int):
     
     except Exception as e:
         return jsonify({
-            "error": "SERVER_ERROR",
+            "code": "SERVER_ERROR",
             "message": f"Error al actualizar rol: {str(e)}"
         }), 500
 
@@ -305,7 +302,7 @@ def delete_role(role_id: int):
             elif error == "ROLE_SYSTEM_PROTECTED":
                 status_code = 403  # Forbidden
             
-            return jsonify({"error": error, "message": _get_error_message(error)}), status_code
+            return jsonify({"code": error, "message": get_error_message(error)}), status_code
         
         # Invalidar cache de permisos
         authorization_service.invalidate_cache()
@@ -314,27 +311,6 @@ def delete_role(role_id: int):
     
     except Exception as e:
         return jsonify({
-            "error": "SERVER_ERROR",
+            "code": "SERVER_ERROR",
             "message": f"Error al eliminar rol: {str(e)}"
         }), 500
-
-
-# ============= HELPER: Mensajes de Error =============
-def _get_error_message(error_code: str) -> str:
-    """Mapea códigos de error a mensajes en español"""
-    messages = {
-        "ROLE_NAME_REQUIRED": "El nombre del rol es requerido",
-        "ROLE_NAME_INVALID": "El nombre del rol contiene caracteres inválidos (solo letras, números, espacios, guiones)",
-        "ROLE_NAME_TOO_LONG": "El nombre del rol no puede exceder 50 caracteres",
-        "ROLE_DESCRIPTION_REQUIRED": "La descripción del rol es requerida",
-        "ROLE_DESCRIPTION_TOO_LONG": "La descripción no puede exceder 200 caracteres",
-        "ROLE_NAME_DUPLICATE": "Ya existe un rol con ese nombre",
-        "INVALID_PRIORITY": "La prioridad debe ser un número positivo",
-        "INVALID_LANDING_ROUTE": "La ruta debe comenzar con /",
-        "ROLE_NOT_FOUND": "Rol no encontrado",
-        "ROLE_SYSTEM_PROTECTED": "Los roles del sistema no pueden ser modificados o eliminados",
-        "ROLE_HAS_USERS": "No se puede eliminar un rol que tiene usuarios asignados",
-        "NO_FIELDS_TO_UPDATE": "No se proporcionó ningún campo para actualizar",
-        "DATABASE_ERROR": "Error de base de datos"
-    }
-    return messages.get(error_code, error_code)

@@ -104,7 +104,11 @@ export function UserPermissionOverrides({
     useUserOverrides(userId);
   const { data: effectivePermissions, isLoading: isLoadingEffective } =
     useUserEffectivePermissions(userId);
-  const { data: allPermissions = [] } = usePermissionsCatalog();
+
+  // IMPORTANTE: usePermissionsCatalog retorna objeto {permissions: [...], by_category: {...}}
+  // Aquí extraemos solo el array de permissions
+  const { data: catalogData } = usePermissionsCatalog();
+  const allPermissions = catalogData?.permissions || [];
 
   // Mutations
   const addOverrideMutation = useAddUserOverride();

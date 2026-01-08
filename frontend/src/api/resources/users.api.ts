@@ -9,6 +9,7 @@ import type {
   CreateUserRequest,
   CreateUserResponse,
   UserRole,
+  UserRoleBackendDTO,
   AssignRolesRequest,
   SetPrimaryRoleRequest,
   UserRolesResponse,
@@ -28,14 +29,39 @@ export const usersAPI = {
 
   /**
    * Obtiene lista de roles asignados a un usuario
-   * GET /api/v1/users/:id/roles
+   *
+   * IMPORTANTE: El backend NO tiene endpoint GET /users/:id/roles
+   * En su lugar, usa GET /users/:id que retorna {user: {...}, roles: [...]}
+   *
+   * MAPEO DE CAMPOS:
+   * Backend retorna: {rol, desc_rol, is_primary}
+   * Frontend espera: {nombre, descripcion, is_primary, priority}
+   *
+   * GET /api/v1/users/:id
    * Requiere: usuarios:read
    */
   getUserRoles: async (userId: number): Promise<UserRole[]> => {
-    const response = await apiClient.get<{ roles: UserRole[] }>(
-      `/users/${userId}/roles`,
-    );
-    return response.data.roles;
+    const response = await apiClient.get<{
+      user: any;
+      roles: UserRoleBackendDTO[];
+    }>(`/users/${userId}`);
+
+    // Validación defensiva
+    if (!response.data || !Array.isArray(response.data.roles)) {
+      console.error("Invalid user roles response:", response.data);
+      throw new Error("Invalid user roles response from backend");
+    }
+
+    // Adapter: Mapear campos del backend al modelo del frontend
+    const mappedRoles: UserRole[] = response.data.roles.map((backendRole) => ({
+      id_rol: backendRole.id_rol,
+      nombre: backendRole.rol, // ← Mapeo: rol → nombre
+      descripcion: backendRole.desc_rol, // ← Mapeo: desc_rol → descripcion
+      is_primary: backendRole.is_primary,
+      priority: 999, // ← Backend no retorna priority, usamos default
+    }));
+
+    return mappedRoles;
   },
 
   /**

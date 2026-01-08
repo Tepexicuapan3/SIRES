@@ -394,6 +394,14 @@ def update_user(user_id: int):
 @requires_permission("usuarios:assign_roles")
 def change_user_role(user_id: int):
     """
+    DEPRECATED: Usar PUT /<user_id>/roles/primary en su lugar.
+    Este endpoint será eliminado en v3.0.
+    
+    La diferencia es que el nuevo endpoint requiere que el rol ya esté
+    asignado al usuario. Si necesitás asignar un rol nuevo como primario,
+    primero usá POST /<user_id>/roles para asignarlo.
+    
+    ---
     Cambia el rol primario de un usuario.
     Solo administradores.
     
@@ -468,11 +476,15 @@ def change_user_role(user_id: int):
         # Separar roles del usuario
         roles = result.pop("roles", [])
         
-        return jsonify({
+        response = jsonify({
             "message": "Rol actualizado correctamente",
             "user": result,
             "roles": roles
-        }), 200
+        })
+        response.headers['Deprecation'] = 'true'
+        response.headers['Sunset'] = '2027-01-01'
+        response.headers['Link'] = f'</api/v1/users/{user_id}/roles/primary>; rel="successor-version"'
+        return response, 200
     
     except Exception as e:
         return jsonify({

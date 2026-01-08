@@ -21,10 +21,21 @@ export const rolesAPI = {
    * Lista todos los roles con count de permisos
    * GET /api/v1/roles
    * Requiere: roles:read
+   *
+   * IMPORTANTE: Backend retorna objeto paginado {total, roles}
+   * Aquí extraemos el array roles[] para simplificar el uso en componentes
    */
   getRoles: async (): Promise<RoleWithCount[]> => {
-    const response = await apiClient.get<RoleWithCount[]>("/roles");
-    return response.data;
+    const response = await apiClient.get<RolesListResponse>("/roles");
+
+    // Validación defensiva: verificar estructura de respuesta
+    if (!response.data || !Array.isArray(response.data.roles)) {
+      console.error("Invalid roles response structure:", response.data);
+      throw new Error("Invalid roles response from backend");
+    }
+
+    // Extraer solo el array de roles del objeto paginado
+    return response.data.roles;
   },
 
   /**

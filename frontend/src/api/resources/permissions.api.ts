@@ -24,21 +24,41 @@ export const permissionsAPI = {
   /**
    * Obtiene el catálogo completo de permisos disponibles
    * Solo admin
+   *
+   * IMPORTANTE: Backend retorna {total, permissions, by_category}
+   * Aquí retornamos el objeto completo porque contiene agrupación útil
    */
   getCatalog: async (): Promise<PermissionCatalogResponse> => {
     const response = await apiClient.get<PermissionCatalogResponse>(
       "/permissions/catalog",
     );
+
+    // Validación defensiva
+    if (!response.data || !Array.isArray(response.data.permissions)) {
+      console.error("Invalid permissions catalog response:", response.data);
+      throw new Error("Invalid permissions catalog response from backend");
+    }
+
     return response.data;
   },
 
   /**
    * Obtiene todos los roles con su count de permisos
    * Solo admin
+   *
+   * IMPORTANTE: Backend retorna {total, roles}
+   * Aquí retornamos el objeto completo (mismo que roles.api.getRoles pero desde endpoint diferente)
    */
   getRoles: async (): Promise<RolesListResponse> => {
     const response =
       await apiClient.get<RolesListResponse>("/permissions/roles");
+
+    // Validación defensiva
+    if (!response.data || !Array.isArray(response.data.roles)) {
+      console.error("Invalid roles response:", response.data);
+      throw new Error("Invalid roles response from backend");
+    }
+
     return response.data;
   },
 
@@ -165,10 +185,22 @@ export const permissionsAPI = {
    * Lista todos los permisos (alternativa a getCatalog)
    * GET /api/v1/permissions
    * Requiere: permisos:read
+   *
+   * IMPORTANTE: Backend retorna {permissions: [...]}
+   * Aquí extraemos solo el array para simplificar uso
    */
   getPermissions: async (): Promise<PermissionResponse[]> => {
-    const response = await apiClient.get<PermissionResponse[]>("/permissions");
-    return response.data;
+    const response = await apiClient.get<{ permissions: PermissionResponse[] }>(
+      "/permissions",
+    );
+
+    // Validación defensiva
+    if (!response.data || !Array.isArray(response.data.permissions)) {
+      console.error("Invalid permissions response:", response.data);
+      throw new Error("Invalid permissions response from backend");
+    }
+
+    return response.data.permissions;
   },
 
   // ========== USER PERMISSION OVERRIDES (FASE 4) ==========

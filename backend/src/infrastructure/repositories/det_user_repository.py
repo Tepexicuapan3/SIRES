@@ -1,6 +1,11 @@
 # src/infrastructure/repositories/det_user_repository.py
-from src.infrastructure.database.mysql_connection import get_db_connection, close_db
+import logging
 from datetime import datetime
+
+from src.infrastructure.database.mysql_connection import (close_db,
+                                                          get_db_connection)
+
+logger = logging.getLogger(__name__)
 
 class DetUserRepository:
 
@@ -87,7 +92,7 @@ class DetUserRepository:
             return cursor.rowcount > 0
 
         except Exception as e:
-            print("Error in update_onboarding:", e)
+            logger.error(f"Error in update_onboarding: {e}", exc_info=True)
             return False
         finally:
             close_db(conn)
@@ -111,7 +116,7 @@ class DetUserRepository:
             return cursor.rowcount > 0
     
         except Exception as e:
-            print("Error in disable_password_change:", e)
+            logger.error(f"Error in disable_password_change: {e}", exc_info=True)
             return False
     
         finally:
@@ -136,7 +141,7 @@ class DetUserRepository:
             return cursor.rowcount > 0
 
         except Exception as e:
-            print("Error resetting lock status:", e)
+            logger.error(f"Error resetting lock status: {e}", exc_info=True)
             return False
 
         finally:
@@ -160,7 +165,7 @@ class DetUserRepository:
             return cursor.rowcount > 0
 
         except Exception as e:
-            print("Error locking user:", e)
+            logger.error(f"Error locking user: {e}", exc_info=True)
             return False
 
         finally:
@@ -222,7 +227,7 @@ class DetUserRepository:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error creating det_user: {e}")
+            logger.error(f"Error creating det_user: {e}", exc_info=True)
             conn.rollback()
             return False
         finally:

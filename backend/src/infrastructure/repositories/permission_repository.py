@@ -8,10 +8,13 @@ Responsabilidades:
 - NO contiene lógica de negocio (eso va en AuthorizationService)
 """
 
+import logging
 from typing import Dict, List, Optional
 
 from src.infrastructure.database.mysql_connection import (close_db,
                                                           get_db_connection)
+
+logger = logging.getLogger(__name__)
 
 
 class PermissionRepository:
@@ -110,7 +113,7 @@ class PermissionRepository:
                     cp.code,
                     up.effect,
                     up.expires_at
-                FROM user_permissions up
+                FROM user_permission_overrides up
                 INNER JOIN cat_permissions cp ON up.id_permission = cp.id_permission
                 WHERE up.id_usuario = %s
                   AND up.fch_baja IS NULL
@@ -136,7 +139,7 @@ class PermissionRepository:
             {
                 "permissions": ["expedientes:read", "usuarios:create", ...],
                 "is_admin": bool,
-                "roles": [{"id_rol": 1, "cod_rol": "MEDICOS", "nom_rol": "Médicos", ...}],
+                "roles": [{"id_rol": 1, "rol": "MEDICOS", "desc_rol": "Médicos", ...}],
                 "landing_route": "/consultas"  # del rol primario
             }
         """
@@ -265,14 +268,23 @@ class PermissionRepository:
             user_id: ID del usuario que hace la asignación (auditoría)
             
         Returns:
-            True si se asignó correctamente
+            True si se asignó correctamente, False si el rol no existe o está inactivo
         """
         conn = get_db_connection()
         if conn is None:
             raise RuntimeError("DB_CONNECTION_FAILED")
 
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         try:
+            # Validar que el rol existe y está activo
+            cursor.execute("""
+                SELECT id_rol FROM cat_roles 
+                WHERE id_rol = %s AND est_rol = 'A'
+            """, (role_id,))
+            
+            if not cursor.fetchone():
+                return False  # Rol no existe o está inactivo
+            
             # Verificar si ya existe (incluyendo bajas lógicas)
             cursor.execute(
                 """
@@ -286,14 +298,14 @@ class PermissionRepository:
 
             if existing:
                 # Si existe pero está dado de baja, reactivar
-                if existing[1] is not None:
+                if existing['fch_baja'] is not None:
                     cursor.execute(
                         """
                         UPDATE role_permissions 
                         SET fch_baja = NULL, usr_baja = NULL 
                         WHERE id_role_permission = %s
                         """,
-                        (existing[0],)
+                        (existing['id_role_permission'],)
                     )
                 # Si ya existe y está activo, no hacer nada
             else:
@@ -919,7 +931,7 @@ class PermissionRepository:
         except Exception as e:
             if conn:
                 conn.rollback()
-            print(f"Error adding user permission override: {e}")
+            logger.error(f"Error adding user permission override: {e}", exc_info=True)
             return False, "OVERRIDE_CREATION_FAILED"
         finally:
             if cursor:
@@ -983,7 +995,7 @@ class PermissionRepository:
         except Exception as e:
             if conn:
                 conn.rollback()
-            print(f"Error removing user permission override: {e}")
+            logger.error(f"Error removing user permission override: {e}", exc_info=True)
             return False, "OVERRIDE_DELETION_FAILED"
         finally:
             if cursor:
