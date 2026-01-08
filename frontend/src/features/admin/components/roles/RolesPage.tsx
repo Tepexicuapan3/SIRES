@@ -159,5 +159,3 @@ export const RolesPage = () => {
 
   return null;
 };
-
-export default RolesPage;
