@@ -1,3 +1,5 @@
+import type { BaseUser } from "./users.types";
+
 /**
  * Types para el sistema de autenticación
  */
@@ -9,23 +11,11 @@ export interface LoginRequest {
 }
 
 // ===== RESPONSE TYPES =====
-export interface Usuario {
-  id_usuario: number;
-  usuario: string;
-  nombre: string;
-  paterno: string;
-  materno: string;
-  nombre_completo: string; // Computed: nombre + paterno + materno
-  expediente: string;
-  id_clin: number | null; // FK a cat_clinicas
-  correo: string;
-  ing_perfil: string;
-  roles: string[]; // ['ADMINISTRADOR', 'MEDICOS', etc.]
+export interface AuthUser extends BaseUser {
+  roles: string[]; // Lista de códigos de roles ['ADMINISTRADOR', 'MEDICOS']
+  permissions: string[]; // Permisos efectivos: ["expedientes:read", ...] o ["*"]
+  landing_route: string; // Ruta post-login
   must_change_password: boolean;
-  // ===== RBAC 2.0 - Nuevos campos =====
-  permissions: string[]; // Permisos efectivos: ["expedientes:read", ...] o ["*"] para admin
-  landing_route: string; // Ruta post-login: "/admin", "/consultas", etc.
-  is_admin: boolean; // Flag de administrador (bypass de permisos)
 }
 
 /**
@@ -37,7 +27,7 @@ export interface Usuario {
 export interface LoginResponse {
   token_type?: "Bearer";
   expires_in?: number;
-  user: Usuario;
+  user: AuthUser;
   requires_onboarding?: boolean; // Flag for first-time users
 }
 
@@ -56,7 +46,7 @@ export interface ApiError {
 // ===== STORE TYPES =====
 // Note: With HttpOnly cookies, tokens are NOT stored client-side
 export interface AuthState {
-  user: Usuario | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   // Removed: token and refreshToken - now in HttpOnly cookies
@@ -114,7 +104,7 @@ export interface IAuthAPI {
   ) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<RefreshTokenResponse>; // No param - token in cookie
-  getCurrentUser: () => Promise<Usuario>;
+  getCurrentUser: () => Promise<AuthUser>;
   verifyToken: () => Promise<boolean>;
   requestResetCode: (data: RequestResetCodeRequest) => Promise<void>;
   verifyResetCode: (
