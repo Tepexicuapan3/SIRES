@@ -1,77 +1,119 @@
 /**
  * Types for Users API
  *
- * Contracts for user management
+ * IMPORTANTE: Estos tipos usan la nomenclatura EXACTA del backend (MySQL).
+ * NO hay mapeo intermedio - usamos los nombres de campos tal cual los retorna la API.
+ *
+ * Filosofía: Simplicidad > Abstracción innecesaria (menos bugs, menos código)
  */
 
 /**
- * User entity
- * Represents a user in the system
+ * User entity - Nomenclatura del backend (MySQL)
+ *
+ * Representa un usuario del sistema con datos básicos.
+ * Este tipo mapea 1:1 con la respuesta de GET /api/v1/users
+ *
+ * CAMPOS CLAVE:
+ * - paterno/materno: Apellidos (nombres cortos en BD)
+ * - expediente: Número de expediente (no "numero_expediente")
+ * - id_clin: Foreign Key a cat_clinicas (puede ser NULL)
+ * - est_usuario: Estado ("A"=Activo, "B"=Baja)
+ * - last_conexion: Última sesión (no "ultimo_acceso")
+ * - rol_primario: Nombre del rol primario (viene del JOIN con users_roles)
  */
 export interface User {
   id_usuario: number;
-  usuario: string;
+  usuario: string; // Username (ej: "jperez")
   nombre: string;
-  apellido_paterno: string;
-  apellido_materno: string;
-  numero_expediente: string | null;
+  paterno: string; // Apellido paterno
+  materno: string; // Apellido materno
+  expediente: string | null; // Número de expediente
+  id_clin: number | null; // FK a cat_clinicas (puede ser NULL)
   correo: string;
-  activo: boolean;
-  ultimo_acceso: string | null;
-  roles?: UserRole[]; // Populated when fetching with roles
+  est_usuario: "A" | "B"; // A=Activo, B=Baja
+  last_conexion: string | null; // Última sesión (timestamp)
+  rol_primario?: string; // Nombre del rol primario (ej: "MEDICO")
 }
 
+/**
+ * User con metadatos de auditoría
+ *
+ * Usado en vista detallada de usuario (GET /api/v1/users/:id)
+ * Incluye información de quién creó/modificó el usuario
+ */
+export interface UserDetail extends User {
+  usr_alta: number; // ID del usuario que lo creó
+  fch_alta: string; // Fecha de alta
+  usr_modf: number | null; // ID del usuario que lo modificó
+  fch_modf: string | null; // Fecha de modificación
+  terminos_acept: boolean; // Aceptó términos y condiciones
+  cambiar_clave: boolean; // Debe cambiar contraseña
+  ip_ultima: string | null; // IP de última conexión
+}
+
+/**
+ * Request para crear usuario
+ * POST /api/v1/users
+ */
 export interface CreateUserRequest {
   usuario: string;
   expediente: string;
   nombre: string;
   paterno: string;
   materno: string;
-  curp: string;
+  id_clin: number | null; // FK a cat_clinicas (puede ser NULL)
   correo: string;
-  id_rol: number;
+  id_rol: number; // Rol inicial a asignar
 }
 
+/**
+ * Response al crear usuario
+ * Incluye contraseña temporal que se muestra UNA SOLA VEZ
+ */
 export interface CreateUserResponse {
   message: string;
   user: {
     id_usuario: number;
     usuario: string;
     expediente: string;
-    temp_password: string;
+    temp_password: string; // ⚠️ Mostrar al admin, no se puede recuperar después
     must_change_password: boolean;
     rol_asignado: number;
   };
 }
 
 /**
- * User role assignment (backend DTO)
- * Estructura que retorna el backend desde users_roles + cat_roles
+ * Request para actualizar usuario
+ * PATCH /api/v1/users/:id
+ *
+ * Todos los campos opcionales - solo enviar los que se modifican
  */
-export interface UserRoleBackendDTO {
-  id_rol: number;
-  rol: string; // ← Backend usa "rol", no "nombre"
-  desc_rol: string;
-  is_primary: boolean;
-  est_usr_rol?: string; // Estado (opcional)
+export interface UpdateUserRequest {
+  nombre?: string;
+  paterno?: string;
+  materno?: string;
+  correo?: string;
+  id_clin?: number | null; // FK a cat_clinicas
 }
 
 /**
- * User role assignment (frontend model)
- * From users_roles table (FASE 3)
+ * User role assignment - Nomenclatura del backend
+ *
+ * CAMBIO IMPORTANTE vs versión anterior:
+ * - Backend usa "rol" y "desc_rol" (NO "nombre" y "descripcion")
+ * - Backend NO retorna "priority" en este endpoint
+ *
+ * Retornado por GET /api/v1/users/:id (lista de roles del usuario)
  */
 export interface UserRole {
   id_rol: number;
-  nombre: string; // Nombre del rol (ej: "ADMIN", "MÉDICO")
-  descripcion?: string; // Descripción del rol
-  is_primary: boolean;
-  priority: number; // Prioridad del rol (default 999 si no viene)
-  assigned_at?: string;
-  assigned_by?: string;
+  rol: string; // Nombre del rol (ej: "ADMIN", "MEDICO")
+  desc_rol: string; // Descripción del rol
+  is_primary: boolean; // TRUE si es el rol primario del usuario
 }
 
 /**
- * Request to assign roles to a user
+ * Request para asignar roles a usuario
  * POST /api/v1/users/:id/roles
  */
 export interface AssignRolesRequest {
@@ -80,7 +122,7 @@ export interface AssignRolesRequest {
 }
 
 /**
- * Request to set primary role
+ * Request para cambiar rol primario
  * PUT /api/v1/users/:id/roles/primary
  */
 export interface SetPrimaryRoleRequest {
@@ -88,7 +130,8 @@ export interface SetPrimaryRoleRequest {
 }
 
 /**
- * Response from assign/update user roles
+ * Response al asignar/actualizar roles
+ * Retorna roles actualizados del usuario
  */
 export interface UserRolesResponse {
   user_id: number;
@@ -97,11 +140,10 @@ export interface UserRolesResponse {
 }
 
 /**
- * Response from GET /api/v1/users
- * Paginated list of users
+ * Response de GET /api/v1/users - Lista paginada
  *
- * IMPORTANTE: El backend retorna un objeto wrapper, NO un array directo.
- * Esto permite agregar metadata de paginación sin romper el contrato.
+ * IMPORTANTE: El backend retorna un objeto wrapper con metadata de paginación,
+ * NO un array directo.
  */
 export interface UsersListResponse {
   items: User[]; // Usuarios de la página actual
@@ -112,24 +154,23 @@ export interface UsersListResponse {
 }
 
 /**
- * User data tal como viene del backend (raw DTO)
- * Nomenclatura de base de datos MySQL (nombres cortos, español)
- *
- * Este tipo representa el CONTRATO real con el backend.
- * NO usarlo en componentes, solo para mapeo en adapters.
+ * Query params para GET /api/v1/users
+ * Todos opcionales - permiten filtrado y paginación
  */
-export interface UserBackendDTO {
-  id_usuario: number;
-  usuario: string;
-  nombre: string;
-  paterno: string; // Backend usa nombre corto
-  materno: string; // Backend usa nombre corto
-  expediente: string | null; // Backend usa nombre corto
-  correo: string;
-  est_usuario: "A" | "B"; // Backend usa códigos ('A'=Activo, 'B'=Baja)
-  last_conexion: string | null; // Backend usa inglés + snake_case
-  img_perfil: string | null;
-  // Campos que pueden venir del JOIN con users_roles (opcional)
-  rol_primario?: string; // Nombre del rol primario
-  roles?: UserRole[]; // Populated cuando se hace join
+export interface UsersListParams {
+  page?: number; // Default: 1
+  page_size?: number; // Default: 20
+  search?: string; // Búsqueda por texto (usuario, nombre, etc.)
+  estado?: "A" | "B"; // Filtrar por estado (Activo/Baja)
+  rol_id?: number; // Filtrar por rol
+}
+
+/**
+ * Response de GET /api/v1/users/:id - Usuario detallado
+ *
+ * Incluye información completa del usuario + roles asignados
+ */
+export interface UserDetailResponse {
+  user: UserDetail;
+  roles: UserRole[];
 }
