@@ -17,11 +17,10 @@ export interface Usuario {
   materno: string;
   nombre_completo: string; // Computed: nombre + paterno + materno
   expediente: string;
-  curp: string;
+  id_clin: number | null; // FK a cat_clinicas
   correo: string;
   ing_perfil: string;
   roles: string[]; // ['ADMINISTRADOR', 'MEDICOS', etc.]
-  permisos?: string[]; // DEPRECATED - usar 'permissions'
   must_change_password: boolean;
   // ===== RBAC 2.0 - Nuevos campos =====
   permissions: string[]; // Permisos efectivos: ["expedientes:read", ...] o ["*"] para admin

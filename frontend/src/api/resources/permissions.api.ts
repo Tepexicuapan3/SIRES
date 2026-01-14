@@ -25,17 +25,16 @@ export const permissionsAPI = {
    * Obtiene el catálogo completo de permisos disponibles
    * Solo admin
    *
-   * IMPORTANTE: Backend retorna {total, permissions, by_category}
-   * Aquí retornamos el objeto completo porque contiene agrupación útil
+   * IMPORTANTE: Backend retorna {permissions: [...]}
+   * Aquí retornamos el objeto completo (con agrupación manual si es necesario)
    */
   getCatalog: async (): Promise<PermissionCatalogResponse> => {
     const response = await apiClient.get<PermissionCatalogResponse>(
-      "/permissions/catalog",
+      "/permissions",
     );
 
     // Validación defensiva
     if (!response.data || !Array.isArray(response.data.permissions)) {
-      console.error("Invalid permissions catalog response:", response.data);
       throw new Error("Invalid permissions catalog response from backend");
     }
 
@@ -55,7 +54,6 @@ export const permissionsAPI = {
 
     // Validación defensiva
     if (!response.data || !Array.isArray(response.data.roles)) {
-      console.error("Invalid roles response:", response.data);
       throw new Error("Invalid roles response from backend");
     }
 
@@ -196,7 +194,6 @@ export const permissionsAPI = {
 
     // Validación defensiva
     if (!response.data || !Array.isArray(response.data.permissions)) {
-      console.error("Invalid permissions response:", response.data);
       throw new Error("Invalid permissions response from backend");
     }
 

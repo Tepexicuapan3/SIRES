@@ -6,7 +6,6 @@
 
 import apiClient from "@api/client";
 import type {
-  RoleWithCount,
   RolesListResponse,
   RoleDetailResponse,
   CreateRoleRequest,
@@ -22,19 +21,19 @@ export const rolesAPI = {
    * Requiere: roles:read
    *
    * IMPORTANTE: Backend retorna objeto paginado {total, roles}
-   * Aquí extraemos el array roles[] para simplificar el uso en componentes
+   * Retornamos el objeto completo para consistencia con permissionsAPI.getRoles()
+   * Los hooks deben usar `select` para extraer solo el array si es necesario
    */
-  getRoles: async (): Promise<RoleWithCount[]> => {
+  getRoles: async (): Promise<RolesListResponse> => {
     const response = await apiClient.get<RolesListResponse>("/roles");
 
     // Validación defensiva: verificar estructura de respuesta
     if (!response.data || !Array.isArray(response.data.roles)) {
-      console.error("Invalid roles response structure:", response.data);
       throw new Error("Invalid roles response from backend");
     }
 
-    // Extraer solo el array de roles del objeto paginado
-    return response.data.roles;
+    // Retornar objeto completo {total, roles}
+    return response.data;
   },
 
   /**

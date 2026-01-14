@@ -10,8 +10,10 @@
  */
 export interface Role {
   id_rol: number;
-  cod_rol: string;
-  nom_rol: string;
+  rol: string; // Código del rol (ej: "MEDICOS")
+  desc_rol: string; // Descripción del rol (ej: "Médicos del servicio")
+  tp_rol?: string; // Tipo de rol (ej: "ADMIN", "CUSTOM")
+  est_rol: "A" | "B"; // Estado: A=Activo, B=Baja
   landing_route: string;
   priority: number;
   is_admin: number; // 0 or 1 (boolean flag)
@@ -27,6 +29,7 @@ export interface Role {
  */
 export interface RoleWithCount extends Role {
   permissions_count: number;
+  users_count: number; // Count de usuarios con este rol
 }
 
 /**
@@ -34,10 +37,11 @@ export interface RoleWithCount extends Role {
  * POST /api/v1/roles
  */
 export interface CreateRoleRequest {
-  nombre: string; // Required: max 50 chars
-  descripcion?: string; // Optional
+  rol: string; // Required: código del rol (max 50 chars)
+  desc_rol: string; // Required: descripción del rol
+  tp_rol?: string; // Optional: tipo de rol (default "ADMIN")
   landing_route?: string; // Optional: default "/inicio"
-  priority?: number; // Optional: default 100
+  priority?: number; // Optional: default 999
   is_admin?: boolean; // Optional: default false
 }
 
@@ -46,8 +50,9 @@ export interface CreateRoleRequest {
  * PUT /api/v1/roles/:id
  */
 export interface UpdateRoleRequest {
-  nombre?: string; // Optional: max 50 chars
-  descripcion?: string; // Optional
+  rol?: string; // Optional: código del rol (max 50 chars)
+  desc_rol?: string; // Optional: descripción del rol
+  tp_rol?: string; // Optional: tipo de rol
   landing_route?: string; // Optional
   priority?: number; // Optional
 }
@@ -57,8 +62,10 @@ export interface UpdateRoleRequest {
  */
 export interface RoleResponse {
   id_rol: number;
-  cod_rol: string;
-  nom_rol: string;
+  rol: string;
+  desc_rol: string;
+  tp_rol?: string;
+  est_rol: "A" | "B";
   landing_route: string;
   priority: number;
   is_admin: number;
@@ -111,8 +118,8 @@ export interface AssignPermissionsRequest {
  */
 export interface UserRole {
   id_rol: number;
-  cod_rol: string;
-  nom_rol: string;
+  rol: string;
+  desc_rol: string;
   is_primary: boolean;
   assigned_at: string;
   assigned_by: string;

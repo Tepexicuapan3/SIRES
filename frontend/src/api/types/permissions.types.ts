@@ -24,9 +24,7 @@ export interface Role {
 }
 
 export interface PermissionCatalogResponse {
-  total: number;
   permissions: Permission[];
-  by_category: Record<string, Permission[]>;
 }
 
 export interface RolesListResponse {
@@ -90,17 +88,19 @@ export interface PermissionResponse {
 }
 
 /**
- * User permission override
- * Allows/denies specific permissions per user
+ * User permission override - Nomenclatura del backend
+ *
+ * Permite/deniega permisos específicos por usuario (excepciones a roles)
+ *
+ * GET /api/v1/permissions/users/:id/overrides
  */
 export interface UserPermissionOverride {
   id_user_permission_override: number;
-  permission_code: string;
-  permission_name: string;
+  permission_code: string; // ej: "expedientes:delete"
+  permission_description: string; // Descripción del permiso
   effect: "ALLOW" | "DENY";
-  expires_at: string | null;
-  created_by: string;
-  created_at: string;
+  expires_at: string | null; // ISO datetime o null (sin expiración)
+  is_expired: boolean; // TRUE si ya expiró
 }
 
 /**
@@ -123,23 +123,42 @@ export interface UserOverridesResponse {
 }
 
 /**
- * Effective permission for a user
- * Result of merging role permissions + overrides
+ * Override simplificado para permisos efectivos
+ * Viene en GET /api/v1/permissions/users/:id/effective
  */
-export interface EffectivePermission {
-  code: string;
-  name: string;
-  source: "ROLE" | "OVERRIDE_ALLOW" | "OVERRIDE_DENY";
-  role_name?: string; // If source is ROLE
-  expires_at?: string; // If source is OVERRIDE_*
+export interface EffectivePermissionOverride {
+  permission_code: string;
+  effect: "ALLOW" | "DENY";
+  expires_at: string | null;
+  is_expired: boolean;
+}
+
+/**
+ * Rol con información completa (para permisos efectivos)
+ */
+export interface EffectivePermissionRole {
+  id_rol: number;
+  rol: string; // Nombre del rol
+  desc_rol: string;
+  is_primary: boolean;
 }
 
 /**
  * Response from get user effective permissions
  * GET /api/v1/permissions/users/:userId/effective
+ *
+ * Retorna:
+ * - permissions: Array de códigos de permisos (strings simples)
+ * - is_admin: Si el usuario tiene rol de admin
+ * - roles: Roles asignados (con is_primary)
+ * - landing_route: Ruta inicial del usuario
+ * - overrides: Overrides activos (ALLOW/DENY)
  */
 export interface UserEffectivePermissionsResponse {
   user_id: number;
-  permissions: EffectivePermission[];
-  overrides_count: number;
+  permissions: string[]; // Array de códigos: ["expedientes:read", "consultas:create", ...]
+  is_admin: boolean;
+  roles: EffectivePermissionRole[];
+  landing_route: string;
+  overrides: EffectivePermissionOverride[];
 }
