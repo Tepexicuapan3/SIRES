@@ -4,7 +4,7 @@ import type {
   LoginRequest,
   LoginResponse,
   RefreshTokenResponse,
-  Usuario,
+  AuthUser,
   RequestResetCodeRequest,
   VerifyResetCodeRequest,
   VerifyResetCodeResponse,
@@ -16,23 +16,11 @@ import type {
 
 /**
  * Implementación de la API de autenticación
- *
- * Nota: MSW interceptará automáticamente las llamadas cuando esté activo en modo desarrollo/testing.
- * No necesitamos lógica condicional - MSW maneja los mocks a nivel de red.
  */
+
 const authAPI: IAuthAPI = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>("/auth/login", data);
-    return response.data;
-  },
-
-  completeOnboarding: async (
-    data: CompleteOnboardingRequest,
-  ): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>(
-      "/auth/complete-onboarding",
-      data,
-    );
     return response.data;
   },
 
@@ -40,15 +28,8 @@ const authAPI: IAuthAPI = {
     await apiClient.post("/auth/logout");
   },
 
-  refreshToken: async (): Promise<RefreshTokenResponse> => {
-    // With HttpOnly cookies, refresh token is sent automatically via cookie
-    const response =
-      await apiClient.post<RefreshTokenResponse>("/auth/refresh");
-    return response.data;
-  },
-
-  getCurrentUser: async (): Promise<Usuario> => {
-    const response = await apiClient.get<Usuario>("/auth/me");
+  getCurrentUser: async (): Promise<AuthUser> => {
+    const response = await apiClient.get<AuthUser>("/auth/me");
     return response.data;
   },
 
@@ -61,27 +42,51 @@ const authAPI: IAuthAPI = {
     }
   },
 
+  refreshToken: async (): Promise<RefreshTokenResponse> => {
+    const response = await apiClient.post<RefreshTokenResponse>(
+      "/auth/refresh"
+    );
+    return response.data;
+  },
+
+  /**
+   * Onboarding (Primer login)
+   */
+
+  completeOnboarding: async (
+    data: CompleteOnboardingRequest
+  ): Promise<LoginResponse> => {
+    const response = await apiClient.post<LoginResponse>(
+      "/auth/complete-onboarding",
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Reseteo de contraseña
+   */
+
   requestResetCode: async (data: RequestResetCodeRequest): Promise<void> => {
     await apiClient.post("/auth/request-reset-code", data);
   },
 
   verifyResetCode: async (
-    data: VerifyResetCodeRequest,
+    data: VerifyResetCodeRequest
   ): Promise<VerifyResetCodeResponse> => {
     const response = await apiClient.post<VerifyResetCodeResponse>(
       "/auth/verify-reset-code",
-      data,
+      data
     );
     return response.data;
   },
 
   resetPassword: async (
-    data: ResetPasswordRequest,
+    data: ResetPasswordRequest
   ): Promise<ResetPasswordResponse> => {
-    // With HttpOnly cookies, reset_token comes from cookie automatically
     const response = await apiClient.post<ResetPasswordResponse>(
       "/auth/reset-password",
-      { new_password: data.new_password },
+      { new_password: data.new_password }
     );
     return response.data;
   },

@@ -11,17 +11,9 @@
  * User entity - Nomenclatura del backend (MySQL)
  *
  * Representa un usuario del sistema con datos básicos.
- * Este tipo mapea 1:1 con la respuesta de GET /api/v1/users
- *
- * CAMPOS CLAVE:
- * - paterno/materno: Apellidos (nombres cortos en BD)
- * - expediente: Número de expediente (no "numero_expediente")
- * - id_clin: Foreign Key a cat_clinicas (puede ser NULL)
- * - est_usuario: Estado ("A"=Activo, "B"=Baja)
- * - last_conexion: Última sesión (no "ultimo_acceso")
- * - rol_primario: Nombre del rol primario (viene del JOIN con users_roles)
+ * Base común para AuthUser y User (CRUD).
  */
-export interface User {
+export interface BaseUser {
   id_usuario: number;
   usuario: string; // Username (ej: "jperez")
   nombre: string;
@@ -30,9 +22,18 @@ export interface User {
   expediente: string | null; // Número de expediente
   id_clin: number | null; // FK a cat_clinicas (puede ser NULL)
   correo: string;
+  primary_role?: string; // Nombre del rol primario (ej: "MEDICO")
+}
+
+/**
+ * User entity para CRUD (Listados y Detalle)
+ * Extiende BaseUser con campos específicos de administración.
+ *
+ * Este tipo mapea 1:1 con la respuesta de GET /api/v1/users
+ */
+export interface User extends BaseUser {
   est_usuario: "A" | "B"; // A=Activo, B=Baja
   last_conexion: string | null; // Última sesión (timestamp)
-  rol_primario?: string; // Nombre del rol primario (ej: "MEDICO")
 }
 
 /**

@@ -7,6 +7,7 @@ import type {
 
 import { env } from "@/config/env";
 import { getCookie } from "@/lib/utils";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Cliente Axios configurado para la API de SIRES
@@ -58,6 +59,9 @@ apiClient.interceptors.request.use(
  * - Maneja errores globalmente
  * - Intenta refresh automático en 401
  * - Redirige a login si la sesión expiró
+ *
+ * IMPORTANTE: Este interceptor PRESERVA la estructura AxiosError original
+ * para que TanStack Query y los hooks puedan acceder a error.response.data.code
  */
 apiClient.interceptors.response.use(
   (response) => response,
@@ -66,24 +70,22 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    const apiError = {
-      code:
-        ((error.response?.data as Record<string, unknown>)?.code as string) ||
-        "UNKNOWN_ERROR",
-      message:
-        ((error.response?.data as Record<string, unknown>)
-          ?.message as string) || "Ocurrió un error inesperado",
-      status: error.response?.status || 500,
-    };
-
-    // Si el error 401 viene de login, logout o refresh, NO reintentar
-    const noRetryEndpoints = ["/auth/login", "/auth/logout", "/auth/refresh"];
+    // Si el error 401 viene de login, logout, refresh o reset-password, NO reintentar
+    // Razón: reset-password usa un token temporal sin refresh token asociado
+    const noRetryEndpoints = [
+      "/auth/login",
+      "/auth/logout",
+      "/auth/refresh",
+      "/auth/reset-password",
+      "/auth/complete-onboarding",
+    ];
     const shouldNotRetry = noRetryEndpoints.some((endpoint) =>
       originalRequest.url?.includes(endpoint),
     );
 
     if (shouldNotRetry) {
-      return Promise.reject(apiError);
+      // CRÍTICO: Rechazar con el error original de Axios para preservar error.response.data
+      return Promise.reject(error);
     }
 
     // Si es error 401 (token vencido) y no estamos reintentando ya
@@ -104,13 +106,17 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch {
         // Refresh falló - sesión expirada
-        // Limpiar estado local y redirigir a login
-        window.location.href = "/login?expired=true";
-        return Promise.reject({ ...apiError, code: "SESSION_EXPIRED" });
+        // Notificar al store para que la UI maneje la redirección suave
+        useAuthStore.getState().setSessionExpired(true);
+        useAuthStore.getState().logout();
+        
+        // Rechazar con el error original para mantener consistencia
+        return Promise.reject(error);
       }
     }
 
-    return Promise.reject(apiError);
+    // Para todos los demás errores, rechazar con el error original de Axios
+    return Promise.reject(error);
   },
 );
 

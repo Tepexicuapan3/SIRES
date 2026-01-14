@@ -82,38 +82,43 @@ const PlaceholderPage = lazy(
   () => import("@/components/shared/PlaceholderPage"),
 );
 
+import { RootLayout } from "@/components/layouts/RootLayout";
+
 export const router = createBrowserRouter([
   {
-    path: "/",
-    element: <Navigate to="/dashboard" replace />,
-  },
-  {
-    path: "/login",
-    element: (
-      <SuspenseWrapper>
-        <LoginPage />
-      </SuspenseWrapper>
-    ),
-  },
-  // Ruta de Onboarding
-  {
-    path: "/onboarding",
-    element: (
-      <ProtectedRoute>
-        <SuspenseWrapper>
-          <OnboardingPage />
-        </SuspenseWrapper>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    // Rutas del sistema
-    element: (
-      <ProtectedRoute>
-        <MainLayout />
-      </ProtectedRoute>
-    ),
+    element: <RootLayout />,
     children: [
+      {
+        path: "/",
+        element: <Navigate to="/dashboard" replace />,
+      },
+      {
+        path: "/login",
+        element: (
+          <SuspenseWrapper>
+            <LoginPage />
+          </SuspenseWrapper>
+        ),
+      },
+      // Ruta de Onboarding
+      {
+        path: "/onboarding",
+        element: (
+          <ProtectedRoute>
+            <SuspenseWrapper>
+              <OnboardingPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        // Rutas del sistema
+        element: (
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        ),
+        children: [
       {
         path: "/dashboard",
         element: <DashboardPage />,
@@ -515,5 +520,7 @@ export const router = createBrowserRouter([
   {
     path: "*",
     element: <Navigate to="/dashboard" replace />,
+  },
+    ],
   },
 ]);

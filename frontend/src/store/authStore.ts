@@ -1,25 +1,24 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { Usuario } from "@api/types/auth.types";
+import { AuthUser } from "@api/types/auth.types";
 
 interface AuthState {
-  // Estado - Ya no almacenamos tokens (están en HttpOnly cookies)
-  user: Usuario | null;
+  // Estado
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSessionExpired: boolean; // Nuevo flag para disparar redirección suave
 
   // Acciones
-  setAuth: (user: Usuario) => void;
-  updateUser: (user: Partial<Usuario>) => void;
+  setAuth: (user: AuthUser) => void;
+  updateUser: (user: Partial<AuthUser>) => void;
   setLoading: (loading: boolean) => void;
+  setSessionExpired: (expired: boolean) => void; // Acción para client.ts
   logout: () => void;
 }
 
 /**
  * Store global de autenticación
- *
- * IMPORTANTE: Los tokens JWT están en HttpOnly cookies (no accesibles desde JS)
- * Este store solo mantiene los datos del usuario para la UI
  */
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -28,22 +27,17 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isSessionExpired: false,
 
-      /**
-       * Setear autenticación después de login exitoso
-       * Los tokens ya están en cookies HttpOnly (seteados por el backend)
-       */
       setAuth: (user) => {
         set({
           user,
           isAuthenticated: true,
           isLoading: false,
+          isSessionExpired: false,
         });
       },
 
-      /**
-       * Actualizar datos del usuario
-       */
       updateUser: (userData) => {
         const currentUser = get().user;
         if (currentUser) {
@@ -53,20 +47,16 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      /**
-       * Control manual de estado de carga
-       */
       setLoading: (loading) => set({ isLoading: loading }),
 
-      /**
-       * Logout - Limpia el estado local
-       * NOTA: El backend elimina las cookies en /auth/logout
-       */
+      setSessionExpired: (expired) => set({ isSessionExpired: expired }),
+
       logout: () => {
         set({
           user: null,
           isAuthenticated: false,
           isLoading: false,
+          isSessionExpired: false, // Resetear flag al salir voluntariamente
         });
       },
     }),
@@ -74,9 +64,9 @@ export const useAuthStore = create<AuthState>()(
       name: "sires-auth-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        // Solo persistir datos del usuario (NO tokens - están en cookies)
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        // No persistimos isSessionExpired, queremos que se resetee al recargar
       }),
     },
   ),
