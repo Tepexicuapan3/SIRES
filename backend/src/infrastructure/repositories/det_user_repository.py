@@ -197,15 +197,16 @@ class DetUserRepository:
         finally:
             close_db(conn, cursor)
 
-    def create_det_user(self, id_usuario: int, expediente: str, must_change_password: bool, created_by: int) -> bool:
+    def create_det_user(self, id_usuario: int, must_change_password: bool) -> bool:
         """
         Crea el registro de detalles de usuario (det_usuarios).
         
+        IMPORTANTE: det_usuarios NO tiene campos de auditoría (usr_alta/fch_alta).
+        La auditoría se maneja en sy_usuarios.
+        
         Args:
             id_usuario: ID del usuario en sy_usuarios
-            expediente: Número de expediente
             must_change_password: Si el usuario debe cambiar su password
-            created_by: ID del usuario que crea el registro
             
         Returns:
             True si se creó correctamente
@@ -218,11 +219,17 @@ class DetUserRepository:
         try:
             cambiar_clave = 'T' if must_change_password else 'F'
             
+            # Campos requeridos según estructura de det_usuarios:
+            # - terminos_acept: 'F' (no aceptó aún)
+            # - cambiar_clave: 'T' o 'F' según parámetro
+            # - last_conexion: fecha inicial (NOW())
+            # - act_conexion: fecha inicial (NOW())
+            # - intentos_fallidos: 0 (default)
             cursor.execute("""
                 INSERT INTO det_usuarios 
-                (id_usuario, expediente, terminos_acept, cambiar_clave, intentos_fallidos, usr_alta, fch_alta)
-                VALUES (%s, %s, 'F', %s, 0, %s, NOW())
-            """, (id_usuario, expediente, cambiar_clave, created_by))
+                (id_usuario, terminos_acept, cambiar_clave, last_conexion, act_conexion, intentos_fallidos)
+                VALUES (%s, 'F', %s, NOW(), NOW(), 0)
+            """, (id_usuario, cambiar_clave))
             
             conn.commit()
             return True

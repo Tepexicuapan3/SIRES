@@ -95,6 +95,10 @@ class AuthorizationService:
         """
         Verifica si un usuario tiene un permiso específico.
         
+        IMPORTANTE: Admin bypass SOLO aplica si no tiene DENY overrides.
+        Si permissions=["*"], tiene acceso total (admin sin restricciones).
+        Si permissions es lista explícita, significa que tiene DENY overrides aplicados.
+        
         Args:
             user_id: ID del usuario
             required_permission: Código del permiso (ej: "expedientes:delete")
@@ -104,10 +108,11 @@ class AuthorizationService:
         """
         user_perms = self.get_user_permissions(user_id)
         
-        # Admin bypass
-        if user_perms["is_admin"]:
+        # Admin bypass SOLO si no tiene overrides (permissions = ["*"])
+        if user_perms["is_admin"] and user_perms["permissions"] == ["*"]:
             return True
         
+        # Verificar contra lista de permisos (incluye admins con DENY overrides)
         return required_permission in user_perms["permissions"]
 
     def has_any_permission(self, user_id: int, required_permissions: List[str]) -> bool:
@@ -124,7 +129,8 @@ class AuthorizationService:
         """
         user_perms = self.get_user_permissions(user_id)
         
-        if user_perms["is_admin"]:
+        # Admin bypass SOLO si no tiene DENY overrides
+        if user_perms["is_admin"] and user_perms["permissions"] == ["*"]:
             return True
         
         return any(perm in user_perms["permissions"] for perm in required_permissions)
@@ -143,7 +149,8 @@ class AuthorizationService:
         """
         user_perms = self.get_user_permissions(user_id)
         
-        if user_perms["is_admin"]:
+        # Admin bypass SOLO si no tiene DENY overrides
+        if user_perms["is_admin"] and user_perms["permissions"] == ["*"]:
             return True
         
         user_perm_set = set(user_perms["permissions"])
@@ -196,7 +203,7 @@ class AuthorizationService:
         Args:
             user_id: Si se especifica, solo invalida ese usuario. 
                      Si es None, limpia TODOS los permisos cacheados.
-                     
+                    
         Comportamiento:
             - Si user_id especificado: DELETE user_permissions:{user_id}
             - Si user_id=None: DELETE user_permissions:* (todos los usuarios)

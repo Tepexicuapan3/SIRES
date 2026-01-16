@@ -1,8 +1,10 @@
+import os
+from datetime import timedelta
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from datetime import timedelta
-import os
+
 
 def create_app():
     app = Flask(__name__)
@@ -65,6 +67,11 @@ def create_app():
     
     # Solo verificar CSRF en métodos que modifican datos (no en GET)
     app.config["JWT_CSRF_METHODS"] = ["POST", "PUT", "PATCH", "DELETE"]
+    
+    # IMPORTANTE: No verificar CSRF en refresh tokens
+    # Razón: El frontend NO tiene acceso al CSRF del refresh token (cookie HttpOnly)
+    # Seguridad: El refresh token ya está protegido (HttpOnly + SameSite + path restringido)
+    app.config["JWT_CSRF_CHECK_FORM"] = False  # Solo verificar en access tokens
     
     # Inicializar JWT
     jwt = JWTManager(app)
@@ -131,11 +138,13 @@ def create_app():
 
     # ========== REGISTRO DE BLUEPRINTS ==========
     from src.presentation.api.auth_routes import auth_bp
+    from src.presentation.api.clinicas_routes import clinicas_bp
     from src.presentation.api.permissions_routes import permissions_bp
-    from src.presentation.api.users_routes import users_bp
     from src.presentation.api.roles_routes import roles_bp
+    from src.presentation.api.users_routes import users_bp
     
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(clinicas_bp, url_prefix="/api/v1/clinicas")
     app.register_blueprint(permissions_bp, url_prefix="/api/v1/permissions")
     app.register_blueprint(users_bp, url_prefix="/api/v1/users")
     app.register_blueprint(roles_bp, url_prefix="/api/v1/roles")

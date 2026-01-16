@@ -7,29 +7,32 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { cn } from "@/lib/utils";
+import { useSidebarStore } from "@/store/sidebarStore";
 
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 
+// Contexto simplificado solo para props locales y estado mobile (que es derivado)
 type SidebarContext = {
   state: "expanded" | "collapsed";
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  openMobile: boolean;
-  setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
-  toggleSidebar: () => void;
-  sidebarRef: React.RefObject<HTMLDivElement | null>;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
 
-function useSidebar() {
+function useSidebarContext() {
   const context = React.useContext(SidebarContext);
   if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.");
+    throw new Error("useSidebarContext must be used within a SidebarProvider.");
   }
   return context;
+}
+
+// Helper para acceder al store + contexto de forma unificada
+function useSidebar() {
+  const store = useSidebarStore();
+  const context = useSidebarContext();
+  return { ...store, ...context };
 }
 
 const SidebarProvider = React.forwardRef<
@@ -52,23 +55,14 @@ const SidebarProvider = React.forwardRef<
     },
     ref,
   ) => {
-    const [openMobile, setOpenMobile] = React.useState(false);
-    const [_open, _setOpen] = React.useState(defaultOpen);
-    const open = openProp ?? _open;
-    const setOpen = React.useCallback(
-      (value: boolean | ((value: boolean) => boolean)) => {
-        const openState = typeof value === "function" ? value(open) : value;
-        if (setOpenProp) {
-          setOpenProp(openState);
-        } else {
-          _setOpen(openState);
-        }
-      },
-      [setOpenProp, open],
-    );
-
-    // Ref para medir el ancho real del sidebar
-    const sidebarRef = React.useRef<HTMLDivElement>(null);
+    const store = useSidebarStore();
+    
+    // Sincronizar props controladas si existen
+    React.useEffect(() => {
+      if (openProp !== undefined) {
+        store.setOpen(openProp);
+      }
+    }, [openProp]);
 
     // Detección reactiva de mobile
     const [isMobile, setIsMobile] = React.useState(false);
@@ -80,35 +74,14 @@ const SidebarProvider = React.forwardRef<
       return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    const toggleSidebar = React.useCallback(() => {
-      return isMobile
-        ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open);
-    }, [isMobile, setOpen, setOpenMobile]);
-
-    const state = open ? "expanded" : "collapsed";
+    const state = store.isOpen ? "expanded" : "collapsed";
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({
         state,
-        open,
-        setOpen,
         isMobile,
-        openMobile,
-        setOpenMobile,
-        toggleSidebar,
-        sidebarRef,
       }),
-      [
-        state,
-        open,
-        setOpen,
-        isMobile,
-        openMobile,
-        setOpenMobile,
-        toggleSidebar,
-        sidebarRef,
-      ],
+      [state, isMobile]
     );
 
     return (
@@ -155,37 +128,16 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile, sidebarRef } =
-      useSidebar();
-
-    // Combinar el ref externo con el ref del contexto
-    const combinedRef = React.useCallback(
-      (node: HTMLDivElement | null) => {
-        // Asignar al ref del contexto
-        if (sidebarRef) {
-          (
-            sidebarRef as React.MutableRefObject<HTMLDivElement | null>
-          ).current = node;
-        }
-        // Asignar al ref externo si existe
-        if (typeof ref === "function") {
-          ref(node);
-        } else if (ref) {
-          (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
-        }
-      },
-      [ref, sidebarRef],
-    );
+    const { isMobile, state, isOpenMobile, setOpenMobile } = useSidebar();
 
     if (collapsible === "none") {
       return (
         <div
           className={cn(
-            // Width fijo de 16rem
-            "flex h-full w-[16rem] flex-col bg-sidebar text-sidebar-foreground",
+            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
             className,
           )}
-          ref={combinedRef}
+          ref={ref}
           role="navigation"
           {...props}
         >
@@ -199,18 +151,16 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "fixed inset-0 z-50 bg-black/50 transition-opacity",
-            openMobile ? "opacity-100" : "pointer-events-none opacity-0",
+            isOpenMobile ? "opacity-100" : "pointer-events-none opacity-0",
           )}
           onClick={() => setOpenMobile(false)}
-          aria-hidden={!openMobile}
+          aria-hidden={!isOpenMobile}
         >
           <div
-            ref={combinedRef}
             className={cn(
-              // Width fijo de 18rem para mobile
-              "fixed inset-y-0 z-50 flex h-full w-[18rem] flex-col bg-sidebar text-sidebar-foreground transition-transform",
+              "fixed inset-y-0 z-50 flex h-full w-[--sidebar-width-mobile] flex-col bg-sidebar text-sidebar-foreground transition-transform",
               side === "left" ? "left-0" : "right-0",
-              openMobile
+              isOpenMobile
                 ? "translate-x-0"
                 : side === "left"
                   ? "-translate-x-full"
@@ -218,6 +168,7 @@ const Sidebar = React.forwardRef<
               className,
             )}
             onClick={(e) => e.stopPropagation()}
+            ref={ref}
             role="navigation"
             {...props}
           >
@@ -229,16 +180,14 @@ const Sidebar = React.forwardRef<
 
     return (
       <div
-        ref={combinedRef}
+        ref={ref}
         className={cn(
-          // Width fijo de 16rem (256px)
-          "fixed inset-y-0 z-10 hidden h-svh w-[16rem] flex-col bg-sidebar text-sidebar-foreground md:flex",
-          // Animación suave con easing para entrada/salida
+          // Z-40 para estar encima del Header (Z-20)
+          "fixed inset-y-0 z-40 hidden h-svh w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground md:flex",
           "transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
           side === "left"
             ? "left-0 border-r border-sidebar-border"
             : "right-0 border-l border-sidebar-border",
-          // Cuando está collapsed, mover fuera de la pantalla
           state === "collapsed" &&
             (side === "left" ? "-translate-x-full" : "translate-x-full"),
           className,
@@ -536,48 +485,25 @@ const SidebarMenuSubButton = React.forwardRef<
 });
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton";
 
-/**
- * SidebarInset - Contenedor del contenido principal
- *
- * Este componente usa el contexto del sidebar para aplicar el margin-left
- * correcto basado en el ancho REAL del sidebar (medido con ref).
- * Esto evita gaps cuando el sidebar tiene padding interno.
- */
 const SidebarInset = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"main">
 >(({ className, style, ...props }, ref) => {
-  const { state, isMobile, sidebarRef } = useSidebar();
-  const [sidebarWidth, setSidebarWidth] = React.useState(0);
-
-  // Medir el ancho real del sidebar cuando cambia el estado o el ref
-  React.useEffect(() => {
-    const measureSidebar = () => {
-      if (sidebarRef?.current && !isMobile && state === "expanded") {
-        const width = sidebarRef.current.getBoundingClientRect().width;
-        setSidebarWidth(width);
-      } else {
-        setSidebarWidth(0);
-      }
-    };
-
-    measureSidebar();
-
-    // Re-medir en resize
-    window.addEventListener("resize", measureSidebar);
-    return () => window.removeEventListener("resize", measureSidebar);
-  }, [sidebarRef, state, isMobile]);
-
+  const { state } = useSidebar();
+  
   return (
     <main
       ref={ref}
       style={{
-        marginLeft: sidebarWidth > 0 ? `${sidebarWidth}px` : "0",
+        // Aplicar margen directamente con style para garantizar que funcione
+        marginLeft: state === "expanded" ? SIDEBAR_WIDTH : "0",
         transition: "margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1)",
         ...style,
       }}
       className={cn(
         "relative flex min-h-svh flex-1 flex-col bg-app",
+        // En mobile el margen siempre es 0
+        "ml-0", 
         className,
       )}
       {...props}

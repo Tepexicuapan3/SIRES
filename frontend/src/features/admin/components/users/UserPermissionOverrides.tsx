@@ -42,7 +42,7 @@ import {
   useRemoveUserOverride,
   useUserEffectivePermissions,
   usePermissionsCatalog,
-} from "@features/admin/hooks";
+} from "../../hooks/useAdminPermissions";
 import type { UserPermissionOverride } from "@api/types/permissions.types";
 
 /**
@@ -117,23 +117,40 @@ export function UserPermissionOverrides({
   const removeOverrideMutation = useRemoveUserOverride(userId);
 
   // ============================================================
-  // PERMISOS EFECTIVOS - Separados por tipo
+  // COMPUTED VALUES
   // ============================================================
 
   /**
-   * Permisos concedidos (ROLE + OVERRIDE_ALLOW)
+   * Permisos efectivos del usuario
+   *
+   * NOTA: El backend retorna:
+   * - permissions: string[] (códigos simples)
+   * - overrides: Array con { permission_code, effect, ... }
+   *
+   * Para mostrar DENY, usamos los overrides directamente
    */
+
+  /**
+   * Permisos concedidos (de roles, sin DENYs)
+   * Filtramos los que tienen override DENY
+   */
+  const deniedCodes = new Set(
+    effectivePermissions?.overrides
+      .filter((o) => o.effect === "DENY" && !o.is_expired)
+      .map((o) => o.permission_code) || [],
+  );
+
   const grantedPermissions =
     effectivePermissions?.permissions.filter(
-      (p) => p.source !== "OVERRIDE_DENY",
+      (code) => !deniedCodes.has(code),
     ) || [];
 
   /**
-   * Permisos denegados (OVERRIDE_DENY)
+   * Permisos denegados (OVERRIDE_DENY activos)
    */
   const deniedPermissions =
-    effectivePermissions?.permissions.filter(
-      (p) => p.source === "OVERRIDE_DENY",
+    effectivePermissions?.overrides.filter(
+      (o) => o.effect === "DENY" && !o.is_expired,
     ) || [];
 
   // ============================================================
@@ -555,14 +572,14 @@ export function UserPermissionOverrides({
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
                   {grantedPermissions.length > 0 ? (
-                    grantedPermissions.map((permission) => (
+                    grantedPermissions.map((code) => (
                       <div
-                        key={permission.code}
+                        key={code}
                         className="p-2 bg-status-stable/10 border border-status-stable/30 rounded text-sm"
                       >
-                        <code className="font-mono">{permission.code}</code>
+                        <code className="font-mono">{code}</code>
                         <div className="text-xs text-txt-muted mt-1">
-                          Origen: {permission.source}
+                          De roles asignados
                         </div>
                       </div>
                     ))
@@ -582,12 +599,14 @@ export function UserPermissionOverrides({
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
                   {deniedPermissions.length > 0 ? (
-                    deniedPermissions.map((permission) => (
+                    deniedPermissions.map((override) => (
                       <div
-                        key={permission.code}
+                        key={override.permission_code}
                         className="p-2 bg-status-critical/10 border border-status-critical/30 rounded text-sm"
                       >
-                        <code className="font-mono">{permission.code}</code>
+                        <code className="font-mono">
+                          {override.permission_code}
+                        </code>
                         <div className="text-xs text-txt-muted mt-1">
                           Override DENY
                         </div>

@@ -67,7 +67,7 @@ class AssignRolesToUserUseCase:
 
         # Validación: todos los roles existen y están activos
         for role_id in role_ids:
-            role = self.role_repo.get_role_by_id(role_id)
+            role = self.role_repo.get_by_id(role_id)
             if not role:
                 return None, "ROLE_NOT_FOUND"
 

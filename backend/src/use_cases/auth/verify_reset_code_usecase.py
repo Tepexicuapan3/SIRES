@@ -1,4 +1,5 @@
 from datetime import timedelta
+
 from flask_jwt_extended import create_access_token
 from src.infrastructure.repositories.user_repository import UserRepository
 from src.use_cases.auth.otp_service import OTPService
@@ -48,10 +49,12 @@ class VerifyResetCodeUseCase:
 
         # JWT temporal para el flujo de password reset
         # (identity DEBE ser string en flask-jwt-extended 4.x)
+        # TTL: 10 minutos (balance entre seguridad y UX)
+        # Razón: Usuario necesita tiempo para pensar contraseña segura
         reset_token = create_access_token(
             identity=str(user["id_usuario"]),
             additional_claims={"scope": "password_reset"},
-            expires_delta=timedelta(minutes=5)
+            expires_delta=timedelta(minutes=10)
         )
 
         # Éxito - retorna el token de reset

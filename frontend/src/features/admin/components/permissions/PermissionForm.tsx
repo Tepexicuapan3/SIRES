@@ -42,7 +42,7 @@ import {
 import {
   useCreatePermission,
   useUpdatePermission,
-} from "@/features/admin/hooks";
+} from "../../hooks/useAdminPermissions";
 import type { PermissionResponse } from "@/api/types/permissions.types";
 import { toast } from "sonner";
 

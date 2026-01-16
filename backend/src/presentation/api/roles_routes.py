@@ -156,15 +156,27 @@ def get_all_roles():
 @requires_permission("roles:read")
 def get_role_by_id(role_id: int):
     """
-    Obtiene detalle de un rol específico.
+    Obtiene detalle de un rol específico CON sus permisos asignados.
     Requiere permiso: roles:read
     
     Response 200:
         {
-            "id_rol": 5,
-            "rol": "ENFERMERIA",
-            "desc_rol": "Personal de enfermería",
-            ...
+            "role": {
+                "id_rol": 5,
+                "rol": "RECEPCION",
+                "desc_rol": "OPCIONES DE RECEPCION",
+                ...
+            },
+            "permissions": [
+                {
+                    "id_permission": 10,
+                    "code": "citas:read",
+                    "description": "Ver citas",
+                    "category": "Citas"
+                },
+                ...
+            ],
+            "permissions_count": 9
         }
     
     Response 404:
@@ -180,7 +192,17 @@ def get_role_by_id(role_id: int):
                 "message": f"Rol con ID {role_id} no encontrado"
             }), 404
         
-        return jsonify(role), 200
+        # Obtener permisos asignados al rol
+        from src.infrastructure.repositories.permission_repository import \
+            PermissionRepository
+        perm_repo = PermissionRepository()
+        permissions = perm_repo.get_permissions_by_role_id(role_id)
+        
+        return jsonify({
+            "role": role,
+            "permissions": permissions,
+            "permissions_count": len(permissions)
+        }), 200
     
     except Exception as e:
         return jsonify({

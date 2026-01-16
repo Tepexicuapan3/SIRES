@@ -8,10 +8,11 @@ Responsabilidades:
 - NO retornar password
 """
 
-from typing import Tuple, Optional, Dict
+from typing import Dict, Optional, Tuple
 
+from src.infrastructure.repositories.det_user_repository import \
+    DetUserRepository
 from src.infrastructure.repositories.user_repository import UserRepository
-from src.infrastructure.repositories.det_user_repository import DetUserRepository
 
 
 class GetUserUseCase:
@@ -37,9 +38,8 @@ class GetUserUseCase:
                 paterno: str,
                 materno: str,
                 expediente: str,
-                curp: str,
+                id_clin: int | None,
                 correo: str,
-                img_perfil: str | None,
                 est_usuario: str,
                 roles: List[str],
                 det_usuario: {
@@ -78,9 +78,8 @@ class GetUserUseCase:
                 "paterno": user["paterno"],
                 "materno": user["materno"],
                 "expediente": user["expediente"],
-                "curp": user["curp"],
+                "id_clin": user.get("id_clin"),
                 "correo": user["correo"],
-                "img_perfil": user.get("img_perfil"),
                 "est_usuario": user["est_usuario"],
                 "roles": roles,
                 "det_usuario": None,

@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDeletePermission } from "@/features/admin/hooks";
+import { useDeletePermission } from "../../hooks/useAdminPermissions";
 import type { PermissionResponse } from "@/api/types/permissions.types";
 import { toast } from "sonner";
 

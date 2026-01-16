@@ -113,10 +113,11 @@ export const MainLayout = () => {
         <main
           id="main-content"
           role="main"
-          className="flex-1 overflow-auto p-4 sm:p-6"
+          className="flex-1 overflow-auto overflow-x-hidden p-4 sm:p-6"
           data-main-content
         >
-          <Suspense fallback={<LoadingSpinner fullScreen={false} />}>
+          {/* Suspense sin spinner para evitar conflicto visual con la barra de progreso superior */}
+          <Suspense fallback={<div className="w-full h-full min-h-[200px]" />}>
             <Outlet />
           </Suspense>
         </main>

@@ -1,7 +1,7 @@
 /**
  * nav-config.ts
  *
- * Configuración centralizada de navegación del sidebar - RBAC 2.0
+ * Configuración centralizada de navegación del sidebar - RBAC
  *
  * Filosofía:
  * - Define toda la estructura de menús en frontend
@@ -10,9 +10,10 @@
  * - Backend valida SIEMPRE (esto es solo para UX)
  *
  * IMPORTANTE:
- * - Roles SIN prefijo "ROL_" (ej: "ADMINISTRADOR", no "ROL_ADMINISTRADOR")
  * - Permisos en formato "categoria:accion" según BD (ej: "usuarios:create")
- * - 7 Áreas Funcionales que agrupan 22 roles del sistema
+ * - Items sin permisos son públicos (pero usuario debe estar autenticado)
+ * - Soporta N niveles de anidamiento (recursivo) - no recomendado más de 3 niveles por UX
+ * - Soporta badges (ej: "Beta", "Nuevo") para destacar items
  */
 
 import {
@@ -42,23 +43,16 @@ import {
 export interface NavItem {
   /** Texto mostrado en el menú */
   title: string;
-  /** URL de navegación (React Router path) */
-  url: string;
+  /** URL de navegación (React Router path). Opcional si es solo un agrupador. */
+  url?: string;
   /** Ícono de Lucide React */
   icon?: LucideIcon;
   /** Permisos requeridos (formato "categoria:accion"). Si está vacío, es público. */
   permissions?: string[];
-  /** Items hijos (submenú) */
-  items?: NavSubItem[];
+  /** Items hijos (submenú recursivo) */
+  items?: NavItem[];
   /** Badge opcional (ej: "Beta", "Nuevo") */
   badge?: string;
-}
-
-export interface NavSubItem {
-  title: string;
-  url: string;
-  /** Permisos requeridos para este sub-item específico */
-  permissions?: string[];
 }
 
 export interface NavSection {
@@ -68,8 +62,6 @@ export interface NavSection {
   items: NavItem[];
   /** Permisos necesarios para ver TODA la sección */
   permissions?: string[];
-  /** Roles necesarios para ver TODA la sección (alternativa a permisos) */
-  roles?: string[];
 }
 
 /**
@@ -90,12 +82,11 @@ export const NAV_CONFIG: NavSection[] = [
   // ========================================================================
   {
     title: "Administración",
-    roles: ["ADMINISTRADOR"],
     items: [
       {
         title: "Panel Admin",
-        url: "/admin",
         icon: Shield,
+        badge: "Nuevo",
         permissions: ["sistema:configurar"],
         items: [
           {
@@ -107,11 +98,6 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Usuarios",
             url: "/admin/usuarios",
             permissions: ["usuarios:read"],
-          },
-          {
-            title: "Crear Usuario",
-            url: "/admin/usuarios/nuevo",
-            permissions: ["usuarios:create"],
           },
           {
             title: "Roles y Permisos",
@@ -127,9 +113,33 @@ export const NAV_CONFIG: NavSection[] = [
       },
       {
         title: "Catálogos",
-        url: "/admin/catalogos",
         icon: BookOpen,
         permissions: ["catalogos:update"],
+        items: [
+          {
+            title: "Especialidades",
+            icon: Users,
+            url: "/admin/catalogos/especialidades",
+            permissions: ["catalogos:update"],
+            items: [
+              {
+                title: "Ver Especialidades",
+                url: "/admin/catalogos/especialidades",
+                permissions: ["catalogos:update"],
+              },
+              {
+                title: "Crear Especialidad",
+                url: "/admin/catalogos/especialidades/nuevo",
+                permissions: ["catalogos:update"],
+              },
+            ],
+          },
+          {
+            title: "Crear Usuario",
+            url: "/admin/usuarios/nuevo",
+            permissions: ["usuarios:create"],
+          },
+        ],
       },
       {
         title: "Configuración",
@@ -151,14 +161,6 @@ export const NAV_CONFIG: NavSection[] = [
   // ========================================================================
   {
     title: "Consultas Médicas",
-    roles: [
-      "MEDICOS",
-      "ESPECIALISTAS",
-      "JEFATURA CLINICA",
-      "VISITADORES",
-      "LICENCIA Y SM21",
-      "HOSP-MEDICO",
-    ],
     items: [
       {
         title: "Consultas",
@@ -238,13 +240,6 @@ export const NAV_CONFIG: NavSection[] = [
   // ========================================================================
   {
     title: "Recepción",
-    roles: [
-      "RECEPCION",
-      "RECOEX",
-      "HOSP-RECEPCION",
-      "URGENCIAS RECEPCION H",
-      "URGENCIAS RECEPCION",
-    ],
     items: [
       {
         title: "Panel Recepción",
@@ -290,7 +285,6 @@ export const NAV_CONFIG: NavSection[] = [
   // ========================================================================
   {
     title: "Urgencias",
-    roles: ["URGENCIAS", "URGENCIAS RECEPCION H"],
     items: [
       {
         title: "Panel Urgencias",
@@ -324,7 +318,6 @@ export const NAV_CONFIG: NavSection[] = [
   // ========================================================================
   {
     title: "Farmacia",
-    roles: ["FARMACIA", "TRANS-RECETA"],
     items: [
       {
         title: "Panel Farmacia",
@@ -358,13 +351,6 @@ export const NAV_CONFIG: NavSection[] = [
   // ========================================================================
   {
     title: "Hospital",
-    roles: [
-      "HOSP-FACTURA",
-      "HOSP-COORDINACION",
-      "HOSP-TRABAJO SOCIAL",
-      "HOSP-RECEPCION",
-      "HOSP-MEDICO",
-    ],
     items: [
       {
         title: "Panel Hospital",
@@ -404,7 +390,6 @@ export const NAV_CONFIG: NavSection[] = [
   // ========================================================================
   {
     title: "Reportes y Estadísticas",
-    roles: ["GERENCIA", "LABORAL"],
     items: [
       {
         title: "Dashboard Gerencial",

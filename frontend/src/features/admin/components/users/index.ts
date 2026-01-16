@@ -1,17 +1,26 @@
 /**
- * Barrel export - Users Components
+ * ============================================
+ * EXPORTS - Componentes de Usuarios
+ * ============================================
  *
- * ARQUITECTURA MODULAR:
- * - UsersPage: Orquestador principal (Container)
- * - UsersList: Tabla de usuarios con búsqueda (Presenter)
- * - UserRolesManager: Gestión de múltiples roles (Presenter)
- * - UserPermissionOverrides: Permisos excepcionales temporales (Presenter)
- *
- * IMPORTACIÓN:
- * import { UsersPage } from "@features/admin/components/users";
+ * Barrel export para facilitar imports de componentes relacionados.
  */
 
+// Componentes principales (integración completa)
 export { UsersPage } from "./UsersPage";
-export { UsersList } from "./UsersList";
+export { UsersTableToolbar } from "./UsersTableToolbar";
+export { UsersDataTable } from "./UsersDataTable";
+
+// Componentes base (primitivos reutilizables)
+export { UserAvatar } from "./UserAvatar";
+export { UserStatusBadge } from "./UserStatusBadge";
+export { UserRoleBadge } from "./UserRoleBadge";
+export { UsersTableSkeleton } from "./UsersTableSkeleton";
+export { UsersTablePagination } from "./UsersTablePagination";
+export { UsersTableRow } from "./UsersTableRow";
+
+// Componentes legacy (mantener para compatibilidad)
+export { UserDetailCard } from "./UserDetailCard";
 export { UserRolesManager } from "./UserRolesManager";
 export { UserPermissionOverrides } from "./UserPermissionOverrides";
+export { UserFormDialog } from "./UserFormDialog";

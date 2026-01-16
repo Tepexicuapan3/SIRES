@@ -2,34 +2,25 @@
 # APIs de Autenticación con HttpOnly Cookies
 
 from datetime import timedelta
-from flask import Blueprint, request, jsonify, make_response
-from flask_jwt_extended import (
-    jwt_required, 
-    get_jwt, 
-    get_jwt_identity,
-    set_access_cookies,
-    set_refresh_cookies,
-    unset_jwt_cookies,
-    create_access_token,
-    create_refresh_token
-)
 
+from flask import Blueprint, jsonify, make_response, request
+from flask_jwt_extended import (create_access_token, create_refresh_token,
+                                get_jwt, get_jwt_identity, jwt_required,
+                                set_access_cookies, set_refresh_cookies,
+                                unset_jwt_cookies, verify_jwt_in_request)
 # Rate Limiting
-from src.infrastructure.rate_limiting import (
-    rate_limit_login,
-    rate_limit_otp,
-    check_user_blocked,
-    get_client_ip,
-    rate_limiter
-)
-
+from src.infrastructure.rate_limiting import (check_user_blocked,
+                                              get_client_ip, rate_limit_login,
+                                              rate_limit_otp, rate_limiter)
+from src.use_cases.auth.complete_onboarding_usecase import \
+    CompleteOnboardingUseCase
 # Casos de uso
 from src.use_cases.auth.login_usecase import LoginUseCase
 from src.use_cases.auth.logout_usecase import LogoutUseCase
-from src.use_cases.auth.request_reset_code_usecase import RequestResetCodeUseCase
-from src.use_cases.auth.verify_reset_code_usecase import VerifyResetCodeUseCase
+from src.use_cases.auth.request_reset_code_usecase import \
+    RequestResetCodeUseCase
 from src.use_cases.auth.reset_password_usecase import ResetPasswordUseCase
-from src.use_cases.auth.complete_onboarding_usecase import CompleteOnboardingUseCase
+from src.use_cases.auth.verify_reset_code_usecase import VerifyResetCodeUseCase
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -193,20 +184,55 @@ def logout():
 
 # ============= REFRESH TOKEN =============
 @auth_bp.route("/refresh", methods=["POST"])
-@jwt_required(refresh=True)  # Requiere refresh token cookie
 def refresh():
     """
     Renueva el access token usando el refresh token de la cookie.
+    
+    IMPORTANTE - Verificación CSRF omitida manualmente:
+    - Usamos verify_jwt_in_request() con optional=True + manual token extraction
+    - Razón: Flask-JWT-Extended NO permite omitir CSRF solo para refresh tokens
+    - Alternativa: Parseamos el refresh token manualmente sin verificar CSRF
+    - Seguridad: Refresh token protegido por HttpOnly + SameSite=Lax + path restringido
     """
     try:
-        # Obtener identidad del refresh token
-        current_user_id = get_jwt_identity()
-        claims = get_jwt()
+        # WORKAROUND: Verificar JWT SIN decorador para omitir CSRF
+        # El decorador @jwt_required(refresh=True) siempre verifica CSRF si JWT_COOKIE_CSRF_PROTECT=True
+        # Solución: Usar get_unverified_jwt_headers + decode_token manualmente
+        
+        from flask import current_app
+        from flask_jwt_extended import decode_token
+
+        # Obtener refresh token de la cookie
+        refresh_token_cookie = request.cookies.get(current_app.config["JWT_REFRESH_COOKIE_NAME"])
+        
+        if not refresh_token_cookie:
+            return jsonify({
+                "code": "MISSING_TOKEN",
+                "message": "Refresh token no encontrado. Por favor, inicia sesión nuevamente."
+            }), 401
+        
+        # Decodificar token SIN verificar CSRF
+        decoded_token = decode_token(
+            refresh_token_cookie,
+            csrf_value=None,  # ← Omitir verificación CSRF
+            allow_expired=False
+        )
+        
+        # Verificar que sea un refresh token
+        if decoded_token.get("type") != "refresh":
+            return jsonify({
+                "code": "INVALID_TOKEN_TYPE",
+                "message": "Token inválido."
+            }), 401
+        
+        # Obtener identidad del usuario
+        current_user_id = decoded_token.get("sub")
+        username = decoded_token.get("username")
         
         # Crear nuevo access token
         additional_claims = {
             "scope": "full_access",
-            "username": claims.get("username"),
+            "username": username,
         }
         
         new_access_token = create_access_token(

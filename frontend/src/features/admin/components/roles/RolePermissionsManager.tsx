@@ -30,19 +30,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   useRole,
-  usePermissionsCatalog,
   useAssignPermissions,
   useRevokePermission,
-} from "@/features/admin/hooks";
+} from "../../hooks/useRoles";
+import { usePermissionsCatalog } from "../../hooks/useAdminPermissions";
 import { toast } from "sonner";
+import type { Permission } from "@/api/types/permissions.types";
 
 interface RolePermissionsManagerProps {
   roleId: number;
@@ -52,7 +52,6 @@ export const RolePermissionsManager = ({
   roleId,
 }: RolePermissionsManagerProps) => {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
 
   const { data: roleData, isLoading: isLoadingRole } = useRole(roleId);
@@ -75,18 +74,22 @@ export const RolePermissionsManager = ({
     );
   }, [catalogData, assignedPermissionIds]);
 
-  // Filtrar por categoría
-  const filteredAvailable = useMemo(() => {
-    if (selectedCategory === "all") return availablePermissions;
-    return availablePermissions.filter((p) => p.category === selectedCategory);
-  }, [availablePermissions, selectedCategory]);
+  // Agrupar permisos disponibles por categoría
+  const permissionsByCategory = useMemo(() => {
+    const grouped: Record<string, Permission[]> = {};
+    availablePermissions.forEach((permission) => {
+      if (!grouped[permission.category]) {
+        grouped[permission.category] = [];
+      }
+      grouped[permission.category].push(permission);
+    });
+    return grouped;
+  }, [availablePermissions]);
 
-  // Categorías únicas
+  // Categorías ordenadas alfabéticamente
   const categories = useMemo(() => {
-    if (!catalogData?.permissions) return [];
-    const cats = new Set(catalogData.permissions.map((p) => p.category));
-    return Array.from(cats).sort();
-  }, [catalogData]);
+    return Object.keys(permissionsByCategory).sort();
+  }, [permissionsByCategory]);
 
   const handleTogglePermission = (permissionId: number) => {
     setSelectedPermissions((prev) =>
@@ -94,6 +97,46 @@ export const RolePermissionsManager = ({
         ? prev.filter((id) => id !== permissionId)
         : [...prev, permissionId],
     );
+  };
+
+  const handleToggleCategory = (category: string) => {
+    const categoryPermissionIds = permissionsByCategory[category].map(
+      (p) => p.id_permission,
+    );
+    const allSelected = categoryPermissionIds.every((id) =>
+      selectedPermissions.includes(id),
+    );
+
+    if (allSelected) {
+      // Deseleccionar todos de esta categoría
+      setSelectedPermissions((prev) =>
+        prev.filter((id) => !categoryPermissionIds.includes(id)),
+      );
+    } else {
+      // Seleccionar todos de esta categoría
+      setSelectedPermissions((prev) => {
+        const newIds = categoryPermissionIds.filter((id) => !prev.includes(id));
+        return [...prev, ...newIds];
+      });
+    }
+  };
+
+  const isCategoryFullySelected = (category: string) => {
+    const categoryPermissionIds =
+      permissionsByCategory[category]?.map((p) => p.id_permission) || [];
+    return (
+      categoryPermissionIds.length > 0 &&
+      categoryPermissionIds.every((id) => selectedPermissions.includes(id))
+    );
+  };
+
+  const isCategoryPartiallySelected = (category: string) => {
+    const categoryPermissionIds =
+      permissionsByCategory[category]?.map((p) => p.id_permission) || [];
+    const selectedCount = categoryPermissionIds.filter((id) =>
+      selectedPermissions.includes(id),
+    ).length;
+    return selectedCount > 0 && selectedCount < categoryPermissionIds.length;
   };
 
   const handleAssignPermissions = async () => {
@@ -146,7 +189,8 @@ export const RolePermissionsManager = ({
               Permisos Asignados
             </CardTitle>
             <CardDescription>
-              Gestiona los permisos del rol {roleData?.role.nom_rol}
+              Gestiona los permisos del rol{" "}
+              {roleData?.role?.desc_rol || "cargando..."}
             </CardDescription>
           </div>
           <Dialog
@@ -159,83 +203,98 @@ export const RolePermissionsManager = ({
                 Asignar Permisos
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
+            <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Asignar Permisos al Rol</DialogTitle>
                 <DialogDescription>
-                  Selecciona los permisos que deseas agregar al rol
+                  Selecciona los permisos que deseas agregar al rol. Los
+                  permisos están agrupados por categoría.
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Filtro por categoría */}
-              <div className="mb-4">
-                <Select
-                  value={selectedCategory}
-                  onValueChange={setSelectedCategory}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las categorías</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {isLoadingCatalog ? (
+                <div className="py-12 text-center">
+                  <p className="text-txt-muted">Cargando permisos...</p>
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="py-12 text-center">
+                  <Shield className="mx-auto mb-4 h-12 w-12 text-txt-muted" />
+                  <p className="text-txt-muted">
+                    Todos los permisos ya están asignados a este rol
+                  </p>
+                </div>
+              ) : (
+                <Accordion type="multiple" className="w-full">
+                  {categories.map((category) => {
+                    const categoryPerms = permissionsByCategory[category];
+                    const isFullySelected = isCategoryFullySelected(category);
+                    const isPartiallySelected =
+                      isCategoryPartiallySelected(category);
 
-              {/* Lista de permisos disponibles */}
-              <div className="space-y-2">
-                {isLoadingCatalog ? (
-                  <p className="text-center text-txt-muted">
-                    Cargando permisos...
-                  </p>
-                ) : filteredAvailable.length === 0 ? (
-                  <p className="text-center text-txt-muted">
-                    {selectedCategory === "all"
-                      ? "Todos los permisos ya están asignados"
-                      : "No hay permisos disponibles en esta categoría"}
-                  </p>
-                ) : (
-                  filteredAvailable.map((permission) => (
-                    <div
-                      key={permission.id_permission}
-                      className="flex items-center space-x-3 rounded-lg border border-line-struct p-3 hover:bg-subtle"
-                    >
-                      <Checkbox
-                        checked={selectedPermissions.includes(
-                          permission.id_permission,
-                        )}
-                        onCheckedChange={() =>
-                          handleTogglePermission(permission.id_permission)
-                        }
-                        id={`perm-${permission.id_permission}`}
-                      />
-                      <label
-                        htmlFor={`perm-${permission.id_permission}`}
-                        className="flex-1 cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <code className="text-sm font-medium text-txt-body">
-                              {permission.code}
-                            </code>
-                            <p className="text-xs text-txt-muted">
-                              {permission.description}
-                            </p>
+                    return (
+                      <AccordionItem key={category} value={category}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-2">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={isFullySelected}
+                                // @ts-ignore - indeterminate es válido pero TypeScript no lo reconoce
+                                indeterminate={isPartiallySelected}
+                                onCheckedChange={() =>
+                                  handleToggleCategory(category)
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <span className="font-semibold text-txt-body">
+                                {category}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className="font-mono text-xs"
+                              >
+                                {categoryPerms.length}
+                              </Badge>
+                            </div>
                           </div>
-                          <Badge variant="outline" className="ml-2">
-                            {permission.category}
-                          </Badge>
-                        </div>
-                      </label>
-                    </div>
-                  ))
-                )}
-              </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-2 pl-4 pt-2">
+                            {categoryPerms.map((permission) => (
+                              <div
+                                key={permission.id_permission}
+                                className="flex items-start space-x-3 rounded-lg border border-line-hairline p-3 hover:bg-subtle transition-colors"
+                              >
+                                <Checkbox
+                                  checked={selectedPermissions.includes(
+                                    permission.id_permission,
+                                  )}
+                                  onCheckedChange={() =>
+                                    handleTogglePermission(
+                                      permission.id_permission,
+                                    )
+                                  }
+                                  id={`perm-${permission.id_permission}`}
+                                />
+                                <label
+                                  htmlFor={`perm-${permission.id_permission}`}
+                                  className="flex-1 cursor-pointer"
+                                >
+                                  <code className="text-sm font-medium text-txt-body">
+                                    {permission.code}
+                                  </code>
+                                  <p className="text-xs text-txt-muted mt-1">
+                                    {permission.description}
+                                  </p>
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              )}
 
               <DialogFooter>
                 <Button

@@ -11,10 +11,11 @@ Responsabilidades:
 
 import secrets
 import string
-from typing import Tuple, Optional, Dict
+from typing import Dict, Optional, Tuple
 
+from src.infrastructure.repositories.det_user_repository import \
+    DetUserRepository
 from src.infrastructure.repositories.user_repository import UserRepository
-from src.infrastructure.repositories.det_user_repository import DetUserRepository
 from src.infrastructure.security.password_hasher import PasswordHasher
 
 
@@ -61,7 +62,7 @@ class CreateUserUseCase:
         nombre: str,
         paterno: str,
         materno: str,
-        curp: str,
+        id_clin: Optional[int],
         correo: str,
         id_rol: int,
         created_by_user_id: int
@@ -75,7 +76,7 @@ class CreateUserUseCase:
             nombre: Nombre(s)
             paterno: Apellido paterno
             materno: Apellido materno
-            curp: CURP (18 chars)
+            id_clin: ID de la clínica (FK a cat_clinicas, puede ser NULL)
             correo: Email válido
             id_rol: ID del rol a asignar
             created_by_user_id: ID del admin que crea el usuario (auditoría)
@@ -109,7 +110,7 @@ class CreateUserUseCase:
                 paterno=paterno,
                 materno=materno,
                 expediente=expediente,
-                curp=curp,
+                id_clin=id_clin,
                 correo=correo,
                 created_by=created_by_user_id
             )
@@ -117,12 +118,12 @@ class CreateUserUseCase:
             if not user_id:
                 return None, "USER_CREATION_FAILED"
             
-            # 5. Crear registro en det_user con must_change_password=1
+            # 5. Crear registro en det_usuarios
+            # Estado inicial: terminos_acept='F', cambiar_clave='T'
+            # Nota: det_usuarios NO tiene campos de auditoría (la auditoría está en sy_usuarios)
             self.det_user_repo.create_det_user(
                 id_usuario=user_id,
-                expediente=expediente,
-                must_change_password=True,
-                created_by=created_by_user_id
+                must_change_password=True
             )
             
             # 6. Asignar rol (is_primary=1 porque es el primer rol)

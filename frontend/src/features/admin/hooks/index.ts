@@ -30,10 +30,19 @@ export {
   useInvalidatePermissionsCache,
 } from "./useAdminPermissions";
 
-// User Multi-Role Management
+// User Management (CRUD + Multi-Role)
 export {
+  useUsers,
+  useUser,
+  useCreateUser,
+  useUpdateUser,
+  useActivateUser,
+  useDeactivateUser,
   useUserRoles,
   useAssignRoles,
   useSetPrimaryRole,
   useRevokeRole,
 } from "./useAdminUsers";
+
+// Clinicas Catalog
+export { useClinics } from "./useClinics";

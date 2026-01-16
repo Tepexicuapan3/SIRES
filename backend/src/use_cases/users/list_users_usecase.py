@@ -8,7 +8,7 @@ Responsabilidades:
 - Incluir información de roles
 """
 
-from typing import Tuple, Optional, Dict, List
+from typing import Dict, List, Optional, Tuple
 
 from src.infrastructure.repositories.user_repository import UserRepository
 
@@ -23,9 +23,7 @@ class ListUsersUseCase:
         self,
         page: int = 1,
         page_size: int = 20,
-        search_query: Optional[str] = None,
-        estado: Optional[str] = None,
-        rol_id: Optional[int] = None
+        filters: Optional[Dict] = None
     ) -> Tuple[Optional[Dict], Optional[str]]:
         """
         Lista usuarios con paginación y filtros opcionales.
@@ -33,9 +31,10 @@ class ListUsersUseCase:
         Args:
             page: Número de página (1-indexed)
             page_size: Tamaño de página (máx 100)
-            search_query: Búsqueda por usuario, nombre, expediente o correo
-            estado: Filtrar por estado ('A'=Activo, 'B'=Baja, None=Todos)
-            rol_id: Filtrar por ID de rol
+            filters: Diccionario con filtros opcionales:
+                - search_query (str): Búsqueda por usuario, nombre, expediente o correo
+                - estado (str): 'A'=Activo, 'B'=Baja, None=Todos
+                - rol_id (int): Filtrar por ID de rol
             
         Returns:
             (result, error_code)
@@ -46,7 +45,7 @@ class ListUsersUseCase:
                 total: int,
                 total_pages: int
               }
-            - error_code: "INVALID_PAGINATION" | "SERVER_ERROR"
+            - error_code: "INVALID_PAGINATION" | "SERVER_ERROR" | "INVALID_ESTADO"
         """
         
         # 1. Validar parámetros de paginación
@@ -56,16 +55,13 @@ class ListUsersUseCase:
         if page_size < 1 or page_size > 100:
             return None, "INVALID_PAGINATION"
         
-        # 2. Construir filtros
-        filters = {}
-        if search_query:
-            filters['search_query'] = search_query
-        if estado:
-            if estado not in ['A', 'B']:
-                return None, "INVALID_ESTADO"
-            filters['estado'] = estado
-        if rol_id:
-            filters['rol_id'] = rol_id
+        # 2. Normalizar filtros
+        filters = filters or {}
+        estado = filters.get('estado')
+        
+        # Validar estado si está presente
+        if estado and estado not in ['A', 'B']:
+            return None, "INVALID_ESTADO"
         
         # 3. Obtener total de registros (para calcular total_pages)
         try:

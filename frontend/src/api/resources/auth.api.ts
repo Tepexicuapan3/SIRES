@@ -1,4 +1,12 @@
+/**
+ * Auth API Resource
+ *
+ * Gestión de autenticación, sesiones y recuperación de cuentas.
+ * Estos endpoints son públicos.
+ */
+
 import apiClient from "@api/client";
+import { AxiosError } from "axios";
 
 import type {
   LoginRequest,
@@ -14,45 +22,116 @@ import type {
   IAuthAPI,
 } from "../types/auth.types";
 
-/**
- * Implementación de la API de autenticación
- */
-
 const authAPI: IAuthAPI = {
+  /**
+   * Iniciar sesión en el sistema.
+   *
+   * @endpoint POST /api/v1/auth/login
+   * @permission Public
+   *
+   * @param data - Credenciales (usuario y clave)
+   * @returns Token, datos de usuario y flag de onboarding
+   * @throws Error si las credenciales son inválidas o la respuesta es malformada
+   */
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>("/auth/login", data);
-    return response.data;
-  },
 
-  logout: async (): Promise<void> => {
-    await apiClient.post("/auth/logout");
-  },
-
-  getCurrentUser: async (): Promise<AuthUser> => {
-    const response = await apiClient.get<AuthUser>("/auth/me");
-    return response.data;
-  },
-
-  verifyToken: async (): Promise<boolean> => {
-    try {
-      await apiClient.get("/auth/verify");
-      return true;
-    } catch {
-      return false;
+    if (!response.data || !response.data.user) {
+      throw new Error(
+        "Respuesta inválida del servidor: Datos de usuario faltantes"
+      );
     }
-  },
 
-  refreshToken: async (): Promise<RefreshTokenResponse> => {
-    const response = await apiClient.post<RefreshTokenResponse>(
-      "/auth/refresh"
-    );
     return response.data;
   },
 
   /**
-   * Onboarding (Primer login)
+   * Cerrar sesión actual.
+   * Invalida el token en el servidor y limpia cookies.
+   *
+   * @endpoint POST /api/v1/auth/logout
+   * @permission Auth (Token válido)
    */
+  logout: async (): Promise<void> => {
+    await apiClient.post("/auth/logout");
+  },
 
+  /**
+   * Obtener datos del usuario autenticado actual.
+   * Se usa para hidratar la sesión al recargar la página.
+   *
+   * @endpoint GET /api/v1/auth/me
+   * @permission Auth (Token válido)
+   *
+   * @returns Datos completos del usuario logueado
+   */
+  getCurrentUser: async (): Promise<AuthUser> => {
+    const response = await apiClient.get<AuthUser>("/auth/me");
+
+    if (!response.data) {
+      throw new Error("No se pudo recuperar la información del usuario actual");
+    }
+
+    return response.data;
+  },
+
+  /**
+   * Verificar validez del token actual.
+   * Útil para guardias de navegación o chequeos periódicos.
+   *
+   * @endpoint GET /api/v1/auth/verify
+   * @permission Auth (Token válido)
+   *
+   * @returns true si el token es válido, false si es 401/403
+   * @throws Error si ocurre un error de red o servidor (500)
+   */
+  verifyToken: async (): Promise<boolean> => {
+    try {
+      await apiClient.get("/auth/verify");
+      return true;
+    } catch (error) {
+      const axiosError = error as AxiosError;
+
+      // Solo retornamos false si es un error de autenticación explícito
+      if (
+        axiosError.response &&
+        (axiosError.response.status === 401 ||
+          axiosError.response.status === 403)
+      ) {
+        return false;
+      }
+
+      // Si es otro error (500, Network Error), lanzamos la excepción
+      throw error;
+    }
+  },
+
+  /**
+   * Renovar el token de acceso usando el refresh token (vía cookies).
+   *
+   * @endpoint POST /api/v1/auth/refresh
+   * @permission Public (Usa Cookie HTTP-Only)
+   */
+  refreshToken: async (): Promise<RefreshTokenResponse> => {
+    const response = await apiClient.post<RefreshTokenResponse>(
+      "/auth/refresh"
+    );
+
+    return response.data;
+  },
+
+  // ===== ONBOARDING =====
+
+  /**
+   * Completar registro inicial (Onboarding).
+   * Cambia contraseña temporal y acepta términos.
+   *
+   * @endpoint POST /api/v1/auth/complete-onboarding
+   * @permission Auth (Token temporal válido)
+   *
+   * @param data - Nueva contraseña y aceptación de términos
+   * @returns Nuevas credenciales definitivas
+   */
   completeOnboarding: async (
     data: CompleteOnboardingRequest
   ): Promise<LoginResponse> => {
@@ -60,17 +139,41 @@ const authAPI: IAuthAPI = {
       "/auth/complete-onboarding",
       data
     );
+
+    if (!response.data || !response.data.user) {
+      throw new Error(
+        "Error en onboarding: No se recibieron las credenciales actualizadas"
+      );
+    }
+
     return response.data;
   },
 
-  /**
-   * Reseteo de contraseña
-   */
+  // ===== RESET PASSWORD =====
 
+  /**
+   * Solicitar código de recuperación de contraseña.
+   * Envía un email con el código OTP.
+   *
+   * @endpoint POST /api/v1/auth/request-reset-code
+   * @permission Public
+   *
+   * @param data - Email del usuario
+   */
   requestResetCode: async (data: RequestResetCodeRequest): Promise<void> => {
     await apiClient.post("/auth/request-reset-code", data);
   },
 
+  /**
+   * Verificar código OTP de recuperación.
+   * Retorna un token temporal para cambiar la contraseña.
+   *
+   * @endpoint POST /api/v1/auth/verify-reset-code
+   * @permission Public
+   *
+   * @param data - Email y Código OTP
+   * @returns Token temporal válido para reset-password
+   */
   verifyResetCode: async (
     data: VerifyResetCodeRequest
   ): Promise<VerifyResetCodeResponse> => {
@@ -78,16 +181,27 @@ const authAPI: IAuthAPI = {
       "/auth/verify-reset-code",
       data
     );
+
     return response.data;
   },
 
+  /**
+   * Establecer nueva contraseña usando token de recuperación.
+   *
+   * @endpoint POST /api/v1/auth/reset-password
+   * @permission Auth (Token de recuperación válido)
+   *
+   * @param data - Nueva contraseña
+   * @returns Auto-login con las nuevas credenciales
+   */
   resetPassword: async (
     data: ResetPasswordRequest
   ): Promise<ResetPasswordResponse> => {
     const response = await apiClient.post<ResetPasswordResponse>(
       "/auth/reset-password",
-      { new_password: data.new_password }
+      data
     );
+
     return response.data;
   },
 };

@@ -1,11 +1,19 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { server } from "./mocks/server";
+
+// Iniciar servidor MSW antes de todos los tests
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
 // Cleanup después de cada test
 afterEach(() => {
   cleanup();
+  server.resetHandlers(); // Resetear handlers para que no se contaminen entre tests
 });
+
+// Cerrar servidor al finalizar
+afterAll(() => server.close());
 
 // Mock de localStorage
 const localStorageMock = (() => {
