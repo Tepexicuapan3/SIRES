@@ -6,14 +6,10 @@
  */
 
 import apiClient from "@api/client";
-import type { Clinica } from "@api/types/clinicas.types";
-
-/**
- * Response del endpoint GET /api/v1/clinicas
- */
-interface ClinicasResponse {
-  clinicas: Clinica[];
-}
+import type {
+  Clinica,
+  ClinicasListResponse,
+} from "@api/schemas/clinicas.schema";
 
 export const clinicasAPI = {
   /**
@@ -24,13 +20,7 @@ export const clinicasAPI = {
    * @throws Error si el backend retorna formato inesperado
    */
   getClinicas: async (): Promise<Clinica[]> => {
-    const response = await apiClient.get<ClinicasResponse>("/clinicas");
-
-    // Validación defensiva - asegurar que el backend retornó el formato esperado
-    if (!response.data || !Array.isArray(response.data.clinicas)) {
-      throw new Error("Formato inválido de respuesta del servidor");
-    }
-
-    return response.data.clinicas;
+    const response = await apiClient.get<ClinicasListResponse>("/clinicas");
+    return response.data.items;
   },
 };
