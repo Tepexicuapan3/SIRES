@@ -6,14 +6,16 @@
 
 import apiClient from "@api/client";
 import type {
+  Permission,
   PermissionCatalogResponse,
-  RolePermissionsResponse,
   AssignPermissionRequest,
-  RevokePermissionRequest,
   AssignPermissionResponse,
+  RevokePermissionRequest,
+  RevokePermissionResponse,
   AddUserOverrideRequest,
+  AddUserOverrideResponse,
   UserOverridesResponse,
-} from "@api/types/permissions.types";
+} from "@api/schemas/permissions.schema";
 
 export const permissionsAPI = {
   /**
@@ -21,14 +23,8 @@ export const permissionsAPI = {
    * Solo admin
    */
   getPermissions: async (): Promise<PermissionCatalogResponse> => {
-    const response = await apiClient.get<PermissionCatalogResponse>(
-      "/permissions",
-    );
-
-    // Validación defensiva
-    if (!response.data || !Array.isArray(response.data.items)) {
-      throw new Error("Invalid permissions catalog response from backend");
-    }
+    const response =
+      await apiClient.get<PermissionCatalogResponse>("/permissions");
 
     return response.data;
   },
@@ -37,10 +33,8 @@ export const permissionsAPI = {
    * Obtiene los permisos de un rol específico
    * Solo admin
    */
-  getRolePermissions: async (
-    roleId: number,
-  ): Promise<RolePermissionsResponse> => {
-    const response = await apiClient.get<RolePermissionsResponse>(
+  getRolePermissions: async (roleId: number): Promise<Permission[]> => {
+    const response = await apiClient.get<Permission[]>(
       `/permissions/role/${roleId}`,
     );
     return response.data;
@@ -68,8 +62,8 @@ export const permissionsAPI = {
   revokePermission: async (
     roleId: number,
     data: RevokePermissionRequest,
-  ): Promise<AssignPermissionResponse> => {
-    const response = await apiClient.post<AssignPermissionResponse>(
+  ): Promise<RevokePermissionResponse> => {
+    const response = await apiClient.post<RevokePermissionResponse>(
       `/permissions/role/${roleId}/revoke`,
       data,
     );
@@ -100,12 +94,11 @@ export const permissionsAPI = {
   addUserOverride: async (
     userId: number,
     data: AddUserOverrideRequest,
-  ): Promise<{ message: string; user_id: number; permission_code: string }> => {
-    const response = await apiClient.post<{
-      message: string;
-      user_id: number;
-      permission_code: string;
-    }>(`/permissions/users/${userId}/overrides`, data);
+  ): Promise<AddUserOverrideResponse> => {
+    const response = await apiClient.post<AddUserOverrideResponse>(
+      `/permissions/users/${userId}/overrides`,
+      data,
+    );
     return response.data;
   },
 
