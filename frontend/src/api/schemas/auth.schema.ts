@@ -176,3 +176,12 @@ export type ResetPasswordResponse = LoginResponse;
  * Complete Onboarding Response (Auto-login)
  */
 export type CompleteOnboardingResponse = LoginResponse;
+
+/**
+ * Verify Token Response
+ */
+export const VerifyTokenResponseSchema = z.object({
+  valid: z.boolean(),
+});
+
+export type VerifyTokenResponse = z.infer<typeof VerifyTokenResponseSchema>;
