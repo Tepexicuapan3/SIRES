@@ -12,7 +12,6 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import { useAuthStore } from "@/store/authStore";
-import * as Cookies from "js-cookie";
 
 // ==========================================
 // SCHEMA MATCHER (Endpoint → Zod Schema)
