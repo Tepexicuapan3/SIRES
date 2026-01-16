@@ -11,16 +11,17 @@ import { AxiosError } from "axios";
 import type {
   LoginRequest,
   LoginResponse,
-  RefreshTokenResponse,
   AuthUser,
+  RefreshTokenResponse,
   RequestResetCodeRequest,
   VerifyResetCodeRequest,
   VerifyResetCodeResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
   CompleteOnboardingRequest,
-  IAuthAPI,
-} from "../types/auth.types";
+  VerifyTokenResponse,
+} from "@api/schemas/auth.schema";
+import type { IAuthAPI } from "../types/auth.types";
 
 const authAPI: IAuthAPI = {
   /**
@@ -35,13 +36,6 @@ const authAPI: IAuthAPI = {
    */
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>("/auth/login", data);
-
-    if (!response.data || !response.data.user) {
-      throw new Error(
-        "Respuesta inválida del servidor: Datos de usuario faltantes"
-      );
-    }
-
     return response.data;
   },
 
@@ -67,11 +61,6 @@ const authAPI: IAuthAPI = {
    */
   getCurrentUser: async (): Promise<AuthUser> => {
     const response = await apiClient.get<AuthUser>("/auth/me");
-
-    if (!response.data) {
-      throw new Error("No se pudo recuperar la información del usuario actual");
-    }
-
     return response.data;
   },
 
@@ -85,23 +74,21 @@ const authAPI: IAuthAPI = {
    * @returns true si el token es válido, false si es 401/403
    * @throws Error si ocurre un error de red o servidor (500)
    */
-  verifyToken: async (): Promise<boolean> => {
+  verifyToken: async (): Promise<VerifyTokenResponse> => {
     try {
       await apiClient.get("/auth/verify");
-      return true;
+      return { valid: true };
     } catch (error) {
       const axiosError = error as AxiosError;
 
-      // Solo retornamos false si es un error de autenticación explícito
       if (
         axiosError.response &&
         (axiosError.response.status === 401 ||
           axiosError.response.status === 403)
       ) {
-        return false;
+        return { valid: false };
       }
 
-      // Si es otro error (500, Network Error), lanzamos la excepción
       throw error;
     }
   },
@@ -113,10 +100,8 @@ const authAPI: IAuthAPI = {
    * @permission Public (Usa Cookie HTTP-Only)
    */
   refreshToken: async (): Promise<RefreshTokenResponse> => {
-    const response = await apiClient.post<RefreshTokenResponse>(
-      "/auth/refresh"
-    );
-
+    const response =
+      await apiClient.post<RefreshTokenResponse>("/auth/refresh");
     return response.data;
   },
 
@@ -133,19 +118,12 @@ const authAPI: IAuthAPI = {
    * @returns Nuevas credenciales definitivas
    */
   completeOnboarding: async (
-    data: CompleteOnboardingRequest
+    data: CompleteOnboardingRequest,
   ): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>(
       "/auth/complete-onboarding",
-      data
+      data,
     );
-
-    if (!response.data || !response.data.user) {
-      throw new Error(
-        "Error en onboarding: No se recibieron las credenciales actualizadas"
-      );
-    }
-
     return response.data;
   },
 
@@ -161,7 +139,7 @@ const authAPI: IAuthAPI = {
    * @param data - Email del usuario
    */
   requestResetCode: async (data: RequestResetCodeRequest): Promise<void> => {
-    await apiClient.post("/auth/request-reset-code", data);
+    await apiClient.post<void>("/auth/request-reset-code", data);
   },
 
   /**
@@ -175,13 +153,12 @@ const authAPI: IAuthAPI = {
    * @returns Token temporal válido para reset-password
    */
   verifyResetCode: async (
-    data: VerifyResetCodeRequest
+    data: VerifyResetCodeRequest,
   ): Promise<VerifyResetCodeResponse> => {
     const response = await apiClient.post<VerifyResetCodeResponse>(
       "/auth/verify-reset-code",
-      data
+      data,
     );
-
     return response.data;
   },
 
@@ -195,13 +172,12 @@ const authAPI: IAuthAPI = {
    * @returns Auto-login con las nuevas credenciales
    */
   resetPassword: async (
-    data: ResetPasswordRequest
+    data: ResetPasswordRequest,
   ): Promise<ResetPasswordResponse> => {
     const response = await apiClient.post<ResetPasswordResponse>(
       "/auth/reset-password",
-      data
+      data,
     );
-
     return response.data;
   },
 };
