@@ -18,20 +18,20 @@ import type {
   CreateUserResponse,
   UpdateUserRequest,
   UpdateUserResponse,
+  UserStatusResponse,
+  UsersListParams,
+  UsersListResponse,
+  UserDetailResponse,
+  UserRolesListResponse,
   AssignRolesRequest,
   AssignRolesResponse,
   SetPrimaryRoleRequest,
   SetPrimaryRoleResponse,
-  UsersListResponse,
-  UsersListParams,
-  UserDetailResponse,
-  UserStatusResponse,
   RevokeRoleResponse,
+  UserOverridesResponse,
   AddUserOverrideRequest,
   AddUserOverrideResponse,
-  UserOverridesResponse,
-  UserRolesListResponse,
-} from "@api/types/users.types";
+} from "@api/schemas/users.schema";
 
 export const usersAPI = {
   // ==========================================
@@ -47,9 +47,6 @@ export const usersAPI = {
     const response = await apiClient.get<UsersListResponse>("/users", {
       params,
     });
-    if (!response.data || !Array.isArray(response.data.items)) {
-      throw new Error("Respuesta inválida: Lista de usuarios malformada");
-    }
     return response.data;
   },
 
@@ -60,11 +57,8 @@ export const usersAPI = {
    */
   getById: async (userId: number): Promise<UserDetailResponse> => {
     const response = await apiClient.get<UserDetailResponse>(
-      `/users/${userId}`
+      `/users/${userId}`,
     );
-    if (!response.data || !response.data.user) {
-      throw new Error("Respuesta inválida: Datos del usuario no encontrados");
-    }
     return response.data;
   },
 
@@ -75,11 +69,6 @@ export const usersAPI = {
    */
   create: async (data: CreateUserRequest): Promise<CreateUserResponse> => {
     const response = await apiClient.post<CreateUserResponse>("/users", data);
-    if (!response.data || !response.data.user) {
-      throw new Error(
-        "Error crítico: El servidor no retornó el usuario creado"
-      );
-    }
     return response.data;
   },
 
@@ -90,11 +79,11 @@ export const usersAPI = {
    */
   update: async (
     userId: number,
-    data: UpdateUserRequest
+    data: UpdateUserRequest,
   ): Promise<UpdateUserResponse> => {
     const response = await apiClient.patch<UpdateUserResponse>(
       `/users/${userId}`,
-      data
+      data,
     );
     return response.data;
   },
@@ -106,7 +95,7 @@ export const usersAPI = {
    */
   activate: async (userId: number): Promise<UserStatusResponse> => {
     const response = await apiClient.patch<UserStatusResponse>(
-      `/users/${userId}/activate`
+      `/users/${userId}/activate`,
     );
     return response.data;
   },
@@ -118,7 +107,7 @@ export const usersAPI = {
    */
   deactivate: async (userId: number): Promise<UserStatusResponse> => {
     const response = await apiClient.patch<UserStatusResponse>(
-      `/users/${userId}/deactivate`
+      `/users/${userId}/deactivate`,
     );
     return response.data;
   },
@@ -133,14 +122,9 @@ export const usersAPI = {
      * @permission admin:gestion:usuarios:read
      */
     list: async (userId: number): Promise<UserRolesListResponse> => {
-      // NOTA: Si el backend no tiene este endpoint específico, idealmente se implementaría.
-      // Por ahora, asumimos que existe para cumplir la arquitectura ideal.
       const response = await apiClient.get<UserRolesListResponse>(
-        `/users/${userId}/roles`
+        `/users/${userId}/roles`,
       );
-      if (!response.data || !Array.isArray(response.data.roles)) {
-        throw new Error("Respuesta inválida: Lista de roles malformada");
-      }
       return response.data;
     },
 
@@ -151,11 +135,11 @@ export const usersAPI = {
      */
     assign: async (
       userId: number,
-      data: AssignRolesRequest
+      data: AssignRolesRequest,
     ): Promise<AssignRolesResponse> => {
       const response = await apiClient.post<AssignRolesResponse>(
         `/users/${userId}/roles`,
-        data
+        data,
       );
       return response.data;
     },
@@ -167,11 +151,11 @@ export const usersAPI = {
      */
     setPrimary: async (
       userId: number,
-      data: SetPrimaryRoleRequest
+      data: SetPrimaryRoleRequest,
     ): Promise<SetPrimaryRoleResponse> => {
       const response = await apiClient.put<SetPrimaryRoleResponse>(
         `/users/${userId}/roles/primary`,
-        data
+        data,
       );
       return response.data;
     },
@@ -183,10 +167,10 @@ export const usersAPI = {
      */
     revoke: async (
       userId: number,
-      roleId: number
+      roleId: number,
     ): Promise<RevokeRoleResponse> => {
       const response = await apiClient.delete<RevokeRoleResponse>(
-        `/users/${userId}/roles/${roleId}`
+        `/users/${userId}/roles/${roleId}`,
       );
       return response.data;
     },
@@ -202,13 +186,9 @@ export const usersAPI = {
      * @permission admin:gestion:usuarios:read
      */
     list: async (userId: number): Promise<UserOverridesResponse> => {
-      // Estandarización de URL ideal
       const response = await apiClient.get<UserOverridesResponse>(
-        `/users/${userId}/overrides`
+        `/users/${userId}/overrides`,
       );
-      if (!response.data || !Array.isArray(response.data.overrides)) {
-        throw new Error("Respuesta inválida: Lista de overrides malformada");
-      }
       return response.data;
     },
 
@@ -219,11 +199,11 @@ export const usersAPI = {
      */
     add: async (
       userId: number,
-      data: AddUserOverrideRequest
+      data: AddUserOverrideRequest,
     ): Promise<AddUserOverrideResponse> => {
       const response = await apiClient.post<AddUserOverrideResponse>(
         `/users/${userId}/overrides`,
-        data
+        data,
       );
       return response.data;
     },
@@ -235,10 +215,10 @@ export const usersAPI = {
      */
     remove: async (
       userId: number,
-      permissionCode: string
+      permissionCode: string,
     ): Promise<{ message: string }> => {
       const response = await apiClient.delete<{ message: string }>(
-        `/users/${userId}/overrides/${permissionCode}`
+        `/users/${userId}/overrides/${permissionCode}`,
       );
       return response.data;
     },
