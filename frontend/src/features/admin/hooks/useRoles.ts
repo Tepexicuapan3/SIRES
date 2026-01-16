@@ -16,12 +16,17 @@ import type {
 /**
  * Hook para listar todos los roles
  * Cachea resultados automáticamente
+ *
+ * IMPORTANTE: rolesAPI.getRoles() retorna {total, roles[]}
+ * Este hook extrae solo el array de roles usando `select`
+ * para mantener compatibilidad con componentes existentes
  */
 export const useRoles = () => {
   return useQuery({
     queryKey: ["roles"],
     queryFn: rolesAPI.getRoles,
     staleTime: 5 * 60 * 1000, // 5 minutos - los roles no cambian frecuentemente
+    select: (data) => data.roles, // Extraer solo el array de roles
   });
 };
 

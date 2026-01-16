@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useDeleteRole } from "@/features/admin/hooks";
+import { useDeleteRole } from "../../hooks/useRoles";
 import type { RoleWithCount } from "@/api/types/roles.types";
 import { toast } from "sonner";
 
@@ -117,13 +117,13 @@ export const RolesList = ({
                     <div className="flex items-center gap-2">
                       <Shield className="h-4 w-4 text-brand" />
                       <span className="font-medium text-txt-body">
-                        {role.nom_rol}
+                        {role.desc_rol}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <code className="rounded bg-subtle px-2 py-1 text-xs text-txt-muted">
-                      {role.cod_rol}
+                      {role.rol}
                     </code>
                   </TableCell>
                   <TableCell className="text-center">

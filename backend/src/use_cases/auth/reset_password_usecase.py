@@ -8,8 +8,10 @@ para mantener consistencia con el sistema de cookies HttpOnly.
 """
 
 import re
+
+from src.infrastructure.repositories.det_user_repository import \
+    DetUserRepository
 from src.infrastructure.repositories.user_repository import UserRepository
-from src.infrastructure.repositories.det_user_repository import DetUserRepository
 from src.infrastructure.security.password_hasher import PasswordHasher
 
 
@@ -88,7 +90,7 @@ class ResetPasswordUseCase:
             "materno": user.get("materno", ""),
             "nombre_completo": f"{user['nombre']} {user.get('paterno', '')} {user.get('materno', '')}".strip(),
             "expediente": user.get("expediente", ""),
-            "curp": user.get("curp", ""),
+            "id_clin": user.get("id_clin"),
             "correo": user.get("correo", ""),
             "ing_perfil": "Usuario",
             "roles": roles,

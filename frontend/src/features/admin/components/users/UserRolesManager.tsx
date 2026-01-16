@@ -25,8 +25,8 @@ import {
   useAssignRoles,
   useSetPrimaryRole,
   useRevokeRole,
-  useRoles,
-} from "@features/admin/hooks";
+} from "../../hooks/useAdminUsers";
+import { useRoles } from "../../hooks/useRoles";
 import type { UserRole } from "@api/types/users.types";
 
 /**
@@ -77,7 +77,11 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
   const { data: userRoles = [], isLoading } = useUserRoles(userId);
 
   // Catálogo completo de roles (para el selector)
-  const { data: allRoles = [] } = useRoles();
+  const {
+    data: allRoles = [],
+    isLoading: isLoadingRoles,
+    isError: isErrorRoles,
+  } = useRoles();
 
   // Mutations
   const assignRolesMutation = useAssignRoles(userId);
@@ -198,7 +202,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
     try {
       await revokeRoleMutation.mutateAsync(roleToRevoke.id_rol);
 
-      toast.success(`Rol "${roleToRevoke.nombre}" revocado`);
+      toast.success(`Rol "${roleToRevoke.rol}" revocado`);
       setRoleToRevoke(null);
     } catch (error) {
       const message =
@@ -210,6 +214,27 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
   // ============================================================
   // RENDER
   // ============================================================
+
+  // Error state: Mostrar si falla la carga de roles (probablemente 401)
+  if (isErrorRoles) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-status-critical p-6">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-status-critical flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-lg font-semibold text-status-critical">
+              Error al cargar roles
+            </h3>
+            <p className="text-sm text-txt-muted mt-1">
+              No se pudieron cargar los roles disponibles. Esto puede deberse a
+              un problema de autenticación. Por favor, recargá la página o volvé
+              a iniciar sesión.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -248,11 +273,11 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
             </Button>
             <Button
               onClick={() => setShowAssignDialog(true)}
-              disabled={availableRoles.length === 0}
+              disabled={availableRoles.length === 0 || isLoadingRoles}
               className="gap-2 bg-brand hover:bg-brand-hover"
             >
               <UserPlus className="h-4 w-4" />
-              Asignar Roles
+              {isLoadingRoles ? "Cargando..." : "Asignar Roles"}
             </Button>
           </div>
         </div>
@@ -280,7 +305,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
                         : "bg-white border border-line-struct"
                     }
                   >
-                    {userRole.nombre}
+                    {userRole.rol}
                   </Badge>
 
                   {/* Indicador de rol primario */}
@@ -291,10 +316,12 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
                     </div>
                   )}
 
-                  {/* Info adicional */}
-                  <span className="text-sm text-txt-muted">
-                    Prioridad: {userRole.priority}
-                  </span>
+                  {/* Descripción del rol */}
+                  {userRole.desc_rol && (
+                    <span className="text-sm text-txt-muted">
+                      {userRole.desc_rol}
+                    </span>
+                  )}
                 </div>
 
                 {/* Botón revocar */}
@@ -363,9 +390,8 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
                     htmlFor={`role-${role.id_rol}`}
                     className="flex-1 cursor-pointer"
                   >
-                    <div className="font-medium">{role.nom_rol}</div>
+                    <div className="font-medium">{role.desc_rol}</div>
                   </Label>
-                  <Badge variant="secondary">Prioridad {role.priority}</Badge>
                 </div>
               ))
             )}
@@ -413,7 +439,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
               <Label htmlFor="primary-role">Rol Primario Actual</Label>
               <div className="mt-2 p-3 bg-subtle rounded-lg">
                 <Badge className="bg-brand text-white">
-                  {primaryRole?.nombre || "Sin rol primario"}
+                  {primaryRole?.rol || "Sin rol primario"}
                 </Badge>
               </div>
             </div>
@@ -432,7 +458,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
                     .filter((ur) => !ur.is_primary)
                     .map((ur) => (
                       <SelectItem key={ur.id_rol} value={ur.id_rol.toString()}>
-                        {ur.nombre}
+                        {ur.rol}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -478,7 +504,7 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
           {roleToRevoke && (
             <div className="p-4 bg-status-critical/10 border border-status-critical rounded-lg">
               <p className="font-medium text-txt-body">
-                Rol: <span className="text-brand">{roleToRevoke.nombre}</span>
+                Rol: <span className="text-brand">{roleToRevoke.rol}</span>
               </p>
               {roleToRevoke.is_primary && (
                 <p className="text-sm text-status-critical mt-2">

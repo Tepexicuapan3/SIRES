@@ -1,97 +1,151 @@
 /**
  * Roles API Resource
  *
- * Handles all role-related API calls for RBAC 2.0
+ * Gestión centralizada de Roles y sus Permisos.
+ * 
+ * ESTRUCTURA DE PERMISOS:
+ * Patrón Granular: ADMIN:CONFIG:ROLES:{ACCION}
+ * 
+ * MEJORAS APLICADAS:
+ * 1. Centralización de lógica (Role + Permissions).
+ * 2. Adaptador de paginación para consistencia con UI.
+ * 3. Documentación estandarizada.
  */
 
 import apiClient from "@api/client";
 import type {
   RolesListResponse,
+  RolesListParams,
   RoleDetailResponse,
   CreateRoleRequest,
+  CreateRoleResponse,
   UpdateRoleRequest,
-  RoleResponse,
+  UpdateRoleResponse,
   AssignPermissionsRequest,
 } from "@api/types/roles.types";
 
 export const rolesAPI = {
   /**
-   * Lista todos los roles con count de permisos
-   * GET /api/v1/roles
-   * Requiere: roles:read
+   * Listar todos los roles del sistema.
+   * Soporta paginación y filtrado.
    *
-   * IMPORTANTE: Backend retorna objeto paginado {total, roles}
-   * Retornamos el objeto completo para consistencia con permissionsAPI.getRoles()
-   * Los hooks deben usar `select` para extraer solo el array si es necesario
+   * @endpoint GET /api/v1/roles
+   * @permission admin:config:roles:read
+   * 
+   * @param params - Filtros de búsqueda
+   * @returns Lista de roles con contadores
    */
-  getRoles: async (): Promise<RolesListResponse> => {
-    const response = await apiClient.get<RolesListResponse>("/roles");
+  getRoles: async (params?: RolesListParams): Promise<RolesListResponse> => {
+    // Nota: El backend actualmente retorna { total: number, roles: Role[] }
+    // Usamos any temporalmente para adaptar la respuesta al contrato estricto del frontend
+    const response = await apiClient.get<any>("/roles", {
+      params,
+    });
 
-    // Validación defensiva: verificar estructura de respuesta
-    if (!response.data || !Array.isArray(response.data.roles)) {
-      throw new Error("Invalid roles response from backend");
+    const data = response.data;
+
+    // Validación defensiva
+    if (!data) {
+      throw new Error("Respuesta inválida al obtener roles");
     }
 
-    // Retornar objeto completo {total, roles}
-    return response.data;
+    // Adaptador: Si el backend devuelve lista plana ('roles'), la convertimos a estructura paginada
+    if (Array.isArray(data.roles)) {
+      return {
+        items: data.roles,
+        total: data.total || data.roles.length,
+        page: params?.page || 1,
+        page_size: params?.page_size || data.roles.length,
+        total_pages: 1 // Asumimos 1 página si no hay metadata real
+      };
+    }
+
+    // Si ya cumple el formato estándar (items)
+    if (Array.isArray(data.items)) {
+      return data;
+    }
+
+    throw new Error("Formato de respuesta de roles desconocido");
   },
 
   /**
-   * Obtiene detalle de un rol específico
-   * GET /api/v1/roles/:id
-   * Requiere: roles:read
+   * Obtener detalle de un rol específico.
+   * Incluye la lista de permisos asignados.
+   *
+   * @endpoint GET /api/v1/roles/:id
+   * @permission admin:config:roles:read
+   * 
+   * @param id - ID del rol
    */
   getRole: async (id: number): Promise<RoleDetailResponse> => {
     const response = await apiClient.get<RoleDetailResponse>(`/roles/${id}`);
+    
+    if (!response.data || !response.data.role) {
+      throw new Error("Rol no encontrado o respuesta inválida");
+    }
+
     return response.data;
   },
 
   /**
-   * Crea un nuevo rol
-   * POST /api/v1/roles
-   * Requiere: roles:create
-   */
-  createRole: async (data: CreateRoleRequest): Promise<RoleResponse> => {
-    const response = await apiClient.post<RoleResponse>("/roles", data);
-    return response.data;
-  },
-
-  /**
-   * Actualiza un rol existente
-   * PUT /api/v1/roles/:id
-   * Requiere: roles:update
+   * Crear un nuevo rol.
    *
-   * NOTA: No permite editar roles del sistema (id_rol <= 22)
+   * @endpoint POST /api/v1/roles
+   * @permission admin:config:roles:create
+   * 
+   * @param data - Configuración del rol
+   */
+  createRole: async (data: CreateRoleRequest): Promise<CreateRoleResponse> => {
+    const response = await apiClient.post<CreateRoleResponse>("/roles", data);
+    return response.data;
+  },
+
+  /**
+   * Actualizar configuración de un rol.
+   * (Nombre, descripción, landing page)
+   *
+   * @endpoint PUT /api/v1/roles/:id
+   * @permission admin:config:roles:update
+   * 
+   * @param id - ID del rol
+   * @param data - Campos a modificar
    */
   updateRole: async (
     id: number,
     data: UpdateRoleRequest,
-  ): Promise<RoleResponse> => {
-    const response = await apiClient.put<RoleResponse>(`/roles/${id}`, data);
+  ): Promise<UpdateRoleResponse> => {
+    const response = await apiClient.put<UpdateRoleResponse>(`/roles/${id}`, data);
     return response.data;
   },
 
   /**
-   * Elimina un rol
-   * DELETE /api/v1/roles/:id
-   * Requiere: roles:delete
+   * Eliminar un rol (Baja Lógica).
+   * Solo permitido si no tiene usuarios activos asignados.
    *
-   * NOTA:
-   * - No permite eliminar roles del sistema (id_rol <= 22)
-   * - No permite eliminar roles con usuarios asignados
+   * @endpoint DELETE /api/v1/roles/:id
+   * @permission admin:config:roles:delete
+   * 
+   * @param id - ID del rol
    */
   deleteRole: async (id: number): Promise<void> => {
     await apiClient.delete(`/roles/${id}`);
   },
 
+  // ========== GESTIÓN DE PERMISOS DEL ROL ==========
+
   /**
-   * Asigna múltiples permisos a un rol
-   * POST /api/v1/permissions/assign
-   * Requiere: permisos:assign
+   * Actualizar permisos asignados al rol (Bulk).
+   * Asigna múltiples permisos en una sola operación transaccional.
+   *
+   * @endpoint POST /api/v1/permissions/assign
+   * @permission admin:config:roles:update
+   * 
+   * @param data - ID del rol y array de IDs de permisos
    */
   assignPermissions: async (
     data: AssignPermissionsRequest,
   ): Promise<{ message: string; assigned_count: number }> => {
+    // TODO: Idealmente debería ser POST /api/v1/roles/:id/permissions
     const response = await apiClient.post<{
       message: string;
       assigned_count: number;
@@ -100,9 +154,13 @@ export const rolesAPI = {
   },
 
   /**
-   * Revoca un permiso de un rol
-   * DELETE /api/v1/permissions/roles/:roleId/permissions/:permissionId
-   * Requiere: permisos:assign
+   * Revocar un permiso específico de un rol.
+   *
+   * @endpoint DELETE /api/v1/permissions/roles/:roleId/permissions/:permissionId
+   * @permission admin:config:roles:update
+   * 
+   * @param roleId - ID del rol
+   * @param permissionId - ID del permiso a quitar
    */
   revokePermission: async (
     roleId: number,

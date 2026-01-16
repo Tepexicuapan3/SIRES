@@ -1,132 +1,207 @@
-import { useState, useMemo } from "react";
-import { ArrowLeft, Users, AlertCircle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { ArrowLeft, Users, AlertCircle, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { UsersList } from "./UsersList";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { UsersTableToolbar } from "./UsersTableToolbar";
+import { UsersDataTable } from "./UsersDataTable";
+import { UserDetailCard } from "./UserDetailCard";
 import { UserRolesManager } from "./UserRolesManager";
 import { UserPermissionOverrides } from "./UserPermissionOverrides";
-import { api } from "@api/client";
-import type { User, UsersListResponse } from "@api/types/users.types";
+import { UserFormDialog } from "./UserFormDialog";
+import {
+  useUser,
+  useActivateUser,
+  useDeactivateUser,
+} from "../../hooks/useAdminUsers";
+import { useUsersFilters } from "../../hooks/useUsersFilters";
+import { toast } from "sonner";
 
 /**
- * UsersPage - Orquestador principal de gestión de usuarios
+ * UsersPage - Página principal de gestión de usuarios
  *
  * ARQUITECTURA:
- * - State Machine con 2 modos: list | detail
+ * - State Machine: list (tabla) | detail (vista completa)
  * - Container/Presenter: Este componente orquesta, los hijos renderizan
- * - Composite Pattern: Vista detail combina RolesManager + PermissionOverrides
+ * - Hooks: useUser() para detalle completo
  *
- * FLUJO DE NAVEGACIÓN:
- * list → (click usuario) → detail → (volver) → list
+ * FLUJO:
+ * list → (click "Ver Detalle") → detail → (volver) → list
+ *
+ * VISTA LIST (REFACTORIZADA - FASE 1-3):
+ * - UsersTableToolbar: Búsqueda + filtros + botón crear
+ * - UsersDataTable: Tabla completa con paginación, loading, estados vacíos
+ *   → Usa useUsersFilters() para estado de filtros (sincronizado con URL)
+ *   → Usa useUsers(filters) para datos (TanStack Query con cache)
  *
  * VISTA DETAIL:
- * - Muestra información del usuario seleccionado
- * - UserRolesManager (gestión de múltiples roles)
- * - UserPermissionOverrides (permisos excepcionales)
- *
- * HOOKS USADOS:
- * - useQuery(): Listar usuarios (endpoint genérico de usuarios)
- *
- * SEGURIDAD:
- * - Solo accesible con permiso usuarios:assign_permissions
- * - Validación en RoleGuard (Routes.tsx)
+ * - UserDetailCard: Información básica + imagen + auditoría
+ * - UserRolesManager: Gestión de roles del usuario
+ * - UserPermissionOverrides: Permisos excepcionales (ALLOW/DENY)
  */
 
 type ViewMode = "list" | "detail";
 
 export function UsersPage() {
-  // Estado de navegación (State Machine)
+  // ============================================================
+  // ESTADO DE NAVEGACIÓN
+  // ============================================================
+
   const [mode, setMode] = useState<ViewMode>("list");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   // ============================================================
-  // TANSTACK QUERY - Listar usuarios
+  // HOOKS - FILTERS (SINGLE SOURCE OF TRUTH)
   // ============================================================
 
   /**
-   * IMPORTANTE: El endpoint GET /api/v1/users retorna un objeto paginado:
-   * {
-   *   items: User[],
-   *   page: number,
-   *   page_size: number,
-   *   total: number,
-   *   total_pages: number
-   * }
+   * 🔥 FIX CRÍTICO: Hook llamado UNA SOLA VEZ en el componente padre
    *
-   * Por eso destructuramos `response.data.items` en el queryFn.
-   * Si intentás retornar `response.data` directo, `users` será un objeto
-   * y `users.find()` explotará con "TypeError: users.find is not a function".
+   * PROBLEMA ANTERIOR:
+   * - UsersTableToolbar llamaba useUsersFilters() (instancia #1)
+   * - UsersDataTable llamaba useUsersFilters() (instancia #2)
+   * - Ambas instancias tenían estado SEPARADO y peleaban por actualizar la URL
+   * - Resultado: filtros nunca se disparaban correctamente
    *
-   * OPCIÓN FUTURA: Si querés paginación server-side, guardá el objeto completo
-   * en vez de solo `items`, y usá `users.items.find()` más abajo.
+   * SOLUCIÓN:
+   * - Llamar useUsersFilters() UNA SOLA VEZ aquí en el padre
+   * - Pasar el hook completo como prop a ambos componentes hijos
+   * - Los hijos destructuran solo lo que necesitan
+   *
+   * ARQUITECTURA:
+   * UsersPage (llama hook AQUÍ)
+   *   ├─ UsersTableToolbar (recibe filtersHook como prop)
+   *   └─ UsersDataTable (recibe filtersHook como prop)
+   */
+  const filtersHook = useUsersFilters();
+
+  // ============================================================
+  // ESTADO DE MODALES
+  // ============================================================
+
+  const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
+  const [showEditUserDialog, setShowEditUserDialog] = useState(false);
+  const [showActivateDialog, setShowActivateDialog] = useState(false);
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+
+  // ============================================================
+  // TANSTACK QUERY - Datos
+  // ============================================================
+
+  /**
+   * Detalle completo de usuario seleccionado (vista detail)
+   * Incluye: user (con auditoría) + roles asignados
+   *
+   * enabled: solo ejecuta si hay userId seleccionado
    */
   const {
-    data: users = [],
-    isLoading,
-    error,
-  } = useQuery<User[]>({
-    queryKey: ["users"],
-    queryFn: async () => {
-      const response = await api.get<UsersListResponse>("/users");
+    data: userDetailData,
+    isLoading: isLoadingDetail,
+    error: errorDetail,
+  } = useUser(selectedUserId);
 
-      // Validación defensiva: verificar que la respuesta tenga la estructura esperada
-      if (!response.data || !Array.isArray(response.data.items)) {
-        console.error("Respuesta inesperada del backend:", response.data);
-        throw new Error("El servidor retornó una estructura inválida");
-      }
-
-      // ✅ CORRECTO: Extraer el array de items del objeto paginado
-      return response.data.items;
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutos
-  });
-
-  // Usuario seleccionado para vista detail (con validación defensiva)
-  const selectedUser = useMemo(() => {
-    // Early return si no hay userId seleccionado
-    if (!selectedUserId) return null;
-
-    // Validación defensiva: asegurarse que users sea un array
-    if (!Array.isArray(users)) {
-      console.error("users no es un array:", users);
-      return null;
-    }
-
-    // Buscar usuario y retornar null si no existe (en vez de undefined)
-    return users.find((u) => u.id_usuario === selectedUserId) ?? null;
-  }, [selectedUserId, users]);
+  // Extraer datos
+  const userDetail = userDetailData?.user ?? null;
 
   // ============================================================
-  // NAVEGACIÓN (State Transitions)
+  // MUTACIONES (Activar/Desactivar)
+  // ============================================================
+
+  const activateUserMutation = useActivateUser(selectedUserId || 0);
+  const deactivateUserMutation = useDeactivateUser(selectedUserId || 0);
+
+  // ============================================================
+  // HANDLERS DE NAVEGACIÓN
   // ============================================================
 
   /**
-   * Transición: list → detail
+   * Navegar a vista detallada
    * @param userId - ID del usuario a ver
    */
-  const handleViewUser = (userId: number) => {
+  const handleViewDetails = (userId: number) => {
     setSelectedUserId(userId);
     setMode("detail");
   };
 
   /**
-   * Transición: detail → list
+   * Volver a la lista
    */
   const handleBackToList = () => {
     setSelectedUserId(null);
     setMode("list");
   };
 
+  /**
+   * Callback después de crear usuario exitosamente
+   * Invalida cache automáticamente (TanStack Query lo hace en el hook)
+   */
+  const handleUserCreated = () => {
+    setShowCreateUserDialog(false);
+    // El hook useCreateUser ya invalida la cache de usuarios
+  };
+
+  /**
+   * Abrir modal de edición
+   */
+  const handleEditUser = () => {
+    setShowEditUserDialog(true);
+  };
+
+  /**
+   * Callback después de editar usuario exitosamente
+   */
+  const handleUserEdited = () => {
+    setShowEditUserDialog(false);
+  };
+
+  /**
+   * Confirmar activación de usuario
+   */
+  const handleConfirmActivate = async () => {
+    try {
+      await activateUserMutation.mutateAsync();
+      toast.success("Usuario activado correctamente");
+      setShowActivateDialog(false);
+    } catch (error: any) {
+      toast.error("Error al activar usuario", {
+        description: error.response?.data?.message || error.message,
+      });
+    }
+  };
+
+  /**
+   * Confirmar desactivación de usuario
+   */
+  const handleConfirmDeactivate = async () => {
+    try {
+      await deactivateUserMutation.mutateAsync();
+      toast.success("Usuario desactivado correctamente");
+      setShowDeactivateDialog(false);
+    } catch (error: any) {
+      toast.error("Error al desactivar usuario", {
+        description: error.response?.data?.message || error.message,
+      });
+    }
+  };
+
   // ============================================================
-  // RENDER CONDICIONAL (State Machine Output)
+  // RENDER
   // ============================================================
 
   return (
     <div className="space-y-6">
-      {/* Header con navegación contextual */}
+      {/* ========== HEADER ========== */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {/* Botón "Volver" solo visible en modo detail */}
+          {/* Botón "Volver" solo en modo detail */}
           {mode === "detail" && (
             <Button
               variant="ghost"
@@ -139,72 +214,70 @@ export function UsersPage() {
             </Button>
           )}
 
-          {/* Título dinámico basado en modo */}
+          {/* Título */}
           <div>
             <h1 className="text-3xl font-bold text-txt-body">
-              {mode === "list" && "Gestión de Usuarios"}
-              {mode === "detail" && selectedUser && (
-                <>
-                  {selectedUser.nombre} {selectedUser.apellido_paterno}
-                </>
-              )}
+              {mode === "list" ? "Gestión de Usuarios" : "Detalle de Usuario"}
             </h1>
             <p className="text-txt-muted mt-1">
               {mode === "list" &&
-                "Administra roles y permisos de usuarios del sistema"}
-              {mode === "detail" && selectedUser && (
+                "Administra usuarios, roles y permisos del sistema"}
+              {mode === "detail" && userDetail && (
                 <>
-                  @{selectedUser.usuario} · Expediente:{" "}
-                  {selectedUser.numero_expediente || "N/A"}
+                  {userDetail.nombre} {userDetail.paterno} {userDetail.materno}{" "}
+                  (@{userDetail.usuario})
                 </>
               )}
             </p>
           </div>
         </div>
 
-        {/* Ícono decorativo en modo list */}
-        {mode === "list" && (
+        {/* Ícono decorativo en modo detail */}
+        {mode === "detail" && (
           <div className="hidden md:block">
             <Users className="h-12 w-12 text-brand opacity-20" />
           </div>
         )}
       </div>
 
-      {/* Vista condicional según modo */}
+      {/* ========== VISTA LIST ========== */}
       {mode === "list" && (
+        <div className="space-y-4">
+          {/* Toolbar con búsqueda, filtros y botón crear */}
+          <UsersTableToolbar
+            onCreateUser={() => setShowCreateUserDialog(true)}
+            filtersHook={filtersHook}
+          />
+
+          {/* Tabla completa con todos los estados (loading, error, empty, success) */}
+          <UsersDataTable
+            onViewDetail={handleViewDetails}
+            filtersHook={filtersHook}
+          />
+        </div>
+      )}
+
+      {/* ========== VISTA DETAIL ========== */}
+      {mode === "detail" && selectedUserId && (
         <>
-          {/* Manejo de error en parent component */}
-          {error && (
-            <div className="rounded-lg border border-status-critical bg-status-critical/10 p-4">
-              <p className="text-status-critical">
-                Error al cargar usuarios:{" "}
-                {error instanceof Error ? error.message : "Error desconocido"}
-              </p>
+          {/* Loading state */}
+          {isLoadingDetail && (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
             </div>
           )}
 
-          <UsersList
-            users={users}
-            isLoading={isLoading}
-            error={error}
-            onViewUser={handleViewUser}
-          />
-        </>
-      )}
-
-      {mode === "detail" && selectedUserId && (
-        <>
-          {/* Empty State: Usuario no encontrado */}
-          {!selectedUser ? (
+          {/* Error state */}
+          {errorDetail && (
             <div className="bg-white rounded-lg shadow-sm border border-line-struct p-12 text-center">
-              <AlertCircle className="mx-auto h-16 w-16 text-status-alert mb-4" />
+              <AlertCircle className="mx-auto h-16 w-16 text-status-critical mb-4" />
               <h3 className="text-xl font-semibold text-txt-body mb-2">
-                Usuario no encontrado
+                Error al cargar usuario
               </h3>
               <p className="text-txt-muted mb-6 max-w-md mx-auto">
-                El usuario puede haber sido eliminado o no tenés permisos para
-                verlo. La lista de usuarios se revalidó y este usuario ya no
-                existe.
+                {errorDetail instanceof Error
+                  ? errorDetail.message
+                  : "No se pudo obtener la información del usuario"}
               </p>
               <Button
                 onClick={handleBackToList}
@@ -215,44 +288,106 @@ export function UsersPage() {
                 Volver a la lista
               </Button>
             </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Card de información del usuario */}
-              <div className="bg-white rounded-lg shadow-sm border border-line-struct p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm text-txt-muted">Usuario</p>
-                    <p className="font-semibold text-txt-body">
-                      @{selectedUser?.usuario}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-txt-muted">Nombre Completo</p>
-                    <p className="font-semibold text-txt-body">
-                      {selectedUser?.nombre} {selectedUser?.apellido_paterno}{" "}
-                      {selectedUser?.apellido_materno}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-txt-muted">
-                      Número de Expediente
-                    </p>
-                    <p className="font-semibold text-txt-body font-mono">
-                      {selectedUser?.numero_expediente || "No asignado"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+          )}
 
-              {/* Gestión de Roles */}
+          {/* Vista detallada completa */}
+          {!isLoadingDetail && !errorDetail && userDetail && (
+            <div className="space-y-6">
+              {/* 1. Información Básica + Auditoría + Acciones */}
+              <UserDetailCard
+                user={userDetail}
+                onEdit={handleEditUser}
+                onActivate={() => setShowActivateDialog(true)}
+                onDeactivate={() => setShowDeactivateDialog(true)}
+              />
+
+              {/* 2. Gestión de Roles */}
               <UserRolesManager userId={selectedUserId} />
 
-              {/* Gestión de Permission Overrides */}
+              {/* 3. Gestión de Permisos (Overrides) */}
               <UserPermissionOverrides userId={selectedUserId} />
             </div>
           )}
         </>
       )}
+
+      {/* ========== MODAL DE CREACIÓN DE USUARIO ========== */}
+      <UserFormDialog
+        open={showCreateUserDialog}
+        onOpenChange={setShowCreateUserDialog}
+        mode="create"
+        onSuccess={handleUserCreated}
+      />
+
+      {/* ========== MODAL DE EDICIÓN DE USUARIO ========== */}
+      {userDetail && (
+        <UserFormDialog
+          open={showEditUserDialog}
+          onOpenChange={setShowEditUserDialog}
+          mode="edit"
+          user={userDetail}
+          onSuccess={handleUserEdited}
+        />
+      )}
+
+      {/* ========== CONFIRMACIÓN: ACTIVAR USUARIO ========== */}
+      <AlertDialog
+        open={showActivateDialog}
+        onOpenChange={setShowActivateDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Activar Usuario</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que querés activar a{" "}
+              <strong>
+                {userDetail?.nombre} {userDetail?.paterno}
+              </strong>
+              ? El usuario podrá iniciar sesión nuevamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmActivate}
+              disabled={activateUserMutation.isPending}
+            >
+              {activateUserMutation.isPending ? "Activando..." : "Activar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ========== CONFIRMACIÓN: DESACTIVAR USUARIO ========== */}
+      <AlertDialog
+        open={showDeactivateDialog}
+        onOpenChange={setShowDeactivateDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desactivar Usuario</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que querés desactivar a{" "}
+              <strong>
+                {userDetail?.nombre} {userDetail?.paterno}
+              </strong>
+              ? El usuario NO podrá iniciar sesión hasta que lo reactives.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeactivate}
+              disabled={deactivateUserMutation.isPending}
+              className="bg-status-critical hover:bg-status-critical/90"
+            >
+              {deactivateUserMutation.isPending
+                ? "Desactivando..."
+                : "Desactivar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -132,6 +132,10 @@ class PermissionRepository:
         2. Aplica overrides de usuario (DENY > ALLOW)
         3. Retorna set final de permisos permitidos + metadata
         
+        IMPORTANTE: DENY overrides tienen prioridad ABSOLUTA, incluso para administradores.
+        Esto permite revocar permisos específicos a cualquier usuario, respetando
+        principios de seguridad como Segregation of Duties y Least Privilege.
+        
         Args:
             user_id: ID del usuario
             
@@ -153,32 +157,46 @@ class PermissionRepository:
                 "landing_route": "/dashboard"  # default
             }
 
-        # 2. Detectar si es admin (bypass total)
+        # 2. Detectar si es admin
         is_admin = any(role.get("is_admin") == 1 for role in roles)
         
         # 3. Landing route = primer rol con is_primary=1, o el de mayor prioridad
         primary_role = next((r for r in roles if r.get("is_primary") == 1), roles[0])
         landing_route = primary_role.get("landing_route") or "/dashboard"
 
-        # 4. Si es admin, retornar todo sin calcular permisos
-        if is_admin:
-            return {
-                "permissions": ["*"],  # Wildcard = todos los permisos
-                "is_admin": True,
-                "roles": roles,
-                "landing_route": landing_route
-            }
-
-        # 5. Obtener permisos de roles
-        role_ids = [r["id_rol"] for r in roles]
-        role_permissions = set(self.get_role_permissions(role_ids))
-
-        # 6. Aplicar overrides de usuario
+        # 4. Obtener overrides ANTES de hacer bypass de admin
+        # DENY tiene prioridad absoluta sobre cualquier rol, incluso admin
         overrides = self.get_user_permission_overrides(user_id)
-        
-        # DENY tiene prioridad absoluta
         denied_permissions = {o["code"] for o in overrides if o["effect"] == "DENY"}
         allowed_permissions = {o["code"] for o in overrides if o["effect"] == "ALLOW"}
+
+        # 5. Si es admin pero tiene DENY overrides, calcular permisos explícitamente
+        if is_admin:
+            if denied_permissions:
+                # Admin con restricciones → calcular permisos explícitos
+                # (todos los permisos de roles + ALLOW overrides) - DENY overrides
+                role_ids = [r["id_rol"] for r in roles]
+                role_permissions = set(self.get_role_permissions(role_ids))
+                effective_permissions = (role_permissions | allowed_permissions) - denied_permissions
+                
+                return {
+                    "permissions": sorted(list(effective_permissions)),
+                    "is_admin": True,  # Sigue siendo admin para otros propósitos
+                    "roles": roles,
+                    "landing_route": landing_route
+                }
+            else:
+                # Admin sin DENY overrides → bypass total
+                return {
+                    "permissions": ["*"],  # Wildcard = todos los permisos
+                    "is_admin": True,
+                    "roles": roles,
+                    "landing_route": landing_route
+                }
+
+        # 6. Usuario normal → calcular permisos con overrides
+        role_ids = [r["id_rol"] for r in roles]
+        role_permissions = set(self.get_role_permissions(role_ids))
 
         # Cálculo final: (role_permissions + allowed) - denied
         effective_permissions = (role_permissions | allowed_permissions) - denied_permissions

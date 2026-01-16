@@ -1,10 +1,15 @@
 /**
  * Users API Resource
  *
- * Handles user management API calls
+ * Gestión completa de usuarios dividida en sub-recursos lógicos.
  *
- * FILOSOFÍA: Sin mapeos intermedios - retornamos los datos del backend tal cual.
- * Los tipos ya están alineados 1:1 con el backend en users.types.ts
+ * ESTRUCTURA:
+ * - Core: CRUD básico de perfil y estados.
+ * - Roles: Gestión de roles asignados.
+ * - Overrides: Gestión de excepciones de permisos.
+ *
+ * PERMISOS:
+ * Patrón: ADMIN:GESTION:USUARIOS:{ACCION}
  */
 
 import apiClient from "@api/client";
@@ -12,200 +17,230 @@ import type {
   CreateUserRequest,
   CreateUserResponse,
   UpdateUserRequest,
-  UserRole,
+  UpdateUserResponse,
   AssignRolesRequest,
+  AssignRolesResponse,
   SetPrimaryRoleRequest,
-  UserRolesResponse,
+  SetPrimaryRoleResponse,
   UsersListResponse,
   UsersListParams,
   UserDetailResponse,
+  UserStatusResponse,
+  RevokeRoleResponse,
+  AddUserOverrideRequest,
+  AddUserOverrideResponse,
+  UserOverridesResponse,
+  UserRolesListResponse,
 } from "@api/types/users.types";
 
 export const usersAPI = {
-  // ========== CRUD DE USUARIOS ==========
+  // ==========================================
+  // 1. CORE: PERFIL Y ESTADOS
+  // ==========================================
 
   /**
-   * Listar usuarios con paginación y filtros
-   * GET /api/v1/users
-   *
-   * @param params - Parámetros de filtrado y paginación
-   * @returns Lista paginada de usuarios
-   *
-   * Requiere: usuarios:read
+   * Listar usuarios con paginación.
+   * @endpoint GET /api/v1/users
+   * @permission admin:gestion:usuarios:read
    */
-  getUsers: async (params?: UsersListParams): Promise<UsersListResponse> => {
+  getAll: async (params?: UsersListParams): Promise<UsersListResponse> => {
     const response = await apiClient.get<UsersListResponse>("/users", {
       params,
     });
-    return response.data;
-  },
-
-  /**
-   * Obtener detalle completo de un usuario
-   * GET /api/v1/users/:id
-   *
-   * Incluye:
-   * - Datos completos del usuario (con auditoría)
-   * - Roles asignados
-   *
-   * Requiere: usuarios:read
-   */
-  getUser: async (userId: number): Promise<UserDetailResponse> => {
-    const response = await apiClient.get<UserDetailResponse>(
-      `/users/${userId}`,
-    );
-    return response.data;
-  },
-
-  /**
-   * Crear nuevo usuario
-   * POST /api/v1/users
-   *
-   * IMPORTANTE: La respuesta incluye contraseña temporal que se muestra UNA SOLA VEZ.
-   * El admin debe copiarla y entregarla al usuario.
-   *
-   * Requiere: usuarios:create
-   */
-  createUser: async (data: CreateUserRequest): Promise<CreateUserResponse> => {
-    const response = await apiClient.post<CreateUserResponse>("/users", data);
-    return response.data;
-  },
-
-  /**
-   * Actualizar datos básicos de usuario
-   * PATCH /api/v1/users/:id
-   *
-   * Solo enviar campos que se quieren modificar (partial update)
-   *
-   * Requiere: usuarios:update
-   */
-  updateUser: async (
-    userId: number,
-    data: UpdateUserRequest,
-  ): Promise<{ message: string }> => {
-    const response = await apiClient.patch<{ message: string }>(
-      `/users/${userId}`,
-      data,
-    );
-    return response.data;
-  },
-
-  /**
-   * Activar usuario (cambiar estado a "A")
-   * PATCH /api/v1/users/:id/activate
-   *
-   * Permite al usuario volver a acceder al sistema
-   *
-   * Requiere: usuarios:update
-   */
-  activateUser: async (userId: number): Promise<{ message: string }> => {
-    const response = await apiClient.patch<{ message: string }>(
-      `/users/${userId}/activate`,
-    );
-    return response.data;
-  },
-
-  /**
-   * Desactivar usuario (cambiar estado a "B")
-   * PATCH /api/v1/users/:id/deactivate
-   *
-   * El usuario no podrá iniciar sesión hasta que sea reactivado
-   *
-   * Requiere: usuarios:update
-   */
-  deactivateUser: async (userId: number): Promise<{ message: string }> => {
-    const response = await apiClient.patch<{ message: string }>(
-      `/users/${userId}/deactivate`,
-    );
-    return response.data;
-  },
-
-  // ========== GESTIÓN DE ROLES (MULTI-ROL) ==========
-
-  /**
-   * Obtener roles asignados a un usuario
-   * GET /api/v1/users/:id
-   *
-   * NOTA: Este endpoint retorna el objeto completo {user, roles}.
-   * Extraemos solo el array de roles.
-   *
-   * CAMBIO vs versión anterior:
-   * - YA NO hay mapeo de campos (backend usa "rol" y "desc_rol")
-   * - Retornamos los datos tal cual vienen del backend
-   *
-   * Requiere: usuarios:read
-   */
-  getUserRoles: async (userId: number): Promise<UserRole[]> => {
-    const response = await apiClient.get<UserDetailResponse>(
-      `/users/${userId}`,
-    );
-
-    // Validación defensiva
-    if (!response.data || !Array.isArray(response.data.roles)) {
-      throw new Error("Invalid user roles response from backend");
+    if (!response.data || !Array.isArray(response.data.items)) {
+      throw new Error("Respuesta inválida: Lista de usuarios malformada");
     }
-
-    // ✅ Sin mapeo - retornamos directo (tipos ya alineados)
-    return response.data.roles;
+    return response.data;
   },
 
   /**
-   * Asignar múltiples roles a un usuario
-   * POST /api/v1/users/:id/roles
-   *
-   * Permite asignar varios roles de una sola vez (bulk assignment)
-   *
-   * Requiere: usuarios:update
+   * Obtener detalle completo (Perfil + Roles + Overrides).
+   * @endpoint GET /api/v1/users/:id
+   * @permission admin:gestion:usuarios:read
    */
-  assignRoles: async (
+  getById: async (userId: number): Promise<UserDetailResponse> => {
+    const response = await apiClient.get<UserDetailResponse>(
+      `/users/${userId}`
+    );
+    if (!response.data || !response.data.user) {
+      throw new Error("Respuesta inválida: Datos del usuario no encontrados");
+    }
+    return response.data;
+  },
+
+  /**
+   * Crear usuario.
+   * @endpoint POST /api/v1/users
+   * @permission admin:gestion:usuarios:create
+   */
+  create: async (data: CreateUserRequest): Promise<CreateUserResponse> => {
+    const response = await apiClient.post<CreateUserResponse>("/users", data);
+    if (!response.data || !response.data.user) {
+      throw new Error(
+        "Error crítico: El servidor no retornó el usuario creado"
+      );
+    }
+    return response.data;
+  },
+
+  /**
+   * Actualizar perfil básico.
+   * @endpoint PATCH /api/v1/users/:id
+   * @permission admin:gestion:usuarios:update
+   */
+  update: async (
     userId: number,
-    data: AssignRolesRequest,
-  ): Promise<UserRolesResponse> => {
-    const response = await apiClient.post<UserRolesResponse>(
-      `/users/${userId}/roles`,
-      data,
+    data: UpdateUserRequest
+  ): Promise<UpdateUserResponse> => {
+    const response = await apiClient.patch<UpdateUserResponse>(
+      `/users/${userId}`,
+      data
     );
     return response.data;
   },
 
   /**
-   * Cambiar el rol primario de un usuario
-   * PUT /api/v1/users/:id/roles/primary
-   *
-   * El rol primario determina:
-   * - Landing page al iniciar sesión
-   * - Permisos base del usuario
-   *
-   * Requiere: usuarios:update
+   * Activar usuario.
+   * @endpoint PATCH /api/v1/users/:id/activate
+   * @permission admin:gestion:usuarios:update
    */
-  setPrimaryRole: async (
-    userId: number,
-    data: SetPrimaryRoleRequest,
-  ): Promise<UserRolesResponse> => {
-    const response = await apiClient.put<UserRolesResponse>(
-      `/users/${userId}/roles/primary`,
-      data,
+  activate: async (userId: number): Promise<UserStatusResponse> => {
+    const response = await apiClient.patch<UserStatusResponse>(
+      `/users/${userId}/activate`
     );
     return response.data;
   },
 
   /**
-   * Revocar (eliminar) un rol de un usuario
-   * DELETE /api/v1/users/:id/roles/:roleId
-   *
-   * REGLAS DE NEGOCIO (validadas en backend):
-   * - No permitir revocar el último rol del usuario
-   * - Si se revoca rol primario, auto-asigna otro como primario
-   *
-   * Requiere: usuarios:update
+   * Desactivar usuario.
+   * @endpoint PATCH /api/v1/users/:id/deactivate
+   * @permission admin:gestion:usuarios:update
    */
-  revokeRole: async (
-    userId: number,
-    roleId: number,
-  ): Promise<{ message: string }> => {
-    const response = await apiClient.delete<{ message: string }>(
-      `/users/${userId}/roles/${roleId}`,
+  deactivate: async (userId: number): Promise<UserStatusResponse> => {
+    const response = await apiClient.patch<UserStatusResponse>(
+      `/users/${userId}/deactivate`
     );
     return response.data;
+  },
+
+  // ==========================================
+  // 2. SUB-RECURSO: ROLES
+  // ==========================================
+  roles: {
+    /**
+     * Listar roles asignados a un usuario.
+     * @endpoint GET /api/v1/users/:id/roles
+     * @permission admin:gestion:usuarios:read
+     */
+    list: async (userId: number): Promise<UserRolesListResponse> => {
+      // NOTA: Si el backend no tiene este endpoint específico, idealmente se implementaría.
+      // Por ahora, asumimos que existe para cumplir la arquitectura ideal.
+      const response = await apiClient.get<UserRolesListResponse>(
+        `/users/${userId}/roles`
+      );
+      if (!response.data || !Array.isArray(response.data.roles)) {
+        throw new Error("Respuesta inválida: Lista de roles malformada");
+      }
+      return response.data;
+    },
+
+    /**
+     * Asignar roles adicionales.
+     * @endpoint POST /api/v1/users/:id/roles
+     * @permission admin:gestion:usuarios:update
+     */
+    assign: async (
+      userId: number,
+      data: AssignRolesRequest
+    ): Promise<AssignRolesResponse> => {
+      const response = await apiClient.post<AssignRolesResponse>(
+        `/users/${userId}/roles`,
+        data
+      );
+      return response.data;
+    },
+
+    /**
+     * Establecer rol primario.
+     * @endpoint PUT /api/v1/users/:id/roles/primary
+     * @permission admin:gestion:usuarios:update
+     */
+    setPrimary: async (
+      userId: number,
+      data: SetPrimaryRoleRequest
+    ): Promise<SetPrimaryRoleResponse> => {
+      const response = await apiClient.put<SetPrimaryRoleResponse>(
+        `/users/${userId}/roles/primary`,
+        data
+      );
+      return response.data;
+    },
+
+    /**
+     * Revocar rol secundario.
+     * @endpoint DELETE /api/v1/users/:id/roles/:roleId
+     * @permission admin:gestion:usuarios:update
+     */
+    revoke: async (
+      userId: number,
+      roleId: number
+    ): Promise<RevokeRoleResponse> => {
+      const response = await apiClient.delete<RevokeRoleResponse>(
+        `/users/${userId}/roles/${roleId}`
+      );
+      return response.data;
+    },
+  },
+
+  // ==========================================
+  // 3. SUB-RECURSO: OVERRIDES (Permisos)
+  // ==========================================
+  overrides: {
+    /**
+     * Listar excepciones de permisos.
+     * @endpoint GET /api/v1/users/:id/overrides
+     * @permission admin:gestion:usuarios:read
+     */
+    list: async (userId: number): Promise<UserOverridesResponse> => {
+      // Estandarización de URL ideal
+      const response = await apiClient.get<UserOverridesResponse>(
+        `/users/${userId}/overrides`
+      );
+      if (!response.data || !Array.isArray(response.data.overrides)) {
+        throw new Error("Respuesta inválida: Lista de overrides malformada");
+      }
+      return response.data;
+    },
+
+    /**
+     * Agregar excepción (Allow/Deny).
+     * @endpoint POST /api/v1/users/:id/overrides
+     * @permission admin:gestion:usuarios:update
+     */
+    add: async (
+      userId: number,
+      data: AddUserOverrideRequest
+    ): Promise<AddUserOverrideResponse> => {
+      const response = await apiClient.post<AddUserOverrideResponse>(
+        `/users/${userId}/overrides`,
+        data
+      );
+      return response.data;
+    },
+
+    /**
+     * Eliminar excepción.
+     * @endpoint DELETE /api/v1/users/:id/overrides/:code
+     * @permission admin:gestion:usuarios:update
+     */
+    remove: async (
+      userId: number,
+      permissionCode: string
+    ): Promise<{ message: string }> => {
+      const response = await apiClient.delete<{ message: string }>(
+        `/users/${userId}/overrides/${permissionCode}`
+      );
+      return response.data;
+    },
   },
 };

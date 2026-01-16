@@ -75,8 +75,22 @@ export const LoginPage = () => {
 
       toast.error("Error al restablecer", { description: message });
 
-      // Si el token expiró, volver al inicio del flujo
-      if (errorCode === "INVALID_SCOPE") {
+      // Si el token expiró o es inválido, volver al inicio del flujo
+      // Códigos que indican token inválido/expirado:
+      // - INVALID_SCOPE: Token con scope incorrecto
+      // - TOKEN_EXPIRED: Token expiró
+      // - INVALID_TOKEN: Token malformado
+      // - UNAUTHORIZED: Token no encontrado
+      const tokenErrors = [
+        "INVALID_SCOPE",
+        "TOKEN_EXPIRED",
+        "INVALID_TOKEN",
+        "UNAUTHORIZED",
+      ];
+      if (errorCode && tokenErrors.includes(errorCode)) {
+        toast.info("Reiniciando proceso", {
+          description: "Por favor solicita un nuevo código de verificación.",
+        });
         setViewState("RECOVERY_REQUEST");
       }
     },

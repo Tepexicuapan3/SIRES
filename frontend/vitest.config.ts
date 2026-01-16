@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    environment: "jsdom",
+    environment: "happy-dom",
     setupFiles: ["./src/test/setup.ts"],
     css: true,
     coverage: {
@@ -14,7 +14,7 @@ export default defineConfig({
       reporter: ["text", "json", "html"],
       exclude: [
         "node_modules/",
-        "src/test/",
+        "src/__tests__/",
         "**/*.d.ts",
         "**/*.config.*",
         "**/mockData",
@@ -31,6 +31,7 @@ export default defineConfig({
       "@store": path.resolve(__dirname, "./src/store"),
       "@config": path.resolve(__dirname, "./src/config"),
       "@lib": path.resolve(__dirname, "./src/lib"),
+      "@routes": path.resolve(__dirname, "./src/routes"),
     },
   },
 });

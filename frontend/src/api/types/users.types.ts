@@ -1,177 +1,183 @@
 /**
- * Types for Users API
+ * Types para Users API
  *
  * IMPORTANTE: Estos tipos usan la nomenclatura EXACTA del backend (MySQL).
  * NO hay mapeo intermedio - usamos los nombres de campos tal cual los retorna la API.
- *
- * Filosofía: Simplicidad > Abstracción innecesaria (menos bugs, menos código)
  */
+
+import type { UserPermissionOverride } from "./permissions.types";
+
+// ==========================================
+// 1. ENTIDADES BASE (Modelos de DB)
+// ==========================================
 
 /**
  * User entity - Nomenclatura del backend (MySQL)
- *
- * Representa un usuario del sistema con datos básicos.
  * Base común para AuthUser y User (CRUD).
  */
 export interface BaseUser {
   id_usuario: number;
-  usuario: string; // Username (ej: "jperez")
+  usuario: string;
   nombre: string;
-  paterno: string; // Apellido paterno
-  materno: string; // Apellido materno
-  expediente: string | null; // Número de expediente
-  id_clin: number | null; // FK a cat_clinicas (puede ser NULL)
+  paterno: string;
+  materno: string;
+  expediente: string | null;
+  id_clin: number | null;
   correo: string;
-  primary_role?: string; // Nombre del rol primario (ej: "MEDICO")
+  rol_primario: string;
 }
 
 /**
  * User entity para CRUD (Listados y Detalle)
- * Extiende BaseUser con campos específicos de administración.
- *
- * Este tipo mapea 1:1 con la respuesta de GET /api/v1/users
  */
 export interface User extends BaseUser {
-  est_usuario: "A" | "B"; // A=Activo, B=Baja
-  last_conexion: string | null; // Última sesión (timestamp)
+  is_active: boolean;
+  last_conexion: string | null;
 }
 
 /**
- * User con metadatos de auditoría
- *
- * Usado en vista detallada de usuario (GET /api/v1/users/:id)
- * Incluye información de quién creó/modificó el usuario
+ * User con metadatos de auditoría completos
  */
 export interface UserDetail extends User {
-  usr_alta: number; // ID del usuario que lo creó
-  fch_alta: string; // Fecha de alta
-  usr_modf: number | null; // ID del usuario que lo modificó
-  fch_modf: string | null; // Fecha de modificación
-  terminos_acept: boolean; // Aceptó términos y condiciones
-  cambiar_clave: boolean; // Debe cambiar contraseña
-  ip_ultima: string | null; // IP de última conexión
+  created_by: number;
+  created_at: string;
+  updated_by: number | null;
+  updated_at: string | null;
+  terminos_acept: boolean;
+  cambiar_clave: boolean;
+  ip_ultima: string | null;
 }
 
 /**
- * Request para crear usuario
- * POST /api/v1/users
+ * Rol asignado a un usuario
  */
+export interface UserRole {
+  id_rol: number;
+  rol: string;
+  desc_rol: string;
+  is_primary: boolean;
+  assigned_at: string;
+  assigned_by: string;
+}
+
+// ==========================================
+// 2. REQUEST / RESPONSE TYPES (Operaciones)
+// ==========================================
+
+// --- CORE CRUD ---
+
 export interface CreateUserRequest {
   usuario: string;
   expediente: string;
   nombre: string;
   paterno: string;
   materno: string;
-  id_clin: number | null; // FK a cat_clinicas (puede ser NULL)
+  id_clin: number | null;
   correo: string;
-  id_rol: number; // Rol inicial a asignar
+  id_rol: number;
 }
 
-/**
- * Response al crear usuario
- * Incluye contraseña temporal que se muestra UNA SOLA VEZ
- */
 export interface CreateUserResponse {
   message: string;
   user: {
     id_usuario: number;
     usuario: string;
-    expediente: string;
-    temp_password: string; // ⚠️ Mostrar al admin, no se puede recuperar después
-    must_change_password: boolean;
-    rol_asignado: number;
+    temp_password: string;
   };
 }
 
-/**
- * Request para actualizar usuario
- * PATCH /api/v1/users/:id
- *
- * Todos los campos opcionales - solo enviar los que se modifican
- */
 export interface UpdateUserRequest {
   nombre?: string;
   paterno?: string;
   materno?: string;
   correo?: string;
-  id_clin?: number | null; // FK a cat_clinicas
+  id_clin?: number | null;
 }
 
-/**
- * User role assignment - Nomenclatura del backend
- *
- * CAMBIO IMPORTANTE vs versión anterior:
- * - Backend usa "rol" y "desc_rol" (NO "nombre" y "descripcion")
- * - Backend NO retorna "priority" en este endpoint
- *
- * Retornado por GET /api/v1/users/:id (lista de roles del usuario)
- */
-export interface UserRole {
-  id_rol: number;
-  rol: string; // Nombre del rol (ej: "ADMIN", "MEDICO")
-  desc_rol: string; // Descripción del rol
-  is_primary: boolean; // TRUE si es el rol primario del usuario
+export interface UpdateUserResponse {
+  message: string;
+  user: User;
 }
 
-/**
- * Request para asignar roles a usuario
- * POST /api/v1/users/:id/roles
- */
+export interface UserStatusResponse {
+  message: string;
+  user: User;
+}
+
+// --- LISTADOS ---
+
+export interface UsersListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  is_active?: boolean;
+  rol_id?: number;
+}
+
+export interface UsersListResponse {
+  items: User[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface UserDetailResponse {
+  user: UserDetail;
+  roles: UserRole[];
+  overrides: UserPermissionOverride[];
+}
+
+// --- SUB-RECURSO: ROLES ---
+
+export interface UserRolesListResponse {
+  user_id: number;
+  roles: UserRole[];
+}
+
 export interface AssignRolesRequest {
-  role_ids: number[]; // Array de IDs de roles a asignar
-  primary_role_id?: number; // Opcional: cuál marcar como primario
+  role_ids: number[];
 }
 
-/**
- * Request para cambiar rol primario
- * PUT /api/v1/users/:id/roles/primary
- */
+export interface AssignRolesResponse {
+  message: string;
+  user_id: number;
+  assigned_count: number;
+  role_ids: number[];
+}
+
 export interface SetPrimaryRoleRequest {
   role_id: number;
 }
 
-/**
- * Response al asignar/actualizar roles
- * Retorna roles actualizados del usuario
- */
-export interface UserRolesResponse {
+export interface SetPrimaryRoleResponse {
+  message: string;
   user_id: number;
-  roles: UserRole[];
-  primary_role: UserRole;
+  role_id: number;
 }
 
-/**
- * Response de GET /api/v1/users - Lista paginada
- *
- * IMPORTANTE: El backend retorna un objeto wrapper con metadata de paginación,
- * NO un array directo.
- */
-export interface UsersListResponse {
-  items: User[]; // Usuarios de la página actual
-  page: number; // Página actual (1-indexed)
-  page_size: number; // Registros por página
-  total: number; // Total de usuarios (todas las páginas)
-  total_pages: number; // Total de páginas
+export interface RevokeRoleResponse {
+  message: string;
+  user_id: number;
+  revoked_role_id: number;
 }
 
-/**
- * Query params para GET /api/v1/users
- * Todos opcionales - permiten filtrado y paginación
- */
-export interface UsersListParams {
-  page?: number; // Default: 1
-  page_size?: number; // Default: 20
-  search?: string; // Búsqueda por texto (usuario, nombre, etc.)
-  estado?: "A" | "B"; // Filtrar por estado (Activo/Baja)
-  rol_id?: number; // Filtrar por rol
+// --- SUB-RECURSO: OVERRIDES ---
+
+export interface AddUserOverrideRequest {
+  permission_code: string;
+  effect: "ALLOW" | "DENY";
+  expires_at?: string;
 }
 
-/**
- * Response de GET /api/v1/users/:id - Usuario detallado
- *
- * Incluye información completa del usuario + roles asignados
- */
-export interface UserDetailResponse {
-  user: UserDetail;
-  roles: UserRole[];
+export interface AddUserOverrideResponse {
+  message: string;
+  user_id: number;
+  permission_code: string;
+  effect: "ALLOW" | "DENY";
+}
+
+export interface UserOverridesResponse {
+  user_id: number;
+  overrides: UserPermissionOverride[];
 }

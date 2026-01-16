@@ -18,7 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useRoles } from "@/features/admin/hooks";
+import { useRoles } from "../../hooks/useRoles";
 import { RolesList } from "./RolesList";
 import { RoleForm } from "./RoleForm";
 import { RolePermissionsManager } from "./RolePermissionsManager";
@@ -143,11 +143,10 @@ export const RolesPage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-brand" />
-              {selectedRole?.nom_rol}
+              {selectedRole?.desc_rol}
             </CardTitle>
             <CardDescription>
-              Código: {selectedRole?.cod_rol} | Prioridad:{" "}
-              {selectedRole?.priority}
+              Código: {selectedRole?.rol} | Prioridad: {selectedRole?.priority}
             </CardDescription>
           </CardHeader>
         </Card>

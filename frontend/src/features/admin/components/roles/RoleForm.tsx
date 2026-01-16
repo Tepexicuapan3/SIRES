@@ -32,17 +32,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useCreateRole, useUpdateRole } from "@/features/admin/hooks";
+import { useCreateRole, useUpdateRole } from "../../hooks/useRoles";
 import type { Role } from "@/api/types/roles.types";
 import { toast } from "sonner";
 
 // Schema de validación con Zod
 const roleFormSchema = z.object({
-  nombre: z
+  rol: z
     .string()
-    .min(1, "El nombre es requerido")
+    .min(1, "El código del rol es requerido")
     .max(50, "Máximo 50 caracteres"),
-  descripcion: z.string().optional(),
+  desc_rol: z.string().min(1, "La descripción es requerida"),
   landing_route: z.string().optional(),
   priority: z.number().int().min(1).max(999).default(100),
   is_admin: z.boolean().optional(),
@@ -64,8 +64,8 @@ export const RoleForm = ({ role, onSuccess, onCancel }: RoleFormProps) => {
   const form = useForm({
     resolver: zodResolver(roleFormSchema),
     defaultValues: {
-      nombre: role?.nom_rol || "",
-      descripcion: "", // Campo vacío hasta que backend tenga este campo
+      rol: role?.rol || "",
+      desc_rol: role?.desc_rol || "",
       landing_route: role?.landing_route || "/inicio",
       priority: role?.priority || 100,
       is_admin: role?.is_admin === 1,
@@ -76,16 +76,16 @@ export const RoleForm = ({ role, onSuccess, onCancel }: RoleFormProps) => {
     try {
       if (isEditing) {
         await updateRoleMutation.mutateAsync({
-          nombre: data.nombre,
-          descripcion: data.descripcion,
+          rol: data.rol,
+          desc_rol: data.desc_rol,
           landing_route: data.landing_route,
           priority: data.priority,
         });
         toast.success("Rol actualizado correctamente");
       } else {
         await createRoleMutation.mutateAsync({
-          nombre: data.nombre,
-          descripcion: data.descripcion,
+          rol: data.rol,
+          desc_rol: data.desc_rol,
           landing_route: data.landing_route,
           priority: data.priority,
           is_admin: data.is_admin,
@@ -117,13 +117,13 @@ export const RoleForm = ({ role, onSuccess, onCancel }: RoleFormProps) => {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Nombre */}
+            {/* Código del Rol */}
             <FormField
               control={form.control}
-              name="nombre"
+              name="rol"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre del Rol *</FormLabel>
+                  <FormLabel>Código del Rol *</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="ej: ENFERMERIA"
@@ -133,7 +133,7 @@ export const RoleForm = ({ role, onSuccess, onCancel }: RoleFormProps) => {
                     />
                   </FormControl>
                   <FormDescription>
-                    Nombre identificador del rol (máx. 50 caracteres)
+                    Código identificador del rol (máx. 50 caracteres)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -143,10 +143,10 @@ export const RoleForm = ({ role, onSuccess, onCancel }: RoleFormProps) => {
             {/* Descripción */}
             <FormField
               control={form.control}
-              name="descripcion"
+              name="desc_rol"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descripción</FormLabel>
+                  <FormLabel>Descripción *</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="ej: Personal de enfermería con acceso a expedientes y constancias"

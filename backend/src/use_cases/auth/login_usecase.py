@@ -8,12 +8,13 @@ para mantener consistencia con el sistema de cookies HttpOnly.
 
 from datetime import datetime, timedelta
 
-from werkzeug.security import check_password_hash
-
 from src.infrastructure.audit.access_log_repository import AccessLogRepository
-from src.infrastructure.repositories.det_user_repository import DetUserRepository
+from src.infrastructure.authorization.authorization_service import \
+    authorization_service
+from src.infrastructure.repositories.det_user_repository import \
+    DetUserRepository
 from src.infrastructure.repositories.user_repository import UserRepository
-from src.infrastructure.authorization.authorization_service import authorization_service
+from werkzeug.security import check_password_hash
 
 
 class LoginUseCase:
@@ -34,6 +35,14 @@ class LoginUseCase:
         if not user:
             # No distinguimos entre user inexistente/clave incorrecta
             return None, "INVALID_CREDENTIALS"
+
+        # ============================
+        # VALIDACIÓN DE ESTADO DEL USUARIO
+        # ============================
+        # Verificar que el usuario esté activo antes de validar contraseña
+        # para prevenir que usuarios dados de baja accedan al sistema
+        if user.get("est_usuario") != "A":
+            return None, "USER_INACTIVE"
 
         det = self.det_repo.get_det_by_userid(user["id_usuario"])
         if not det:
@@ -103,7 +112,7 @@ class LoginUseCase:
             "materno": user.get("materno", ""),
             "nombre_completo": f"{user['nombre']} {user.get('paterno', '')} {user.get('materno', '')}".strip(),
             "expediente": user.get("expediente", ""),
-            "curp": user.get("curp", ""),
+            "id_clin": user.get("id_clin"),
             "correo": user.get("correo", ""),
             "ing_perfil": "Nuevo Usuario" if requires_onboarding else "Usuario",
             "roles": roles,

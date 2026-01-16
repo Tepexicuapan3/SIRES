@@ -17,7 +17,7 @@ class UserRepository:
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
                 SELECT id_usuario, usuario, clave, nombre, paterno, materno, 
-                       expediente, curp, img_perfil, correo, est_usuario
+                       expediente, id_clin, correo, est_usuario
                 FROM sy_usuarios
                 WHERE usuario = %s
                 LIMIT 1
@@ -35,7 +35,7 @@ class UserRepository:
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
                 SELECT id_usuario, usuario, clave, nombre, paterno, materno,
-                       expediente, curp, img_perfil, correo, est_usuario
+                       expediente, id_clin, correo, est_usuario
                 FROM sy_usuarios
                 WHERE correo = %s
                 LIMIT 1
@@ -82,7 +82,7 @@ class UserRepository:
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
                 SELECT id_usuario, usuario, nombre, paterno, materno,
-                       expediente, curp, img_perfil, correo, est_usuario
+                       expediente, id_clin, correo, est_usuario
                 FROM sy_usuarios
                 WHERE id_usuario = %s
                 LIMIT 1
@@ -124,7 +124,7 @@ class UserRepository:
         paterno: str,
         materno: str,
         expediente: str,
-        curp: str,
+        id_clin: int | None,
         correo: str,
         created_by: int
     ) -> int | None:
@@ -138,7 +138,7 @@ class UserRepository:
             paterno: Apellido paterno
             materno: Apellido materno
             expediente: Número de expediente
-            curp: CURP
+            id_clin: ID de la clínica (FK a cat_clinicas)
             correo: Email
             created_by: ID del usuario que crea el registro
             
@@ -153,9 +153,9 @@ class UserRepository:
         try:
             cursor.execute("""
                 INSERT INTO sy_usuarios 
-                (usuario, clave, nombre, paterno, materno, expediente, curp, correo, est_usuario, usr_alta, fch_alta)
+                (usuario, clave, nombre, paterno, materno, expediente, id_clin, correo, est_usuario, usr_alta, fch_alta)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'A', %s, NOW())
-            """, (usuario, clave, nombre, paterno, materno, expediente, curp, correo, created_by))
+            """, (usuario, clave, nombre, paterno, materno, expediente, id_clin, correo, created_by))
             
             conn.commit()
             return cursor.lastrowid
@@ -197,10 +197,12 @@ class UserRepository:
             
             is_primary_int = 1 if is_primary else 0
             
+            # tp_asignacion valores posibles: 'DIRECTA', 'HEREDADA', 'TEMPORAL'
+            # Para creación de usuarios nuevos, siempre es DIRECTA
             cursor.execute("""
                 INSERT INTO users_roles 
-                (id_usuario, id_rol, is_primary, est_usr_rol, usr_alta, fch_alta)
-                VALUES (%s, %s, %s, 'A', %s, NOW())
+                (id_usuario, id_rol, tp_asignacion, is_primary, est_usr_rol, usr_alta, fch_alta)
+                VALUES (%s, %s, 'DIRECTA', %s, 'A', %s, NOW())
             """, (user_id, role_id, is_primary_int, created_by))
             
             conn.commit()
@@ -259,10 +261,9 @@ class UserRepository:
                     u.paterno LIKE %s OR
                     u.materno LIKE %s OR
                     u.expediente LIKE %s OR
-                    u.curp LIKE %s OR
                     u.correo LIKE %s
                 )""")
-                params.extend([search] * 7)
+                params.extend([search] * 6)
             
             # Construir WHERE si hay filtros
             if where_clauses:
@@ -306,9 +307,8 @@ class UserRepository:
                     u.paterno,
                     u.materno,
                     u.expediente,
-                    u.curp,
+                    u.id_clin,
                     u.correo,
-                    u.img_perfil,
                     u.est_usuario,
                     u.usr_alta,
                     u.fch_alta,
@@ -346,10 +346,9 @@ class UserRepository:
                     u.paterno LIKE %s OR
                     u.materno LIKE %s OR
                     u.expediente LIKE %s OR
-                    u.curp LIKE %s OR
                     u.correo LIKE %s
                 )""")
-                params.extend([search] * 7)
+                params.extend([search] * 6)
             
             # Construir WHERE si hay filtros
             if where_clauses:
@@ -391,8 +390,7 @@ class UserRepository:
                     u.paterno,
                     u.materno,
                     u.expediente,
-                    u.curp,
-                    u.img_perfil,
+                    u.id_clin,
                     u.correo,
                     u.est_usuario,
                     u.usr_alta,
@@ -481,8 +479,8 @@ class UserRepository:
         """
         Actualiza los datos de perfil de un usuario.
         
-        Campos actualizables: nombre, paterno, materno, correo
-        Campos NO actualizables: usuario, expediente, curp, clave
+        Campos actualizables: nombre, paterno, materno, correo, id_clin
+        Campos NO actualizables: usuario, expediente, clave
         
         Args:
             user_id: ID del usuario a actualizar
@@ -501,7 +499,7 @@ class UserRepository:
             cursor = conn.cursor()
             
             # Campos permitidos para actualización
-            allowed_fields = ["nombre", "paterno", "materno", "correo"]
+            allowed_fields = ["nombre", "paterno", "materno", "correo", "id_clin"]
             
             # Construir dinámicamente la query con solo los campos enviados
             updates = []
@@ -572,6 +570,10 @@ class UserRepository:
         Desactiva un usuario (soft delete).
         Marca est_usuario = 'B' (baja).
         
+        Auditoría:
+        - usr_baja/fch_baja: Quién y cuándo desactivó (específico de baja)
+        - usr_modf/fch_modf: Última modificación general
+        
         Args:
             user_id: ID del usuario
             modified_by: ID del usuario que realiza la desactivación
@@ -588,9 +590,13 @@ class UserRepository:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE sy_usuarios
-                SET est_usuario = 'B', usr_modf = %s, fch_modf = NOW()
+                SET est_usuario = 'B', 
+                    usr_baja = %s, 
+                    fch_baja = NOW(),
+                    usr_modf = %s, 
+                    fch_modf = NOW()
                 WHERE id_usuario = %s
-            """, (modified_by, user_id))
+            """, (modified_by, modified_by, user_id))
             
             conn.commit()
             return cursor.rowcount > 0
@@ -606,6 +612,10 @@ class UserRepository:
         """
         Reactiva un usuario.
         Marca est_usuario = 'A' (activo).
+        
+        Auditoría:
+        - usr_modf/fch_modf: Quién y cuándo reactivó
+        - usr_baja/fch_baja: Se limpian (NULL) porque ya no está de baja
         
         Args:
             user_id: ID del usuario
@@ -623,7 +633,11 @@ class UserRepository:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE sy_usuarios
-                SET est_usuario = 'A', usr_modf = %s, fch_modf = NOW()
+                SET est_usuario = 'A', 
+                    usr_modf = %s, 
+                    fch_modf = NOW(),
+                    usr_baja = NULL,
+                    fch_baja = NULL
                 WHERE id_usuario = %s
             """, (modified_by, user_id))
             

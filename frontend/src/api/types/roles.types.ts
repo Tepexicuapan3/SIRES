@@ -1,31 +1,31 @@
 /**
  * Types for Roles API
  *
- * Contracts for RBAC 2.0 role management
+ * Contratos para RBAC gestión de roles
  */
 
+import type { Permission } from "./permissions.types";
+
 /**
- * Role entity from backend
- * Matches cat_roles table structure
+ * Entidad Rol
+ * Machea con la estructura de la tabla cat_roles
  */
 export interface Role {
   id_rol: number;
-  rol: string; // Código del rol (ej: "MEDICOS")
-  desc_rol: string; // Descripción del rol (ej: "Médicos del servicio")
-  tp_rol?: string; // Tipo de rol (ej: "ADMIN", "CUSTOM")
-  est_rol: "A" | "B"; // Estado: A=Activo, B=Baja
+  rol: string;
+  desc_rol: string;
+  is_active: boolean;
+  is_system: boolean;
   landing_route: string;
-  priority: number;
-  is_admin: number; // 0 or 1 (boolean flag)
-  usr_alta: string;
-  fch_alta: string;
-  usr_mod?: string | null;
-  fch_mod?: string | null;
+  created_at: string;
+  created_by: string;
+  updated_at: string | null;
+  updated_by: string | null;
 }
 
 /**
- * Role with permissions count
- * Used in list views
+ * Role con contadores de permisos y usuarios
+ * Usado en vistas de lista
  */
 export interface RoleWithCount extends Role {
   permissions_count: number;
@@ -33,54 +33,66 @@ export interface RoleWithCount extends Role {
 }
 
 /**
- * Request payload for creating a new role
+ * Peticion payload para crear un nuevo rol
  * POST /api/v1/roles
  */
 export interface CreateRoleRequest {
   rol: string; // Required: código del rol (max 50 chars)
   desc_rol: string; // Required: descripción del rol
-  tp_rol?: string; // Optional: tipo de rol (default "ADMIN")
   landing_route?: string; // Optional: default "/inicio"
-  priority?: number; // Optional: default 999
-  is_admin?: boolean; // Optional: default false
 }
 
 /**
- * Request payload for updating a role
+ * Response de crear rol (Minima)
+ */
+export interface CreateRoleResponse {
+  message: string;
+  id_rol: number;
+  rol: string; // Necesario para notificaciones (Toast)
+}
+
+/**
+ * Peticion payload para actualizar un rol
  * PUT /api/v1/roles/:id
  */
 export interface UpdateRoleRequest {
-  rol?: string; // Optional: código del rol (max 50 chars)
-  desc_rol?: string; // Optional: descripción del rol
-  tp_rol?: string; // Optional: tipo de rol
-  landing_route?: string; // Optional
-  priority?: number; // Optional
+  rol?: string;
+  desc_rol?: string;
+  landing_route?: string;
+  is_active?: boolean;
 }
 
 /**
- * Response from create/update role
+ * Response de actualizar rol
  */
-export interface RoleResponse {
-  id_rol: number;
-  rol: string;
-  desc_rol: string;
-  tp_rol?: string;
-  est_rol: "A" | "B";
-  landing_route: string;
-  priority: number;
-  is_admin: number;
+export interface UpdateRoleResponse {
+  message: string;
+  role: Role; // Completo para actualizaciones locales (Optimistic)
 }
 
 /**
- * Response from GET /api/v1/roles
+ * Query params for GET /api/v1/roles
+ */
+export interface RolesListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  is_active?: boolean;
+}
+
+/**
+ * Response from GET /api/v1/roles (Full Paged)
  */
 export interface RolesListResponse {
+  items: RoleWithCount[];
   total: number;
-  roles: RoleWithCount[];
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 /**
- * Response from GET /api/v1/roles/:id
+ * Response de GET /api/v1/roles/:id
  */
 export interface RoleDetailResponse {
   role: Role;
@@ -89,38 +101,19 @@ export interface RoleDetailResponse {
 }
 
 /**
- * Permission assigned to a role
- * Includes assignment metadata
+ * Permisos asociados a un rol
+ * Extiende la entidad Permission con metadatos de asignación
  */
-export interface RolePermission {
-  id_permission: number;
-  code: string;
-  resource: string;
-  action: string;
-  description: string;
-  category: string;
+export interface RolePermission extends Permission {
   assigned_by: string;
   assigned_at: string;
 }
 
 /**
- * Request to assign multiple permissions to a role
+ * Request a payload para asignar permisos a un rol
  * POST /api/v1/permissions/assign
  */
 export interface AssignPermissionsRequest {
   role_id: number;
   permission_ids: number[];
-}
-
-/**
- * User role assignment
- * From users_roles table
- */
-export interface UserRole {
-  id_rol: number;
-  rol: string;
-  desc_rol: string;
-  is_primary: boolean;
-  assigned_at: string;
-  assigned_by: string;
 }

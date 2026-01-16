@@ -151,7 +151,6 @@
 
     "NEO": {
       "mode": "primary",
-      "model": "github-copilot/claude-sonnet-4.5",
       "prompt": "{file:./.opencode/prompts/build.md}",
       "tools": {
         "write": true,
@@ -166,7 +165,6 @@
 
     "JARVIS": {
       "mode": "primary",
-      "model": "github-copilot/claude-opus-4.5",
       "prompt": "{file:./.opencode/prompts/plan.md}",
       "tools": {
         "write": false,
@@ -182,7 +180,6 @@
     "code-reviewer": {
       "description": "Revisa código siguiendo las convenciones de SIRES",
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
       "prompt": "{file:./.opencode/prompts/code-reviewer.md}",
       "tools": {
         "write": false,
@@ -197,7 +194,6 @@
     "security-auditor": {
       "description": "Audita seguridad JWT, CSRF, y vulnerabilidades",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.5",
       "prompt": "{file:./.opencode/prompts/security-auditor.md}",
       "tools": {
         "write": false,
@@ -212,7 +208,6 @@
     "committer": {
       "description": "Genera commits con Conventional Commits",
       "mode": "subagent",
-      "model": "github-copilot/claude-haiku-4.5",
       "prompt": "{file:./.opencode/prompts/committer.md}",
       "tools": {
         "write": false,
@@ -227,7 +222,6 @@
     "ui-designer": {
       "description": "Crea/refactoriza componentes UI con shadcn adaptados a Metro CDMX",
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
       "prompt": "{file:./.opencode/prompts/ui-designer.md}",
       "tools": {
         "write": true,

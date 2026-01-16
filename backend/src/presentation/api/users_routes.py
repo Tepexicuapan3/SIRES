@@ -7,7 +7,12 @@ Responsabilidades:
 - Gestionar usuarios (CRUD básico)
 """
 
+import logging
+import traceback
+
 from flask import Blueprint, jsonify, request
+
+logger = logging.getLogger(__name__)
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from src.infrastructure.authorization.decorators import requires_permission
 from src.use_cases.users.assign_roles_to_user import AssignRolesToUserUseCase
@@ -47,7 +52,7 @@ def create_user():
             "nombre": "Juan",
             "paterno": "Pérez",
             "materno": "García",
-            "curp": "PEGJ950101HDFRZN01",
+            "id_clin": 1,  // Opcional - FK a cat_clinicas
             "correo": "jperez@metro.cdmx.gob.mx",
             "id_rol": 2
         }
@@ -75,8 +80,8 @@ def create_user():
         current_user_id = int(get_jwt_identity())
         data = request.get_json()
         
-        # Validación de campos requeridos
-        required_fields = ["usuario", "expediente", "nombre", "paterno", "materno", "curp", "correo", "id_rol"]
+        # Validación de campos requeridos (id_clin es opcional)
+        required_fields = ["usuario", "expediente", "nombre", "paterno", "materno", "correo", "id_rol"]
         missing_fields = [field for field in required_fields if field not in data or not data[field]]
         
         if missing_fields:
@@ -98,10 +103,12 @@ def create_user():
                 "message": "El expediente debe ser de 8 dígitos"
             }), 422
         
-        if len(data["curp"]) != 18:
+        # Validar id_clin si se proporciona (puede ser None)
+        id_clin = data.get("id_clin")
+        if id_clin is not None and not isinstance(id_clin, int):
             return jsonify({
                 "code": "VALIDATION_ERROR",
-                "message": "El CURP debe tener 18 caracteres"
+                "message": "El ID de clínica debe ser un número entero"
             }), 422
         
         # Ejecutar use case
@@ -111,7 +118,7 @@ def create_user():
             nombre=data["nombre"],
             paterno=data["paterno"],
             materno=data["materno"],
-            curp=data["curp"],
+            id_clin=id_clin,
             correo=data["correo"],
             id_rol=data["id_rol"],
             created_by_user_id=current_user_id
@@ -151,7 +158,7 @@ def list_users():
     Query params:
         - page (int, default=1): Número de página
         - page_size (int, default=20): Registros por página
-        - search (str, opcional): Búsqueda por usuario/nombre/expediente/CURP/correo
+        - search (str, opcional): Búsqueda por usuario/nombre/expediente/correo
         - estado (str, opcional): 'A' (activo) o 'B' (baja)
         - rol_id (int, opcional): Filtrar por rol específico
     
@@ -255,9 +262,8 @@ def get_user(user_id: int):
                 "paterno": "Pérez",
                 "materno": "García",
                 "expediente": "12345678",
-                "curp": "PEGJ950101HDFRZN01",
+                "id_clin": 1,  // FK a cat_clinicas (puede ser null)
                 "correo": "jperez@metro.cdmx.gob.mx",
-                "img_perfil": null,
                 "est_usuario": "A",
                 "usr_alta": 1,
                 "fch_alta": "2025-01-15 10:30:00",
@@ -317,8 +323,8 @@ def update_user(user_id: int):
     Actualiza datos de perfil de un usuario.
     Requiere permiso 'usuarios:update'.
     
-    Campos actualizables: nombre, paterno, materno, correo
-    Campos NO actualizables: usuario, expediente, curp, clave (usar endpoints específicos)
+    Campos actualizables: nombre, paterno, materno, correo, id_clin
+    Campos NO actualizables: usuario, expediente, clave (usar endpoints específicos)
     
     Path params:
         - user_id (int): ID del usuario a actualizar
@@ -328,7 +334,8 @@ def update_user(user_id: int):
             "nombre": "Juan",
             "paterno": "Pérez",
             "materno": "García",
-            "correo": "jperez@metro.cdmx.gob.mx"
+            "correo": "jperez@metro.cdmx.gob.mx",
+            "id_clin": 1  // Opcional - FK a cat_clinicas
         }
     
     Response 200:
@@ -481,6 +488,13 @@ def assign_roles_to_user(user_id: int):
         current_user_id = int(get_jwt_identity())
         data = request.get_json()
         
+        # DEBUG: Logging del request recibido
+        print(f"\n{'='*60}")
+        print(f"[DEBUG] POST /users/{user_id}/roles")
+        print(f"[DEBUG] Current user ID: {current_user_id}")
+        print(f"[DEBUG] Request data: {data}")
+        print(f"{'='*60}\n")
+        
         # Validación de campos requeridos
         if not data or "role_ids" not in data:
             return jsonify({
@@ -497,12 +511,17 @@ def assign_roles_to_user(user_id: int):
                 "message": "'role_ids' debe ser una lista de IDs"
             }), 400
         
+        print(f"[DEBUG] role_ids validated: {role_ids}")
+        
         # Ejecutar use case
+        print(f"[DEBUG] Calling AssignRolesToUserUseCase.execute...")
         result, error = assign_roles_usecase.execute(
             user_id=user_id,
             role_ids=role_ids,
             modified_by=current_user_id
         )
+        
+        print(f"[DEBUG] UseCase result: {result}, error: {error}")
         
         if error:
             error_mapping = {
@@ -514,14 +533,26 @@ def assign_roles_to_user(user_id: int):
                 "SERVER_ERROR": (500, "Error interno del servidor"),
             }
             status, message = error_mapping.get(error, (500, "Error desconocido"))
+            print(f"[DEBUG] Returning error: {error} -> {status} {message}")
             return jsonify({"code": error, "message": message}), status
         
+        print(f"[DEBUG] Success! Returning result...")
         return jsonify({
             "message": "Roles asignados correctamente",
             **result
         }), 200
     
     except Exception as e:
+        # CRITICAL: Mostrar stack trace completo
+        import traceback
+        print(f"\n{'='*60}")
+        print(f"[ERROR] EXCEPTION in assign_roles_to_user:")
+        print(f"[ERROR] Exception type: {type(e).__name__}")
+        print(f"[ERROR] Exception message: {str(e)}")
+        print(f"[ERROR] Stack trace:")
+        traceback.print_exc()
+        print(f"{'='*60}\n")
+        
         return jsonify({
             "code": "SERVER_ERROR",
             "message": f"Error al asignar roles: {str(e)}"

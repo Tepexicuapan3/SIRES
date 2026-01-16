@@ -11,6 +11,7 @@ import {
   Mail,
   User as UserIcon,
   IdCard,
+  Building2,
 } from "lucide-react";
 import {
   Card,
@@ -34,9 +35,11 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { usersAPI } from "@api/resources/users.api";
-import { permissionsAPI } from "@api/resources/permissions.api";
+import type { Clinica } from "@api/types/users.types";
+import { useClinics } from "../hooks/useClinics";
+import { useRoles } from "../hooks/useRoles";
 
 // Schema de validación
 const createUserSchema = z.object({
@@ -51,7 +54,7 @@ const createUserSchema = z.object({
     .string()
     .length(8, "Debe ser de 8 dígitos")
     .regex(/^\d+$/, "Solo números"),
-  curp: z.string().length(18, "CURP debe tener 18 caracteres"),
+  id_clin: z.string().nullable(),
   correo: z.string().email("Email inválido"),
   rol: z.string().min(1, "Seleccioná un rol"),
 });
@@ -62,11 +65,15 @@ export const CreateUserPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
 
-  // Fetch roles from API
-  const { data: rolesData, isLoading: isLoadingRoles } = useQuery({
-    queryKey: ["roles"],
-    queryFn: permissionsAPI.getRoles,
-  });
+  // Fetch roles from API usando hook centralizado
+  const rolesQuery = useRoles();
+  const rolesData = rolesQuery.data
+    ? { total: rolesQuery.data.length, roles: rolesQuery.data }
+    : undefined;
+  const isLoadingRoles = rolesQuery.isLoading;
+
+  // Fetch clínicas
+  const { data: clinicas = [], isLoading: isLoadingClinics } = useClinics();
 
   // Mutation para crear usuario
   const createUserMutation = useMutation({
@@ -107,7 +114,7 @@ export const CreateUserPage = () => {
       paterno: "",
       materno: "",
       expediente: "",
-      curp: "",
+      id_clin: null,
       correo: "",
       rol: "",
     },
@@ -126,7 +133,7 @@ export const CreateUserPage = () => {
         nombre: data.nombre,
         paterno: data.paterno,
         materno: data.materno,
-        curp: data.curp.toUpperCase(),
+        id_clin: data.id_clin ? parseInt(data.id_clin) : null,
         correo: data.correo,
         id_rol: parseInt(data.rol),
       });
@@ -268,20 +275,46 @@ export const CreateUserPage = () => {
                 </div>
               </div>
 
-              {/* CURP y Email */}
+              {/* Clínica y Email */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="curp">CURP</Label>
-                  <Input
-                    id="curp"
-                    placeholder="18 caracteres"
-                    maxLength={18}
-                    {...register("curp")}
-                    className={errors.curp ? "border-status-critical" : ""}
-                  />
-                  {errors.curp && (
+                  <Label htmlFor="id_clin">
+                    <Building2 className="inline size-4 mr-1" />
+                    Clínica Asignada
+                  </Label>
+                  <Select
+                    value={watch("id_clin") || "null"}
+                    onValueChange={(value) =>
+                      setValue("id_clin", value === "null" ? null : value)
+                    }
+                    disabled={isLoadingClinics}
+                  >
+                    <SelectTrigger
+                      className={errors.id_clin ? "border-status-critical" : ""}
+                    >
+                      <SelectValue
+                        placeholder={
+                          isLoadingClinics
+                            ? "Cargando clínicas..."
+                            : "Seleccioná una clínica"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="null">Sin clínica asignada</SelectItem>
+                      {clinicas.map((clinica: Clinica) => (
+                        <SelectItem
+                          key={clinica.id_clin}
+                          value={clinica.id_clin.toString()}
+                        >
+                          {clinica.clinica} ({clinica.folio_clin})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.id_clin && (
                     <p className="text-xs text-status-critical">
-                      {errors.curp.message}
+                      {errors.id_clin.message}
                     </p>
                   )}
                 </div>
@@ -331,7 +364,7 @@ export const CreateUserPage = () => {
                         key={role.id_rol}
                         value={role.id_rol.toString()}
                       >
-                        {role.nom_rol}
+                        {role.desc_rol}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -350,7 +383,7 @@ export const CreateUserPage = () => {
                       {
                         rolesData.roles.find(
                           (r) => r.id_rol.toString() === selectedRole,
-                        )?.nom_rol
+                        )?.desc_rol
                       }
                     </Badge>
                   </div>

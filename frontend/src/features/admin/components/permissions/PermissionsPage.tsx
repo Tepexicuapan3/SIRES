@@ -3,7 +3,7 @@ import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PermissionsList } from "./PermissionsList";
 import { PermissionForm } from "./PermissionForm";
-import { usePermissions } from "@features/admin/hooks";
+import { usePermissions } from "../../hooks/useAdminPermissions";
 import type { PermissionResponse } from "@api/types/permissions.types";
 
 /**
