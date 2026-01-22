@@ -14,7 +14,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
    - Health checks
 
 2. **Arquitectura:** [`docs/architecture/overview.md`](./architecture/overview.md)
-   - Stack completo (Flask + React)
+   - Stack completo (Django + React)
    - Capas backend (Clean-ish Architecture)
    - Flujo end-to-end
 
@@ -44,7 +44,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
 | **Testear código** | [Testing](./guides/testing.md) | 20 min |
 | **Implementar RBAC frontend** | [RBAC Frontend](./guides/rbac-frontend.md) | 25 min |
-| **Contratos API RBAC** | [RBAC API Contracts](./api/rbac-api-contracts.md) | Referencia |
+| **Contratos API** | [API Docs](./api/README.md) | Referencia |
 
 ---
 
@@ -77,9 +77,11 @@ docs/
 │   └── 003-rbac-2-migration.md     # 🆕 Migración a RBAC 2.0 (permisos granulares)
 │
 ├── api/
-│   ├── endpoints.md                # Referencia general de API
-│   ├── auth-endpoints.md           # Contratos auth detallados
-│   └── rbac-api-contracts.md       # 🆕 Contratos RBAC para frontend
+│   ├── standards.md                # Contrato global de API
+│   ├── README.md                   # Indice de API
+│   └── modules/
+│       ├── auth.md                 # Contratos auth
+│       └── rbac.md                 # Contratos RBAC
 │
 └── templates/                      # Templates para crear docs nuevos
     ├── guide-template.md           # Template guías
@@ -99,9 +101,9 @@ docs/
 4. [RBAC](./architecture/rbac.md) → Decoradores `@requires_permission()`
 
 **Stack que vas a usar:**
-- Flask + MySQL + Redis
+- Django + DRF + MySQL + Redis
 - Clean Architecture (use cases / infrastructure / presentation)
-- Flask-JWT-Extended (cookies HttpOnly)
+- JWT en cookies HttpOnly + CSRF header
 
 ### Eres Frontend Developer
 
@@ -180,7 +182,7 @@ UI Component → Hook (TanStack Query) → API Resource → Backend
 | React 19 | UI framework |
 | TypeScript | Tipado estático |
 | Vite | Build tool |
-| React Router v6 | Routing |
+| React Router 7 | Routing |
 | TanStack Query | Server state |
 | Zustand | UI state |
 | React Hook Form | Forms |
@@ -229,13 +231,13 @@ chore: update dependencies
 ### Permisos (formato)
 
 ```
-{resource}:{action}
+{grupo}{modulo}{submodulo}:{action}
 ```
 
 Ejemplos:
-- `expedientes:create`
-- `usuarios:delete`
-- `consultas:read`
+- `medico:gestion:expedientes:create`
+- `admin:gestion:usuarios:delete`
+- `medico:consultas:read`
 - `*` (admin wildcard)
 
 ### Tokens Metro CDMX
@@ -338,31 +340,6 @@ docker-compose logs frontend
 
 # Revisar consola del navegador (F12)
 ```
-
----
-
-## 🎓 Filosofía del Proyecto
-
-> **No somos un generador de código. Somos mentores que programan.**
-
-Este proyecto está configurado para **enseñar mientras construyes**:
-
-1. **Preguntamos antes de asumir** (clarificamos requerimientos)
-2. **Explicamos el "por qué"** (no solo el "cómo")
-3. **Conectamos con principios** (SOLID, Clean Architecture)
-4. **Revisamos con rigor** (seguridad, performance, maintainability)
-
-### Agentes Disponibles
-
-Ver [`AGENTS.md`](../AGENTS.md) para la lista completa.
-
-| Agente | Rol | Cuándo Usar |
-|--------|-----|-------------|
-| `build` | Developer + Mentor | Implementar features (explica antes de codear) |
-| `plan` | Arquitecto | Diseñar antes de implementar |
-| `code-reviewer` | Reviewer | Revisar código (aprenderás de los errores) |
-| `security-auditor` | Security Expert | Auditar seguridad (aprenderás a pensar como atacante) |
-| `ui-designer` | UI/UX Engineer | Crear/refactorizar componentes shadcn |
 
 ---
 
