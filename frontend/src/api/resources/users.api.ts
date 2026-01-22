@@ -22,16 +22,15 @@ import type {
   UsersListParams,
   UsersListResponse,
   UserDetailResponse,
-  UserRolesListResponse,
   AssignRolesRequest,
   AssignRolesResponse,
   SetPrimaryRoleRequest,
   SetPrimaryRoleResponse,
   RevokeRoleResponse,
-  UserOverridesResponse,
   AddUserOverrideRequest,
   AddUserOverrideResponse,
-} from "@api/schemas/users.schema";
+  RemoveUserOverrideResponse,
+} from "@api/types";
 
 export const usersAPI = {
   // ==========================================
@@ -117,18 +116,6 @@ export const usersAPI = {
   // ==========================================
   roles: {
     /**
-     * Listar roles asignados a un usuario.
-     * @endpoint GET /api/v1/users/:id/roles
-     * @permission admin:gestion:usuarios:read
-     */
-    list: async (userId: number): Promise<UserRolesListResponse> => {
-      const response = await apiClient.get<UserRolesListResponse>(
-        `/users/${userId}/roles`,
-      );
-      return response.data;
-    },
-
-    /**
      * Asignar roles adicionales.
      * @endpoint POST /api/v1/users/:id/roles
      * @permission admin:gestion:usuarios:update
@@ -181,18 +168,6 @@ export const usersAPI = {
   // ==========================================
   overrides: {
     /**
-     * Listar excepciones de permisos.
-     * @endpoint GET /api/v1/users/:id/overrides
-     * @permission admin:gestion:usuarios:read
-     */
-    list: async (userId: number): Promise<UserOverridesResponse> => {
-      const response = await apiClient.get<UserOverridesResponse>(
-        `/users/${userId}/overrides`,
-      );
-      return response.data;
-    },
-
-    /**
      * Agregar excepción (Allow/Deny).
      * @endpoint POST /api/v1/users/:id/overrides
      * @permission admin:gestion:usuarios:update
@@ -216,8 +191,8 @@ export const usersAPI = {
     remove: async (
       userId: number,
       permissionCode: string,
-    ): Promise<{ message: string }> => {
-      const response = await apiClient.delete<{ message: string }>(
+    ): Promise<RemoveUserOverrideResponse> => {
+      const response = await apiClient.delete<RemoveUserOverrideResponse>(
         `/users/${userId}/overrides/${permissionCode}`,
       );
       return response.data;

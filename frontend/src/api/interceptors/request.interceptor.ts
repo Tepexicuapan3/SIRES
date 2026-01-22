@@ -1,65 +1,48 @@
 /**
  * Request Interceptor
  *
- * Agrega Request ID (OBLIGATORIO en sistemas médicos) y CSRF token a requests.
- * Basado en estándares definidos en: ../standards.md
- */
-
-import type { InternalAxiosRequestConfig } from "axios";
-import { Cookie } from "js-cookie";
-
-/**
- * Genera un Request ID único (UUID v4)
- * Importante: En sistemas médicos, TODOS los requests deben tener un Request ID para traceability.
- */
-export const generateRequestId = (): string => {
-  return crypto.randomUUID();
-};
-
-/**
- * Obtener el CSRF token de la cookie
- * Usa js-cookie en vez de implementación manual.
- */
-export const getCsrfToken = (): string | undefined => {
-  return Cookie.get("csrf_access_token");
-};
-
-/**
- * Interceptor de Request
+ * Se ejecuta ANTES de cada request al backend.
  *
- * Agrega:
- * - Request ID (para traceability en sistemas médicos críticos)
- * - CSRF token (para métodos mutantes: POST, PUT, PATCH, DELETE)
+ * RESPONSABILIDADES:
+ * 1. X-Request-ID: Traceability (obligatorio para el sistema médico)
+ * 2. X-CSRF-TOKEN: Protección CSRF en métodos mutantes
+ *
+ * ¿POR QUÉ X-Request-ID?
+ * En sistemas de salud, si algo falla, necesitás poder rastrear
+ * el request desde el frontend hasta los logs del backend.
+ * Este ID único conecta todo el flujo.
+ *
+ * ¿POR QUÉ CSRF SOLO EN MUTACIONES?
+ * Los ataques CSRF explotan acciones que CAMBIAN datos.
+ * Un GET no puede hacer daño porque solo lee.
+ * POST/PUT/PATCH/DELETE sí modifican, por eso necesitan protección.
  */
-export const requestInterceptor = (
-  config: InternalAxiosRequestConfig,
-): InternalAxiosRequestConfig => {
-  // 1. Agregar Request ID (OBLIGATORIO en sistemas médicos)
-  const requestId = generateRequestId();
-  config.headers["X-Request-ID"] = requestId;
 
-  // 2. Agregar CSRF token para métodos que lo requieren
-  const methodsRequiringCsrf = ["POST", "PUT", "PATCH", "DELETE"];
+import type { AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import Cookies from "js-cookie";
 
-  if (
-    config.method &&
-    methodsRequiringCsrf.includes(config.method.toUpperCase())
-  ) {
-    const csrfToken = getCsrfToken();
-    if (csrfToken && config.headers) {
-      config.headers["X-CSRF-TOKEN"] = csrfToken;
-    }
-  }
-
-  // 3. Retornar config modificado
-  return config;
-};
+// Métodos HTTP que modifican datos (requieren CSRF)
+const MUTATING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
 /**
- * Verifica si el método requiere CSRF token
+ * Configura el interceptor de request en el cliente Axios
  */
-export const requiresCsrfToken = (method?: string): boolean => {
-  if (!method) return false;
-  const methodsRequiringCsrf = ["POST", "PUT", "PATCH", "DELETE"];
-  return methodsRequiringCsrf.includes(method.toUpperCase());
-};
+export function setupRequestInterceptor(client: AxiosInstance): void {
+  client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+    // 1. Request ID para traceability
+    config.headers["X-Request-ID"] = crypto.randomUUID();
+
+    // 2. CSRF token para métodos mutantes
+    if (
+      config.method &&
+      MUTATING_METHODS.includes(config.method.toUpperCase())
+    ) {
+      const csrfToken = Cookies.get("csrf_access_token");
+      if (csrfToken) {
+        config.headers["X-CSRF-TOKEN"] = csrfToken;
+      }
+    }
+
+    return config;
+  });
+}

@@ -11,26 +11,28 @@ import { AxiosError } from "axios";
 import type {
   LoginRequest,
   LoginResponse,
-  AuthUser,
   RefreshTokenResponse,
   RequestResetCodeRequest,
+  RequestResetCodeResponse,
   VerifyResetCodeRequest,
   VerifyResetCodeResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
   CompleteOnboardingRequest,
+  CompleteOnboardingResponse,
   VerifyTokenResponse,
-} from "@api/schemas/auth.schema";
-import type { IAuthAPI } from "../types/auth.types";
+  LogoutResponse,
+  MeResponse,
+} from "@api/types";
 
-const authAPI: IAuthAPI = {
+const authAPI = {
   /**
    * Iniciar sesión en el sistema.
    *
    * @endpoint POST /api/v1/auth/login
    * @permission Public
    *
-   * @param data - Credenciales (usuario y clave)
+   * @param data - Credenciales (username y password)
    * @returns Token, datos de usuario y flag de onboarding
    * @throws Error si las credenciales son inválidas o la respuesta es malformada
    */
@@ -46,8 +48,9 @@ const authAPI: IAuthAPI = {
    * @endpoint POST /api/v1/auth/logout
    * @permission Auth (Token válido)
    */
-  logout: async (): Promise<void> => {
-    await apiClient.post("/auth/logout");
+  logout: async (): Promise<LogoutResponse> => {
+    const response = await apiClient.post<LogoutResponse>("/auth/logout");
+    return response.data;
   },
 
   /**
@@ -59,8 +62,8 @@ const authAPI: IAuthAPI = {
    *
    * @returns Datos completos del usuario logueado
    */
-  getCurrentUser: async (): Promise<AuthUser> => {
-    const response = await apiClient.get<AuthUser>("/auth/me");
+  getCurrentUser: async (): Promise<MeResponse> => {
+    const response = await apiClient.get<MeResponse>("/auth/me");
     return response.data;
   },
 
@@ -119,8 +122,8 @@ const authAPI: IAuthAPI = {
    */
   completeOnboarding: async (
     data: CompleteOnboardingRequest,
-  ): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>(
+  ): Promise<CompleteOnboardingResponse> => {
+    const response = await apiClient.post<CompleteOnboardingResponse>(
       "/auth/complete-onboarding",
       data,
     );
@@ -138,8 +141,14 @@ const authAPI: IAuthAPI = {
    *
    * @param data - Email del usuario
    */
-  requestResetCode: async (data: RequestResetCodeRequest): Promise<void> => {
-    await apiClient.post<void>("/auth/request-reset-code", data);
+  requestResetCode: async (
+    data: RequestResetCodeRequest,
+  ): Promise<RequestResetCodeResponse> => {
+    const response = await apiClient.post<RequestResetCodeResponse>(
+      "/auth/request-reset-code",
+      data,
+    );
+    return response.data;
   },
 
   /**

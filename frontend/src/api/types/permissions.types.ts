@@ -1,65 +1,50 @@
 /**
- * Types para Permissions API
+ * Permissions Types - Pure TypeScript interfaces
+ * Tipos para catálogo de permisos del sistema.
  *
- * Estrategia Code-First: Los permisos son estructurales y se definen en el código.
- * No hay CRUD, solo catálogo de solo lectura.
+ * @description Interfaces para listar y mostrar permisos disponibles.
+ * Los permisos son de solo lectura (no CRUD) y se ordenan por UI usando
+ * la estructura del código "GRUPO:MODULO:SUBMODULO:ACCION".
+ * Todos los campos usan camelCase en inglés según el estándar de la API.
  */
 
+// =============================================================================
+// TIPOS COMUNES
+// =============================================================================
+
+/**
+ * Efecto de un permiso override: permitir o denegar.
+ * Usado en overrides de usuarios para modificar permisos heredados de roles.
+ */
+export type PermissionEffect = "ALLOW" | "DENY";
+
+// =============================================================================
+// ENTIDADES
+// =============================================================================
+
+/**
+ * Permiso del sistema (estructura completa).
+ * Representa un permiso en el catálogo.
+ *
+ * Los permisos se ordenan en la UI usando la estructura del código:
+ * "GRUPO:MODULO:SUBMODULO:ACCION" (ej: "expedientes:create", "admin:gestion:usuarios:read")
+ */
 export interface Permission {
-  id_permission: number;
-  code: string; // Formato jerárquico: GRUPO:MODULO:SUBMODULO:ACCION
+  id: number;
+  code: string; // (ej: "GRUPO:MODULO:SUBMODULO:ACCION") 
   description: string;
+  isSystem: boolean;
 }
 
+// =============================================================================
+// RESPONSES
+// =============================================================================
+
+/**
+ * Response del catálogo de permisos.
+ * GET /api/v1/permissions
+ */
 export interface PermissionCatalogResponse {
   items: Permission[];
   total: number;
-}
-
-// Request types para asignación y revocación de permisos a roles
-export interface AssignPermissionRequest {
-  permission_id: number;
-}
-
-export interface RevokePermissionRequest {
-  permission_id: number;
-}
-
-export interface AssignPermissionResponse {
-  message: string;
-  role_id: number;
-  permission_id: number;
-}
-
-/**
- * User permission override
- */
-export interface UserPermissionOverride {
-  id_user_permission_override: number;
-  permission_code: string;
-  permission_description: string;
-  effect: "ALLOW" | "DENY";
-  expires_at: string | null;
-  is_expired: boolean;
-  assigned_at: string;
-  assigned_by: string;
-}
-
-/**
- * Request para agregar un override de permiso a un usuario
- */
-
-export interface AddUserOverrideRequest {
-  permission_code: string;
-  effect: "ALLOW" | "DENY";
-  expires_at?: string;
-}
-
-/**
- * Response de get user overrides
- */
-
-export interface UserOverridesResponse {
-  user_id: number;
-  overrides: UserPermissionOverride[];
 }
