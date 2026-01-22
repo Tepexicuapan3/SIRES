@@ -1,93 +1,9 @@
-# API Layer - Frontend
+# API Layer - SIRES Frontend
 
-> **Documentación de Arquitectura:** [`docs/architecture/authentication.md`](../../../docs/architecture/authentication.md)
+> **Fuente de verdad de contratos:** [`docs/api/standards.md`](../../../docs/api/standards.md)  
+> **Documentacion centralizada:** [`docs/api/README.md`](../../../docs/api/README.md)
 
-Este directorio contiene la capa de transporte de datos del frontend. Su única responsabilidad es comunicar la aplicación con el backend de SIRES, manejando la seguridad y el tipado de datos.
-
----
-
-## 🏛️ Arquitectura y Responsabilidades
-
-### 1. Cliente HTTP (`client.ts`)
-Configuración centralizada de **Axios** que maneja:
-*   **Seguridad:** Cookies `HttpOnly` (automático con `withCredentials: true`) y Header CSRF (`X-CSRF-TOKEN`).
-*   **Manejo de Errores:** Normalización de errores y redirección en sesión expirada.
-*   **Refresh Token:** Interceptor que renueva el token silenciosamente en errores 401.
-
-### 2. Recursos (`resources/*.api.ts`)
-Módulos "tontos" que mapean 1:1 con los endpoints del backend.
-*   **✅ LO QUE HACEN:** Tipar peticiones/respuestas, llamar a `client.ts`.
-*   **❌ LO QUE NO HACEN:** Transformar datos, agrupar, filtrar o contener lógica de negocio.
-    *   *La transformación de datos pertenece a la capa de Hooks (React Query).*
-
----
-
-## 📏 Estándares de Respuesta (Backend Contract)
-
-El frontend está diseñado para consumir dos tipos de estructuras de respuesta, dependiendo de la naturaleza del endpoint.
-
-### A. Endpoints de Colección (Listas/Tablas)
-Usados para obtener múltiples registros (ej: Usuarios, Clínicas, Roles, Permisos).
-**Siempre** retornan un **Wrapper con Metadatos**, independientemente de si son 10 o 10,000 registros.
-
-```typescript
-// GET /api/v1/users?page=1
-interface CollectionResponse<T> {
-  items: T[];       // Array de datos
-  total: number;    // Total de registros en BD
-  page: number;     // Página actual
-  page_size: number;// Registros por página
-  total_pages: number;
-}
-```
-*   **Uso en Tablas:** Se consume `response.items` y `response.page/total`.
-*   **Uso en Selects:** Se consume `response.items` (ignorando metadata).
-
-### B. Endpoints Singulares (Operacionales/Detalle)
-Usados para obtener una sola entidad o el resultado de una operación específica.
-Retornan el objeto directo o un wrapper semántico específico.
-
-```typescript
-// GET /api/v1/users/1
-interface UserDetailResponse {
-  user: User;
-  roles: UserRole[];
-}
-
-// POST /api/v1/auth/login
-interface LoginResponse {
-  user: User;
-  requires_onboarding: boolean;
-}
-```
-
----
-
-## 🛡️ Seguridad y Buenas Prácticas
-
-### Autenticación (HttpOnly Cookies)
-El frontend **NO** tiene acceso a los JWT (Access/Refresh Tokens). Estos viajan en cookies `HttpOnly` gestionadas por el navegador.
-*   **Prohibido:** Intentar leer `document.cookie` para buscar tokens.
-*   **Prohibido:** Guardar tokens en `localStorage` o `sessionStorage` (Vulnerabilidad XSS).
-
-### Protección CSRF
-Las mutaciones (`POST`, `PUT`, `PATCH`, `DELETE`) requieren un token CSRF.
-*   El backend envía una cookie `csrf_access_token` (legible por JS).
-*   `client.ts` lee esta cookie y la inyecta en el header `X-CSRF-TOKEN`.
-
----
-
-## 🧪 Mocking (MSW)
-
-El proyecto utiliza **Mock Service Worker (MSW)** para interceptar peticiones a nivel de red durante desarrollo y tests.
-*   No existe lógica condicional en el código (`if (USE_MOCKS) ...`).
-*   Los recursos (`auth.api.ts`) siempre llaman a la URL real.
-*   MSW intercepta el tráfico si está activo.
-
-Activar mocks en `.env`:
-```bash
-VITE_USE_MOCKS=true
-```
+Capa de transporte de datos del frontend. Comunica la aplicación con el backend de SIRES.
 
 ---
 
@@ -95,20 +11,150 @@ VITE_USE_MOCKS=true
 
 ```
 api/
-├── client.ts              # Core Axios + Interceptores
-├── README.md              # Esta documentación
+├── client.ts                 # Configuración Axios + interceptores
+├── README.md                 # Esta documentación
 │
-├── resources/             # Definición de Endpoints
-│   ├── auth.api.ts        # Login, Logout, Reset Password
-│   ├── users.api.ts       # CRUD Usuarios (Wrapper Paginado)
-│   ├── roles.api.ts       # CRUD Roles (Wrapper Paginado)
-│   ├── permissions.api.ts # CRUD Permisos (Wrapper Paginado)
-│   └── clinicas.api.ts    # Catálogo Clínicas
+├── interceptors/
+│   ├── request.interceptor.ts    # X-Request-ID, X-CSRF-TOKEN
+│   └── error.interceptor.ts      # Refresh token, ApiError
 │
-└── types/                 # Contratos de Datos (TypeScript)
-    ├── auth.types.ts
-    ├── users.types.ts
-    ├── roles.types.ts
-    ├── permissions.types.ts
-    └── clinicas.types.ts
+├── utils/
+│   └── errors.ts                 # Clase ApiError, códigos de error
+│
+├── resources/                    # Definición de Endpoints
+│   ├── auth.api.ts               # Login, Logout, Reset Password
+│   ├── users.api.ts              # CRUD Usuarios
+│   ├── roles.api.ts              # CRUD Roles
+│   ├── permissions.api.ts        # Gestión de Permisos
+│   └── clinicas.api.ts           # Catálogo Clínicas
+│
+└── types/                        # Contratos de Datos (TypeScript)
+    ├── index.ts                  # Barrel export
+    ├── common.types.ts           # Paginación, respuestas estándar
+    ├── auth.types.ts             # Login, sesión, recovery
+    ├── users.types.ts            # Usuarios, roles asignados, overrides
+    ├── roles.types.ts            # Roles, permisos asignados
+    ├── permissions.types.ts      # Catálogo permisos, overrides
+    └── clinicas.types.ts         # Catálogo clínicas
 ```
+
+---
+
+## 🏛️ Arquitectura
+
+### Cliente HTTP (`client.ts`)
+Configuración centralizada de Axios:
+- **Seguridad:** Cookies HttpOnly + Header CSRF (`X-CSRF-TOKEN`)
+- **Refresh Token:** Renovación silenciosa en errores 401
+- **Trazabilidad:** Header `X-Request-ID` en cada petición
+
+### Recursos (`resources/*.api.ts`)
+Módulos que mapean 1:1 con endpoints del backend:
+- ✅ Tipar peticiones/respuestas, llamar a `client.ts`
+- ❌ No transforman datos ni contienen lógica de negocio
+
+### Tipos (`types/*.types.ts`)
+Contratos TypeScript que definen la forma de los datos:
+- Todos los campos usan **camelCase** (inglés)
+- IDs genéricos (`id`) no específicos (`idUsuario`)
+
+---
+
+## 📏 Estándares Principales
+
+| Estándar | Archivo | Descripción |
+|----------|---------|-------------|
+| **Nomenclatura** | `standards.md` | camelCase en API, snake_case en BD |
+| **Responses** | `standards.md` | Estructura de listados, errores, void responses |
+| **Error Codes** | `standards.md` | Códigos de error consistentes |
+| **Pagination** | `standards.md` | Params y response structure |
+| **Cache Strategy** | `standards.md` | Estrategia de TanStack Query |
+
+---
+
+## 🛡️ Seguridad
+
+### Autenticación (HttpOnly Cookies)
+El frontend **NO** tiene acceso a los JWT. Viajan en cookies HttpOnly:
+- ❌ No leer `document.cookie` para buscar tokens
+- ❌ No guardar tokens en `localStorage`/`sessionStorage`
+
+### Protección CSRF
+Mutaciones (`POST`, `PUT`, `PATCH`, `DELETE`) requieren token CSRF:
+- Backend envía cookie `csrf_token` (legible por JS)
+- `request.interceptor.ts` inyecta header `X-CSRF-TOKEN`
+
+---
+
+## 🔄 Cache Management (TanStack Query)
+
+### Estrategia Principal
+
+| Tipo de Operación | Response | Cache Strategy |
+|-------------------|----------|----------------|
+| **Crear (POST)** | Minimalista: `{id, name}` | **Invalidar** query de listado |
+| **Actualizar datos (PUT/PATCH)** | Recurso completo | **Invalidar** query de detalle + listado |
+| **Eliminar (DELETE)** | `SuccessResponse` vacío | **Invalidar** query de listado |
+| **Sub-recursos** (roles, overrides, permissions) | `{parentId, lista[]}` | **Sync optimista** + respuesta |
+
+### Query Keys Estándar
+
+```typescript
+// Usuarios
+["users", params]              // Lista paginada
+["users", userId]              // Detalle completo
+["users", userId, "roles"]     // Roles asignados
+
+// Roles
+["roles", params]              // Lista paginada
+["roles", roleId]              // Detalle completo
+["roles", roleId, "permissions"]  // Permisos asignados
+
+// Sesión
+["me"]                         // Usuario actual (/auth/me)
+```
+
+> Ver [`standards.md`](./standards.md) > **Estándar 9** para ejemplos completos de implementación de hooks.
+
+---
+
+## 📋 Checklist de Implementación
+
+Antes de implementar un nuevo endpoint:
+
+- [ ] Definir tipos en `types/*.types.ts`
+- [ ] Crear función en `resources/*.api.ts`
+- [ ] Actualizar `types/index.ts` (barrel export)
+- [ ] Documentar en `standards.md` si introduce nuevos patrones
+- [ ] Implementar hook con estrategia de cache correcta
+- [ ] Probar happy path y edge cases
+
+---
+
+## 📚 Documentación Relacionada
+
+| Documento | Descripción | Publico |
+|-----------|-------------|---------|
+| [`docs/api/standards.md`](../../../docs/api/standards.md) | Estandares globales de API | Backend + Frontend |
+| [`docs/api/README.md`](../../../docs/api/README.md) | Indice de documentacion API | Backend + Frontend |
+
+---
+
+## 🔗 Links Externos
+
+- [TanStack Query](https://tanstack.com/query/latest)
+- [Axios Interceptors](https://axios-http.com/docs/interceptors)
+- [Flask-JWT-Extended](https://flask-jwt-extended.readthedocs.io/)
+
+---
+
+## 🤝 Contribuciones
+
+Para agregar nuevos endpoints:
+
+1. **Definir tipos** en el archivo correspondiente en `types/`
+2. **Crear la función** en `resources/`
+3. **Actualizar barrel export** en `types/index.ts`
+4. **Documentar cambios** en `standards.md` si es necesario
+
+No modifiques `client.ts` ni los interceptores a menos que sea absolutamente necesario.
