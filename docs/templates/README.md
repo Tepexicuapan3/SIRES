@@ -16,12 +16,9 @@ Este directorio contiene templates para crear documentación consistente en el p
 **Destino:** `docs/guides/<nombre-guia>.md`
 
 **Ejemplo de uso:**
-```bash
-# Usando el comando /doc
-opencode run --command doc "create adding-rbac-endpoint"
-
-# El agente copiará guide-template.md y lo adaptará
-```
+- Copiar `docs/templates/guide-template.md` a `docs/guides/mi-guia.md`.
+- Completar los placeholders con el contenido real.
+- Linkear desde `docs/README.md`.
 
 **Estructura:**
 - TL;DR (resumen ejecutivo)
@@ -51,13 +48,9 @@ opencode run --command doc "create adding-rbac-endpoint"
 **Destino:** `docs/adr/###-titulo-decision.md`
 
 **Ejemplo de uso:**
-```bash
-# Usando el comando /doc
-opencode run --command doc "adr jwt-cookies-httponly"
-
-# El agente copiará adr-template.md, numerará secuencialmente
-# y lo adaptará al contexto
-```
+- Copiar `docs/templates/adr-template.md` a `docs/adr/###-mi-decision.md`.
+- Numerar secuencialmente y completar la metadata.
+- Linkear desde `docs/README.md`.
 
 **Estructura:**
 - Contexto y problema
@@ -79,25 +72,7 @@ opencode run --command doc "adr jwt-cookies-httponly"
 
 ## Cómo Usar los Templates
 
-### Opción 1: Comando `/doc` (Recomendado)
-
-El agente automáticamente:
-1. Copia el template correcto
-2. Numera ADRs secuencialmente
-3. Rellena metadata (fecha, autor)
-4. Linkea desde `docs/README.md`
-
-```bash
-# Crear guía
-opencode run --command doc "create nombre-guia"
-
-# Crear ADR
-opencode run --command doc "adr titulo-decision"
-```
-
----
-
-### Opción 2: Manualmente
+### Uso Manual (Recomendado)
 
 1. **Copiar template:**
    ```bash
@@ -139,8 +114,8 @@ opencode run --command doc "adr titulo-decision"
 
 1. **¿Ya existe?**
    ```bash
-   # Buscar en docs/
-   grep -r "palabra clave" docs/
+    # Buscar en docs/
+    rg "palabra clave" docs/
    ```
 
 2. **¿Es realmente necesario?**
@@ -154,7 +129,7 @@ opencode run --command doc "adr titulo-decision"
 3. **¿Dónde va?**
    - Decisión arquitectónica → ADR
    - Guía paso a paso → guides/
-   - Cambio en API → actualizar `api/endpoints.md`
+    - Cambio en API → actualizar `docs/api/`
    - Setup/troubleshooting → actualizar `getting-started/setup.md`
    - Concepto arquitectónico → actualizar `architecture/*.md`
 
