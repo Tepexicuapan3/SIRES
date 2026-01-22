@@ -1,71 +1,62 @@
+/**
+ * Cliente HTTP - SIRES API
+ *
+ * Punto de entrada ÚNICO para todas las llamadas al backend.
+ *
+ * RESPONSABILIDADES:
+ * 1. Configuración base de Axios (URL, timeout, credentials)
+ * 2. Inyección de headers (CSRF, Request-ID)
+ * 3. Manejo de errores (transformar a ApiError, refresh token en 401)
+ *
+ * SEGURIDAD:
+ * - Los JWT viajan en cookies HttpOnly (el JS no puede leerlos)
+ * - CSRF token se envía en header X-CSRF-TOKEN para mutaciones
+ * - withCredentials: true permite que el browser envíe las cookies
+ *
+ * @example
+ * ```typescript
+ * // En resources/auth.api.ts
+ * import apiClient from "@api/client";
+ *
+ * const response = await apiClient.post<LoginResponse>("/auth/login", data);
+ * return response.data;
+ * ```
+ */
+
 import axios from "axios";
-import type { AxiosInstance, AxiosError } from "axios";
+import type { AxiosInstance } from "axios";
 
 import { env } from "@/config/env";
-import { useAuthStore } from "@/store/authStore";
-import { requestInterceptor } from "./interceptors/request.interceptor";
-import {
-  responseInterceptor,
-  errorInterceptor401,
-} from "./interceptors/response.interceptor";
-import { errorInterceptor } from "./interceptors/error.interceptor";
+import { setupRequestInterceptor } from "@api/interceptors/request.interceptor";
+import { setupErrorInterceptor } from "@api/interceptors/error.interceptor";
 
-/**
- * Cliente Axios configurado para la API de SIRES
- *
- * IMPORTANTE: Usa HttpOnly cookies para autenticación
- * - Los tokens NO se almacenan en localStorage (vulnerabilidad XSS)
- * - Las cookies se envían automáticamente con withCredentials: true
- * - El CSRF token se envía en header X-CSRF-TOKEN
- *
- * Refactorizado: Interceptors separados por responsabilidad
- * - Request: Agrega Request ID y CSRF token
- * - Response: Valida con Zod y maneja 401 con auto-refresh
- * - Error: Transforma AxiosError en ApiError estandarizado
- */
+// ==========================================
+// CONFIGURACIÓN BASE
+// ==========================================
+
 const apiClient: AxiosInstance = axios.create({
   baseURL: env.apiUrl,
-  timeout: 30000,
+  timeout: env.apiTimeout,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  // CRÍTICO: Permite envío de cookies en requests cross-origin
+  // CRÍTICO: Permite envío/recepción de cookies HttpOnly
   withCredentials: true,
 });
 
 // ==========================================
-// CONFIGURAR INTERCEPTORS
+// INTERCEPTORS
 // ==========================================
 
-/**
- * Interceptor de Request
- * - Agrega Request ID (OBLIGATORIO en sistemas médicos)
- * - Agrega CSRF token a requests que modifican datos
- */
-apiClient.interceptors.request.use(requestInterceptor);
+// Request: Agrega X-Request-ID y X-CSRF-TOKEN
+setupRequestInterceptor(apiClient);
 
-/**
- * Interceptor de Response
- * - Valida respuestas con Zod (contract validation)
- * - Maneja 401 con auto-refresh de token
- */
-apiClient.interceptors.response.use(responseInterceptor);
+// Response/Error: Maneja 401 con refresh + transforma errores a ApiError
+setupErrorInterceptor(apiClient);
 
-/**
- * Interceptor de Error (401 handling)
- * - Maneja refresh de token en errores 401
- * - Excepciones para endpoints sin retry
- */
-apiClient.interceptors.response.use(errorInterceptor401);
-
-/**
- * Interceptor de Error (transformación)
- * - Transforma AxiosError en ApiError estandarizado
- * - Loggear en development
- * - Inyecta Request ID y timestamp
- */
-apiClient.interceptors.response.use(errorInterceptor);
+// ==========================================
+// EXPORT
+// ==========================================
 
 export default apiClient;
-export { apiClient as api };

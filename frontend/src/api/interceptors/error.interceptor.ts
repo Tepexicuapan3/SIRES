@@ -1,88 +1,176 @@
 /**
  * Error Interceptor
  *
- * Transforma AxiosError en ApiError estandarizado.
- * Basado en estándares definidos en: ../standards.md
+ * Se ejecuta cuando el backend responde con error (4xx, 5xx) o hay fallo de red.
+ *
+ * RESPONSABILIDADES:
+ * 1. Refresh automático de token en errores 401
+ * 2. Transformar errores de Axios a ApiError (formato consistente)
+ * 3. Logging en desarrollo (sin datos sensibles)
+ *
+ * ¿CÓMO FUNCIONA EL REFRESH?
+ * 1. Request falla con 401 (token expirado)
+ * 2. Intentamos POST /auth/refresh (el refresh_token está en cookie)
+ * 3. Si funciona: reintentamos el request original con el nuevo token
+ * 4. Si falla: sesión expirada, redirigimos al login
+ *
+ * ¿POR QUÉ ApiError?
+ * Sin normalización, cada componente interpreta errores diferente.
+ * Con ApiError, TODOS los errores tienen: code, message, status, requestId.
  */
 
-import type { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { ApiError, ERROR_CODES, getErrorMessage } from "../utils/errors";
+import type {
+  AxiosError,
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+} from "axios";
+import { ApiError, ERROR_CODES } from "../utils/errors";
+import { useAuthStore } from "@/store/authStore";
+import { env } from "@/config/env";
 
-// ==========================================
-// ERROR INTERCEPTOR
-// ==========================================
+// Endpoints que NO deben intentar refresh (evita loops infinitos)
+const NO_REFRESH_ENDPOINTS = [
+  "/auth/login",
+  "/auth/logout",
+  "/auth/refresh",
+  "/auth/reset-password",
+  "/auth/complete-onboarding",
+];
+
+// Flag para evitar múltiples refreshes simultáneos
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
 
 /**
- * Interceptor de error principal
- *
- * Responsabilidades:
- * 1. Transformar AxiosError en ApiError estandarizado
- * 2. Agregar Request ID y timestamp
- * 3. Loggear en development (sin datos sensibles)
+ * Configura el interceptor de errores en el cliente Axios
  */
-export const errorInterceptor = (error: AxiosError): never => {
-  const originalRequest = error.config as InternalAxiosRequestConfig;
+export function setupErrorInterceptor(client: AxiosInstance): void {
+  client.interceptors.response.use(
+    // Success: pasar la respuesta sin modificar
+    (response) => response,
 
-  // 1. Crear ApiError estandarizado
-  let apiError: ApiError;
+    // Error: manejar 401 y transformar a ApiError
+    async (error: AxiosError) => {
+      const originalRequest = error.config as InternalAxiosRequestConfig & {
+        _retry?: boolean;
+      };
 
+      // ¿Es un 401 que podemos reintentar?
+      const shouldAttemptRefresh =
+        error.response?.status === 401 &&
+        !originalRequest._retry &&
+        !NO_REFRESH_ENDPOINTS.some((ep) => originalRequest.url?.includes(ep));
+
+      if (shouldAttemptRefresh) {
+        originalRequest._retry = true;
+
+        try {
+          // Evitar múltiples refreshes simultáneos
+          if (!isRefreshing) {
+            isRefreshing = true;
+            refreshPromise = attemptTokenRefresh(originalRequest);
+          }
+
+          const refreshSucceeded = await refreshPromise;
+
+          if (refreshSucceeded) {
+            // Reintentar request original con nuevo token
+            return client(originalRequest);
+          }
+        } catch {
+          // Refresh falló, continuar con el error original
+        } finally {
+          isRefreshing = false;
+          refreshPromise = null;
+        }
+      }
+
+      // Transformar a ApiError y rechazar
+      throw transformToApiError(error);
+    },
+  );
+}
+
+/**
+ * Intenta renovar el token de acceso
+ */
+async function attemptTokenRefresh(
+  originalRequest: InternalAxiosRequestConfig,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${env.apiUrl}/auth/refresh`, {
+      method: "POST",
+      credentials: "include", // Envía cookies
+      headers: {
+        "Content-Type": "application/json",
+        "X-Request-ID":
+          (originalRequest.headers?.["X-Request-ID"] as string) ||
+          crypto.randomUUID(),
+      },
+    });
+
+    if (response.ok) {
+      return true;
+    }
+
+    // Refresh falló - sesión expirada
+    handleSessionExpired();
+    return false;
+  } catch {
+    // Error de red durante refresh
+    handleSessionExpired();
+    return false;
+  }
+}
+
+/**
+ * Maneja sesión expirada - notifica al store para redirección
+ */
+function handleSessionExpired(): void {
+  const authStore = useAuthStore.getState();
+  authStore.setSessionExpired(true);
+  authStore.logout();
+}
+
+/**
+ * Transforma AxiosError en ApiError normalizado
+ */
+function transformToApiError(error: AxiosError): ApiError {
+  const requestId = error.config?.headers?.["X-Request-ID"] as string;
+
+  // Error de red (sin conexión, timeout, etc.)
   if (!error.response) {
-    // Network error (sin conexión, timeout, etc.)
-    apiError = new ApiError(
+    return new ApiError(
       ERROR_CODES.NETWORK_ERROR,
       error.message || "No hay conexión a internet",
       0,
       undefined,
-      originalRequest.headers?.["X-Request-ID"] as string,
-      new Date(),
-    );
-  } else {
-    // Backend error
-    const response = error.response;
-    const data = response.data as any;
-    const status = response.status;
-
-    // 2. Determinar código de error (usar código del backend si existe)
-    const code = data?.code || getErrorCodeFromStatus(status);
-
-    // 3. Determinar mensaje (usar mensaje del backend o default)
-    const message = data?.message || getErrorMessage(code);
-
-    // 4. Crear ApiError
-    apiError = new ApiError(
-      code,
-      message,
-      status,
-      data?.details,
-      originalRequest.headers?.["X-Request-ID"] as string,
-      new Date(),
+      requestId,
     );
   }
 
-  // 5. Loggear en development (sin datos sensibles)
-  if (import.meta.env.DEV) {
-    console.error("[API ERROR]", {
-      endpoint: `${originalRequest.method} ${originalRequest.url}`,
-      code: apiError.code,
-      message: apiError.message,
-      status: apiError.status,
-      requestId: apiError.requestId,
-      timestamp: apiError.timestamp.toISOString(),
-    });
-  }
+  // Error del backend
+  const { status, data } = error.response;
+  const errorData = data as {
+    code?: string;
+    message?: string;
+    details?: Record<string, string[]>;
+  };
 
-  // 6. Lanzar el ApiError (será capturado por TanStack Query)
-  throw apiError;
-};
+  return new ApiError(
+    (errorData?.code as keyof typeof ERROR_CODES) ||
+      getDefaultErrorCode(status),
+    errorData?.message || getDefaultMessage(status),
+    status,
+    errorData?.details,
+    requestId,
+  );
+}
 
 /**
- * Obtener código de error por HTTP status
- *
- * Fallback para cuando el backend no envía código custom.
+ * Código de error por defecto según HTTP status
  */
-function getErrorCodeFromStatus(
-  status: number,
-): (typeof ERROR_CODES)[keyof typeof ERROR_CODES] {
+function getDefaultErrorCode(status: number): string {
   switch (status) {
     case 400:
       return ERROR_CODES.VALIDATION_ERROR;
@@ -91,14 +179,36 @@ function getErrorCodeFromStatus(
     case 403:
       return ERROR_CODES.PERMISSION_DENIED;
     case 404:
-      return ERROR_CODES.USER_NOT_FOUND; // Fallback genérico
+      return ERROR_CODES.USER_NOT_FOUND;
     case 409:
-      return ERROR_CODES.USER_EXISTS; // Fallback genérico
-    case 500:
-      return ERROR_CODES.INTERNAL_SERVER_ERROR;
-    case 502:
-      return ERROR_CODES.EXTERNAL_SERVICE_ERROR;
+      return ERROR_CODES.USER_EXISTS;
+    case 429:
+      return ERROR_CODES.RATE_LIMIT_EXCEEDED;
     default:
       return ERROR_CODES.INTERNAL_SERVER_ERROR;
+  }
+}
+
+/**
+ * Mensaje por defecto según HTTP status
+ */
+function getDefaultMessage(status: number): string {
+  switch (status) {
+    case 400:
+      return "Error de validación";
+    case 401:
+      return "Sesión expirada";
+    case 403:
+      return "No tienes permiso para esta acción";
+    case 404:
+      return "Recurso no encontrado";
+    case 409:
+      return "El recurso ya existe";
+    case 429:
+      return "Demasiadas solicitudes, intenta en unos minutos";
+    case 500:
+      return "Error interno del servidor";
+    default:
+      return "Error desconocido";
   }
 }
