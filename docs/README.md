@@ -38,6 +38,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Configurar rate limiting** | [Rate Limiting](./architecture/rate-limiting.md) | 25 min |
 | **Implementar OTP/Recovery** | [OTP con Redis](./architecture/otp-redis.md) | 20 min |
 | **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
+| **Auth queries/mutations** | [Auth Queries](./guides/auth-queries-mutations.md) | 15 min |
 | **Implementar CRUD RBAC completo** | [RBAC CRUD Implementation](./guides/rbac-crud-implementation.md) | Plan detallado |
 | **Usar sistema RBAC CRUD** | [RBAC CRUD User Guide](./guides/rbac-crud-user-guide.md) | Guía completa |
 | **Arquitectura Frontend RBAC** | [RBAC Frontend Architecture](./architecture/rbac-frontend.md) | 30 min |
@@ -65,6 +66,7 @@ docs/
 │
 ├── guides/
 │   ├── adding-feature.md           # Checklist backend → frontend
+│   ├── auth-queries-mutations.md   # Guia de auth con TanStack Query
 │   ├── rbac-crud-implementation.md # 🆕 Plan implementación RBAC CRUD completo
 │   ├── rbac-crud-user-guide.md     # 🆕 Guía de uso sistema RBAC CRUD
 │   ├── ui-components.md            # shadcn + Metro CDMX
