@@ -24,6 +24,8 @@
 - Route guards live in `frontend/src/routes/` (no guards in pages).
 - Keep routes declarative; business logic lives in features/use cases.
 - Protected routes must enforce auth and permissions.
+- Route modules live in `frontend/src/routes/modules/` (grouped by domain).
+- Lazy loading must be applied per module (not per page).
 
 ---
 
