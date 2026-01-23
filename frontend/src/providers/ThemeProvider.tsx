@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useThemeStore } from "../store/themeStore";
+import { useThemeStore } from "@/store/themeStore";
 
 /**
  * Aplica el tema global usando la clase `dark` en <html>.
