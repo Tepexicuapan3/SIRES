@@ -8,7 +8,7 @@
 
 import type { PaginationParams, ListResponse } from "@api/types/common.types";
 import type { PermissionEffect } from "@api/types/permissions.types";
-import type { ClinicRef } from "@api/types/clinicas.types";
+import type { CentroAtencionRef } from "@api/types/catalogos/centros-atencion.types";
 
 // =============================================================================
 // OBJETOS ANIDADOS (Relaciones)
@@ -38,7 +38,7 @@ export interface UserListItem {
   username: string;
   fullname: string;
   email: string;
-  clinic: ClinicRef | null;
+  clinic: CentroAtencionRef | null;
   primaryRole: string;
   isActive: boolean;
 }
