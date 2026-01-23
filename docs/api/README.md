@@ -10,6 +10,7 @@ Estructura
 - `standards.md` estandares globales.
 - `modules/auth.md` contratos de autenticacion.
 - `modules/rbac.md` contratos de roles, permisos y overrides.
+- `modules/catalogos.md` contratos de catalogos.
 
 Reglas de mantenimiento
 - Actualiza primero `docs/api/standards.md` y despues los modulos.
