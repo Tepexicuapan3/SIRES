@@ -62,8 +62,6 @@ export interface CentroAtencionDetail extends CentroAtencionListItem {
 
   // --- Datos de control ---
   address: string;
-  deletedAt: string | null;
-  deletedBy: UserRef | null;
 
   // --- Horarios ---
   schedule: CentroAtencionSchedule;

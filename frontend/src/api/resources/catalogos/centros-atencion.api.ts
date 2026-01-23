@@ -25,7 +25,7 @@ export const centrosAtencionAPI = {
   /**
    * Listar centros de atencion con paginacion y filtros.
    * @endpoint GET /api/v1/care-centers
-   * @permission admin:gestion:centros_atencion:read
+   * @permission admin:catalogo:centros_atencion:read
    */
   getAll: async (
     params?: CentrosAtencionListParams,
@@ -42,7 +42,7 @@ export const centrosAtencionAPI = {
   /**
    * Obtener detalle completo de un centro de atencion.
    * @endpoint GET /api/v1/care-centers/:id
-   * @permission admin:gestion:centros_atencion:read
+   * @permission admin:catalogo:centros_atencion:read
    */
   getById: async (centerId: number): Promise<CentroAtencionDetailResponse> => {
     const response = await apiClient.get<CentroAtencionDetailResponse>(
@@ -54,7 +54,7 @@ export const centrosAtencionAPI = {
   /**
    * Crear centro de atencion.
    * @endpoint POST /api/v1/care-centers
-   * @permission admin:gestion:centros_atencion:create
+   * @permission admin:catalogo:centros_atencion:create
    */
   create: async (
     data: CreateCentroAtencionRequest,
@@ -69,7 +69,7 @@ export const centrosAtencionAPI = {
   /**
    * Actualizar centro de atencion.
    * @endpoint PUT /api/v1/care-centers/:id
-   * @permission admin:gestion:centros_atencion:update
+   * @permission admin:catalogo:centros_atencion:update
    */
   update: async (
     centerId: number,
@@ -85,7 +85,7 @@ export const centrosAtencionAPI = {
   /**
    * Eliminar centro de atencion (baja logica).
    * @endpoint DELETE /api/v1/care-centers/:id
-   * @permission admin:gestion:centros_atencion:delete
+   * @permission admin:catalogo:centros_atencion:delete
    */
   delete: async (centerId: number): Promise<DeleteCentroAtencionResponse> => {
     const response = await apiClient.delete<DeleteCentroAtencionResponse>(

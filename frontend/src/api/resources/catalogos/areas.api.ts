@@ -21,7 +21,7 @@ export const areasAPI = {
   /**
    * Listar areas con paginacion y filtros.
    * @endpoint GET /api/v1/areas
-   * @permission admin:gestion:areas:read
+   * @permission admin:catalogo:areas:read
    */
   getAll: async (params?: AreasListParams): Promise<AreasListResponse> => {
     const response = await apiClient.get<AreasListResponse>("/areas", {
@@ -33,7 +33,7 @@ export const areasAPI = {
   /**
    * Obtener detalle completo de un area.
    * @endpoint GET /api/v1/areas/:id
-   * @permission admin:gestion:areas:read
+   * @permission admin:catalogo:areas:read
    */
   getById: async (areaId: number): Promise<AreaDetailResponse> => {
     const response = await apiClient.get<AreaDetailResponse>(
@@ -45,7 +45,7 @@ export const areasAPI = {
   /**
    * Crear area.
    * @endpoint POST /api/v1/areas
-   * @permission admin:gestion:areas:create
+   * @permission admin:catalogo:areas:create
    */
   create: async (data: CreateAreaRequest): Promise<CreateAreaResponse> => {
     const response = await apiClient.post<CreateAreaResponse>("/areas", data);
@@ -55,7 +55,7 @@ export const areasAPI = {
   /**
    * Actualizar area.
    * @endpoint PUT /api/v1/areas/:id
-   * @permission admin:gestion:areas:update
+   * @permission admin:catalogo:areas:update
    */
   update: async (
     areaId: number,
@@ -71,7 +71,7 @@ export const areasAPI = {
   /**
    * Eliminar area (baja logica).
    * @endpoint DELETE /api/v1/areas/:id
-   * @permission admin:gestion:areas:delete
+   * @permission admin:catalogo:areas:delete
    */
   delete: async (areaId: number): Promise<DeleteAreaResponse> => {
     const response = await apiClient.delete<DeleteAreaResponse>(
