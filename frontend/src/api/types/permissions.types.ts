@@ -27,11 +27,11 @@ export type PermissionEffect = "ALLOW" | "DENY";
  * Representa un permiso en el catálogo.
  *
  * Los permisos se ordenan en la UI usando la estructura del código:
- * "GRUPO:MODULO:SUBMODULO:ACCION" (ej: "expedientes:create", "admin:gestion:usuarios:read")
+ * "GRUPO:MODULO:SUBMODULO:ACCION" (ej: "clinico:expedientes:create", "admin:gestion:usuarios:read")
  */
 export interface Permission {
   id: number;
-  code: string; // (ej: "GRUPO:MODULO:SUBMODULO:ACCION") 
+  code: string; // (ej: "GRUPO:MODULO:SUBMODULO:ACCION")
   description: string;
   isSystem: boolean;
 }

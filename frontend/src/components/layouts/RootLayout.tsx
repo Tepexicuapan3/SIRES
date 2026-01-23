@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { SessionObserver } from "@/features/auth/components/SessionObserver";
+import { useAuthSession } from "@/features/auth/queries/useAuthSession";
 
 /**
  * Layout raíz de la aplicación.
@@ -11,6 +12,9 @@ import { SessionObserver } from "@/features/auth/components/SessionObserver";
  * No tiene UI visual propia, solo lógica y Outlet.
  */
 export const RootLayout = () => {
+  // Hidratacion global de sesion para evitar estado obsoleto en rutas publicas.
+  useAuthSession();
+
   return (
     <>
       <SessionObserver />

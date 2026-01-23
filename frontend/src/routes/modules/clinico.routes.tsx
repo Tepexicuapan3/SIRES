@@ -27,7 +27,7 @@ const consultasRoutes: RouteObject[] = [
   {
     index: true,
     element: (
-      <ProtectedRoute requiredPermission="consultas:read">
+      <ProtectedRoute requiredPermission="clinico:consultas:read">
         <ConsultasPage />
       </ProtectedRoute>
     ),
@@ -35,7 +35,7 @@ const consultasRoutes: RouteObject[] = [
   {
     path: "agenda",
     element: (
-      <ProtectedRoute requiredPermission="consultas:read">
+      <ProtectedRoute requiredPermission="clinico:consultas:read">
         <AgendaPage />
       </ProtectedRoute>
     ),
@@ -43,7 +43,7 @@ const consultasRoutes: RouteObject[] = [
   {
     path: "nueva",
     element: (
-      <ProtectedRoute requiredPermission="consultas:create">
+      <ProtectedRoute requiredPermission="clinico:consultas:create">
         <NuevaConsultaPage />
       </ProtectedRoute>
     ),
@@ -51,7 +51,7 @@ const consultasRoutes: RouteObject[] = [
   {
     path: "historial",
     element: (
-      <ProtectedRoute requiredPermission="consultas:read">
+      <ProtectedRoute requiredPermission="clinico:consultas:read">
         <HistorialPage />
       </ProtectedRoute>
     ),
@@ -62,7 +62,7 @@ const expedientesRoutes: RouteObject[] = [
   {
     index: true,
     element: (
-      <ProtectedRoute requiredPermission="expedientes:read">
+      <ProtectedRoute requiredPermission="clinico:expedientes:read">
         <ExpedientesListPage />
       </ProtectedRoute>
     ),
@@ -70,7 +70,7 @@ const expedientesRoutes: RouteObject[] = [
   {
     path: ":folio",
     element: (
-      <ProtectedRoute requiredPermission="expedientes:read">
+      <ProtectedRoute requiredPermission="clinico:expedientes:read">
         <ExpedienteDetailPage />
       </ProtectedRoute>
     ),
@@ -78,7 +78,7 @@ const expedientesRoutes: RouteObject[] = [
   {
     path: "nuevo",
     element: (
-      <ProtectedRoute requiredPermission="expedientes:create">
+      <ProtectedRoute requiredPermission="clinico:expedientes:create">
         <PlaceholderPage
           title="Nuevo Expediente"
           description="Formulario para crear un nuevo expediente medico"

@@ -43,7 +43,7 @@ import {
   useCreatePermission,
   useUpdatePermission,
 } from "../../hooks/useAdminPermissions";
-import type { PermissionResponse } from "@/api/types/permissions.types";
+import type { Permission } from "@api/types";
 import { toast } from "sonner";
 
 // Categorías disponibles
@@ -64,7 +64,7 @@ const createPermissionSchema = z.object({
     .min(1, "El código es requerido")
     .regex(
       /^[a-z_]+:[a-z_]+$/,
-      "Formato: recurso:accion (ej: expedientes:read)",
+      "Formato: grupo:modulo:submodulo:accion (ej: clinico:expedientes:read)",
     ),
   description: z
     .string()
@@ -86,7 +86,7 @@ type CreatePermissionValues = z.infer<typeof createPermissionSchema>;
 type UpdatePermissionValues = z.infer<typeof updatePermissionSchema>;
 
 interface PermissionFormProps {
-  permission?: PermissionResponse;
+  permission?: Permission;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -175,7 +175,7 @@ export const PermissionForm = ({
                     <FormLabel>Código del Permiso *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="ej: expedientes:read"
+                        placeholder="ej: clinico:expedientes:read"
                         {...field}
                         className="font-mono lowercase"
                       />

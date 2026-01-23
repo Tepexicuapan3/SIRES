@@ -32,7 +32,7 @@ export const rolesAPI = {
    * Soporta paginación y filtrado.
    *
    * @endpoint GET /api/v1/roles
-   * @permission admin:config:roles:read
+   * @permission admin:gestion:roles:read
    *
    * @param params - Filtros de búsqueda
    * @returns Lista de roles con contadores
@@ -49,12 +49,14 @@ export const rolesAPI = {
    * Incluye la lista de permisos asignados.
    *
    * @endpoint GET /api/v1/roles/:id
-   * @permission admin:config:roles:read
+   * @permission admin:gestion:roles:read
    *
    * @param roleId - ID del rol
    */
   getById: async (roleId: number): Promise<RoleDetailResponse> => {
-    const response = await apiClient.get<RoleDetailResponse>(`/roles/${roleId}`);
+    const response = await apiClient.get<RoleDetailResponse>(
+      `/roles/${roleId}`,
+    );
     return response.data;
   },
 
@@ -62,7 +64,7 @@ export const rolesAPI = {
    * Crear un nuevo rol.
    *
    * @endpoint POST /api/v1/roles
-   * @permission admin:config:roles:create
+   * @permission admin:gestion:roles:create
    *
    * @param data - Configuración del rol
    */
@@ -76,7 +78,7 @@ export const rolesAPI = {
    * (Nombre, descripción, landing page)
    *
    * @endpoint PUT /api/v1/roles/:id
-   * @permission admin:config:roles:update
+   * @permission admin:gestion:roles:update
    *
    * @param roleId - ID del rol
    * @param data - Campos a modificar
@@ -97,7 +99,7 @@ export const rolesAPI = {
    * Solo permitido si no tiene usuarios activos asignados.
    *
    * @endpoint DELETE /api/v1/roles/:id
-   * @permission admin:config:roles:delete
+   * @permission admin:gestion:roles:delete
    *
    * @param roleId - ID del rol
    */
@@ -114,7 +116,7 @@ export const rolesAPI = {
      * Asigna múltiples permisos en una sola operación transaccional.
      *
      * @endpoint POST /api/v1/permissions/assign
-     * @permission admin:config:roles:update
+     * @permission admin:gestion:roles:update
      *
      * @param data - ID del rol y array de IDs de permisos
      */
@@ -132,7 +134,7 @@ export const rolesAPI = {
      * Revocar un permiso específico de un rol.
      *
      * @endpoint DELETE /api/v1/permissions/roles/:roleId/permissions/:permissionId
-     * @permission admin:config:roles:update
+     * @permission admin:gestion:roles:update
      *
      * @param roleId - ID del rol
      * @param permissionId - ID del permiso a quitar

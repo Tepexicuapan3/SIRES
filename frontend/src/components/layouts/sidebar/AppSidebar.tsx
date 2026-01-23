@@ -7,11 +7,11 @@
  * - Header: Logo SIRES
  * - Content: NavMain (secciones filtradas por permisos)
  * - Footer: NavSecondary (Support/Feedback) + NavUser
- * - Variante: "inset" (como sidebar-08 de shadcn)
+ * - Variante: "inset" 
  * - Collapsible: "offcanvas" (se cierra completamente)
  */
 
-import * as React from "react";
+import type { ComponentProps } from "react";
 
 import {
   Sidebar,
@@ -25,7 +25,7 @@ import { NavSecondary } from "./NavSecondary";
 import { NavUser } from "./NavUser";
 import { useNavigation } from "@features/navigation/hooks/useNavigation";
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   const { sections, secondaryItems, isEmpty } = useNavigation();
 
   return (

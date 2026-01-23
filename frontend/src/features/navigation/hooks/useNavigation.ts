@@ -6,8 +6,8 @@
  */
 
 import { useMemo } from "react";
-import { useAuthStore } from "@/store/authStore";
-import { usePermissions } from "@features/auth/hooks/usePermissions";
+import { useAuthSession } from "@features/auth/queries/useAuthSession";
+import { usePermissions } from "@features/auth/queries/usePermissions";
 import {
   NAV_CONFIG,
   NAV_SECONDARY,
@@ -22,7 +22,7 @@ export interface UseNavigationReturn {
 }
 
 export function useNavigation(): UseNavigationReturn {
-  const { user } = useAuthStore();
+  const { data: user } = useAuthSession();
   const { hasAnyPermission, isAdmin } = usePermissions();
 
   /**
@@ -41,7 +41,7 @@ export function useNavigation(): UseNavigationReturn {
     // 2. Procesar hijos recursivamente
     if (item.items && item.items.length > 0) {
       const filteredChildren = item.items
-        .map(child => filterItem(child))
+        .map((child) => filterItem(child))
         .filter((child): child is NavItem => child !== null);
 
       // 3. Regla de Propagación (Bubbling):
@@ -54,7 +54,7 @@ export function useNavigation(): UseNavigationReturn {
       // Retornar item con hijos filtrados
       return {
         ...item,
-        items: filteredChildren
+        items: filteredChildren,
       };
     }
 
@@ -70,7 +70,11 @@ export function useNavigation(): UseNavigationReturn {
     return NAV_CONFIG.map((section) => {
       // 1. Filtro de Nivel Sección (Permisos globales)
       // Si la sección requiere permisos específicos
-      if (!isUserAdmin && section.permissions && section.permissions.length > 0) {
+      if (
+        !isUserAdmin &&
+        section.permissions &&
+        section.permissions.length > 0
+      ) {
         if (!hasAnyPermission(section.permissions)) return null;
       }
 

@@ -1,437 +1,192 @@
-/**
- * nav-config.ts
- *
- * Configuración centralizada de navegación del sidebar - RBAC
- *
- * Filosofía:
- * - Define toda la estructura de menús en frontend
- * - Cada item tiene permisos requeridos para filtrarlo
- * - El hook useNavigation filtra según el usuario actual
- * - Backend valida SIEMPRE (esto es solo para UX)
- *
- * IMPORTANTE:
- * - Permisos en formato "categoria:accion" según BD (ej: "usuarios:create")
- * - Items sin permisos son públicos (pero usuario debe estar autenticado)
- * - Soporta N niveles de anidamiento (recursivo) - no recomendado más de 3 niveles por UX
- * - Soporta badges (ej: "Beta", "Nuevo") para destacar items
- */
-
 import {
   LayoutDashboard,
   Users,
   Shield,
-  Settings,
+  BookOpen,
   Stethoscope,
   Calendar,
-  FileText,
-  ClipboardList,
-  UserPlus,
-  BookOpen,
-  Database,
-  Activity,
   FolderOpen,
   UserCheck,
   Ambulance,
   Pill,
-  Building2,
-  BarChart3,
-  FlaskConical,
-  ClipboardCheck,
+  Database,
   type LucideIcon,
 } from "lucide-react";
 
+/**
+ * Configuracion de navegacion basada en permisos.
+ *
+ * Razon industria:
+ * - Mantiene el sidebar alineado a rutas reales.
+ * - Usa permisos como filtro UX (backend siempre valida).
+ */
+
 export interface NavItem {
-  /** Texto mostrado en el menú */
   title: string;
-  /** URL de navegación (React Router path). Opcional si es solo un agrupador. */
   url?: string;
-  /** Ícono de Lucide React */
   icon?: LucideIcon;
-  /** Permisos requeridos (formato "categoria:accion"). Si está vacío, es público. */
   permissions?: string[];
-  /** Items hijos (submenú recursivo) */
   items?: NavItem[];
-  /** Badge opcional (ej: "Beta", "Nuevo") */
   badge?: string;
 }
 
 export interface NavSection {
-  /** Título de la sección (ej: "ADMINISTRADOR", "MÉDICO") */
   title: string;
-  /** Items de navegación de esta sección */
   items: NavItem[];
-  /** Permisos necesarios para ver TODA la sección */
   permissions?: string[];
 }
 
-/**
- * Configuración completa de navegación - RBAC 2.0
- *
- * 7 ÁREAS FUNCIONALES:
- * 1. Administración (ADMINISTRADOR)
- * 2. Consultas (MEDICOS, ESPECIALISTAS, JEFATURA CLINICA, VISITADORES, LICENCIA Y SM21, HOSP-MEDICO)
- * 3. Recepción (RECEPCION, RECOEX, HOSP-RECEPCION, URGENCIAS RECEPCION H, URGENCIAS RECEPCION)
- * 4. Urgencias (URGENCIAS, URGENCIAS RECEPCION H)
- * 5. Farmacia (FARMACIA, TRANS-RECETA)
- * 6. Hospital (HOSP-FACTURA, HOSP-COORDINACION, HOSP-TRABAJO SOCIAL, HOSP-RECEPCION, HOSP-MEDICO)
- * 7. Reportes (GERENCIA, LABORAL)
- */
+// Badge reutilizable para modulos aun no implementados.
+const PLACEHOLDER_BADGE = "En desarrollo";
+
 export const NAV_CONFIG: NavSection[] = [
-  // ========================================================================
-  // 1. ADMINISTRACIÓN
-  // ========================================================================
   {
-    title: "Administración",
+    title: "Core",
     items: [
       {
-        title: "Panel Admin",
-        icon: Shield,
-        badge: "Nuevo",
-        permissions: ["sistema:configurar"],
-        items: [
-          {
-            title: "Dashboard",
-            url: "/admin",
-            permissions: ["sistema:configurar"],
-          },
-          {
-            title: "Usuarios",
-            url: "/admin/usuarios",
-            permissions: ["usuarios:read"],
-          },
-          {
-            title: "Roles y Permisos",
-            url: "/admin/roles",
-            permissions: ["usuarios:assign_permissions"],
-          },
-          {
-            title: "Permisos Detalle",
-            url: "/admin/permisos",
-            permissions: ["usuarios:assign_permissions"],
-          },
-        ],
-      },
-      {
-        title: "Catálogos",
-        icon: BookOpen,
-        permissions: ["catalogos:update"],
-        items: [
-          {
-            title: "Especialidades",
-            icon: Users,
-            url: "/admin/catalogos/especialidades",
-            permissions: ["catalogos:update"],
-            items: [
-              {
-                title: "Ver Especialidades",
-                url: "/admin/catalogos/especialidades",
-                permissions: ["catalogos:update"],
-              },
-              {
-                title: "Crear Especialidad",
-                url: "/admin/catalogos/especialidades/nuevo",
-                permissions: ["catalogos:update"],
-              },
-            ],
-          },
-          {
-            title: "Crear Usuario",
-            url: "/admin/usuarios/nuevo",
-            permissions: ["usuarios:create"],
-          },
-        ],
-      },
-      {
-        title: "Configuración",
-        url: "/admin/configuracion",
-        icon: Settings,
-        permissions: ["sistema:configurar"],
-      },
-      {
-        title: "Logs de Auditoría",
-        url: "/admin/auditoria",
-        icon: Activity,
-        permissions: ["sistema:audit_logs"],
-      },
-    ],
-  },
-
-  // ========================================================================
-  // 2. CONSULTAS (6 roles: MEDICOS, ESPECIALISTAS, JEFATURA CLINICA, etc.)
-  // ========================================================================
-  {
-    title: "Consultas Médicas",
-    items: [
-      {
-        title: "Consultas",
-        url: "/consultas",
-        icon: Stethoscope,
-        permissions: ["consultas:read"],
-        items: [
-          {
-            title: "Panel Principal",
-            url: "/consultas",
-            permissions: ["consultas:read"],
-          },
-          {
-            title: "Agenda",
-            url: "/consultas/agenda",
-            permissions: ["consultas:read"],
-          },
-          {
-            title: "Nueva Consulta",
-            url: "/consultas/nueva",
-            permissions: ["consultas:create"],
-          },
-          {
-            title: "Historial",
-            url: "/consultas/historial",
-            permissions: ["consultas:read"],
-          },
-        ],
-      },
-      {
-        title: "Expedientes",
-        url: "/expedientes",
-        icon: FolderOpen,
-        permissions: ["expedientes:read"],
-        items: [
-          {
-            title: "Buscar Expediente",
-            url: "/expedientes",
-            permissions: ["expedientes:read"],
-          },
-          {
-            title: "Nuevo Expediente",
-            url: "/expedientes/nuevo",
-            permissions: ["expedientes:create"],
-          },
-        ],
-      },
-      {
-        title: "Recetas",
-        url: "/recetas",
-        icon: Pill,
-        permissions: ["consultas:prescribir"],
-      },
-      {
-        title: "Laboratorio",
-        url: "/laboratorio",
-        icon: FlaskConical,
-        permissions: ["laboratorio:solicitar"],
-      },
-      {
-        title: "Licencias",
-        url: "/licencias",
-        icon: ClipboardCheck,
-        permissions: ["licencias:emitir"],
-      },
-      {
-        title: "Pases Médicos",
-        url: "/pases",
-        icon: FileText,
-        permissions: ["pases:emitir"],
-      },
-    ],
-  },
-
-  // ========================================================================
-  // 3. RECEPCIÓN (5 roles)
-  // ========================================================================
-  {
-    title: "Recepción",
-    items: [
-      {
-        title: "Panel Recepción",
-        url: "/recepcion",
-        icon: UserCheck,
-        permissions: ["expedientes:read"],
-      },
-      {
-        title: "Pacientes",
-        url: "/recepcion/pacientes",
-        icon: Users,
-        permissions: ["expedientes:read"],
-        items: [
-          {
-            title: "Registrar Paciente",
-            url: "/recepcion/pacientes/nuevo",
-            permissions: ["expedientes:create"],
-          },
-          {
-            title: "Buscar Paciente",
-            url: "/recepcion/pacientes/buscar",
-            permissions: ["expedientes:read"],
-          },
-        ],
-      },
-      {
-        title: "Citas",
-        url: "/recepcion/citas",
-        icon: Calendar,
-        permissions: ["citas:create"],
-      },
-      {
-        title: "Expedientes",
-        url: "/expedientes",
-        icon: FolderOpen,
-        permissions: ["expedientes:read"],
-      },
-    ],
-  },
-
-  // ========================================================================
-  // 4. URGENCIAS (2 roles)
-  // ========================================================================
-  {
-    title: "Urgencias",
-    items: [
-      {
-        title: "Panel Urgencias",
-        url: "/urgencias",
-        icon: Ambulance,
-        permissions: ["urgencias:atender"],
-      },
-      {
-        title: "Triage",
-        url: "/urgencias/triage",
-        icon: Activity,
-        permissions: ["urgencias:triage"],
-      },
-      {
-        title: "Atenciones",
-        url: "/urgencias/atenciones",
-        icon: Stethoscope,
-        permissions: ["urgencias:atender"],
-      },
-      {
-        title: "Expedientes",
-        url: "/expedientes",
-        icon: FolderOpen,
-        permissions: ["expedientes:read"],
-      },
-    ],
-  },
-
-  // ========================================================================
-  // 5. FARMACIA (2 roles)
-  // ========================================================================
-  {
-    title: "Farmacia",
-    items: [
-      {
-        title: "Panel Farmacia",
-        url: "/farmacia",
-        icon: Pill,
-        permissions: ["farmacia:dispensar"],
-      },
-      {
-        title: "Recetas Pendientes",
-        url: "/farmacia/recetas",
-        icon: ClipboardList,
-        permissions: ["farmacia:dispensar"],
-      },
-      {
-        title: "Inventario",
-        url: "/farmacia/inventario",
-        icon: Database,
-        permissions: ["farmacia:gestionar_inventario"],
-      },
-      {
-        title: "Transcripción Recetas",
-        url: "/farmacia/transcripcion",
-        icon: FileText,
-        permissions: ["farmacia:transcribir_recetas"],
-      },
-    ],
-  },
-
-  // ========================================================================
-  // 6. HOSPITAL (5 roles)
-  // ========================================================================
-  {
-    title: "Hospital",
-    items: [
-      {
-        title: "Panel Hospital",
-        url: "/hospital",
-        icon: Building2,
-        permissions: ["hospital:gestionar"],
-      },
-      {
-        title: "Admisión",
-        url: "/hospital/admision",
-        icon: UserPlus,
-        permissions: ["hospital:admitir"],
-      },
-      {
-        title: "Facturación",
-        url: "/hospital/facturacion",
-        icon: FileText,
-        permissions: ["hospital:facturar"],
-      },
-      {
-        title: "Coordinación",
-        url: "/hospital/coordinacion",
-        icon: Settings,
-        permissions: ["hospital:coordinar"],
-      },
-      {
-        title: "Trabajo Social",
-        url: "/hospital/trabajo-social",
-        icon: Users,
-        permissions: ["hospital:trabajo_social"],
-      },
-    ],
-  },
-
-  // ========================================================================
-  // 7. REPORTES (2 roles: GERENCIA, LABORAL)
-  // ========================================================================
-  {
-    title: "Reportes y Estadísticas",
-    items: [
-      {
-        title: "Dashboard Gerencial",
-        url: "/reportes",
-        icon: BarChart3,
-        permissions: ["reportes:gerenciales"],
-      },
-      {
-        title: "Estadísticas Clínicas",
-        url: "/reportes/clinicas",
-        icon: Activity,
-        permissions: ["reportes:clinicos"],
-      },
-      {
-        title: "Reportes Personalizados",
-        url: "/reportes/personalizados",
-        icon: FileText,
-        permissions: ["reportes:generar"],
-      },
-    ],
-  },
-
-  // ========================================================================
-  // COMÚN (todos los roles autenticados)
-  // ========================================================================
-  {
-    title: "General",
-    // Sin roles/permissions = todos ven esto (pero deben estar autenticados)
-    items: [
-      {
-        title: "Mi Dashboard",
+        title: "Dashboard",
         url: "/dashboard",
         icon: LayoutDashboard,
       },
     ],
   },
+  {
+    title: "Administracion",
+    items: [
+      {
+        title: "Usuarios",
+        url: "/admin/usuarios",
+        icon: Users,
+        permissions: ["admin:gestion:usuarios:read"],
+      },
+      {
+        title: "Nuevo Usuario",
+        url: "/admin/usuarios/nuevo",
+        icon: Users,
+        permissions: ["admin:gestion:usuarios:create"],
+      },
+      {
+        title: "Roles",
+        url: "/admin/roles",
+        icon: Shield,
+        permissions: ["admin:gestion:roles:read"],
+      },
+      {
+        title: "Catalogos",
+        url: "/admin/catalogos",
+        icon: BookOpen,
+        permissions: [
+          "admin:catalogos:centros_atencion:read",
+          "admin:catalogos:areas:read",
+        ],
+      },
+    ],
+  },
+  {
+    title: "Clinico",
+    items: [
+      {
+        title: "Consultas",
+        url: "/clinico/consultas",
+        icon: Stethoscope,
+        permissions: ["clinico:consultas:read"],
+        items: [
+          {
+            title: "Listado",
+            url: "/clinico/consultas",
+            permissions: ["clinico:consultas:read"],
+          },
+          {
+            title: "Agenda",
+            url: "/clinico/consultas/agenda",
+            permissions: ["clinico:consultas:read"],
+          },
+          {
+            title: "Nueva Consulta",
+            url: "/clinico/consultas/nueva",
+            permissions: ["clinico:consultas:create"],
+          },
+          {
+            title: "Historial",
+            url: "/clinico/consultas/historial",
+            permissions: ["clinico:consultas:read"],
+          },
+        ],
+      },
+      {
+        title: "Expedientes",
+        url: "/clinico/expedientes",
+        icon: FolderOpen,
+        permissions: ["clinico:expedientes:read"],
+        items: [
+          {
+            title: "Listado",
+            url: "/clinico/expedientes",
+            permissions: ["clinico:expedientes:read"],
+          },
+          {
+            title: "Nuevo Expediente",
+            url: "/clinico/expedientes/nuevo",
+            permissions: ["clinico:expedientes:create"],
+            badge: PLACEHOLDER_BADGE,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Recepcion",
+    items: [
+      {
+        title: "Pacientes",
+        url: "/recepcion/pacientes",
+        icon: UserCheck,
+        permissions: ["recepcion:pacientes:create"],
+        badge: PLACEHOLDER_BADGE,
+      },
+      {
+        title: "Citas",
+        url: "/recepcion/citas",
+        icon: Calendar,
+        permissions: ["recepcion:citas:create"],
+        badge: PLACEHOLDER_BADGE,
+      },
+    ],
+  },
+  {
+    title: "Farmacia",
+    items: [
+      {
+        title: "Recetas",
+        url: "/farmacia/recetas",
+        icon: Pill,
+        permissions: ["farmacia:recetas:dispensar"],
+        badge: PLACEHOLDER_BADGE,
+      },
+      {
+        title: "Inventario",
+        url: "/farmacia/inventario",
+        icon: Database,
+        permissions: ["farmacia:inventario:update"],
+        badge: PLACEHOLDER_BADGE,
+      },
+    ],
+  },
+  {
+    title: "Urgencias",
+    items: [
+      {
+        title: "Triage",
+        url: "/urgencias/triage",
+        icon: Ambulance,
+        permissions: ["urgencias:triage:read"],
+        badge: PLACEHOLDER_BADGE,
+      },
+    ],
+  },
 ];
 
-/**
- * Items de navegación secundaria (Support / Feedback / Ayuda)
- * Estos van ARRIBA del NavUser en el footer del sidebar.
- */
+// Acciones globales disponibles para cualquier usuario autenticado.
 export const NAV_SECONDARY: NavItem[] = [
   {
     title: "Soporte",
@@ -441,6 +196,6 @@ export const NAV_SECONDARY: NavItem[] = [
   {
     title: "Enviar Feedback",
     url: "/feedback",
-    icon: ClipboardList,
+    icon: BookOpen,
   },
 ];
