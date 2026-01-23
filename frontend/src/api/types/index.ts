@@ -135,4 +135,4 @@ export type {
   ClinicsListResponse,
   // Detalle
   ClinicDetailResponse,
-} from "./clinicas.types";
+} from "@api/types/clinicas.types";

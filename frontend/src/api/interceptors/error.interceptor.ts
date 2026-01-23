@@ -24,7 +24,7 @@ import type {
   AxiosInstance,
   InternalAxiosRequestConfig,
 } from "axios";
-import { ApiError, ERROR_CODES } from "../utils/errors";
+import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { useAuthStore } from "@/store/authStore";
 import { env } from "@/config/env";
 
