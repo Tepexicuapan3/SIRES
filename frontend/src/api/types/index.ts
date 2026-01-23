@@ -120,19 +120,38 @@ export type {
 // =============================================================================
 export type {
   // Entidades
-  ClinicRef,
-  ClinicListItem,
-  ClinicDetail,
+  CentroAtencionRef,
+  CentroAtencionListItem,
+  CentroAtencionDetail,
   // CRUD Requests
-  CreateClinicRequest,
-  UpdateClinicRequest,
+  CreateCentroAtencionRequest,
+  UpdateCentroAtencionRequest,
   // CRUD Responses
-  CreateClinicResponse,
-  UpdateClinicResponse,
-  DeleteClinicResponse,
+  CreateCentroAtencionResponse,
+  UpdateCentroAtencionResponse,
+  DeleteCentroAtencionResponse,
   // Listados
-  ClinicsListParams,
-  ClinicsListResponse,
+  CentrosAtencionListParams,
+  CentrosAtencionListResponse,
   // Detalle
-  ClinicDetailResponse,
-} from "@api/types/clinicas.types";
+  CentroAtencionDetailResponse,
+} from "@api/types/catalogos/centros-atencion.types";
+
+export type {
+  // Entidades
+  AreaRef,
+  AreaListItem,
+  AreaDetail,
+  // CRUD Requests
+  CreateAreaRequest,
+  UpdateAreaRequest,
+  // CRUD Responses
+  CreateAreaResponse,
+  UpdateAreaResponse,
+  DeleteAreaResponse,
+  // Listados
+  AreasListParams,
+  AreasListResponse,
+  // Detalle
+  AreaDetailResponse,
+} from "@api/types/catalogos/areas.types";
