@@ -41,11 +41,11 @@ Incluye clinicas, hospitales y sanatorios.
 Endpoints
 | Metodo | Ruta | Request | Response | Permiso |
 | --- | --- | --- | --- | --- |
-| GET | `/care-centers` | `CentrosAtencionListParams` | `CentrosAtencionListResponse` | `admin:gestion:centros_atencion:read` |
-| GET | `/care-centers/:id` | - | `CentroAtencionDetailResponse` | `admin:gestion:centros_atencion:read` |
-| POST | `/care-centers` | `CreateCentroAtencionRequest` | `CreateCentroAtencionResponse` | `admin:gestion:centros_atencion:create` |
-| PUT | `/care-centers/:id` | `UpdateCentroAtencionRequest` | `UpdateCentroAtencionResponse` | `admin:gestion:centros_atencion:update` |
-| DELETE | `/care-centers/:id` | - | `DeleteCentroAtencionResponse` | `admin:gestion:centros_atencion:delete` |
+| GET | `/care-centers` | `CentrosAtencionListParams` | `CentrosAtencionListResponse` | `admin:catalogos:centros_atencion:read` |
+| GET | `/care-centers/:id` | - | `CentroAtencionDetailResponse` | `admin:catalogos:centros_atencion:read` |
+| POST | `/care-centers` | `CreateCentroAtencionRequest` | `CreateCentroAtencionResponse` | `admin:catalogos:centros_atencion:create` |
+| PUT | `/care-centers/:id` | `UpdateCentroAtencionRequest` | `UpdateCentroAtencionResponse` | `admin:catalogos:centros_atencion:update` |
+| DELETE | `/care-centers/:id` | - | `DeleteCentroAtencionResponse` | `admin:catalogos:centros_atencion:delete` |
 
 Tipos
 - `frontend/src/api/types/catalogos/centros-atencion.types.ts`
@@ -57,11 +57,11 @@ Tipos
 Endpoints
 | Metodo | Ruta | Request | Response | Permiso |
 | --- | --- | --- | --- | --- |
-| GET | `/areas` | `AreasListParams` | `AreasListResponse` | `admin:gestion:areas:read` |
-| GET | `/areas/:id` | - | `AreaDetailResponse` | `admin:gestion:areas:read` |
-| POST | `/areas` | `CreateAreaRequest` | `CreateAreaResponse` | `admin:gestion:areas:create` |
-| PUT | `/areas/:id` | `UpdateAreaRequest` | `UpdateAreaResponse` | `admin:gestion:areas:update` |
-| DELETE | `/areas/:id` | - | `DeleteAreaResponse` | `admin:gestion:areas:delete` |
+| GET | `/areas` | `AreasListParams` | `AreasListResponse` | `admin:catalogos:areas:read` |
+| GET | `/areas/:id` | - | `AreaDetailResponse` | `admin:catalogos:areas:read` |
+| POST | `/areas` | `CreateAreaRequest` | `CreateAreaResponse` | `admin:catalogos:areas:create` |
+| PUT | `/areas/:id` | `UpdateAreaRequest` | `UpdateAreaResponse` | `admin:catalogos:areas:update` |
+| DELETE | `/areas/:id` | - | `DeleteAreaResponse` | `admin:catalogos:areas:delete` |
 
 Tipos
 - `frontend/src/api/types/catalogos/areas.types.ts`

@@ -5,20 +5,17 @@
  */
 
 import apiClient from "@api/client";
-import type {
-  PermissionCatalogResponse
-} from "@api/types/permissions.types";
+import type { PermissionCatalogResponse } from "@api/types/permissions.types";
 
 export const permissionsAPI = {
   /**
    * Obtiene el catálogo completo de permisos disponibles
    * @endpoint GET /api/v1/permissions
-   * @permission admin:config:permissions:read
+   * @permission admin:gestion:permisos:read
    */
   getAll: async (): Promise<PermissionCatalogResponse> => {
-    const response = await apiClient.get<PermissionCatalogResponse>(
-      "/permissions",
-    );
+    const response =
+      await apiClient.get<PermissionCatalogResponse>("/permissions");
 
     return response.data;
   },

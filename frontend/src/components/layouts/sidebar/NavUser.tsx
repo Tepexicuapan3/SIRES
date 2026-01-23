@@ -41,9 +41,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthSession } from "@features/auth/queries/useAuthSession";
 import { useThemeStore } from "@/store/themeStore";
-import { useLogout } from "@features/auth/hooks/useLogout";
+import { useLogout } from "@features/auth/mutations/useLogout";
 
 /**
  * Genera iniciales desde un nombre completo.
@@ -69,13 +69,14 @@ function getInitials(name: string): string {
 
 export function NavUser() {
   const { isMobile } = useSidebar();
-  const { user } = useAuthStore();
+  const { data: user } = useAuthSession();
   const { theme, setTheme } = useThemeStore();
   const { logoutWithToast } = useLogout();
 
   if (!user) return null;
 
-  const userInitials = getInitials(user.usuario || "U");
+  const userInitials = getInitials(user.fullName || user.username || "U");
+  const primaryRole = user.primaryRole || user.roles?.[0] || "Usuario";
 
   return (
     <SidebarMenu className="px-2">
@@ -90,15 +91,15 @@ export function NavUser() {
                 <AvatarImage src="" alt="" />
                 <AvatarFallback
                   className="rounded-lg bg-brand text-white font-display text-xs"
-                  aria-label={`Usuario ${user.usuario}`}
+                  aria-label={`Usuario ${user.username}`}
                 >
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.usuario}</span>
+                <span className="truncate font-semibold">{user.username}</span>
                 <span className="truncate text-xs text-txt-muted">
-                  {user.roles?.[0] || "Usuario"}
+                  {primaryRole}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
@@ -116,16 +117,17 @@ export function NavUser() {
                   <AvatarImage src="" alt="" />
                   <AvatarFallback
                     className="rounded-lg bg-brand text-white font-display text-xs"
-                    aria-label={`Usuario ${user.usuario}`}
+                    aria-label={`Usuario ${user.username}`}
                   >
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{user.usuario}</span>
+                  <span className="truncate font-semibold">
+                    {user.username}
+                  </span>
                   <span className="truncate text-xs text-txt-muted">
-                    {/* Aquí podríamos mostrar email si lo tuviéramos */}
-                    {user.roles?.join(", ") || "Usuario"}
+                    {user.roles?.join(", ") || primaryRole}
                   </span>
                 </div>
               </div>

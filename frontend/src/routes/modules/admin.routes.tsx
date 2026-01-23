@@ -25,7 +25,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "usuarios",
     element: (
-      <ProtectedRoute requiredPermission="usuarios:read">
+      <ProtectedRoute requiredPermission="admin:gestion:usuarios:read">
         <UsersPage />
       </ProtectedRoute>
     ),
@@ -33,7 +33,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "usuarios/nuevo",
     element: (
-      <ProtectedRoute requiredPermission="usuarios:create">
+      <ProtectedRoute requiredPermission="admin:gestion:usuarios:create">
         <CreateUserPage />
       </ProtectedRoute>
     ),
@@ -41,7 +41,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "roles",
     element: (
-      <ProtectedRoute requiredPermission="usuarios:assign_permissions">
+      <ProtectedRoute requiredPermission="admin:gestion:roles:read">
         <RolesPage />
       </ProtectedRoute>
     ),
@@ -49,7 +49,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "catalogos",
     element: (
-      <ProtectedRoute requiredPermission="catalogos:update">
+      <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
         <CatalogosPage />
       </ProtectedRoute>
     ),

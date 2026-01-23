@@ -29,11 +29,12 @@ export function NavSecondary({ items }: NavSecondaryProps) {
         <SidebarMenu>
           {items.map((item) => {
             const isActive = location.pathname === item.url;
+            const href = item.url ?? "#";
 
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild size="sm" isActive={isActive}>
-                  <Link to={item.url}>
+                  <Link to={href}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
                   </Link>

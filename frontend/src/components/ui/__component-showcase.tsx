@@ -150,14 +150,14 @@ export default function ComponentShowcase() {
                         <SelectValue placeholder="Seleccioná un permiso" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="expedientes:read">
-                          expedientes:read
+                        <SelectItem value="clinico:expedientes:read">
+                          clinico:expedientes:read
                         </SelectItem>
-                        <SelectItem value="expedientes:write">
-                          expedientes:write
+                        <SelectItem value="clinico:expedientes:create">
+                          clinico:expedientes:create
                         </SelectItem>
-                        <SelectItem value="usuarios:delete">
-                          usuarios:delete
+                        <SelectItem value="admin:gestion:usuarios:delete">
+                          admin:gestion:usuarios:delete
                         </SelectItem>
                       </SelectContent>
                     </Select>

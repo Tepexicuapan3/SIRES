@@ -22,7 +22,7 @@ const recepcionRoutes: RouteObject[] = [
   {
     path: "pacientes",
     element: (
-      <ProtectedRoute requiredPermission="recepcion:registrar_paciente">
+      <ProtectedRoute requiredPermission="recepcion:pacientes:create">
         <PlaceholderPage
           title="Gestion de Pacientes"
           description="Registro y administracion de pacientes"
@@ -34,7 +34,7 @@ const recepcionRoutes: RouteObject[] = [
   {
     path: "citas",
     element: (
-      <ProtectedRoute requiredPermission="recepcion:agendar_cita">
+      <ProtectedRoute requiredPermission="recepcion:citas:create">
         <PlaceholderPage
           title="Agenda de Citas"
           description="Programacion y gestion de citas medicas"
@@ -53,7 +53,7 @@ const farmaciaRoutes: RouteObject[] = [
   {
     path: "recetas",
     element: (
-      <ProtectedRoute requiredPermission="farmacia:dispensar">
+      <ProtectedRoute requiredPermission="farmacia:recetas:dispensar">
         <PlaceholderPage
           title="Gestion de Recetas"
           description="Dispensacion y control de recetas medicas"
@@ -65,7 +65,7 @@ const farmaciaRoutes: RouteObject[] = [
   {
     path: "inventario",
     element: (
-      <ProtectedRoute requiredPermission="farmacia:gestionar_inventario">
+      <ProtectedRoute requiredPermission="farmacia:inventario:update">
         <PlaceholderPage
           title="Inventario"
           description="Control de stock y medicamentos"
@@ -84,7 +84,7 @@ const urgenciasRoutes: RouteObject[] = [
   {
     path: "triage",
     element: (
-      <ProtectedRoute requiredPermission="urgencias:triage">
+      <ProtectedRoute requiredPermission="urgencias:triage:read">
         <PlaceholderPage
           title="Triage"
           description="Clasificacion y priorizacion de pacientes"

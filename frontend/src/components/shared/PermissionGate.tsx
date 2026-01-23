@@ -3,12 +3,12 @@
  *
  * Uso:
  * ```tsx
- * <PermissionGate permission="expedientes:create">
+ * <PermissionGate permission="clinico:expedientes:create">
  *   <Button>Crear Expediente</Button>
  * </PermissionGate>
  *
  * <PermissionGate
- *   anyOf={["usuarios:create", "usuarios:update"]}
+ *   anyOf={["admin:gestion:usuarios:create", "admin:gestion:usuarios:update"]}
  *   fallback={<div>No tienes permisos</div>}
  * >
  *   <UserForm />
@@ -17,24 +17,14 @@
  */
 
 import { ReactNode } from "react";
-import { usePermissions } from "@features/auth/hooks/usePermissions";
+import { usePermissions } from "@features/auth/queries/usePermissions";
 
 interface PermissionGateProps {
   children: ReactNode;
-
-  /** Permiso único requerido */
   permission?: string;
-
-  /** Al menos uno de estos permisos (OR lógico) */
   anyOf?: string[];
-
-  /** Todos estos permisos (AND lógico) */
   allOf?: string[];
-
-  /** Requiere ser admin */
   requireAdmin?: boolean;
-
-  /** Contenido alternativo si no tiene permisos */
   fallback?: ReactNode;
 }
 
