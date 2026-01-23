@@ -24,4 +24,24 @@ export default defineConfig({
       usePolling: true,
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          admin: ["./src/features/admin"],
+          clinico: ["./src/features/consultas", "./src/features/expedientes"],
+          placeholders: ["./src/components/shared/PlaceholderPage.tsx"],
+          auth: ["./src/features/auth"],
+          vendors: [
+            "react",
+            "react-dom",
+            "react-router-dom",
+            "@tanstack/react-query",
+            "zustand",
+            "zod",
+          ],
+        },
+      },
+    },
+  },
 });
