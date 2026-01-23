@@ -9,8 +9,11 @@ interface AppProvidersProps {
 }
 
 /**
- * Composición de todos los providers de la aplicación
- * Mantiene App.tsx limpio y centraliza la configuración
+ * Composición de providers transversales.
+ *
+ * Razon industria:
+ * - Mantiene App.tsx limpio y reduce acoplamiento al entrypoint.
+ * - El orden de providers es intencional (Theme -> Query -> UI global).
  */
 export const AppProviders = ({ children }: AppProvidersProps) => {
   return (
