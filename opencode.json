@@ -1,10 +1,27 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "theme": "catppuccin-macchiato",
-  "default_agent": "JARVIS",
-
-  "instructions": ["./AGENTS.md", "./PROJECT_GUIDE.md"],
-
+  "autoupdate": true,
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "git commit *": "ask",
+      "git push *": "ask",
+      "git push": "ask",
+      "git push --force *": "ask",
+      "git rebase *": "ask",
+      "git reset --hard *": "ask"
+    },
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      "**/secrets/**": "deny",
+      "**/credentials.json": "deny"
+    }
+  },
   "mcp": {
     "context7": {
       "type": "remote",
@@ -34,16 +51,10 @@
       "enabled": true
     },
 
-    "21st-magic": {
-      "type": "local",
-      "command": ["npx", "-y", "@21st-dev/magic"],
-      "enabled": true
-    },
-
     "mysql": {
       "type": "local",
       "command": ["npx", "-y", "@liangshanli/mcp-server-mysql"],
-      "enabled": true,
+      "enabled": false,
       "environment": {
         "MYSQL_HOST": "10.15.15.76",
         "MYSQL_PORT": "3306",
@@ -54,27 +65,9 @@
         "ALLOW_DROP": "true",
         "ALLOW_DELETE": "true"
       }
-    },
-
-    "redis": {
-      "type": "local",
-      "command": ["npx", "-y", "@liangshanli/mcp-server-redis"],
-      "enabled": true,
-      "environment": {
-        "REDIS_HOST": "{env:REDIS_HOST}",
-        "REDIS_PORT": "{env:REDIS_PORT}"
-      }
-    },
-
-    "testsprite": {
-      "type": "local",
-      "command": ["npx", "-y", "@testsprite/testsprite-mcp@latest"],
-      "enabled": true,
-      "environment": {
-        "API_KEY": "sk-user-bBkhLCKHiIJ_Y78k7enEKyqGUXM0I3pElenyfThmdoGohOc6uzbKJirO4x1FrXf8V6QEIHGWXDcTBhs6NNWKLMJ1knGS-plJ3D4wFjrnvdOqDF41ZfmdPYVoxYvGQuAs0LY"
-      }
     }
   },
+
 
   "formatter": {
     "prettier": {
@@ -93,216 +86,24 @@
     }
   },
 
-  "tools": {
-    "read": true,
-    "write": true,
-    "edit": true,
-    "bash": true,
-    "glob": true,
-    "grep": true,
-    "webfetch": true,
-    "todowrite": true,
-    "todoread": true
-  },
-
-  "permission": {
-    "edit": "allow",
-    "bash": {
-      "bun *": "allow",
-      "npm *": "allow",
-      "python *": "allow",
-      "pip *": "allow",
-      "docker-compose *": "allow",
-      "docker logs *": "allow",
-      "docker ps *": "allow",
-      "docker exec *": "ask",
-      "git status": "allow",
-      "git diff*": "allow",
-      "git log*": "allow",
-      "git branch*": "allow",
-      "git show*": "allow",
-      "git add *": "allow",
-      "git commit *": "ask",
-      "git push*": "ask",
-      "git checkout *": "ask",
-      "git merge *": "ask",
-      "git rebase *": "deny",
-      "rm -rf *": "deny",
-      "rm -r *": "ask",
-      "DROP *": "deny",
-      "DELETE FROM *": "ask",
-      "*": "ask"
-    },
-    "webfetch": "allow",
-    "external_directory": "ask",
-    "doom_loop": "ask"
-  },
 
   "agent": {
     "build": {
       "disable": true
     },
+
     "plan": {
       "disable": true
     },
+    
     "gentleman": {
-      "disable": true
-    },
-
-    "NEO": {
       "mode": "primary",
-      "prompt": "{file:./.opencode/prompts/build.md}",
+      "description": "Senior Architect mentor - helpful first, challenging when it matters",
+      "prompt": "You are a Senior Architect with 15+ years of experience, Google Developer Expert (GDE) and Microsoft MVP. Passionate teacher who genuinely wants people to learn and grow.\n\nCORE PRINCIPLE - READ THIS FIRST:\nBe helpful FIRST. You're a MENTOR, not an interrogator. Simple questions get simple answers. Save the tough love for moments that ACTUALLY matter - architecture decisions, bad practices, real misconceptions. Don't challenge every single message or demand clarification on simple requests.\n\nCRITICAL - BE A GOOD PERSON:\nYou are warm, genuine, and caring. Use casual expressions NATURALLY, like a friend who wants to help. NEVER be sarcastic, mocking, or condescending. NEVER use air quotes around what the user says. NEVER make them feel stupid. You're passionate because you CARE about their growth, not because you want to show off or put them down.\n\nPREFERRED CLI TOOLS:\nUse modern tools over legacy: bat (not cat), rg (not grep), fd (not find), sd (not sed), eza (not ls). Install via brew if missing.\n\nLANGUAGE RULES:\n\nSPANISH INPUT → Rioplatense Spanish (voseo), warm and natural:\n- 'Bien', '¿Se entiende?', 'Ya te estoy diciendo', 'Es así de fácil'\n- 'Fantástico', 'Buenísimo'\n- 'Loco', 'Hermano' (friendly, not mocking)\n- 'Ponete las pilas', 'Locura'\n\nENGLISH INPUT → Same warm energy in English:\n- 'Here's the thing', 'And you know why?', 'I'm telling you right now'\n- 'It's that simple', 'Fantastic'\n- 'Dude', 'Come on', 'Let me be real', 'Seriously?'\n\nTONE:\nPassionate and direct, but from a place of CARING. You get frustrated with shortcuts because you KNOW they can do better. Use rhetorical questions. Use CAPS for emphasis. But always be WARM - you're helping a friend grow, not lecturing a subordinate.\n\nBEING A COLLABORATIVE PARTNER:\n- Help first, add context after if needed\n- If something seems technically wrong, verify - but don't interrogate simple questions\n- Correct errors explaining the technical WHY\n- Propose alternatives with tradeoffs when RELEVANT (not every message)\n- You're Jarvis: helpful by default, challenging when it counts\n\nPHILOSOPHY:\n- CONCEPTS > CODE: Understand before coding\n- AI IS A TOOL: Tony Stark/Jarvis - we direct, AI executes\n- FOUNDATIONS FIRST: Know JS before React, know the DOM\n\nCRITICAL - WHEN ASKING QUESTIONS:\nWhen you ask the user a question, STOP IMMEDIATELY after the question. DO NOT continue with code, explanations or actions until the user responds.",
       "tools": {
         "write": true,
-        "edit": true,
-        "bash": true,
-        "glob": true,
-        "grep": true,
-        "read": true,
-        "webfetch": true
+        "edit": true
       }
     },
-
-    "JARVIS": {
-      "mode": "primary",
-      "prompt": "{file:./.opencode/prompts/plan.md}",
-      "tools": {
-        "write": false,
-        "edit": false,
-        "bash": false,
-        "glob": true,
-        "grep": true,
-        "read": true,
-        "webfetch": true
-      }
-    },
-
-    "code-reviewer": {
-      "description": "Revisa código siguiendo las convenciones de SIRES",
-      "mode": "subagent",
-      "prompt": "{file:./.opencode/prompts/code-reviewer.md}",
-      "tools": {
-        "write": false,
-        "edit": false,
-        "bash": false,
-        "read": true,
-        "glob": true,
-        "grep": true
-      }
-    },
-
-    "security-auditor": {
-      "description": "Audita seguridad JWT, CSRF, y vulnerabilidades",
-      "mode": "subagent",
-      "prompt": "{file:./.opencode/prompts/security-auditor.md}",
-      "tools": {
-        "write": false,
-        "edit": false,
-        "bash": false,
-        "read": true,
-        "glob": true,
-        "grep": true
-      }
-    },
-
-    "committer": {
-      "description": "Genera commits con Conventional Commits",
-      "mode": "subagent",
-      "prompt": "{file:./.opencode/prompts/committer.md}",
-      "tools": {
-        "write": false,
-        "edit": false,
-        "bash": true,
-        "read": true,
-        "glob": false,
-        "grep": false
-      }
-    },
-
-    "ui-designer": {
-      "description": "Crea/refactoriza componentes UI con shadcn adaptados a Metro CDMX",
-      "mode": "subagent",
-      "prompt": "{file:./.opencode/prompts/ui-designer.md}",
-      "tools": {
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "read": true,
-        "glob": true,
-        "grep": true
-      }
-    }
-  },
-
-  "command": {
-    "lint": {
-      "template": "Run linting for both frontend and backend:\n\n1. Frontend: `bun lint` in frontend/\n2. Backend: Check for Python style issues\n\nFix any issues found and report the results.",
-      "description": "Run project linting",
-      "agent": "NEO"
-    },
-
-    "test": {
-      "template": "Run the test suite for $ARGUMENTS.\n\nIf no argument provided, run all available tests.\n\nFrontend: Use Vitest if configured\nBackend: Use pytest if configured\n\nReport coverage and any failures.",
-      "description": "Run tests with coverage",
-      "agent": "NEO"
-    },
-
-    "review": {
-      "template": "Review the code in $ARGUMENTS following SIRES project conventions.\n\nCheck:\n- Clean Architecture compliance\n- TypeScript/Python naming conventions\n- Security (JWT HttpOnly, CSRF tokens)\n- Error handling patterns\n- Component structure",
-      "description": "Code review following project standards",
-      "agent": "code-reviewer"
-    },
-
-    "security": {
-      "template": "Perform a security audit on $ARGUMENTS.\n\nFocus on:\n- JWT token handling (must be HttpOnly cookies)\n- CSRF protection (X-CSRF-TOKEN header)\n- Input validation\n- SQL injection prevention\n- Authentication/Authorization flows\n\nReference: backend/docs/JWT_CSRF_MIGRATION.md",
-      "description": "Security audit for auth flows",
-      "agent": "security-auditor"
-    },
-
-    "feature": {
-      "template": "Create a new feature following the SIRES architecture template.\n\nFeature name: $ARGUMENTS\n\nFollow the template from PROJECT_GUIDE.md Section 8.3:\n\n**Backend:**\n1. Use case in backend/src/use_cases/<feature>/\n2. Repository in backend/src/infrastructure/repositories/\n3. Route in backend/src/presentation/api/\n\n**Frontend:**\n1. Types in frontend/src/api/types/\n2. API resource in frontend/src/api/resources/\n3. Hook in frontend/src/features/<feature>/hooks/\n4. Page component in frontend/src/features/<feature>/components/\n5. Register route in frontend/src/routes/Routes.tsx\n\nDo NOT create files until the structure is confirmed.",
-      "description": "Scaffold a new feature end-to-end",
-      "agent": "JARVIS"
-    },
-
-    "docker": {
-      "template": "Manage Docker environment:\n\n$ARGUMENTS\n\nCommon operations:\n- up: docker-compose up -d\n- down: docker-compose down\n- logs: docker-compose logs -f\n- rebuild: docker-compose up -d --build\n- status: docker-compose ps",
-      "description": "Docker compose operations",
-      "agent": "NEO"
-    },
-
-    "commit": {
-      "template": "Analizá los cambios del repositorio y creá los commits necesarios.\n\nContexto adicional: $ARGUMENTS\n\nProceso:\n1. Ejecutá `git status` y `git diff` para ver los cambios\n2. Agrupá los cambios por tipo (feat/fix/refactor/etc) y scope (frontend/backend/etc)\n3. Proponé los commits necesarios (pueden ser varios si los cambios no están relacionados)\n4. Mostrá qué archivos irían en cada commit\n5. Pedí confirmación antes de ejecutar\n6. Ejecutá los commits en orden\n\nUsá Conventional Commits: type(scope): description",
-      "description": "Genera commits con Conventional Commits",
-      "agent": "committer"
-    },
-
-    "explain": {
-      "template": "Explain how $ARGUMENTS works in this codebase.\n\nProvide:\n1. High-level overview\n2. File locations involved\n3. Data flow diagram (text-based)\n4. Key implementation details\n5. Gotchas or potential issues",
-      "description": "Explain a concept in the codebase",
-      "agent": "JARVIS"
-    },
-
-    "fix": {
-      "template": "Fix the issue: $ARGUMENTS\n\nSteps:\n1. Understand the problem\n2. Locate relevant code\n3. Identify root cause\n4. Propose fix\n5. Implement if approved\n6. Verify fix works",
-      "description": "Debug and fix an issue",
-      "agent": "NEO"
-    },
-
-    "ui": {
-      "template": "Gestionar componentes UI del proyecto SIRES.\n\n$ARGUMENTS\n\n**Acciones disponibles:**\n\n- **create <component>**: Crear un componente nuevo usando shadcn/ui como base\n  Ejemplo: /ui create button\n\n- **refactor <path>**: Refactorizar componente existente para usar patrones shadcn\n  Ejemplo: /ui refactor frontend/src/components/ui/FormField.tsx\n\n- **audit**: Auditar todos los componentes UI del proyecto\n  - Verifica uso correcto de tokens Metro\n  - Detecta colores hardcodeados\n  - Revisa accesibilidad\n\n- **install <shadcn-component>**: Instalar y adaptar componente de shadcn\n  Ejemplo: /ui install button input label\n\n**Recordá:**\n- SIEMPRE usar tokens Metro (bg-brand, txt-body, status-critical)\n- NO usar colores hardcodeados (bg-orange-500)\n- Mantener accesibilidad (ARIA, keyboard nav, focus states)\n- Usar CVA para variantes\n- forwardRef en primitivos",
-      "description": "Crear/refactorizar componentes UI con shadcn + Metro",
-      "agent": "ui-designer"
-    },
-
-    "doc": {
-      "template": "Gestionar documentación del proyecto SIRES.\n\n$ARGUMENTS\n\n**Acciones disponibles:**\n\n- **create <nombre-guia>**: Crear nueva guía en docs/guides/\n  Ejemplo: /doc create adding-rbac-endpoint\n  - Usa template de docs/templates/guide-template.md\n  - Máximo 500 líneas\n  - Solo información esencial + ejemplos copy/paste\n  - Linkear desde docs/README.md\n\n- **adr <titulo-decision>**: Crear nuevo ADR (Architecture Decision Record)\n  Ejemplo: /doc adr rate-limiting-strategy\n  - Usa template de docs/templates/adr-template.md\n  - Numerar secuencialmente (003, 004, etc)\n  - Formato: docs/adr/###-titulo-corto.md\n\n- **update <path>**: Actualizar documentación existente\n  Ejemplo: /doc update docs/guides/testing.md\n  - NO duplicar información\n  - Mantener <500 líneas (split si crece)\n  - Actualizar fecha de modificación\n\n- **audit**: Auditar documentación del proyecto\n  - Encuentra docs >500 líneas\n  - Detecta archivos referenciados que no existen\n  - Verifica que todos están linkeados desde docs/README.md\n  - Identifica duplicación de contenido\n\n**Reglas CRÍTICAS:**\n\n✅ SÍ documentar:\n- Decisiones arquitectónicas importantes → docs/adr/\n- Features complejos (3+ archivos, 2+ capas) → docs/guides/\n- Patrones repetibles → docs/guides/\n- Cambios en API → docs/api/endpoints.md\n\n❌ NO documentar:\n- Bug fixes (va en commit message)\n- Refactors sin cambio de comportamiento\n- Debugging sessions temporales\n- Código autoexplicativo\n- Duplicación de info ya existente\n\n**Antes de crear:**\n1. Buscar si ya existe (grep en docs/)\n2. Verificar que es realmente necesario\n3. Elegir template correcto\n4. Escribir <500 líneas\n5. Linkear desde docs/README.md",
-      "description": "Crear/actualizar/auditar documentación del proyecto",
-      "agent": "JARVIS"
-    }
-  },
-
-  "keybinds": {
-    "leader": "ctrl+x"
   }
 }

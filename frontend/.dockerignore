@@ -3,6 +3,12 @@ node_modules
 bun.lockb
 dist
 build
+coverage
+.nyc_output
+playwright-report
+test-results
+.cache
+node_modules/.cache
 
 # --- SEGURIDAD ---
 .env
@@ -26,6 +32,9 @@ pnpm-debug.log*
 .idea
 *.swp
 *.swo
+.DS_Store
+Thumbs.db
+*.log
 
 # --- DOCKER ---
 Dockerfile

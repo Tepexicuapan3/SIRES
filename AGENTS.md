@@ -1,779 +1,88 @@
-# AGENTS.md - Guía de Desarrollo SIRES
+# AGENTS.md - SIRES Operating Guide
 
-> **Filosofía del proyecto:** Los agentes de IA están configurados para ENSEÑAR, no solo generar código.
-> Cada interacción es una oportunidad de aprendizaje. No aceptes código que no entiendas.
+## How to Use This Guide
 
----
+- Start here for cross-project norms. SIRES has several components.
+- Each component has an `AGENTS.md` file with specific guidelines (e.g., `backend/AGENTS.md`, `frontend/AGENTS.md`).
+- Component docs override this file when guidance conflicts.
 
-## 🎓 Filosofía Anti-Vibe-Coding
+## Project summary
 
-Este proyecto usa agentes de IA configurados para ayudarte a **pensar como arquitecto/ingeniero**, no como un "code monkey" que solo copia y pega.
+SIRES is a clinical system. The frontend is React 19 + Vite and the backend has **completed the migration to Django 5 + DRF**. All new functionality must be designed for Django/DRF.
 
-### Qué esperar de los agentes:
+## Primary stack
 
-1. **Te van a hacer preguntas** antes de escribir código
-2. **Te van a explicar el "por qué"** de cada decisión
-3. **Te van a mostrar alternativas** con trade-offs
-4. **Te van a enseñar patrones y principios** que aplican
-5. **Responden siempre en español rioplatense** (directo, sin vueltas)
+| Component | Stack | Notes |
+| --- | --- | --- |
+| Frontend | React 19, TypeScript 5.9, Vite 7 | React Router 7, TanStack Query 5, Zustand 5, Zod 4, RHF, Radix/shadcn |
+| Backend | Django 5 + DRF | Clean architecture |
+| Data | MySQL, Redis | Redis for OTP/cache, MySQL as primary DB |
+| UI | Tailwind 4, shadcn/ui, Radix | Metro CDMX tokens in `frontend/src/styles/theme.css` |
+| Testing | Vitest, Testing Library, MSW, Playwright | Pytest for backend |
+| Infra | Docker Compose | `frontend` 5173, `backend` 5000 |
 
-### Tu responsabilidad:
+## Available skills (SIRES)
 
-- **No aceptes código que no entiendas** - Preguntá hasta que quede claro
-- **Cuestioná las decisiones** - "¿Por qué esto y no aquello?"
-- **Pedí que te expliquen** - "¿Qué principio SOLID aplica acá?"
-- **Conectá con conceptos** - "¿Esto es como el patrón Repository?"
+| Skill | Recommended use | Path |
+| --- | --- | --- |
+| `react-19` | React components, hooks, compiler patterns | `.opencode/skill/react-19/SKILL.md` |
+| `typescript` | Types, interfaces, strict generics | `.opencode/skill/typescript/SKILL.md` |
+| `tailwind-4` | Tailwind styling + `cn()` | `.opencode/skill/tailwind-4/SKILL.md` |
+| `zod-4` | Schemas and validation (Zod v4) | `.opencode/skill/zod-4/SKILL.md` |
+| `zustand-5` | Stores, slices, persistence | `.opencode/skill/zustand-5/SKILL.md` |
+| `django-drf` | ViewSets, serializers, filters | `.opencode/skill/django-drf/SKILL.md` |
+| `pytest` | Python tests, fixtures, mocking | `.opencode/skill/pytest/SKILL.md` |
+| `playwright` | E2E with Page Objects + MCP | `.opencode/skill/playwright/SKILL.md` |
+| `jira-epic` | Large epics definition | `.opencode/skill/jira-epic/SKILL.md` |
+| `jira-task` | Tasks/bugs definition | `.opencode/skill/jira-task/SKILL.md` |
+| `skill-creator` | Create new skills | `.opencode/skill/skill-creator/SKILL.md` |
 
----
+## Skills present but inactive
 
-## 🚀 Comandos de Desarrollo
+- `nextjs-15` and `ai-sdk-5` exist in the repo but are not used in SIRES today. Only invoke them if the project adopts Next.js or AI features.
+
+## Auto-invoke (when to load skills)
+
+| Action | Skill |
+| --- | --- |
+| Create/modify React components | `react-19` |
+| Write TypeScript types | `typescript` |
+| Tailwind styling | `tailwind-4` |
+| Zod / RHF validation | `zod-4` |
+| Create/edit global stores | `zustand-5` |
+| Design Django/DRF APIs | `django-drf` |
+| Backend Python tests | `pytest` |
+| E2E tests | `playwright` |
+| Create project epics | `jira-epic` |
+| Create tasks/bugs | `jira-task` |
+| Define a new skill | `skill-creator` |
+
+## Backend rules (Django)
+
+- All new features must be built in Django/DRF.
+- Keep clean architecture: presentation (DRF views/serializers), use_cases (orchestration), infrastructure (DB, mail, cache), domain (entities and rules).
+- JWT in HttpOnly cookies and CSRF via `X-CSRF-TOKEN` header.
+
+## Development commands
 
 ### Frontend (Bun)
 ```bash
-bun dev          # Servidor desarrollo Vite (puerto 5173)
-bun build        # Compilar TypeScript + build producción  
-bun lint         # Ejecutar ESLint
-bun preview      # Previsualizar build de producción
+bun dev
+bun build
+bun lint
+bun test
 ```
 
-### Backend (Python Flask)
+### Backend (Django)
 ```bash
-python run.py    # Iniciar servidor Flask (puerto 5000)
-pip install -r requirements.txt  # Instalar dependencias
+python manage.py runserver
+python manage.py makemigrations
+python manage.py migrate
 ```
 
-### Docker (Recomendado)
-
+### Docker (recommended)
 ```bash
-# Limpiar contenedores y volúmenes anteriores
-docker-compose down -v
-
-# Levantar servicios (rebuild automático si hay cambios en Dockerfile/package.json)
 docker-compose up --build
-
-# O en modo background:
-docker-compose up --build -d
-
-# Ver logs en tiempo real
+docker-compose down -v
 docker-compose logs -f
-
-# Acceder al contenedor backend
-docker-compose exec backend sh
 ```
-
-**Cómo funciona:**
-- El `Dockerfile` instala dependencias dentro del contenedor (se cachea si `package.json` no cambia)
-- El volumen `./frontend:/app` sincroniza tu código, pero `/app/node_modules` usa el del contenedor
-- Cambios en código → hot reload automático. Cambios en `package.json` → rebuild necesario
-
----
-
-## 🤖 OpenCode - Comandos Personalizados
-
-El proyecto está configurado con comandos custom en `opencode.json`. Usá estos comandos para tareas comunes:
-
-```bash
-# Linting completo (frontend + backend)
-opencode run --command lint
-
-# Ejecutar tests
-opencode run --command test "auth module"
-
-# Code review siguiendo convenciones
-opencode run --command review "frontend/src/features/auth"
-
-# Auditoría de seguridad
-opencode run --command security "backend/src/presentation/api/auth_routes.py"
-
-# Scaffolding de nueva feature
-opencode run --command feature "expedientes"
-
-# Docker operations
-opencode run --command docker "up"
-opencode run --command docker "logs"
-
-# Commit con Conventional Commits
-opencode run --command commit "add patient search functionality"
-
-# Explicar cómo funciona algo
-opencode run --command explain "authentication flow"
-
-# Debuggear y arreglar issues
-opencode run --command fix "login fails on expired refresh token"
-
-# Crear/refactorizar componentes UI con shadcn
-opencode run --command ui "create button"
-opencode run --command ui "refactor frontend/src/components/ui/FormField.tsx"
-opencode run --command ui "audit"
-opencode run --command ui "install button input label"
-```
-
-### Agentes Disponibles (Modo Educativo)
-
-Todos los agentes están configurados para **enseñar mientras trabajan**. Responden en español rioplatense y explican el "por qué" de cada decisión.
-
-| Agente | Rol | Filosofía | Puede editar |
-|--------|-----|-----------|--------------|
-| `build` | Developer + Mentor | Explica problema → arquitectura → código | ✅ Sí |
-| `plan` | Arquitecto + Educador | Clarifica → analiza opciones → diseña | ❌ No |
-| `code-reviewer` | Reviewer + Maestro | Encuentra issues → explica por qué → enseña | ❌ No |
-| `security-auditor` | Security Expert + Docente | Audita → muestra cómo explotaría → remedia | ❌ No |
-| `committer` | Git Expert (Liviano) | Analiza cambios → propone commits → ejecuta | ⚡ Solo git |
-| `ui-designer` | UI/UX Engineer + Educador | Crea/refactoriza componentes shadcn + Metro | ✅ Sí |
-
-**Cambiar de agente:** `Tab` o `Shift+Tab` en el TUI.
-
-**Cuándo usar cada uno:**
-- `build` → Cuando querés implementar algo (te va a hacer preguntas antes)
-- `plan` → Cuando querés pensar/diseñar antes de codear
-- `code-reviewer` → Cuando querés que revisen tu código (aprenderás de los errores)
-- `security-auditor` → Cuando querés verificar seguridad (aprenderás a pensar como atacante)
-- `committer` → Cuando terminaste de trabajar y querés commitear (usa `/commit`)
-- `ui-designer` → Cuando necesitás crear/refactorizar componentes UI (usa `/ui`)
-
-### MCP Servers Habilitados
-
-| MCP | Descripción | Variables de entorno |
-|-----|-------------|----------------------|
-| `context7` | Docs actualizadas de librerías (React, Flask, etc.) | - |
-| `gh_grep` | Buscar ejemplos de código en GitHub | - |
-| `sequential-thinking` | Razonamiento paso a paso para problemas complejos | - |
-| `playwright` | Testing E2E y web scraping | - |
-| `21st-magic` | Generación de componentes UI con Tailwind | - |
-| `mysql` | Queries directas a la BD SIRES | `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` |
-| `redis` | Operaciones en cache OTP/sesiones | `REDIS_HOST`, `REDIS_PORT` |
-
-#### Configurar MCPs de Base de Datos
-
-Para que los MCPs de MySQL y Redis funcionen, necesitás configurar las variables de entorno.
-Podés hacerlo en tu shell o crear un archivo `.env` en la raíz del proyecto:
-
-```bash
-# MySQL (usar los mismos valores que backend/.env)
-export MYSQL_HOST=10.15.15.76
-export MYSQL_PORT=3306
-export MYSQL_USER=sires
-export MYSQL_PASSWORD=tu_password
-export MYSQL_DATABASE=SIRES
-
-# Redis (default Docker)
-export REDIS_HOST=localhost
-export REDIS_PORT=6379
-```
-
-O si usás Docker, apuntá a los servicios del compose:
-```bash
-export MYSQL_HOST=host.docker.internal  # Para acceder desde host a contenedor
-export REDIS_HOST=localhost             # Redis está expuesto en puerto 6379
-```
-
----
-
-## 📝 Guías de Estilo
-
-### Frontend (TypeScript/React)
-- **Componentes**: PascalCase (`AuthPasswordForm.tsx`)
-- **Hooks**: camelCase con prefijo `use` (`useAuth.ts`)
-- **Tipos**: PascalCase con inferencia Zod (`LoginRequest`)
-- **Imports**: External → Local con aliases `@/`, `@api/`, `@features/`
-- **Validación**: Zod + React Hook Form para formularios
-- **Estado**: Zustand con persistencia, TanStack Query para API calls
-- **Path aliases**: Configurados en vite.config.ts y tsconfig.json
-
-### Backend (Python Flask)
-- **Arquitectura**: Clean architecture (use_cases/, repositories/, infrastructure/)
-- **Nomenclatura**: snake_case archivos, PascalCase clases (`LoginUseCase`)
-- **Errores**: Excepciones personalizadas con código y status HTTP
-- **API**: Flask blueprints, respuestas JSON consistentes
-- **Patrón**: Retorno `(result, error)` en use cases
-- **Variables**: `.env` separados por servicio, `VITE_*` para frontend
-
----
-
-## 🔒 Seguridad (CRÍTICO)
-
-### Reglas de Oro
-
-1. **NUNCA** guardar tokens en localStorage/sessionStorage
-2. JWT **SIEMPRE** en cookies HttpOnly
-3. **SIEMPRE** incluir header `X-CSRF-TOKEN` en requests mutantes
-4. **NUNCA** concatenar strings para queries SQL (usar parameterized queries)
-5. **SIEMPRE** usar `@jwt_required()` en endpoints protegidos
-
-### Documentación de Seguridad
-
-- `backend/docs/JWT_CSRF_MIGRATION.md` - Arquitectura de autenticación
-- `backend/docs/RATE_LIMITING.md` - Rate limiting (diseño propuesto)
-- `backend/docs/AUDIT_ONBOARDING.md` - Auditoría de onboarding
-
----
-
-## ⚠️ Notas Importantes
-
-- **Tests**: No configurado actualmente en el proyecto
-- **Proxy**: Configuración proxy corporativo en Docker
-- **Autenticación**: JWT con refresh tokens, validación en múltiples capas
-- **BD**: MySQL con Redis para cache de OTP
-- **Desarrollo**: Usar siempre Docker Compose para ambiente completo
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-SIRES/
-├── backend/
-│   ├── src/
-│   │   ├── presentation/api/     # Flask Blueprints (HTTP)
-│   │   ├── use_cases/            # Business logic
-│   │   ├── infrastructure/       # DB, email, security
-│   │   └── domain/dto/           # Data Transfer Objects
-│   └── docs/                     # Docs internas
-│
-├── frontend/
-│   ├── src/
-│   │   ├── api/                  # Axios client + resources + types
-│   │   ├── features/             # Feature modules
-│   │   ├── components/           # Shared UI
-│   │   ├── store/                # Zustand stores
-│   │   └── routes/               # React Router + guards
-│   └── ...
-│
-├── .opencode/                    # Configuración OpenCode
-│   ├── prompts/                  # System prompts por agente
-│   ├── agent/                    # Agentes custom (markdown)
-│   └── command/                  # Comandos custom (markdown)
-│
-├── opencode.json                 # Config principal OpenCode
-├── AGENTS.md                     # Este archivo
-└── PROJECT_GUIDE.md              # Guía técnica detallada
-```
-
----
-
-## 🎨 Desarrollo de UI con shadcn/ui + Metro CDMX
-
-### Filosofía del Sistema de Diseño
-
-El proyecto usa **shadcn/ui como librería de primitivos** (estructura + accesibilidad) adaptados al **sistema de diseño Metro CDMX** (colores + tipografía + identidad).
-
-**Reglas de Oro:**
-
-1. ✅ **Usar tokens semánticos** → `bg-brand`, `txt-body`, `status-critical`
-2. ❌ **NO hardcodear colores** → `bg-orange-500`, `text-gray-600`
-3. ✅ **Accesibilidad completa** → ARIA, keyboard nav, focus states
-4. ✅ **Usar CVA para variantes** → Type-safe variant system
-5. ✅ **forwardRef en primitivos** → React Hook Form compatibility
-
-### Tokens de Color Disponibles
-
-```tsx
-// Marca Metro CDMX
-bg-brand, text-brand, border-brand, bg-brand-hover
-
-// Estados Clínicos
-status-critical  // Errores, alertas vitales
-status-alert     // Advertencias, pendientes
-status-stable    // Éxito, signos estables
-status-info      // Información administrativa
-
-// Texto y Legibilidad
-txt-body         // Texto principal
-txt-muted        // Metadatos, secundario
-txt-hint         // Placeholders
-txt-inverse      // Texto sobre fondos oscuros
-
-// Superficies
-bg-app           // Fondo general
-bg-paper         // Tarjetas, expedientes
-bg-paper-lift    // Modales, dropdowns
-bg-subtle        // Áreas secundarias
-
-// Bordes
-line-hairline    // Divisiones sutiles
-line-struct      // Bordes de inputs
-```
-
-### Comandos Útiles
-
-```bash
-# Ver componentes disponibles
-npx shadcn@latest add
-
-# Instalar componente base
-npx shadcn@latest add button
-
-# Instalar múltiples
-npx shadcn@latest add button input label dialog
-
-# Ver diferencias (útil para updates)
-npx shadcn@latest diff
-```
-
-### Flujo de Trabajo Típico
-
-1. **Instalar componente shadcn:**
-   ```bash
-   cd frontend
-   npx shadcn@latest add button
-   ```
-
-2. **Adaptar a tokens Metro:**
-   ```tsx
-   // ❌ Código generado por shadcn (usa sus colores)
-   "bg-primary text-primary-foreground"
-   
-   // ✅ Adaptado a Metro CDMX
-   "bg-brand text-txt-inverse hover:bg-brand-hover"
-   ```
-
-3. **Usar el componente:**
-   ```tsx
-   import { Button } from "@/components/ui/button";
-   
-   <Button variant="default">Guardar Expediente</Button>
-   <Button variant="destructive">Eliminar Registro</Button>
-   ```
-
-### Estructura de Componentes
-
-```
-frontend/src/components/
-  ui/              # Primitivos shadcn (Button, Input, Dialog)
-  layouts/         # Layout components (Sidebar, Header)
-  shared/          # Reutilizables no-primitivos (LoadingSpinner)
-```
-
-**Regla:** Componente genérico → `ui/`. Componente específico → `features/<feature>/components/`.
-
-### Variables CSS Bridge
-
-Ya están configuradas en `frontend/src/styles/theme.css`:
-
-```css
-/* shadcn espera */      /* mapea a Metro */
---primary          →     var(--metro-orange-500)
---destructive      →     var(--clinical-critical)
---muted            →     var(--bg-subtle)
---border           →     var(--border-struct)
-```
-
-Esto permite que los componentes shadcn funcionen **sin modificación**, pero siempre es mejor personalizar explícitamente.
-
-### Ejemplo Completo: Button Adaptado
-
-```tsx
-// frontend/src/components/ui/button.tsx
-import { forwardRef } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/utils";
-
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-all focus-visible:ring-2 disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-brand text-txt-inverse hover:bg-brand-hover",
-        destructive: "bg-status-critical text-white hover:bg-status-critical/90",
-        outline: "border border-line-struct hover:bg-subtle",
-      },
-      size: {
-        default: "h-10 px-4",
-        sm: "h-9 px-3",
-        lg: "h-12 px-8",
-      },
-    },
-    defaultVariants: { variant: "default", size: "default" },
-  }
-);
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
-
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
-    <button
-      ref={ref}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
-);
-Button.displayName = "Button";
-
-export { Button, buttonVariants };
-```
-
-### Recursos
-
-- Docs shadcn: https://ui.shadcn.com
-- Sistema Metro: `frontend/src/styles/theme.css`
-- Prompt del agente: `.opencode/prompts/ui-designer.md`
-
-**Pro tip:** Usá el agente `ui-designer` con `/ui` para automatizar la creación/adaptación de componentes.
-
----
-
-## 📚 Estrategia de Documentación (CRÍTICO para Agentes)
-
-> **Filosofía:** Documentación es una herramienta, NO un objetivo. Solo creá documentación que alguien va a **usar** y que no se puede inferir del código mismo.
-
-### Cuándo Documentar (Checklist para Agentes)
-
-#### ✅ SÍ documentar en estos casos:
-
-1. **Decisiones arquitectónicas no obvias**
-   - ¿Por qué usamos JWT en cookies HttpOnly y no en localStorage?
-   - ¿Por qué el onboarding es un wizard de 2 pasos?
-   - → **Destino:** `docs/adr/` (Architecture Decision Records)
-
-2. **Nuevos features complejos** (3+ archivos, 2+ capas)
-   - Feature que toca backend + frontend + DB
-   - Flows con múltiples estados (ej: reset password con OTP)
-   - → **Destino:** `docs/guides/` o actualizar existentes
-
-3. **Patrones de implementación repetibles**
-   - "Cómo agregar un endpoint protegido con RBAC"
-   - "Cómo crear un componente UI con shadcn + Metro"
-   - → **Destino:** `docs/guides/`
-
-4. **Contratos de API** (si cambian endpoints/tipos)
-   - → **Destino:** `docs/api/endpoints.md`
-
-5. **Decisiones de seguridad**
-   - Cambios en auth, CSRF, validación
-   - → **Destino:** `docs/adr/` + actualizar `docs/architecture/authentication.md`
-
-#### ❌ NO documentar en estos casos:
-
-1. **Bug fixes** → Va solo en commit message + código
-2. **Refactors que no cambian comportamiento** → Commit message
-3. **Debugging sessions temporales** → Borrá logs después
-4. **Código autoexplicativo** → Si tiene buenos nombres, no necesita docs
-5. **Duplicación de información** → Si ya está en código/tipos, no lo repitas
-
-### Dónde Poner la Documentación (Árbol de Decisión)
-
-```
-¿Qué estoy documentando?
-│
-├─ ¿Es una decisión arquitectónica importante?
-│  └─ SÍ → docs/adr/###-titulo-decision.md
-│
-├─ ¿Es una guía para implementar algo?
-│  └─ SÍ → docs/guides/nombre-guia.md
-│
-├─ ¿Es sobre cómo funciona el sistema?
-│  └─ SÍ → docs/architecture/subsistema.md
-│
-├─ ¿Es referencia de API endpoints?
-│  └─ SÍ → docs/api/endpoints.md
-│
-├─ ¿Es setup inicial o troubleshooting?
-│  └─ SÍ → docs/getting-started/setup.md
-│
-├─ ¿Es específico de un componente/función?
-│  └─ SÍ → Comentario inline en el código (JSDoc/docstring)
-│
-└─ ¿No encaja en ninguna categoría?
-   └─ PREGUNTÁ antes de crear archivo nuevo
-```
-
-### Cómo Documentar (Reglas de Formato)
-
-#### Regla 1: Máximo 500 líneas por archivo
-
-Si superás las 500 líneas, **dividí el archivo**. Nadie lee docs de 1000+ líneas.
-
-**Ejemplo:**
-- ❌ `docs/authentication-everything.md` (1500 líneas)
-- ✅ `docs/architecture/authentication.md` (500 líneas)
-- ✅ `docs/adr/001-jwt-cookies-httponly.md` (200 líneas)
-- ✅ `docs/guides/adding-protected-endpoint.md` (300 líneas)
-
-#### Regla 2: Información esencial ÚNICAMENTE
-
-Preguntate: **"¿Esto ayuda a alguien a hacer su trabajo MÁS RÁPIDO?"**
-
-- ✅ Ejemplos copy/paste
-- ✅ Checklists
-- ✅ Comandos exactos
-- ✅ Diagramas de flujo
-- ❌ Explicaciones filosóficas largas
-- ❌ Historia de cómo llegamos a esto (solo si es ADR)
-- ❌ Múltiples formas de hacer lo mismo (elegí UNA)
-
-#### Regla 3: Estructura predecible
-
-Todos los docs deben seguir esta estructura (usá templates):
-
-```markdown
-# Título Claro y Descriptivo
-
-> **TL;DR:** Resumen en 1-2 oraciones de qué problema resuelve este doc.
-
-## Problema / Contexto
-[Por qué existe este doc, qué problema resuelve]
-
-## Solución / Implementación
-[Cómo se resuelve, con ejemplos concretos]
-
-## Ejemplos
-[Código copy/paste, comandos, checklists]
-
-## Referencias
-[Links a otros docs relevantes, NO externos sin contexto]
-```
-
-#### Regla 4: Ejemplos funcionales (copy/paste ready)
-
-**Malo:**
-```markdown
-Creá un use case que retorne un error si algo falla.
-```
-
-**Bueno:**
-```python
-# backend/src/use_cases/auth/ejemplo_usecase.py
-class EjemploUseCase:
-    def execute(self, param: str):
-        if not param:
-            return None, "INVALID_PARAM"
-        
-        try:
-            result = self.repo.do_something(param)
-            return result, None
-        except Exception:
-            return None, "SERVER_ERROR"
-```
-
-### Comandos de Documentación (para Agentes)
-
-Usá estos comandos para gestionar docs:
-
-```bash
-# Crear nueva guía
-opencode run --command doc "create adding-rbac-endpoint"
-
-# Crear nuevo ADR (Architecture Decision Record)
-opencode run --command doc "adr rate-limiting-strategy"
-
-# Actualizar documentación existente
-opencode run --command doc "update docs/guides/testing.md"
-
-# Auditar documentación (encontrar docs obsoletos/redundantes)
-opencode run --command doc "audit"
-```
-
-### Template: ADR (Architecture Decision Record)
-
-Archivo: `docs/adr/###-titulo-corto.md`
-
-```markdown
-# ADR-### Título de la Decisión
-
-**Estado:** Aceptado | Propuesto | Deprecado  
-**Fecha:** YYYY-MM-DD  
-**Autores:** @usuario / AI Agent
-
-## Contexto y Problema
-
-[Qué problema estamos resolviendo. Por qué es importante.]
-
-## Decisión
-
-[Qué decidimos hacer.]
-
-## Alternativas Consideradas
-
-### Opción 1: [Nombre]
-- **Pros:** ...
-- **Contras:** ...
-
-### Opción 2: [Nombre]
-- **Pros:** ...
-- **Contras:** ...
-
-## Consecuencias
-
-### Positivas
-- ...
-
-### Negativas (Trade-offs)
-- ...
-
-## Implementación
-
-[Cómo se implementa esto en el código. Referencias a archivos.]
-
-## Referencias
-
-- Documentos relacionados
-- Issues/PRs relevantes
-```
-
-### Template: Guía de Implementación
-
-Archivo: `docs/guides/nombre-guia.md`
-
-```markdown
-# Nombre de la Guía
-
-> **TL;DR:** [Qué vas a aprender en 1 línea]
-
-## Prerequisitos
-
-- [Qué necesitás saber antes]
-- [Dependencias/setup necesario]
-
-## Paso a Paso
-
-### 1. [Primer Paso]
-
-[Explicación breve]
-
-**Código:**
-```[lenguaje]
-[código copy/paste]
-```
-
-### 2. [Segundo Paso]
-
-...
-
-## Checklist Final
-
-Antes de dar por terminado, verificá:
-
-- [ ] Item 1
-- [ ] Item 2
-- [ ] Item 3
-
-## Troubleshooting
-
-**Problema:** [Error común]  
-**Solución:** [Cómo resolverlo]
-
-## Referencias
-
-- [Docs relacionados]
-```
-
-### Anti-Patrones de Documentación (Evitar)
-
-#### 🚫 Anti-Patrón 1: "Documentation Dumping"
-
-**Malo:**
-Crear archivo `FRONTEND_DIAGNOSTICO.md` con 800 líneas de debugging session.
-
-**Bueno:**
-- Si encontraste un bug → commit message + fix
-- Si descubriste un patrón → agregar a guía existente (1 sección, 50 líneas)
-
-#### 🚫 Anti-Patrón 2: "README Inception"
-
-**Malo:**
-Crear `frontend/src/components/ui/README.md`, `frontend/src/components/layouts/README.md`, `frontend/src/components/shared/README.md` (cada uno explicando lo mismo).
-
-**Bueno:**
-- UN solo `docs/guides/ui-components.md` con índice y secciones
-
-#### 🚫 Anti-Patrón 3: "Future Maybe Documentation"
-
-**Malo:**
-Crear `docs/future/rate-limiting-proposal.md` con 1500 líneas de diseño que nunca se implementa.
-
-**Bueno:**
-- Si es propuesta NO implementada → Issue de GitHub o ADR con estado "Propuesto"
-- Si se implementa → ADR con estado "Aceptado" + código real
-
-#### 🚫 Anti-Patrón 4: "Copy/Paste de Docs Externas"
-
-**Malo:**
-Copiar toda la doc de Flask-JWT-Extended o shadcn/ui al repo.
-
-**Bueno:**
-- Link a docs oficiales
-- Documentar **solo las decisiones específicas del proyecto** (qué configuración elegimos y por qué)
-
-### Workflow: Creando Documentación Nueva
-
-#### Paso 1: Preguntate (Antes de crear archivo)
-
-1. **¿Esto ya está documentado?** → Buscar con grep antes de duplicar
-2. **¿Es realmente necesario?** → Si el código es claro, NO documentes
-3. **¿Quién lo va a usar y cuándo?** → Si no sabés responder, NO lo crees
-4. **¿Dónde va esto?** → Usar árbol de decisión de arriba
-
-#### Paso 2: Elegir Template
-
-- Decisión arquitectónica → Template ADR
-- Guía de implementación → Template Guía
-- API reference → Actualizar `docs/api/endpoints.md`
-- Setup/troubleshooting → Actualizar `docs/getting-started/setup.md`
-
-#### Paso 3: Escribir (Máximo 500 líneas)
-
-- Arrancá con TL;DR
-- Solo información esencial
-- Ejemplos copy/paste
-- NO explicaciones filosóficas
-
-#### Paso 4: Validar
-
-- [ ] ¿Tiene menos de 500 líneas?
-- [ ] ¿Tiene ejemplos funcionales?
-- [ ] ¿Está en la carpeta correcta?
-- [ ] ¿Está linkeado desde `docs/README.md`?
-- [ ] ¿No duplica contenido existente?
-
-#### Paso 5: Linkear desde `docs/README.md`
-
-Siempre agregá el nuevo doc al índice principal para que sea descubrible.
-
-### Mantenimiento de Docs (Agentes: Revisar al tocar código)
-
-Cuando modificás código que tiene documentación asociada:
-
-1. **¿Cambió el comportamiento?** → Actualizar doc relacionado
-2. **¿Se agregó endpoint?** → Actualizar `docs/api/endpoints.md`
-3. **¿Cambió flujo de auth?** → Actualizar `docs/architecture/authentication.md`
-4. **¿Nueva decisión importante?** → Crear ADR
-
-**Comando para auditar:**
-```bash
-opencode run --command doc "audit"
-```
-
-Esto revisa:
-- Docs que referencian archivos borrados
-- Docs con >500 líneas
-- Docs que no están linkeados desde `docs/README.md`
-- Duplicación de contenido
-
----
-
-## 🎯 Resumen para Agentes (Copy/Paste Mental)
-
-### Antes de Crear Documentación
-
-**Preguntá:**
-1. ¿Es una decisión arquitectónica importante? → ADR
-2. ¿Es una guía repetible? → docs/guides/
-3. ¿Ya está documentado en otro lado? → NO duplicar
-4. ¿Se puede inferir del código? → NO documentar
-
-**Si la respuesta es "documentar", seguí:**
-1. Elegir template (ADR o Guía)
-2. Escribir <500 líneas
-3. Solo info esencial + ejemplos copy/paste
-4. Linkear desde docs/README.md
-
-**Nunca crear:**
-- Debugging logs como docs permanentes
-- Docs de "futuras ideas"
-- Duplicación de docs externas
-- Explicaciones de código autoexplicativo
-
-
