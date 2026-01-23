@@ -12,19 +12,35 @@ const getEnvVar = (key: string, defaultValue?: string): string => {
   return value;
 };
 
+const getEnvNumber = (key: string, defaultValue: number): number => {
+  const value = import.meta.env[key];
+
+  if (value === undefined || value === "") {
+    return defaultValue;
+  }
+
+  const parsed = Number(value);
+
+  if (Number.isNaN(parsed)) {
+    throw new Error(`Invalid environment variable: ${key}`);
+  }
+
+  return parsed;
+};
+
 export const env = {
   // API
-  apiUrl: getEnvVar("VITE_API_URL", "http://localhost:5000/api/v1"),
+  apiUrl: getEnvVar("VITE_API_URL"),
 
   // App
-  appName: getEnvVar("VITE_APP_NAME", "SIRES"),
-  appVersion: getEnvVar("VITE_APP_VERSION", "1.0.0"),
+  appName: getEnvVar("VITE_APP_NAME"),
+  appVersion: getEnvVar("VITE_APP_VERSION"),
 
   // Flags
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,
 
   // Timeouts
-  apiTimeout: 30000,
+  apiTimeout: getEnvNumber("VITE_API_TIMEOUT", 3000),
   tokenRefreshInterval: 5 * 60 * 1000, // 5 minutos
 } as const;
