@@ -1,5 +1,5 @@
 import { Outlet } from "react-router-dom";
-import { SessionObserver } from "@/features/auth/components/SessionObserver";
+import { SessionObserver } from "@/features/auth/components/shared/SessionObserver";
 import { useAuthSession } from "@/features/auth/queries/useAuthSession";
 
 /**

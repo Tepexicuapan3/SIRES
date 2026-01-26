@@ -28,7 +28,7 @@ export const ProtectedRoute = ({
   const isAuthenticated = Boolean(sessionUser);
 
   if (isLoading && !sessionUser) {
-    return <LoadingSpinner fullScreen size="lg" />;
+    return <LoadingSpinner fullScreen />;
   }
 
   // Si no está autenticado, redirigir a login
