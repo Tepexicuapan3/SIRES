@@ -16,7 +16,7 @@
  * ```
  */
 
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { usePermissions } from "@features/auth/queries/usePermissions";
 
 interface PermissionGateProps {
@@ -39,6 +39,19 @@ export const PermissionGate = ({
   const { hasPermission, hasAnyPermission, hasAllPermissions, isAdmin } =
     usePermissions();
 
+  const ruleCount = [
+    requireAdmin ? 1 : 0,
+    permission ? 1 : 0,
+    anyOf?.length ? 1 : 0,
+    allOf?.length ? 1 : 0,
+  ].reduce((sum, value) => sum + value, 0);
+
+  if (process.env.NODE_ENV !== "production" && ruleCount > 1) {
+    console.warn(
+      "PermissionGate: usa solo una regla a la vez (requireAdmin, permission, anyOf, allOf).",
+    );
+  }
+
   // Admin bypass
   if (requireAdmin) {
     return isAdmin() ? <>{children}</> : <>{fallback}</>;
@@ -50,12 +63,12 @@ export const PermissionGate = ({
   }
 
   // ANY of permissions (OR)
-  if (anyOf) {
+  if (anyOf?.length) {
     return hasAnyPermission(anyOf) ? <>{children}</> : <>{fallback}</>;
   }
 
   // ALL of permissions (AND)
-  if (allOf) {
+  if (allOf?.length) {
     return hasAllPermissions(allOf) ? <>{children}</> : <>{fallback}</>;
   }
 

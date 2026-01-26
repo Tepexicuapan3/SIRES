@@ -72,7 +72,7 @@ export const router = createBrowserRouter([
       {
         path: "/login",
         element: (
-          <SuspenseWrapper>
+          <SuspenseWrapper fullScreen size="lg">
             <LoginPage />
           </SuspenseWrapper>
         ),
@@ -81,7 +81,7 @@ export const router = createBrowserRouter([
         path: "/onboarding",
         element: (
           <ProtectedRoute>
-            <SuspenseWrapper>
+            <SuspenseWrapper fullScreen size="lg">
               <OnboardingPage />
             </SuspenseWrapper>
           </ProtectedRoute>
@@ -98,7 +98,7 @@ export const router = createBrowserRouter([
           {
             path: "/dashboard",
             element: (
-              <SuspenseWrapper>
+              <SuspenseWrapper className="min-h-[calc(100dvh-4rem)]" size="md">
                 <CoreRoutes />
               </SuspenseWrapper>
             ),
@@ -106,7 +106,7 @@ export const router = createBrowserRouter([
           {
             path: "/admin/*",
             element: (
-              <SuspenseWrapper>
+              <SuspenseWrapper className="min-h-[calc(100dvh-4rem)]" size="md">
                 <AdminRoutes />
               </SuspenseWrapper>
             ),
@@ -114,7 +114,7 @@ export const router = createBrowserRouter([
           {
             path: "/clinico/*",
             element: (
-              <SuspenseWrapper>
+              <SuspenseWrapper className="min-h-[calc(100dvh-4rem)]" size="md">
                 <ClinicoRoutes />
               </SuspenseWrapper>
             ),
@@ -122,7 +122,7 @@ export const router = createBrowserRouter([
           {
             path: "/recepcion/*",
             element: (
-              <SuspenseWrapper>
+              <SuspenseWrapper className="min-h-[calc(100dvh-4rem)]" size="md">
                 <RecepcionRoutes />
               </SuspenseWrapper>
             ),
@@ -130,7 +130,7 @@ export const router = createBrowserRouter([
           {
             path: "/farmacia/*",
             element: (
-              <SuspenseWrapper>
+              <SuspenseWrapper className="min-h-[calc(100dvh-4rem)]" size="md">
                 <FarmaciaRoutes />
               </SuspenseWrapper>
             ),
@@ -138,7 +138,7 @@ export const router = createBrowserRouter([
           {
             path: "/urgencias/*",
             element: (
-              <SuspenseWrapper>
+              <SuspenseWrapper className="min-h-[calc(100dvh-4rem)]" size="md">
                 <UrgenciasRoutes />
               </SuspenseWrapper>
             ),

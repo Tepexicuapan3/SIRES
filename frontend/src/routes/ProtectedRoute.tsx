@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
 import { usePermissions } from "@features/auth/queries/usePermissions";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
@@ -28,7 +28,7 @@ export const ProtectedRoute = ({
   const isAuthenticated = Boolean(sessionUser);
 
   if (isLoading && !sessionUser) {
-    return <LoadingSpinner fullScreen={true} text="Validando sesión..." />;
+    return <LoadingSpinner fullScreen size="lg" />;
   }
 
   // Si no está autenticado, redirigir a login
