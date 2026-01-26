@@ -16,7 +16,7 @@ export function SkipToContent() {
   return (
     <a
       href="#main-content"
-      className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-txt-inverse focus:shadow-lg focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:outline-hidden"
+      className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-txt-inverse focus:shadow-lg focus:ring-2 focus:ring-brand focus:ring-offset-2 focus-visible:outline-none"
     >
       Saltar al contenido principal
     </a>
