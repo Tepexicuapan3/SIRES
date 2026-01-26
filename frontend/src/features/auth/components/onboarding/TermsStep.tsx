@@ -7,23 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-/**
- * TermsStep - Paso 1 del Onboarding
- *
- * DISEÑO OPTIMIZADO PARA LECTURA (AuthCard maxWidth="lg" = 672px):
- * ✅ Card ancha: Líneas largas facilitan lectura de texto legal extenso
- * ✅ Fuentes legibles: text-base (16px) en desktop, text-sm (14px) en mobile
- * ✅ Scroll alto: h-[50vh] mobile, h-[480px] desktop (más contenido visible)
- * ✅ Scroll híbrido: Nativo en mobile (performance), ScrollArea en desktop (estilo)
- * ✅ Espaciado generoso: Aprovecha ancho para separar secciones
- *
- * PRINCIPIO UX:
- * Un documento legal NO debe competir con un formulario en tamaño.
- * La legibilidad > simetría visual arbitraria.
- *
- * @see AuthCard.tsx - Wrapper con maxWidth configurable
- * @see OnboardingPage.tsx - TERMS usa "lg", PASSWORD usa "md"
- */
+/** Paso 1 del onboarding: aceptación de términos. */
 
 interface Props {
   onAccept: () => void;
@@ -34,22 +18,7 @@ export const TermsStep = ({ onAccept }: Props) => {
 
   return (
     <div className="space-y-0">
-      {/* 
-        === HEADER INSTITUCIONAL ===
-        
-        DECISIÓN DE DISEÑO:
-        - Los Términos y Condiciones son un DOCUMENTO LEGAL/INSTITUCIONAL
-        - Merece branding completo: Metro CDMX + SIRES (autoridad visual)
-        - Gradiente naranja sutil: Identidad Metro sin saturar
-        - Layout horizontal: Logo + Título (profesional, no genérico)
-        
-        CONTRASTE CON PASO PASSWORD:
-        - PASSWORD usa AuthCard simple (foco en acción, no en institución)
-        - TERMS necesita "peso" visual para documentos formales
-        
-        Esta NO es inconsistencia, es JERARQUÍA DE CONTENIDO.
-      */}
-      <div className="bg-gradient-to-r from-brand/10 via-brand/5 to-transparent p-6 sm:p-8 border-b border-line-hairline/50 rounded-t-2xl">
+      <div className="bg-linear-to-r from-brand/10 via-brand/5 to-transparent p-6 sm:p-8 border-b border-line-hairline/50 rounded-t-2xl">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           {/* Logos Institucionales */}
           <div className="flex items-center gap-4 shrink-0">
@@ -73,53 +42,24 @@ export const TermsStep = ({ onAccept }: Props) => {
         </div>
       </div>
 
-      {/* === CONTENIDO DE TÉRMINOS === */}
       <div className="space-y-4 pt-6">
-        {/* 
-        Contenido de Términos (ScrollArea)
-        
-        OPTIMIZACIÓN PARA CARD ANCHA (672px):
-        - Altura generosa: h-[50vh] mobile, h-[480px] desktop (más contenido visible sin scroll)
-        - Aprovecha ancho: Párrafos de ~60-80 caracteres (óptimo para lectura)
-        - Fuentes base: text-base (16px) en desktop, legibilidad garantizada
-        
-        SCROLL HÍBRIDO:
-        - Mobile (< sm): Scroll nativo (60fps, familiar)
-        - Desktop (>= sm): ScrollArea custom (estilo Metro CDMX)
-      */}
         <div className="relative">
-          {/* ScrollArea custom (solo desktop) */}
           <div className="hidden sm:block">
-            <ScrollArea className="h-[480px] w-full pr-4">
+            <ScrollArea className="h-120 w-full pr-4">
               <TermsContent />
             </ScrollArea>
           </div>
 
-          {/* Scroll nativo (solo mobile) */}
           <div className="block sm:hidden h-[50vh] overflow-y-auto overflow-x-hidden pr-2 scroll-smooth">
             <TermsContent />
           </div>
         </div>
 
-        {/* Checkbox y Botón (fuera del scroll) */}
         <div className="pt-4 border-t border-line-hairline space-y-4">
-          {/* 
-            Checkbox de Aceptación - shadcn/ui Component con Layout Original
-            
-            MIGRACIÓN COMPLETADA:
-            - Usa shadcn Checkbox (accesibilidad + Radix UI)
-            - Mantiene layout original con texto dentro del card (no al lado)
-            - Estados visuales claros (accepted → naranja Metro)
-            
-            DECISIÓN DE DISEÑO:
-            - Texto DENTRO del card clickeable (no al lado del checkbox)
-            - Permite textos largos sin romper el layout
-            - Checkbox funciona como indicador visual, no como único elemento
-          */}
           <Label
             htmlFor="accept-terms"
             className={cn(
-              "flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer min-h-[68px]",
+              "flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer min-h-17",
               accepted
                 ? "border-brand bg-brand/5 ring-2 ring-brand/20"
                 : "border-line-struct hover:border-brand/50 hover:bg-subtle/30",
@@ -148,7 +88,6 @@ export const TermsStep = ({ onAccept }: Props) => {
             </div>
           </Label>
 
-          {/* Botón Continuar - shadcn Button Component */}
           <Button
             onClick={onAccept}
             disabled={!accepted}
@@ -164,20 +103,7 @@ export const TermsStep = ({ onAccept }: Props) => {
   );
 };
 
-/**
- * TermsContent - Contenido del Acta Responsiva
- *
- * OPTIMIZADO PARA CARD ANCHA (672px):
- * - Fuentes base: text-base (16px) en desktop → lectura cómoda
- * - Líneas ~70 caracteres: Óptimo según tipografía (no muy corto, no muy largo)
- * - Espaciado generoso: space-y-6 (24px) entre secciones → respiro visual
- * - Grid 2 columnas en desktop: Aprovecha ancho para compromisos (opcional)
- *
- * ACCESIBILIDAD:
- * - leading-relaxed (1.625): Altura de línea generosa para texto extenso
- * - Contraste garantizado: text-txt-body (WCAG AA mínimo)
- * - Iconos con aria-hidden: Screen readers ignoran decoración
- */
+/** Contenido del acta responsiva. */
 const TermsContent = () => (
   <div className="space-y-6 p-1">
     {/* Acta Responsiva Header */}

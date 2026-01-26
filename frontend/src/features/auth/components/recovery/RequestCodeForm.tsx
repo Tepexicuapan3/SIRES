@@ -1,12 +1,13 @@
-// src/features/auth/components/recovery/RequestCodeForm.tsx
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Mail, ArrowLeft } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
+import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { authAPI } from "@/api/resources/auth.api";
 import { toast } from "sonner";
+import { ApiError } from "@/api/utils/errors";
 import { recoveryErrorMessages } from "@features/auth/utils/errorMessages";
 
 const schema = z.object({
@@ -23,7 +24,7 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm({
+  } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
   });
 
@@ -35,10 +36,12 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
       });
       onSuccess(variables.email);
     },
-    onError: (error: Error & { response?: { data?: { code?: string } } }) => {
-      const errorCode = error.response?.data?.code;
+    onError: (error) => {
+      const errorCode = error instanceof ApiError ? error.code : undefined;
       const message = errorCode
-        ? recoveryErrorMessages[errorCode] || "Error al enviar el código"
+        ? recoveryErrorMessages[
+            errorCode as keyof typeof recoveryErrorMessages
+          ] || "Error al enviar el código"
         : "Error al enviar el código";
 
       toast.error("Error", { description: message });
@@ -65,26 +68,24 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
         placeholder="usuario@metro.cdmx.gob.mx"
         error={errors.email}
         disabled={isPending}
+        autoComplete="email"
         {...register("email")}
       />
 
       <div className="space-y-3 pt-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="w-full h-12 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
+        <Button type="submit" disabled={isPending} className="w-full h-12">
           {isPending ? "Enviando..." : "Enviar Código"}
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={onCancel}
           disabled={isPending}
-          className="w-full h-12 text-txt-muted hover:text-txt-body font-medium transition-colors flex items-center justify-center gap-2"
+          className="w-full h-12 gap-2"
         >
           <ArrowLeft size={16} /> Volver al Login
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useAuthStore } from "@/store/authStore";
+import { clearAuthSession } from "@features/auth/utils/auth-cache";
+import { subscribeSessionExpired } from "@features/auth/utils/session-events";
+import { queryClient } from "@/config/query-client";
 
 /**
  * Componente lógico (sin UI) que observa el estado de la sesión.
@@ -12,22 +14,21 @@ import { useAuthStore } from "@/store/authStore";
  */
 export const SessionObserver = () => {
   const navigate = useNavigate();
-  const isSessionExpired = useAuthStore((state) => state.isSessionExpired);
-  const setSessionExpired = useAuthStore((state) => state.setSessionExpired);
 
   useEffect(() => {
-    if (isSessionExpired) {
+    const handleSessionExpired = () => {
       // 1. Notificar al usuario
       toast.error("Tu sesión ha expirado. Por favor ingresa nuevamente.");
 
       // 2. Navegación suave (sin recargar la página)
       navigate("/login", { replace: true });
 
-      // 3. Resetear el flag inmediatamente para no bloquear futuros intentos
-      // o causar bucles si el componente se remonta.
-      setSessionExpired(false);
-    }
-  }, [isSessionExpired, navigate, setSessionExpired]);
+      // 3. Limpieza defensiva de la sesión cacheada
+      clearAuthSession(queryClient);
+    };
 
-  return null; // No renderiza nada visualmente
+    return subscribeSessionExpired(handleSessionExpired);
+  }, [navigate]);
+
+  return null;
 };

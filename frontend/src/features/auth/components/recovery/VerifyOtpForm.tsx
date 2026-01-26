@@ -1,30 +1,23 @@
-import { useState, useCallback } from "react";
+import { useState, type FormEvent } from "react";
 import { ShieldCheck, ArrowLeft, AlertCircle } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { authAPI } from "@/api/resources/auth.api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { OtpInput } from "@/components/ui/OtpInput";
+import { Button } from "@/components/ui/button";
+import { ApiError, ERROR_CODES } from "@/api/utils/errors";
+import { recoveryErrorMessages } from "@features/auth/utils/errorMessages";
 
 interface Props {
   email: string;
-  onSuccess: () => void; // Token now comes in HttpOnly cookie
+  onSuccess: () => void;
   onBack: () => void;
 }
 
 const MAX_ATTEMPTS = 3;
 
-/**
- * VerifyOtpForm - Verificación de código OTP para recovery de contraseña
- *
- * RATE LIMITING (Defense in Depth):
- * - **Backend:** `verify_reset_code_usecase.py` valida intentos en DB (línea 22-24)
- *   Si >= 3 intentos, borra el código y retorna error.
- * - **Frontend (este componente):** Bloqueo UX enhancement para evitar spam.
- *   NOTA: Este bloqueo es evadible (F5), la seguridad real está en backend.
- *
- * @see backend/src/use_cases/auth/verify_reset_code_usecase.py
- */
+/** UX: bloqueo local de intentos, el control real es backend. */
 export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
   const [code, setCode] = useState("");
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -39,17 +32,34 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
     onSuccess: (data) => {
       if (data.valid) {
         toast.success("Código verificado");
-        onSuccess(); // Token already set in HttpOnly cookie by backend
+        onSuccess();
       } else {
         handleVerificationError();
       }
     },
-    onError: () => {
-      handleVerificationError();
+    onError: (error) => {
+      const errorCode = error instanceof ApiError ? error.code : undefined;
+      const errorMessage = errorCode
+        ? recoveryErrorMessages[
+            errorCode as keyof typeof recoveryErrorMessages
+          ] || error.message
+        : undefined;
+
+      if (errorCode === ERROR_CODES.RATE_LIMIT_EXCEEDED) {
+        setHasError(true);
+        setFailedAttempts(MAX_ATTEMPTS);
+        toast.error("Codigo invalidado", {
+          description:
+            errorMessage || "Has superado el numero maximo de intentos.",
+        });
+        return;
+      }
+
+      handleVerificationError(errorMessage);
     },
   });
 
-  const handleVerificationError = useCallback(() => {
+  const handleVerificationError = (message?: string) => {
     setHasError(true);
     setCode(""); // Limpiar el código
 
@@ -58,19 +68,21 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
 
     if (newCount >= MAX_ATTEMPTS) {
       toast.error("Código invalidado", {
-        description: "Has superado el número máximo de intentos.",
+        description: message || "Has superado el número máximo de intentos.",
       });
     } else {
       toast.error("Código incorrecto", {
-        description: `Te quedan ${MAX_ATTEMPTS - newCount} intento${
-          MAX_ATTEMPTS - newCount !== 1 ? "s" : ""
-        }.`,
+        description:
+          message ||
+          `Te quedan ${MAX_ATTEMPTS - newCount} intento${
+            MAX_ATTEMPTS - newCount !== 1 ? "s" : ""
+          }.`,
       });
     }
 
     // Quitar estado de error después de un momento
     setTimeout(() => setHasError(false), 1500);
-  }, [failedAttempts]);
+  };
 
   const handleCodeChange = (newCode: string) => {
     setCode(newCode);
@@ -78,16 +90,13 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
     if (hasError) setHasError(false);
   };
 
-  const handleComplete = useCallback(
-    (completedCode: string) => {
-      if (!isBlocked && !isPending) {
-        mutate(completedCode);
-      }
-    },
-    [isBlocked, isPending, mutate],
-  );
+  const handleComplete = (completedCode: string) => {
+    if (!isBlocked && !isPending) {
+      mutate(completedCode);
+    }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (isCodeComplete && !isBlocked && !isPending) {
       mutate(code);
@@ -103,7 +112,6 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in-up">
-      {/* Header con icono y mensaje */}
       <div className="mt-4 text-center space-y-2 mb-6">
         <div
           className={cn(
@@ -142,7 +150,6 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
         )}
       </div>
 
-      {/* OTP Input */}
       <div className="pt-2">
         <OtpInput
           length={6}
@@ -154,7 +161,6 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
           autoFocus={!isBlocked}
         />
 
-        {/* Indicador sutil de estado */}
         {!isBlocked && (
           <div className="h-8 mt-4 flex items-center justify-center">
             {isPending ? (
@@ -186,18 +192,18 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
         )}
       </div>
 
-      {/* Botón de acción */}
       <div className="space-y-3">
-        <button
+        <Button
           type="button"
           onClick={onBack}
           disabled={isPending}
           className={cn(
-            "w-full h-12 font-medium flex items-center justify-center gap-2 transition-all duration-200 rounded-lg",
+            "w-full h-12 gap-2",
             isBlocked
               ? "bg-brand text-white hover:bg-brand-hover shadow-md"
               : "text-txt-muted hover:text-txt-body hover:bg-subtle",
           )}
+          variant={isBlocked ? "default" : "ghost"}
         >
           {isBlocked ? (
             <>
@@ -210,10 +216,9 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
               Cambiar correo
             </>
           )}
-        </button>
+        </Button>
       </div>
 
-      {/* Texto de ayuda */}
       {!isBlocked && (
         <p className="text-xs text-center text-txt-hint">
           ¿No recibiste el código?{" "}

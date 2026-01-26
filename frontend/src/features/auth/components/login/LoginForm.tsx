@@ -1,20 +1,21 @@
-import React, { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
-import { useLogin } from "../hooks/useLogin";
+import { useLogin } from "@features/auth/mutations/useLogin";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Schema
 const loginSchema = z.object({
-  usuario: z
+  username: z
     .string()
     .min(1, "El usuario es requerido")
     .max(20, "Máximo 20 caracteres")
     .regex(/^[a-zA-Z0-9]+$/, "Solo letras y números"),
-  clave: z.string().min(1, "La contraseña es requerida"),
+  password: z.string().min(1, "La contraseña es requerida"),
   rememberMe: z.boolean(),
 });
 
@@ -30,11 +31,9 @@ interface Props {
  * NOTA DE SEGURIDAD: El rate limiting y bloqueo por intentos fallidos
  * se maneja EXCLUSIVAMENTE en el backend. No hay validación client-side
  * porque sería trivial de evadir (borrar localStorage, usar cURL, etc.)
- *
- * @see backend/docs/RATE_LIMITING.md
  */
 export const LoginForm = ({ onForgotPassword }: Props) => {
-  const [showPassword, setShowPassword] = React.useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { mutate: login, isPending } = useLogin();
 
   const {
@@ -43,27 +42,33 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
     setValue,
     setFocus,
     formState: { errors },
+    control,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { rememberMe: false, usuario: "" },
+    defaultValues: { rememberMe: false, username: "" },
   });
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("saved_username");
+    if (typeof window === "undefined") return;
+    const savedUser = window.localStorage.getItem("saved_username");
     if (savedUser) {
-      setValue("usuario", savedUser);
+      setValue("username", savedUser);
       setValue("rememberMe", true);
     }
   }, [setValue]);
 
   const onSubmit = (data: LoginFormData) => {
     login(
-      { usuario: data.usuario, clave: data.clave, rememberMe: data.rememberMe },
+      {
+        username: data.username,
+        password: data.password,
+        rememberMe: data.rememberMe,
+      },
       {
         onError: () => {
-          setValue("clave", "");
+          setValue("password", "");
           setTimeout(() => {
-            setFocus("clave");
+            setFocus("password");
           }, 10);
         },
       },
@@ -72,74 +77,69 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-8">
-      <p className="mt-2 text-txt-muted text-sm sm:text-base font-normal max-w-xs mx-auto text-center">
-        Sistema de Información de Registro Electrónico para la Salud
-      </p>
-
       {/* Inputs Group */}
       <div className="space-y-5">
         <FormField
-          id="usuario"
+          id="username"
           label="No. Expediente o Usuario"
           placeholder="Ej. mperez123"
           icon={<User size={18} />}
-          error={errors.usuario}
+          error={errors.username}
           disabled={isPending}
-          {...register("usuario")}
+          autoComplete="username"
+          {...register("username")}
         />
 
         <FormField
-          id="clave"
+          id="password"
           label="Contraseña"
           type={showPassword ? "text" : "password"}
           placeholder="••••••••"
           icon={<Lock size={18} />}
-          error={errors.clave}
+          error={errors.password}
           disabled={isPending}
+          autoComplete="current-password"
           rightElement={
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="p-1 hover:text-brand transition-colors focus:outline-none focus:text-brand rounded-md"
+              className="p-1 hover:text-brand transition-colors focus-visible:outline-none focus-visible:text-brand rounded-md"
               disabled={isPending}
+              aria-label={
+                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+              }
+              aria-pressed={showPassword}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           }
-          {...register("clave")}
+          {...register("password")}
         />
       </div>
 
       {/* Checkbox Recordarme */}
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 cursor-pointer group">
-          <div className="relative flex items-center">
-            <input
-              type="checkbox"
-              aria-label="Recordar mi usuario en este dispositivo"
-              className="peer h-4 w-4 appearance-none rounded border border-line-struct bg-paper checked:bg-brand checked:border-brand focus:ring-2 focus:ring-brand/20 transition-all cursor-pointer"
-              {...register("rememberMe")}
-              disabled={isPending}
-            />
-            {/* Checkmark SVG personalizado para control total */}
-            <svg
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="3"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4.5 12.75l6 6 9-13.5"
+        <div className="flex items-center gap-2">
+          <Controller
+            name="rememberMe"
+            control={control}
+            render={({ field }) => (
+              <Checkbox
+                id="rememberMe"
+                checked={field.value}
+                onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                disabled={isPending}
+                aria-label="Recordar mi usuario en este dispositivo"
               />
-            </svg>
-          </div>
-          <span className="text-sm text-txt-muted group-hover:text-txt-body transition-colors select-none">
+            )}
+          />
+          <label
+            htmlFor="rememberMe"
+            className="text-sm text-txt-muted hover:text-txt-body transition-colors select-none cursor-pointer"
+          >
             Recordarme
-          </span>
-        </label>
+          </label>
+        </div>
 
         <button
           type="button"
@@ -154,7 +154,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
       <Button
         type="submit"
         disabled={isPending}
-        className="w-full h-12"
+        className="w-full h-12 group"
         size="lg"
       >
         {isPending ? (
