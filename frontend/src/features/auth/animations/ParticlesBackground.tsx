@@ -65,22 +65,11 @@ interface GridCell {
 }
 
 // Paleta de colores Metro CDMX (clínica, profesional, tecnológica)
-const COLORS = {
-  // Naranja Metro (color institucional - usado en nodos primarios)
-  primary: "rgba(254, 80, 0, 0.8)", // #fe5000 con alpha
-  primaryGlow: "rgba(254, 80, 0, 0.3)", // Glow para nodos destacados
-
-  // Grises técnicos (para dots y elementos secundarios)
-  node: "rgba(148, 163, 184, 0.6)", // Gris azulado profesional
-  nodeGlow: "rgba(148, 163, 184, 0.2)", // Glow sutil
-
-  // Conexiones entre partículas
-  connection: "rgba(203, 213, 225, 0.15)", // Líneas sutiles base
-  connectionActive: "rgba(254, 80, 0, 0.4)", // Líneas naranja cerca del mouse
-
-  // Hexágonos estructurales (casi invisibles, solo estructura)
-  hexagon: "rgba(241, 245, 249, 0.03)", // Relleno ultra sutil
-  hexagonStroke: "rgba(203, 213, 225, 0.1)", // Borde visible
+const COLOR_FALLBACKS = {
+  brand: "#fe5000",
+  textHint: "#94a3b8",
+  textMuted: "#64748b",
+  borderStruct: "#cbd5e1",
 } as const;
 
 // Configuración del sistema de partículas
@@ -162,6 +151,56 @@ export const ParticlesBackground = ({
   // Arrays de entidades
   const particlesRef = useRef<Particle[]>([]);
   const hexagonsRef = useRef<Hexagon[]>([]);
+
+  // Esquema de color activo
+  const colorsRef = useRef({
+    primary: "rgba(254, 80, 0, 0.8)",
+    primaryGlow: "rgba(254, 80, 0, 0.3)",
+    node: "rgba(148, 163, 184, 0.6)",
+    nodeGlow: "rgba(148, 163, 184, 0.2)",
+    connection: "rgba(203, 213, 225, 0.15)",
+    connectionActive: "rgba(254, 80, 0, 0.4)",
+    hexagon: "rgba(241, 245, 249, 0.03)",
+    hexagonStroke: "rgba(203, 213, 225, 0.1)",
+  });
+
+  const toRgba = (value: string, alpha: number): string => {
+    const trimmed = value.trim();
+    if (!trimmed) return `rgba(0, 0, 0, ${alpha})`;
+    if (trimmed.startsWith("rgba")) {
+      const parts = trimmed.match(/\d+(?:\.\d+)?/g);
+      if (!parts || parts.length < 3) return trimmed;
+      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+    }
+    if (trimmed.startsWith("rgb")) {
+      const parts = trimmed.match(/\d+(?:\.\d+)?/g);
+      if (!parts || parts.length < 3) return trimmed;
+      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+    }
+    if (trimmed.startsWith("#")) {
+      const hex = trimmed.replace("#", "");
+      const normalized =
+        hex.length === 3
+          ? hex
+              .split("")
+              .map((char) => char + char)
+              .join("")
+          : hex;
+      const r = parseInt(normalized.slice(0, 2), 16);
+      const g = parseInt(normalized.slice(2, 4), 16);
+      const b = parseInt(normalized.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    return trimmed;
+  };
+
+  const readCssVar = (name: string, fallback: string): string => {
+    if (typeof document === "undefined") return fallback;
+    const value = getComputedStyle(document.documentElement)
+      .getPropertyValue(name)
+      .trim();
+    return value || fallback;
+  };
 
   // Estado del mouse
   const mouseRef = useRef<Mouse>({ x: 0, y: 0, radius: CONFIG.mouseRadius });
@@ -367,7 +406,7 @@ export const ParticlesBackground = ({
       // Limitar la deriva para que no se acumule
       const baseSpeed = p.type === "node" ? CONFIG.nodeSpeed : CONFIG.dotSpeed;
       const currentBaseSpeed = Math.sqrt(
-        p.baseVx * p.baseVx + p.baseVy * p.baseVy
+        p.baseVx * p.baseVx + p.baseVy * p.baseVy,
       );
       if (currentBaseSpeed > baseSpeed * 1.5) {
         p.baseVx = (p.baseVx / currentBaseSpeed) * baseSpeed;
@@ -528,7 +567,7 @@ export const ParticlesBackground = ({
       // Decay del flash (vuelve a alpha original)
       p.targetAlpha = Math.max(
         p.targetAlpha * 0.95,
-        p.type === "node" ? 0.8 : 0.4
+        p.type === "node" ? 0.8 : 0.4,
       );
 
       // Pulsación de nodos (solo nodos, NO dots)
@@ -602,6 +641,8 @@ export const ParticlesBackground = ({
     const ctx = contextRef.current;
     if (!ctx) return;
 
+    const colors = colorsRef.current;
+
     hexagonsRef.current.forEach((hex) => {
       ctx.save();
 
@@ -625,11 +666,11 @@ export const ParticlesBackground = ({
       ctx.closePath();
 
       // Relleno ultra sutil
-      ctx.fillStyle = COLORS.hexagon;
+      ctx.fillStyle = colors.hexagon;
       ctx.fill();
 
       // Borde visible
-      ctx.strokeStyle = COLORS.hexagonStroke;
+      ctx.strokeStyle = colors.hexagonStroke;
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -653,12 +694,14 @@ export const ParticlesBackground = ({
     const ctx = contextRef.current;
     if (!ctx) return;
 
+    const colors = colorsRef.current;
+
     const { x: mx, y: my } = mouseRef.current;
     const maxDist = CONFIG.connectionDistance;
 
     // Solo dibujamos conexiones entre NODOS (no dots)
     const nodes: Particle[] = particlesRef.current.filter(
-      (p) => p.type === "node"
+      (p) => p.type === "node",
     );
 
     // Actualizar spatial grid antes de buscar vecinos
@@ -707,8 +750,8 @@ export const ParticlesBackground = ({
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
             ctx.strokeStyle = nearMouse
-              ? COLORS.connectionActive
-              : COLORS.connection;
+              ? colors.connectionActive
+              : colors.connection;
             ctx.globalAlpha = alpha * 0.6;
             ctx.lineWidth = lineWidth; // ANTES era constante
             ctx.stroke();
@@ -743,7 +786,7 @@ export const ParticlesBackground = ({
       ctx.beginPath();
       ctx.moveTo(mx, my);
       ctx.lineTo(x, y);
-      ctx.strokeStyle = COLORS.primary;
+      ctx.strokeStyle = colors.primary;
       ctx.globalAlpha = alpha * 0.5;
       ctx.lineWidth = 1.5;
       ctx.stroke();
@@ -758,6 +801,8 @@ export const ParticlesBackground = ({
   const drawParticles = () => {
     const ctx = contextRef.current;
     if (!ctx) return;
+
+    const colors = colorsRef.current;
 
     particlesRef.current.forEach((p) => {
       // ====================================================================
@@ -778,7 +823,7 @@ export const ParticlesBackground = ({
           ctx.moveTo(point1.x, point1.y);
           ctx.lineTo(point2.x, point2.y);
           ctx.strokeStyle =
-            p.type === "node" ? COLORS.primary : COLORS.connection;
+            p.type === "node" ? colors.primary : colors.connection;
           ctx.globalAlpha = trailAlpha;
           ctx.lineWidth = p.radius * 0.5; // Grosor proporcional al radio
           ctx.stroke();
@@ -805,13 +850,13 @@ export const ParticlesBackground = ({
       // Glow effect (solo en nodos)
       if (p.type === "node") {
         ctx.shadowBlur = 10;
-        ctx.shadowColor = COLORS.primaryGlow;
+        ctx.shadowColor = colors.primaryGlow;
       }
 
       // Círculo
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = p.type === "node" ? COLORS.primary : COLORS.node;
+      ctx.fillStyle = p.type === "node" ? colors.primary : colors.node;
       ctx.globalAlpha = p.alpha;
       ctx.fill();
 
@@ -879,6 +924,7 @@ export const ParticlesBackground = ({
     canvasRef.current.style.width = `${offsetWidth}px`;
     canvasRef.current.style.height = `${offsetHeight}px`;
 
+    contextRef.current.setTransform(1, 0, 0, 1, 0, 0);
     contextRef.current.scale(dpr, dpr);
 
     // Reinicializar entidades con nuevas dimensiones
@@ -914,10 +960,40 @@ export const ParticlesBackground = ({
   // =========================================================================
 
   useEffect(() => {
+    const resolveTheme = () => {
+      if (typeof document === "undefined") return;
+      const hasDarkClass = document.documentElement.classList.contains("dark");
+      const prefersDark =
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+      const isDark = hasDarkClass || prefersDark;
+
+      const brand = readCssVar("--action-main", COLOR_FALLBACKS.brand);
+      const textHint = readCssVar("--text-hint", COLOR_FALLBACKS.textHint);
+      const textMuted = readCssVar("--text-muted", COLOR_FALLBACKS.textMuted);
+      const borderStruct = readCssVar(
+        "--border-struct",
+        COLOR_FALLBACKS.borderStruct,
+      );
+
+      colorsRef.current = {
+        primary: toRgba(brand, 0.8),
+        primaryGlow: toRgba(brand, 0.3),
+        node: toRgba(textHint, 0.6),
+        nodeGlow: toRgba(textHint, 0.2),
+        connection: toRgba(textMuted, isDark ? 0.15 : 0.22),
+        connectionActive: toRgba(brand, 0.4),
+        hexagon: toRgba(textHint, isDark ? 0.03 : 0.08),
+        hexagonStroke: toRgba(borderStruct, isDark ? 0.1 : 0.25),
+      };
+    };
+
     // Inicializar contexto de canvas
     if (canvasRef.current) {
       contextRef.current = canvasRef.current.getContext("2d");
     }
+
+    resolveTheme();
 
     // Setup inicial
     resizeCanvas();
@@ -926,6 +1002,19 @@ export const ParticlesBackground = ({
     window.addEventListener("resize", resizeCanvas);
     window.addEventListener("mousemove", handleMouseMove);
 
+    const observer = new MutationObserver(() => resolveTheme());
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    const mediaQuery =
+      typeof window !== "undefined"
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : undefined;
+    const handleMediaChange = () => resolveTheme();
+    mediaQuery?.addEventListener("change", handleMediaChange);
+
     // Iniciar loop de animación
     rafIdRef.current = window.requestAnimationFrame(animate);
 
@@ -933,6 +1022,9 @@ export const ParticlesBackground = ({
     return () => {
       window.removeEventListener("resize", resizeCanvas);
       window.removeEventListener("mousemove", handleMouseMove);
+
+      observer.disconnect();
+      mediaQuery?.removeEventListener("change", handleMediaChange);
 
       if (rafIdRef.current) {
         window.cancelAnimationFrame(rafIdRef.current);
