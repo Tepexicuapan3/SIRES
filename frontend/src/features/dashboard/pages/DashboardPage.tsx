@@ -12,17 +12,17 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
-import { useLogout } from "../../auth/mutations/useLogout";
+import { useLogout } from "@features/auth/mutations/useLogout";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@features/auth/queries/usePermissions";
 import { PermissionGate } from "@/components/shared/PermissionGate";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthSession } from "@features/auth/queries/useAuthSession";
 
 export const DashboardPage = () => {
   const { logoutWithToast, isPending } = useLogout();
   const { hasPermission, isAdmin, permissions } = usePermissions();
-  const user = useAuthStore((state) => state.user);
+  const { data: user } = useAuthSession();
 
   const handlePromise = (shouldFail = false) => {
     const promise = () =>
@@ -348,13 +348,13 @@ export const DashboardPage = () => {
               <div>
                 <span className="text-txt-muted">Usuario:</span>
                 <p className="font-medium text-txt-body">
-                  {user?.nombre_completo}
+                  {user?.fullName ?? "—"}
                 </p>
               </div>
               <div>
                 <span className="text-txt-muted">Roles:</span>
                 <p className="font-medium text-txt-body">
-                  {user?.roles.join(", ")}
+                  {user?.roles?.join(", ") ?? "—"}
                 </p>
               </div>
               <div>
