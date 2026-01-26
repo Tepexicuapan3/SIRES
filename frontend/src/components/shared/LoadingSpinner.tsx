@@ -4,31 +4,22 @@ import { cn } from "@/lib/utils";
 import { LoaderIcon } from "lucide-react";
 
 interface LoadingSpinnerProps {
-  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   fullScreen?: boolean;
 }
-
-const sizeMap = {
-  sm: "size-4",
-  md: "size-6",
-  lg: "size-10",
-  xl: "size-14",
-} as const;
 
 const Spinner = ({ className, ...props }: ComponentProps<"svg">) => {
   return (
     <LoaderIcon
       role="status"
       aria-label="Loading"
-      className={cn("animate-spin text-brand", className)}
+      className={cn("size-4 animate-spin text-brand", className)}
       {...props}
     />
   );
 };
 
 export const LoadingSpinner = ({
-  size = "md",
   className,
   fullScreen = false,
 }: LoadingSpinnerProps) => {
@@ -43,7 +34,7 @@ export const LoadingSpinner = ({
       )}
       aria-live="polite"
     >
-      <Spinner className={sizeMap[size]} />
+      <Spinner />
     </div>
   );
 };

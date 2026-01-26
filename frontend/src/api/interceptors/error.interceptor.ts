@@ -25,7 +25,9 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
-import { useAuthStore } from "@/store/authStore";
+import { queryClient } from "@/config/query-client";
+import { clearAuthSession } from "@features/auth/utils/auth-cache";
+import { emitSessionExpired } from "@features/auth/utils/session-events";
 import { env } from "@/config/env";
 
 // Endpoints que NO deben intentar refresh (evita loops infinitos)
@@ -127,9 +129,8 @@ async function attemptTokenRefresh(
  * Maneja sesión expirada - notifica al store para redirección
  */
 function handleSessionExpired(): void {
-  const authStore = useAuthStore.getState();
-  authStore.setSessionExpired(true);
-  authStore.logout();
+  clearAuthSession(queryClient);
+  emitSessionExpired();
 }
 
 /**
