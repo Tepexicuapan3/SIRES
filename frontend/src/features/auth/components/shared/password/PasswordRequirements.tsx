@@ -13,11 +13,6 @@ import { cn } from "@/lib/utils";
  * - X gris: Requisito pendiente
  * - Transiciones suaves de color/ícono
  *
- * BENEFICIOS:
- * - Usuario ve progreso en tiempo real
- * - Reduce frustración de "submit fallido"
- * - Guía para crear contraseña segura
- *
  * @see AuthPasswordForm.tsx - Integración con React Hook Form
  */
 
@@ -55,15 +50,28 @@ const requirements: Requirement[] = [
 ];
 
 export const PasswordRequirements = ({ password }: Props) => {
+  const results = requirements.map((req) => ({
+    req,
+    isMet: req.test(password),
+  }));
+  const metCount = results.filter((item) => item.isMet).length;
+  const progressPercent = Math.round((metCount / requirements.length) * 100);
+  const progressClass =
+    metCount === 0
+      ? "w-0 bg-txt-muted"
+      : metCount === requirements.length
+        ? "w-full bg-status-stable"
+        : metCount >= 2
+          ? "bg-status-alert"
+          : "bg-status-critical";
+
   return (
     <div className="space-y-2 p-4 rounded-lg bg-subtle/30 border border-line-hairline">
       <p className="text-xs font-semibold text-txt-body mb-3">
         Requisitos de Contraseña:
       </p>
       <ul className="space-y-2">
-        {requirements.map((req) => {
-          const isMet = req.test(password);
-
+        {results.map(({ req, isMet }) => {
           return (
             <li
               key={req.id}
@@ -90,31 +98,22 @@ export const PasswordRequirements = ({ password }: Props) => {
         })}
       </ul>
 
-      {/* Barra de Progreso Visual (Opcional) */}
+      {/* Barra de Progreso Visual */}
       <div className="mt-4 pt-3 border-t border-line-hairline">
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 bg-line-struct rounded-full overflow-hidden">
             <div
               className={cn(
                 "h-full transition-all duration-300",
-                password.length === 0
-                  ? "w-0 bg-txt-muted"
-                  : requirements.filter((r) => r.test(password)).length === 4
-                    ? "w-full bg-status-stable"
-                    : requirements.filter((r) => r.test(password)).length >= 2
-                      ? "w-2/3 bg-status-alert"
-                      : "w-1/3 bg-status-critical",
+                progressClass,
               )}
               style={{
-                width: `${
-                  (requirements.filter((r) => r.test(password)).length / 4) *
-                  100
-                }%`,
+                width: `${progressPercent}%`,
               }}
             />
           </div>
           <span className="text-xs text-txt-muted font-medium tabular-nums">
-            {requirements.filter((r) => r.test(password)).length}/4
+            {metCount}/{requirements.length}
           </span>
         </div>
       </div>

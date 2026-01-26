@@ -7,6 +7,7 @@ import { Lock, Eye, EyeOff, CheckCircle2, ShieldCheck } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
 import { PasswordRequirements } from "./PasswordRequirements";
+import { cn } from "@/lib/utils";
 
 const schema = z
   .object({
@@ -48,7 +49,6 @@ export const AuthPasswordForm = ({
   });
 
   // Watch password value para validación en tiempo real
-  // useWatch es preferido por React Compiler (memoization-safe)
   const passwordValue = useWatch({
     control,
     name: "newPassword",
@@ -60,23 +60,14 @@ export const AuthPasswordForm = ({
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-5 animate-fade-in-up"
     >
-      {/* 
-        Banner Informativo - Adaptado a Metro CDMX
-        
-        DECISIÓN DE DISEÑO:
-        - Recovery: usa status-info (azul institucional para información administrativa)
-        - Onboarding: usa brand (naranja Metro para reforzar la marca en activación)
-        
-        RAZONAMIENTO:
-        - Recovery es un proceso de soporte → info neutral (azul)
-        - Onboarding es el primer contacto con la marca → brand identity (naranja)
-      */}
+      {/* Banner Informativo - Adaptado a Metro CDMX */}
       <div
-        className={
+        className={cn(
+          "mt-6 p-4 rounded-lg flex gap-3 items-start",
           mode === "recovery"
-            ? "mt-6 bg-status-info/10 dark:bg-status-info/20 p-4 rounded-lg border border-status-info/30 dark:border-status-info/40 flex gap-3 items-start"
-            : "mt-6 bg-brand/5 dark:bg-brand/10 p-4 rounded-lg border border-brand/20 dark:border-brand/30 flex gap-3 items-start"
-        }
+            ? "bg-status-info/10 dark:bg-status-info/20 border border-status-info/30 dark:border-status-info/40"
+            : "bg-brand/5 dark:bg-brand/10 border border-brand/20 dark:border-brand/30",
+        )}
       >
         {mode === "recovery" ? (
           <CheckCircle2
@@ -93,20 +84,20 @@ export const AuthPasswordForm = ({
         )}
         <div className="space-y-1">
           <p
-            className={
+            className={cn(
+              "text-sm font-medium",
               mode === "recovery"
-                ? "text-sm font-medium text-status-info dark:text-status-info"
-                : "text-sm font-medium text-brand dark:text-brand"
-            }
+                ? "text-status-info dark:text-status-info"
+                : "text-brand dark:text-brand",
+            )}
           >
             {mode === "recovery" ? "Identidad Verificada" : "Activa tu Cuenta"}
           </p>
           <p
-            className={
-              mode === "recovery"
-                ? "text-xs text-status-info/80 leading-relaxed"
-                : "text-xs text-brand/80 leading-relaxed"
-            }
+            className={cn(
+              "text-xs leading-relaxed",
+              mode === "recovery" ? "text-status-info/80" : "text-brand/80",
+            )}
           >
             {mode === "recovery"
               ? "Ingresa tu nueva contraseña para recuperar el acceso."
@@ -122,26 +113,23 @@ export const AuthPasswordForm = ({
           icon={<Lock size={18} />}
           error={errors.newPassword}
           disabled={isPending}
+          autoComplete="new-password"
           rightElement={
-            <button type="button" onClick={() => setShowPass(!showPass)}>
+            <button
+              type="button"
+              onClick={() => setShowPass(!showPass)}
+              aria-label={
+                showPass ? "Ocultar contraseña" : "Mostrar contraseña"
+              }
+              aria-pressed={showPass}
+              className="text-txt-muted hover:text-brand transition-colors"
+            >
               {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           }
           {...register("newPassword")}
         />
 
-        {/* 
-          Validación en Tiempo Real (NUEVA FUNCIONALIDAD)
-          
-          MEJORA UX IMPLEMENTADA:
-          - Feedback progresivo mientras el usuario tipea
-          - Checklist visual de requisitos cumplidos
-          - Barra de progreso 0/4 → 4/4
-          - Reduce frustración de "submit fallido"
-          
-          DECISIÓN DE DISEÑO:
-          - Solo se muestra cuando el usuario empieza a escribir (no abruma al inicio)
-        */}
         {passwordValue && passwordValue.length > 0 && (
           <PasswordRequirements password={passwordValue} />
         )}
@@ -153,6 +141,7 @@ export const AuthPasswordForm = ({
           icon={<Lock size={18} />}
           error={errors.confirmPassword}
           disabled={isPending}
+          autoComplete="new-password"
           {...register("confirmPassword")}
         />
       </div>

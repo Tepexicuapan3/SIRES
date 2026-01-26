@@ -162,6 +162,7 @@ export const ParticlesBackground = ({
     connectionActive: "rgba(254, 80, 0, 0.4)",
     hexagon: "rgba(241, 245, 249, 0.03)",
     hexagonStroke: "rgba(203, 213, 225, 0.1)",
+    hexagonStrokeWidth: 1,
   });
 
   const toRgba = (value: string, alpha: number): string => {
@@ -671,7 +672,7 @@ export const ParticlesBackground = ({
 
       // Borde visible
       ctx.strokeStyle = colors.hexagonStroke;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = colors.hexagonStrokeWidth;
       ctx.stroke();
 
       ctx.restore();
@@ -962,11 +963,7 @@ export const ParticlesBackground = ({
   useEffect(() => {
     const resolveTheme = () => {
       if (typeof document === "undefined") return;
-      const hasDarkClass = document.documentElement.classList.contains("dark");
-      const prefersDark =
-        typeof window !== "undefined" &&
-        window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      const isDark = hasDarkClass || prefersDark;
+      const isDark = document.documentElement.classList.contains("dark");
 
       const brand = readCssVar("--action-main", COLOR_FALLBACKS.brand);
       const textHint = readCssVar("--text-hint", COLOR_FALLBACKS.textHint);
@@ -983,8 +980,11 @@ export const ParticlesBackground = ({
         nodeGlow: toRgba(textHint, 0.2),
         connection: toRgba(textMuted, isDark ? 0.15 : 0.22),
         connectionActive: toRgba(brand, 0.4),
-        hexagon: toRgba(textHint, isDark ? 0.03 : 0.08),
-        hexagonStroke: toRgba(borderStruct, isDark ? 0.1 : 0.25),
+        hexagon: isDark ? toRgba(textHint, 0.03) : toRgba(textMuted, 0.12),
+        hexagonStroke: isDark
+          ? toRgba(borderStruct, 0.12)
+          : toRgba(textMuted, 0.3),
+        hexagonStrokeWidth: isDark ? 1 : 1.25,
       };
     };
 
