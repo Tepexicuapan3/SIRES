@@ -99,7 +99,10 @@ export interface UpdateRoleRequest {
  * POST /api/v1/roles/:id/permissions
  */
 export interface AssignPermissionsRequest {
-  permissionIds: number[];
+  roleId?: number;
+  role_id?: number;
+  permissionIds?: number[];
+  permission_ids?: number[];
 }
 
 /**

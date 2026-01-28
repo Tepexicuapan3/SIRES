@@ -45,6 +45,16 @@ export const rolesAPI = {
   },
 
   /**
+   * Compat: alias legacy.
+   */
+  getRoles: async (params?: RolesListParams): Promise<RolesListResponse> => {
+    const response = await apiClient.get<RolesListResponse>("/roles", {
+      params,
+    });
+    return response.data;
+  },
+
+  /**
    * Obtener detalle de un rol específico.
    * Incluye la lista de permisos asignados.
    *
@@ -61,6 +71,16 @@ export const rolesAPI = {
   },
 
   /**
+   * Compat: alias legacy.
+   */
+  getRole: async (roleId: number): Promise<RoleDetailResponse> => {
+    const response = await apiClient.get<RoleDetailResponse>(
+      `/roles/${roleId}`,
+    );
+    return response.data;
+  },
+
+  /**
    * Crear un nuevo rol.
    *
    * @endpoint POST /api/v1/roles
@@ -70,6 +90,31 @@ export const rolesAPI = {
    */
   create: async (data: CreateRoleRequest): Promise<CreateRoleResponse> => {
     const response = await apiClient.post<CreateRoleResponse>("/roles", data);
+    return response.data;
+  },
+
+  /**
+   * Compat: alias legacy.
+   */
+  createRole: async (
+    data: CreateRoleRequest & {
+      rol?: string;
+      desc_rol?: string;
+      landing_route?: string;
+    },
+  ): Promise<CreateRoleResponse> => {
+    const payload =
+      "rol" in data
+        ? {
+            name: data.rol ?? "",
+            description: data.desc_rol ?? "",
+            landingRoute: data.landing_route,
+          }
+        : data;
+    const response = await apiClient.post<CreateRoleResponse>(
+      "/roles",
+      payload,
+    );
     return response.data;
   },
 
@@ -95,6 +140,32 @@ export const rolesAPI = {
   },
 
   /**
+   * Compat: alias legacy.
+   */
+  updateRole: async (
+    roleId: number,
+    data: UpdateRoleRequest & {
+      rol?: string;
+      desc_rol?: string;
+      landing_route?: string;
+    },
+  ): Promise<UpdateRoleResponse> => {
+    const payload =
+      "rol" in data || "desc_rol" in data
+        ? {
+            name: data.rol,
+            description: data.desc_rol,
+            landingRoute: data.landing_route,
+          }
+        : data;
+    const response = await apiClient.put<UpdateRoleResponse>(
+      `/roles/${roleId}`,
+      payload,
+    );
+    return response.data;
+  },
+
+  /**
    * Eliminar un rol (Baja Lógica).
    * Solo permitido si no tiene usuarios activos asignados.
    *
@@ -104,6 +175,13 @@ export const rolesAPI = {
    * @param roleId - ID del rol
    */
   delete: async (roleId: number): Promise<void> => {
+    await apiClient.delete(`/roles/${roleId}`);
+  },
+
+  /**
+   * Compat: alias legacy.
+   */
+  deleteRole: async (roleId: number): Promise<void> => {
     await apiClient.delete(`/roles/${roleId}`);
   },
 
@@ -123,9 +201,13 @@ export const rolesAPI = {
     assign: async (
       data: AssignPermissionsRequest,
     ): Promise<AssignPermissionsResponse> => {
+      const payload = {
+        roleId: data.roleId ?? data.role_id,
+        permissionIds: data.permissionIds ?? data.permission_ids ?? [],
+      };
       const response = await apiClient.post<AssignPermissionsResponse>(
         "/permissions/assign",
-        data,
+        payload,
       );
       return response.data;
     },
@@ -148,5 +230,35 @@ export const rolesAPI = {
       );
       return response.data;
     },
+  },
+
+  /**
+   * Compat: alias legacy.
+   */
+  assignPermissions: async (
+    data: AssignPermissionsRequest,
+  ): Promise<AssignPermissionsResponse> => {
+    const payload = {
+      roleId: data.roleId ?? data.role_id,
+      permissionIds: data.permissionIds ?? data.permission_ids ?? [],
+    };
+    const response = await apiClient.post<AssignPermissionsResponse>(
+      "/permissions/assign",
+      payload,
+    );
+    return response.data;
+  },
+
+  /**
+   * Compat: alias legacy.
+   */
+  revokePermission: async (
+    roleId: number,
+    permissionId: number,
+  ): Promise<RevokePermissionsResponse> => {
+    const response = await apiClient.delete<RevokePermissionsResponse>(
+      `/permissions/roles/${roleId}/permissions/${permissionId}`,
+    );
+    return response.data;
   },
 };

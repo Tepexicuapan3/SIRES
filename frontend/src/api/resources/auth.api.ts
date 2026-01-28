@@ -7,6 +7,7 @@
 
 import apiClient from "@api/client";
 import { AxiosError } from "axios";
+import { ApiError } from "@api/utils/errors";
 
 import type {
   LoginRequest,
@@ -82,6 +83,14 @@ const authAPI = {
       await apiClient.get("/auth/verify");
       return { valid: true };
     } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401 || error.status === 403) {
+          return { valid: false };
+        }
+
+        throw error;
+      }
+
       const axiosError = error as AxiosError;
 
       if (
