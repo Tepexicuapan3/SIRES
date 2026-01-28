@@ -7,7 +7,15 @@ import { cn } from "@/lib/utils";
 import { OtpInput } from "@/components/ui/OtpInput";
 import { Button } from "@/components/ui/button";
 import { ApiError, ERROR_CODES } from "@/api/utils/errors";
-import { recoveryErrorMessages } from "@features/auth/utils/errorMessages";
+import {
+  getAuthErrorMessage,
+  recoveryErrorMessages,
+} from "@features/auth/domain/auth.messages";
+import {
+  OTP_LENGTH,
+  OTP_MAX_ATTEMPTS,
+  obfuscateEmail,
+} from "@features/auth/domain/auth.rules";
 
 interface Props {
   email: string;
@@ -15,16 +23,14 @@ interface Props {
   onBack: () => void;
 }
 
-const MAX_ATTEMPTS = 3;
-
 /** UX: bloqueo local de intentos, el control real es backend. */
 export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
   const [code, setCode] = useState("");
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [hasError, setHasError] = useState(false);
 
-  const isBlocked = failedAttempts >= MAX_ATTEMPTS;
-  const isCodeComplete = code.length === 6;
+  const isBlocked = failedAttempts >= OTP_MAX_ATTEMPTS;
+  const isCodeComplete = code.length === OTP_LENGTH;
 
   const { mutate, isPending } = useMutation({
     mutationFn: (otpCode: string) =>
@@ -39,15 +45,12 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
     },
     onError: (error) => {
       const errorCode = error instanceof ApiError ? error.code : undefined;
-      const errorMessage = errorCode
-        ? recoveryErrorMessages[
-            errorCode as keyof typeof recoveryErrorMessages
-          ] || error.message
-        : undefined;
+      const errorMessage =
+        getAuthErrorMessage(recoveryErrorMessages, errorCode) || error.message;
 
       if (errorCode === ERROR_CODES.RATE_LIMIT_EXCEEDED) {
         setHasError(true);
-        setFailedAttempts(MAX_ATTEMPTS);
+        setFailedAttempts(OTP_MAX_ATTEMPTS);
         toast.error("Codigo invalidado", {
           description:
             errorMessage || "Has superado el numero maximo de intentos.",
@@ -66,7 +69,7 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
     const newCount = failedAttempts + 1;
     setFailedAttempts(newCount);
 
-    if (newCount >= MAX_ATTEMPTS) {
+    if (newCount >= OTP_MAX_ATTEMPTS) {
       toast.error("Código invalidado", {
         description: message || "Has superado el número máximo de intentos.",
       });
@@ -74,8 +77,8 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
       toast.error("Código incorrecto", {
         description:
           message ||
-          `Te quedan ${MAX_ATTEMPTS - newCount} intento${
-            MAX_ATTEMPTS - newCount !== 1 ? "s" : ""
+          `Te quedan ${OTP_MAX_ATTEMPTS - newCount} intento${
+            OTP_MAX_ATTEMPTS - newCount !== 1 ? "s" : ""
           }.`,
       });
     }
@@ -104,11 +107,7 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
   };
 
   // Ofuscar el email para mostrar solo parte
-  const obfuscatedEmail = email.replace(
-    /(.{2})(.*)(@.*)/,
-    (_, start, middle, end) =>
-      `${start}${"•".repeat(Math.min(middle.length, 6))}${end}`,
-  );
+  const obfuscatedEmail = obfuscateEmail(email);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in-up">
@@ -136,8 +135,8 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
               Código Invalidado
             </h3>
             <p className="text-sm text-txt-muted leading-relaxed max-w-xs mx-auto">
-              Has superado los 3 intentos. Por seguridad, debes solicitar un
-              nuevo código.
+              Has superado los {OTP_MAX_ATTEMPTS} intentos. Por seguridad, debes
+              solicitar un nuevo código.
             </p>
           </div>
         ) : (
@@ -152,7 +151,7 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
 
       <div className="pt-2">
         <OtpInput
-          length={6}
+          length={OTP_LENGTH}
           value={code}
           onChange={handleCodeChange}
           onComplete={handleComplete}

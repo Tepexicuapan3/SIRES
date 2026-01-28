@@ -3,19 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { authAPI } from "@api/resources/auth.api";
 import type { LoginRequest } from "@api/types";
-import { ApiError, ERROR_CODES, type ErrorCode } from "@api/utils/errors";
-import { loginErrorMessages } from "@features/auth/utils/errorMessages";
+import { ApiError, ERROR_CODES } from "@api/utils/errors";
+import {
+  getAuthErrorMessage,
+  loginErrorMessages,
+} from "@features/auth/domain/auth.messages";
 import { setAuthSession } from "@features/auth/utils/auth-cache";
 
 type LoginMutationVariables = LoginRequest & { rememberMe: boolean };
 
-const getLoginMessage = (code?: string) => {
-  if (!code) return undefined;
-  if (code in loginErrorMessages) {
-    return loginErrorMessages[code as ErrorCode];
-  }
-  return undefined;
-};
+const getLoginMessage = (code?: string) =>
+  getAuthErrorMessage(loginErrorMessages, code);
 
 /**
  * Mutation de login.
@@ -29,7 +27,10 @@ export const useLogin = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ rememberMe, ...credentials }: LoginMutationVariables) => {
+    mutationFn: async ({
+      rememberMe,
+      ...credentials
+    }: LoginMutationVariables) => {
       void rememberMe;
       return authAPI.login(credentials);
     },
@@ -68,7 +69,9 @@ export const useLogin = () => {
         }
 
         const description =
-          getLoginMessage(error.code) || error.message || "Error al iniciar sesion";
+          getLoginMessage(error.code) ||
+          error.message ||
+          "Error al iniciar sesion";
         toast.error("Error de autenticacion", { description });
         return;
       }

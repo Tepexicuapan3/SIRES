@@ -63,7 +63,7 @@ const BackButton = ({
     type="button"
     onClick={onBack}
     className={cn(
-      "flex items-center gap-1 text-xs text-txt-muted hover:text-brand transition-colors min-h-[44px]",
+      "flex items-center gap-1 text-xs text-txt-muted hover:text-brand transition-colors min-h-11",
       className,
     )}
     aria-label="Volver al paso anterior"
