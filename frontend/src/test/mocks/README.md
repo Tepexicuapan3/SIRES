@@ -52,6 +52,19 @@ Los mocks se activan automáticamente si `VITE_USE_MOCKS=true` en tu archivo `.e
 VITE_USE_MOCKS=true
 ```
 
+## Onboarding (mocks)
+
+Para simular escenarios específicos durante onboarding:
+
+- `ExpiredToken1!` → `TOKEN_EXPIRED` (401)
+- `InvalidToken1!` → `ONBOARDING_FAILED` (500)
+
+## Reset password (mocks)
+
+- `ExpiredToken1!` → `TOKEN_EXPIRED` (401)
+- `TokenInvalid1!` → `TOKEN_INVALID` (401)
+- `InvalidToken1!` → `INTERNAL_SERVER_ERROR` (500)
+
 ## Uso en Tests
 
 En los tests de integración (Vitest), el `server` de mocks se inicia automáticamente (ver `frontend/src/test/setup.ts`).

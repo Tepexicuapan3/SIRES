@@ -72,14 +72,9 @@ export const LoginPage = () => {
     },
     onError: (error) => {
       const errorCode = error instanceof ApiError ? error.code : undefined;
-
-      const message =
-        getAuthErrorMessage(recoveryErrorMessages, errorCode) ||
-        (errorCode
-          ? "Error al restablecer la contraseña"
-          : "El token ha expirado, solicita uno nuevo");
-
-      toast.error("Error al restablecer", { description: message });
+      const errorStatus = error instanceof ApiError ? error.status : undefined;
+      const errorMessage =
+        error instanceof ApiError ? error.message : undefined;
 
       const tokenErrors: string[] = [
         ERROR_CODES.TOKEN_EXPIRED,
@@ -87,12 +82,27 @@ export const LoginPage = () => {
         ERROR_CODES.SESSION_EXPIRED,
         ERROR_CODES.REFRESH_TOKEN_EXPIRED,
       ];
-      if (errorCode && tokenErrors.includes(errorCode)) {
-        toast.info("Reiniciando proceso", {
-          description: "Por favor solicita un nuevo código de verificación.",
+      const isTokenError =
+        errorStatus === 401 ||
+        errorStatus === 403 ||
+        (errorCode && tokenErrors.includes(errorCode));
+
+      const message =
+        getAuthErrorMessage(recoveryErrorMessages, errorCode) ||
+        errorMessage ||
+        (errorCode
+          ? "Error al restablecer la contraseña"
+          : "El token ha expirado, solicita uno nuevo");
+
+      if (isTokenError) {
+        toast.error("Sesión expirada", {
+          description: `${message}. Solicita un nuevo código de verificación.`,
         });
         setViewState("RECOVERY_REQUEST");
+        return;
       }
+
+      toast.error("Error al restablecer", { description: message });
     },
   });
 

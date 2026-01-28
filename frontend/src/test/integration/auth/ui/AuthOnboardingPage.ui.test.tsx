@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 const mockNavigate = vi.fn();
 const mockLogout = vi.fn();
+const mockForceLogout = vi.fn();
 
 vi.mock("react-router-dom", async () => {
   const actual = await import("react-router-dom");
@@ -22,6 +23,7 @@ vi.mock("@/features/auth/mutations/useLogout", () => ({
     mutate: mockLogout,
     isPending: false,
     logoutWithToast: vi.fn(),
+    forceLogout: mockForceLogout,
   }),
 }));
 
@@ -62,6 +64,7 @@ describe("Auth UI - OnboardingPage", () => {
   beforeEach(() => {
     mockNavigate.mockClear();
     mockLogout.mockClear();
+    mockForceLogout.mockClear();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.mocked(authAPI.completeOnboarding).mockResolvedValue({
       user: {
@@ -206,11 +209,8 @@ describe("Auth UI - OnboardingPage", () => {
       );
     });
 
-    await waitFor(
-      () => {
-        expect(mockLogout).toHaveBeenCalled();
-      },
-      { timeout: 2500 },
-    );
+    await waitFor(() => {
+      expect(mockForceLogout).toHaveBeenCalled();
+    });
   });
 });

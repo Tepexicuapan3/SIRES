@@ -30,7 +30,7 @@ type Step = "TERMS" | "PASSWORD";
 
 export const OnboardingPage = () => {
   const [step, setStep] = useState<Step>("TERMS");
-  const { mutate: logout, isPending: isLoggingOut } = useLogout();
+  const { mutate: logout, isPending: isLoggingOut, forceLogout } = useLogout();
   const queryClient = useQueryClient();
 
   const navigate = useNavigate();
@@ -61,6 +61,7 @@ export const OnboardingPage = () => {
       const errorCode = error instanceof ApiError ? error.code : undefined;
       const errorMessage =
         error instanceof ApiError ? error.message : undefined;
+      const errorStatus = error instanceof ApiError ? error.status : undefined;
 
       const displayMessage =
         getAuthErrorMessage(onboardingErrorMessages, errorCode) ||
@@ -68,12 +69,16 @@ export const OnboardingPage = () => {
         "Error inesperado";
 
       if (
+        errorStatus === 401 ||
+        errorStatus === 403 ||
         errorCode === ERROR_CODES.TOKEN_EXPIRED ||
         errorCode === ERROR_CODES.TOKEN_INVALID ||
         errorCode === ERROR_CODES.SESSION_EXPIRED
       ) {
-        toast.error("Sesión expirada", { description: displayMessage });
-        setTimeout(() => logout(), 2000);
+        toast.error("Sesión expirada", {
+          description: `${displayMessage}. Redirigiendo al login...`,
+        });
+        forceLogout();
         return;
       }
 

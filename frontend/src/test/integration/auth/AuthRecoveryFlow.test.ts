@@ -80,10 +80,18 @@ describe("Auth Recovery Flow (MSW)", () => {
 
   it("rejects reset when token is invalid", async () => {
     const promise = authAPI.resetPassword({
-      newPassword: "InvalidToken1!",
+      newPassword: "TokenInvalid1!",
     });
 
-    await expectApiError(promise, { code: "INVALID_TOKEN", status: 401 });
+    await expectApiError(promise, { code: "TOKEN_INVALID", status: 401 });
+  });
+
+  it("rejects reset when token is expired", async () => {
+    const promise = authAPI.resetPassword({
+      newPassword: "ExpiredToken1!",
+    });
+
+    await expectApiError(promise, { code: "TOKEN_EXPIRED", status: 401 });
   });
 
   it("rejects weak passwords", async () => {

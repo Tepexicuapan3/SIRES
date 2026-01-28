@@ -313,14 +313,36 @@ export const authHandlers = [
     await delay(800);
     const body = (await request.json()) as { newPassword: string };
 
-    // Simulación de Token Inválido
-    if (body.newPassword === "InvalidToken1!") {
+    // Simulación de Token Expirado
+    if (body.newPassword === "ExpiredToken1!") {
       return HttpResponse.json(
         {
-          code: "INVALID_TOKEN",
+          code: "TOKEN_EXPIRED",
+          message: "Tu sesión ha expirado. Solicita un nuevo código.",
+        },
+        { status: 401 },
+      );
+    }
+
+    // Simulación de Token Inválido
+    if (body.newPassword === "TokenInvalid1!") {
+      return HttpResponse.json(
+        {
+          code: "TOKEN_INVALID",
           message: "El token de restablecimiento es inválido o ha expirado.",
         },
         { status: 401 },
+      );
+    }
+
+    // Simulación de Error Interno
+    if (body.newPassword === "InvalidToken1!") {
+      return HttpResponse.json(
+        {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo restablecer la contraseña. Intente nuevamente.",
+        },
+        { status: 500 },
       );
     }
 
@@ -366,8 +388,19 @@ export const authHandlers = [
       );
     }
 
-    // Simulación de Fallo Genérico en Onboarding (Nuevo)
-    // Usamos la misma password mágica "InvalidToken1!" para simular que algo falló en el backend
+    // Simulación de Token Expirado (Onboarding)
+    if (body.newPassword === "ExpiredToken1!") {
+      return HttpResponse.json(
+        {
+          code: "TOKEN_EXPIRED",
+          message: "Tu sesión ha expirado. Inicia sesión nuevamente.",
+        },
+        { status: 401 },
+      );
+    }
+
+    // Simulación de Fallo Genérico en Onboarding
+    // Usamos la password mágica "InvalidToken1!" para simular que algo falló en el backend
     if (body.newPassword === "InvalidToken1!") {
       return HttpResponse.json(
         {

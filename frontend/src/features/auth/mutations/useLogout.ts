@@ -15,21 +15,27 @@ export const useLogout = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const clearSession = () => {
+    queryClient.cancelQueries();
+    queryClient.clear();
+    clearAuthSession(queryClient);
+  };
+
+  const navigateToLogin = () => {
+    navigate("/login");
+  };
+
   const mutation = useMutation({
     mutationFn: () => authAPI.logout(),
     onSuccess: () => {
       // Asegura limpieza total de datos en memoria.
-      queryClient.cancelQueries();
-      queryClient.clear();
-      clearAuthSession(queryClient);
-      navigate("/login");
+      clearSession();
+      navigateToLogin();
     },
     onError: (error) => {
       // Incluso con error de red, se fuerza logout local.
-      queryClient.cancelQueries();
-      queryClient.clear();
-      clearAuthSession(queryClient);
-      navigate("/login");
+      clearSession();
+      navigateToLogin();
 
       if (import.meta.env.DEV) {
         console.error("Logout error:", error);
@@ -46,8 +52,14 @@ export const useLogout = () => {
     });
   };
 
+  const forceLogout = () => {
+    clearSession();
+    navigateToLogin();
+  };
+
   return {
     ...mutation,
     logoutWithToast,
+    forceLogout,
   };
 };

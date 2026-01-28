@@ -66,8 +66,16 @@ El mock valida la seguridad de la contraseña igual que el backend real.
   - Ej: `SecurePass123!`
 - **Contraseña Débil:** Cualquier otra combinación.
   - Ej: `weak`, `12345678`, `password` → ❌ Error "Contraseña muy débil"
+- **Simular Token Expirado (Onboarding):**
+  - Usar contraseña `ExpiredToken1!` → ❌ Error 401 "TOKEN_EXPIRED"
+- **Simular Error Backend (Onboarding):**
+  - Usar contraseña `InvalidToken1!` → ❌ Error 500 "ONBOARDING_FAILED"
+- **Simular Token Expirado (Reset):**
+  - Usar contraseña `ExpiredToken1!` → ❌ Error 401 "TOKEN_EXPIRED"
 - **Simular Token Inválido (Reset):**
-  - Usar contraseña `InvalidToken1!` → ❌ Error 401 "Token inválido"
+  - Usar contraseña `TokenInvalid1!` → ❌ Error 401 "TOKEN_INVALID"
+- **Simular Error Backend (Reset):**
+  - Usar contraseña `InvalidToken1!` → ❌ Error 500 "INTERNAL_SERVER_ERROR"
 
 ---
 
@@ -98,7 +106,7 @@ src/test/
 │   └── handlers.ts        # Índice de todos los handlers
 │
 ├── setup.ts               # Configuración global de Vitest (beforeAll, etc)
-└── utils.tsx              # Render personalizado (wrappers de Query/Router)
+└── utils.ts               # Render personalizado (wrappers de Query/Router)
 ```
 
 
@@ -143,7 +151,7 @@ http.get("*/expedientes", () => {
 **No olvides registrarlo** en `src/test/mocks/handlers.ts`.
 
 ### 3. Escribir el Test
-Usá el `render` personalizado de `src/test/utils.tsx`.
+Usá el `render` personalizado de `src/test/utils.ts`.
 
 ```typescript
 import { render, screen } from "../utils";
