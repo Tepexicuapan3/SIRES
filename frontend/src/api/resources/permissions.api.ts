@@ -19,4 +19,13 @@ export const permissionsAPI = {
 
     return response.data;
   },
+
+  /**
+   * Compat: alias legacy.
+   */
+  getPermissions: async (): Promise<PermissionCatalogResponse> => {
+    const response =
+      await apiClient.get<PermissionCatalogResponse>("/permissions");
+    return response.data;
+  },
 };

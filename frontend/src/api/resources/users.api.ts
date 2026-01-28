@@ -50,6 +50,16 @@ export const usersAPI = {
   },
 
   /**
+   * Compat: alias legacy.
+   */
+  getUsers: async (params?: UsersListParams): Promise<UsersListResponse> => {
+    const response = await apiClient.get<UsersListResponse>("/users", {
+      params,
+    });
+    return response.data;
+  },
+
+  /**
    * Obtener detalle completo (Perfil + Roles + Overrides).
    * @endpoint GET /api/v1/users/:id
    * @permission admin:gestion:usuarios:read
