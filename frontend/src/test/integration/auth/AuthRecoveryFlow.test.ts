@@ -57,7 +57,7 @@ describe("Auth Recovery Flow (MSW)", () => {
       code: "999999",
     });
 
-    await expectApiError(promise, { code: "TOO_MANY_ATTEMPTS", status: 429 });
+    await expectApiError(promise, { code: "CODE_EXPIRED", status: 400 });
   });
 
   it("rejects invalid OTP codes", async () => {

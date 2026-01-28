@@ -60,7 +60,7 @@ export const authHandlers = [
     if (username === "locked") {
       return HttpResponse.json(
         {
-          code: "USER_LOCKED",
+          code: "ACCOUNT_LOCKED",
           message:
             "Tu cuenta ha sido bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
         },
@@ -105,7 +105,7 @@ export const authHandlers = [
     if (username === "broken") {
       return HttpResponse.json(
         {
-          code: "SERVER_ERROR",
+          code: "INTERNAL_SERVER_ERROR",
           message: "Error interno del servidor. Intente más tarde.",
         },
         { status: 500 },
@@ -293,10 +293,10 @@ export const authHandlers = [
     if (code === "999999") {
       return HttpResponse.json(
         {
-          code: "TOO_MANY_ATTEMPTS",
-          message: "Has excedido el número de intentos. Intenta más tarde.",
+          code: "CODE_EXPIRED",
+          message: "Código invalidado por demasiados intentos.",
         },
-        { status: 429 },
+        { status: 400 },
       );
     }
 
