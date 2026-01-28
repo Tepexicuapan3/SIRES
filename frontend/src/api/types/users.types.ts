@@ -28,6 +28,16 @@ export interface UserRef {
 // =============================================================================
 
 /**
+ * Datos base para construir nombre completo.
+ * Usado en utilidades compartidas de UI.
+ */
+export interface BaseUser {
+  firstName: string;
+  paternalName: string;
+  maternalName: string;
+}
+
+/**
  * Usuario en listado (tabla administrativa).
  * Contiene solo datos necesarios para identificar, filtrar y mostrar en tabla.
  *

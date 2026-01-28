@@ -29,6 +29,8 @@ export const ERROR_CODES = {
   SESSION_EXPIRED: "SESSION_EXPIRED",
   PERMISSION_DENIED: "PERMISSION_DENIED",
   ACCOUNT_LOCKED: "ACCOUNT_LOCKED",
+  USER_INACTIVE: "USER_INACTIVE",
+  ACCOUNT_EXPIRED: "ACCOUNT_EXPIRED",
 
   // Validación (400)
   VALIDATION_ERROR: "VALIDATION_ERROR",
@@ -36,6 +38,9 @@ export const ERROR_CODES = {
   INVALID_FORMAT: "INVALID_FORMAT",
   INVALID_EMAIL: "INVALID_EMAIL",
   PASSWORD_TOO_WEAK: "PASSWORD_TOO_WEAK",
+  CODE_EXPIRED: "CODE_EXPIRED",
+  INVALID_CODE: "INVALID_CODE",
+  TERMS_NOT_ACCEPTED: "TERMS_NOT_ACCEPTED",
 
   // Lógica de negocio (4xx)
   USER_EXISTS: "USER_EXISTS",
@@ -50,6 +55,8 @@ export const ERROR_CODES = {
   INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR",
   DATABASE_ERROR: "DATABASE_ERROR",
   EXTERNAL_SERVICE_ERROR: "EXTERNAL_SERVICE_ERROR",
+  SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
+  ONBOARDING_FAILED: "ONBOARDING_FAILED",
 
   // Red (0)
   NETWORK_ERROR: "NETWORK_ERROR",
@@ -71,11 +78,16 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.SESSION_EXPIRED]: "Tu sesión ha expirado",
   [ERROR_CODES.PERMISSION_DENIED]: "No tienes permiso para esta acción",
   [ERROR_CODES.ACCOUNT_LOCKED]: "Cuenta bloqueada por intentos fallidos",
+  [ERROR_CODES.USER_INACTIVE]: "Cuenta desactivada por un administrador",
+  [ERROR_CODES.ACCOUNT_EXPIRED]: "Tu cuenta ha expirado. Contacta a soporte",
   [ERROR_CODES.VALIDATION_ERROR]: "Hay errores en el formulario",
   [ERROR_CODES.FIELD_REQUIRED]: "Faltan campos requeridos",
   [ERROR_CODES.INVALID_FORMAT]: "Formato inválido",
   [ERROR_CODES.INVALID_EMAIL]: "Email inválido",
   [ERROR_CODES.PASSWORD_TOO_WEAK]: "La contraseña es demasiado débil",
+  [ERROR_CODES.CODE_EXPIRED]: "El código ha expirado o fue invalidado",
+  [ERROR_CODES.INVALID_CODE]: "Código incorrecto",
+  [ERROR_CODES.TERMS_NOT_ACCEPTED]: "Debes aceptar los términos y condiciones",
   [ERROR_CODES.USER_EXISTS]: "Ya existe un usuario con estos datos",
   [ERROR_CODES.USER_NOT_FOUND]: "Usuario no encontrado",
   [ERROR_CODES.ROLE_NOT_FOUND]: "Rol no encontrado",
@@ -88,6 +100,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.INTERNAL_SERVER_ERROR]: "Error del servidor, intenta nuevamente",
   [ERROR_CODES.DATABASE_ERROR]: "Error de base de datos",
   [ERROR_CODES.EXTERNAL_SERVICE_ERROR]: "Error en servicio externo",
+  [ERROR_CODES.SERVICE_UNAVAILABLE]: "Servicio temporalmente no disponible",
+  [ERROR_CODES.ONBOARDING_FAILED]: "No se pudo completar el onboarding",
   [ERROR_CODES.NETWORK_ERROR]: "No hay conexión a internet",
   [ERROR_CODES.RATE_LIMIT_EXCEEDED]:
     "Demasiadas solicitudes, espera un momento",

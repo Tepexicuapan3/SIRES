@@ -71,7 +71,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
       <div className="space-y-5">
         <FormField
           id="username"
-          label="No. Expediente o Usuario"
+          label="Usuario"
           placeholder="Ej. mperez123"
           icon={<User size={18} />}
           error={errors.username}

@@ -4,8 +4,10 @@ import { OTP_LENGTH, PASSWORD_REQUIREMENTS } from "./auth.rules";
 const usernameSchema = z
   .string()
   .min(1, { error: "El usuario es requerido" })
-  .max(20, { error: "Máximo 20 caracteres" })
-  .regex(/^[a-zA-Z0-9]+$/, { error: "Solo letras y números" });
+  .max(50, { error: "Máximo 50 caracteres" })
+  .regex(/^[a-zA-Z0-9._-]+$/, {
+    error: "Solo letras, números y . _ -",
+  });
 
 const passwordSchema = z
   .string()

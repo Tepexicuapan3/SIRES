@@ -13,8 +13,11 @@ export const loginErrorMessages: Record<ErrorCode, string> = {
   ...pickMessages([
     ERROR_CODES.INVALID_CREDENTIALS,
     ERROR_CODES.USER_NOT_FOUND,
+    ERROR_CODES.USER_INACTIVE,
     ERROR_CODES.RATE_LIMIT_EXCEEDED,
     ERROR_CODES.ACCOUNT_LOCKED,
+    ERROR_CODES.ACCOUNT_EXPIRED,
+    ERROR_CODES.SERVICE_UNAVAILABLE,
     ERROR_CODES.SESSION_EXPIRED,
     ERROR_CODES.TOKEN_EXPIRED,
     ERROR_CODES.TOKEN_INVALID,
@@ -27,6 +30,8 @@ export const loginErrorMessages: Record<ErrorCode, string> = {
 export const onboardingErrorMessages: Record<ErrorCode, string> = {
   ...pickMessages([
     ERROR_CODES.PASSWORD_TOO_WEAK,
+    ERROR_CODES.TERMS_NOT_ACCEPTED,
+    ERROR_CODES.ONBOARDING_FAILED,
     ERROR_CODES.SESSION_EXPIRED,
     ERROR_CODES.TOKEN_EXPIRED,
     ERROR_CODES.TOKEN_INVALID,
@@ -39,6 +44,8 @@ export const onboardingErrorMessages: Record<ErrorCode, string> = {
 
 export const recoveryErrorMessages: Record<ErrorCode, string> = {
   ...pickMessages([
+    ERROR_CODES.CODE_EXPIRED,
+    ERROR_CODES.INVALID_CODE,
     ERROR_CODES.PASSWORD_TOO_WEAK,
     ERROR_CODES.USER_NOT_FOUND,
     ERROR_CODES.INTERNAL_SERVER_ERROR,

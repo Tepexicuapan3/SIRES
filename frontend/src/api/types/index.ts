@@ -47,6 +47,7 @@ export type {
 export type {
   // Objetos anidados (relaciones)
   UserRef,
+  BaseUser,
   // Entidades
   UserListItem,
   UserDetail,
