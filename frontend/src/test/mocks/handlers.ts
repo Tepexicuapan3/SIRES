@@ -1,7 +1,7 @@
 import { http, HttpResponse, passthrough } from "msw";
 import { authHandlers } from "./handlers/auth";
 import { usersHandlers } from "./handlers/users";
-import { clinicasHandlers } from "./handlers/clinicas";
+import { centrosAtencionHandlers } from "./handlers/centros-atencion";
 import { rolesHandlers } from "./handlers/roles";
 import { permissionsHandlers } from "./handlers/permissions";
 import { getApiUrl } from "./urls";
@@ -18,8 +18,11 @@ export const handlers = [
   http.get("**/*.png", () => passthrough()),
   http.get("**/*.json", ({ request }) => {
     // Solo dejar pasar JSON si NO es de la API (es decir, si viene de src/ o node_modules)
-    if (request.url.includes("/src/") || request.url.includes("/node_modules/")) {
-        return passthrough();
+    if (
+      request.url.includes("/src/") ||
+      request.url.includes("/node_modules/")
+    ) {
+      return passthrough();
     }
     // Si es una llamada a API que pide JSON, dejar que sigan los handlers de abajo
     return;
@@ -33,7 +36,7 @@ export const handlers = [
   // 3. Módulos de Negocio
   ...authHandlers,
   ...usersHandlers,
-  ...clinicasHandlers,
+  ...centrosAtencionHandlers,
   ...rolesHandlers,
   ...permissionsHandlers,
 ];
