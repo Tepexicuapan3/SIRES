@@ -183,4 +183,105 @@ describe("Auth UI - Recovery flow", () => {
       );
     });
   });
+
+  it("returns to request form when OTP code is expired", async () => {
+    vi.mocked(authAPI.verifyResetCode).mockRejectedValueOnce(
+      new ApiError("CODE_EXPIRED", "El código ha expirado", 400),
+    );
+
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.click(
+      screen.getByRole("button", { name: /¿olvidaste tu contraseña\?/i }),
+    );
+    await user.type(
+      screen.getByLabelText(/correo electrónico/i),
+      "usuario@metro.cdmx.gob.mx",
+    );
+    await user.click(screen.getByRole("button", { name: /enviar código/i }));
+
+    const otpInput = await screen.findByLabelText(/dígito 1 de 6/i);
+    await user.type(otpInput, "000000");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/correo electrónico/i)).toBeVisible();
+    });
+  });
+
+  it("returns to request form when reset token is expired", async () => {
+    vi.mocked(authAPI.resetPassword).mockRejectedValueOnce(
+      new ApiError(ERROR_CODES.TOKEN_EXPIRED, "Sesión expirada", 401),
+    );
+
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.click(
+      screen.getByRole("button", { name: /¿olvidaste tu contraseña\?/i }),
+    );
+    await user.type(
+      screen.getByLabelText(/correo electrónico/i),
+      "usuario@metro.cdmx.gob.mx",
+    );
+    await user.click(screen.getByRole("button", { name: /enviar código/i }));
+
+    const otpInput = await screen.findByLabelText(/dígito 1 de 6/i);
+    await user.type(otpInput, "123456");
+
+    await user.type(
+      await screen.findByLabelText(/nueva contraseña/i),
+      "SecurePass123!",
+    );
+    await user.type(
+      screen.getByLabelText(/confirmar contraseña/i),
+      "SecurePass123!",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /restablecer contraseña/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/correo electrónico/i)).toBeVisible();
+    });
+  });
+
+  it("returns to request form when reset token is invalid", async () => {
+    vi.mocked(authAPI.resetPassword).mockRejectedValueOnce(
+      new ApiError(ERROR_CODES.TOKEN_INVALID, "Token inválido", 401),
+    );
+
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.click(
+      screen.getByRole("button", { name: /¿olvidaste tu contraseña\?/i }),
+    );
+    await user.type(
+      screen.getByLabelText(/correo electrónico/i),
+      "usuario@metro.cdmx.gob.mx",
+    );
+    await user.click(screen.getByRole("button", { name: /enviar código/i }));
+
+    const otpInput = await screen.findByLabelText(/dígito 1 de 6/i);
+    await user.type(otpInput, "123456");
+
+    await user.type(
+      await screen.findByLabelText(/nueva contraseña/i),
+      "SecurePass123!",
+    );
+    await user.type(
+      screen.getByLabelText(/confirmar contraseña/i),
+      "SecurePass123!",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /restablecer contraseña/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/correo electrónico/i)).toBeVisible();
+    });
+  });
 });

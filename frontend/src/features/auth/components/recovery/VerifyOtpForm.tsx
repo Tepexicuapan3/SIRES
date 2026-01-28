@@ -25,6 +25,7 @@ interface Props {
 
 /** UX: bloqueo local de intentos, el control real es backend. */
 export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
+  const expiredCode = "CODE_EXPIRED";
   const [code, setCode] = useState("");
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [hasError, setHasError] = useState(false);
@@ -47,6 +48,15 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
       const errorCode = error instanceof ApiError ? error.code : undefined;
       const errorMessage =
         getAuthErrorMessage(recoveryErrorMessages, errorCode) || error.message;
+
+      if (errorCode === expiredCode) {
+        toast.error("Código expirado", {
+          description:
+            errorMessage || "Solicita un nuevo código para continuar.",
+        });
+        onBack();
+        return;
+      }
 
       if (errorCode === ERROR_CODES.RATE_LIMIT_EXCEEDED) {
         setHasError(true);
