@@ -43,7 +43,7 @@ export const MainLayout = () => {
           data-main-content
         >
           {/* Suspense sin spinner para evitar conflicto visual con la barra de progreso superior */}
-          <Suspense fallback={<div className="w-full h-full min-h-[200px]" />}>
+          <Suspense fallback={<div className="w-full h-full min-h-50" />}>
             <Outlet />
           </Suspense>
         </main>

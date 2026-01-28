@@ -1,15 +1,17 @@
 import {
-  LayoutDashboard,
-  Users,
-  Shield,
-  BookOpen,
-  Stethoscope,
-  Calendar,
-  FolderOpen,
-  UserCheck,
+  Activity,
   Ambulance,
-  Pill,
+  BookOpen,
+  ClipboardList,
   Database,
+  FileText,
+  FolderOpen,
+  Key,
+  LayoutDashboard,
+  Pill,
+  Shield,
+  Stethoscope,
+  ShieldUser,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,7 +39,7 @@ export interface NavSection {
 }
 
 // Badge reutilizable para modulos aun no implementados.
-const PLACEHOLDER_BADGE = "En desarrollo";
+export const PLACEHOLDER_BADGE = "Dev";
 
 export const NAV_CONFIG: NavSection[] = [
   {
@@ -54,22 +56,26 @@ export const NAV_CONFIG: NavSection[] = [
     title: "Administracion",
     items: [
       {
-        title: "Usuarios",
-        url: "/admin/usuarios",
-        icon: Users,
-        permissions: ["admin:gestion:usuarios:read"],
-      },
-      {
-        title: "Nuevo Usuario",
-        url: "/admin/usuarios/nuevo",
-        icon: Users,
-        permissions: ["admin:gestion:usuarios:create"],
-      },
-      {
-        title: "Roles",
-        url: "/admin/roles",
-        icon: Shield,
-        permissions: ["admin:gestion:roles:read"],
+        title: "Panel",
+        icon: ShieldUser,
+        items: [
+          {
+            title: "Usuarios",
+            url: "/admin/usuarios",
+            permissions: ["admin:gestion:usuarios:read"],
+          },
+          {
+            title: "Expedientes",
+            url: "/admin/expedientes",
+            permissions: ["admin:gestion:expedientes:read"],
+            badge: PLACEHOLDER_BADGE,
+          },
+          {
+            title: "Roles",
+            url: "/admin/roles",
+            permissions: ["admin:gestion:roles:read"],
+          },
+        ],
       },
       {
         title: "Catalogos",
@@ -80,6 +86,52 @@ export const NAV_CONFIG: NavSection[] = [
           "admin:catalogos:areas:read",
         ],
       },
+      {
+        title: "Reportes",
+        url: "/admin/reportes",
+        icon: FileText,
+        permissions: ["admin:reportes:read"],
+        badge: PLACEHOLDER_BADGE,
+      },
+      {
+        title: "Estadisticas",
+        url: "/admin/estadisticas",
+        icon: Activity,
+        permissions: ["admin:estadisticas:read"],
+        badge: PLACEHOLDER_BADGE,
+      },
+      {
+        title: "Autorizacion",
+        icon: Shield,
+        items: [
+          {
+            title: "Recetas",
+            url: "/admin/autorizacion/recetas",
+            permissions: ["admin:autorizacion:recetas:read"],
+            badge: PLACEHOLDER_BADGE,
+          },
+          {
+            title: "Estudios",
+            url: "/admin/autorizacion/estudios",
+            permissions: ["admin:autorizacion:estudios:read"],
+            badge: PLACEHOLDER_BADGE,
+          },
+        ],
+      },
+      {
+        title: "Licencias",
+        url: "/admin/licencias",
+        icon: Key,
+        permissions: ["admin:licencias:read"],
+        badge: PLACEHOLDER_BADGE,
+      },
+      {
+        title: "Conciliacion",
+        url: "/admin/conciliacion",
+        icon: Database,
+        permissions: ["admin:conciliacion:read"],
+        badge: PLACEHOLDER_BADGE,
+      },
     ],
   },
   {
@@ -87,9 +139,7 @@ export const NAV_CONFIG: NavSection[] = [
     items: [
       {
         title: "Consultas",
-        url: "/clinico/consultas",
         icon: Stethoscope,
-        permissions: ["clinico:consultas:read"],
         items: [
           {
             title: "Listado",
@@ -99,7 +149,7 @@ export const NAV_CONFIG: NavSection[] = [
           {
             title: "Agenda",
             url: "/clinico/consultas/agenda",
-            permissions: ["clinico:consultas:read"],
+            permissions: ["clinico:consultas:agenda:read"],
           },
           {
             title: "Nueva Consulta",
@@ -109,13 +159,12 @@ export const NAV_CONFIG: NavSection[] = [
           {
             title: "Historial",
             url: "/clinico/consultas/historial",
-            permissions: ["clinico:consultas:read"],
+            permissions: ["clinico:consultas:historial:read"],
           },
         ],
       },
       {
         title: "Expedientes",
-        url: "/clinico/expedientes",
         icon: FolderOpen,
         permissions: ["clinico:expedientes:read"],
         items: [
@@ -132,23 +181,47 @@ export const NAV_CONFIG: NavSection[] = [
           },
         ],
       },
+      {
+        title: "Somatometria",
+        url: "/clinico/somatometria",
+        icon: Activity,
+        permissions: ["clinico:somatometria:read"],
+        badge: PLACEHOLDER_BADGE,
+      },
     ],
   },
   {
     title: "Recepcion",
     items: [
       {
-        title: "Pacientes",
-        url: "/recepcion/pacientes",
-        icon: UserCheck,
-        permissions: ["recepcion:pacientes:create"],
-        badge: PLACEHOLDER_BADGE,
+        title: "Fichas",
+        icon: ClipboardList,
+        items: [
+          {
+            title: "Medicina general",
+            url: "/recepcion/fichas/medicina-general",
+            permissions: ["recepcion:fichas:medicina_general:create"],
+            badge: PLACEHOLDER_BADGE,
+          },
+          {
+            title: "Especialidad",
+            url: "/recepcion/fichas/especialidad",
+            permissions: ["recepcion:fichas:especialidad:create"],
+            badge: PLACEHOLDER_BADGE,
+          },
+          {
+            title: "Urgencias",
+            url: "/recepcion/fichas/urgencias",
+            permissions: ["recepcion:fichas:urgencias:create"],
+            badge: PLACEHOLDER_BADGE,
+          },
+        ],
       },
       {
-        title: "Citas",
-        url: "/recepcion/citas",
-        icon: Calendar,
-        permissions: ["recepcion:citas:create"],
+        title: "Incapacidad",
+        url: "/recepcion/incapacidad",
+        icon: FileText,
+        permissions: ["recepcion:incapacidad:create"],
         badge: PLACEHOLDER_BADGE,
       },
     ],

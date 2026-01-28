@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   NAV_CONFIG,
+  PLACEHOLDER_BADGE,
   type NavItem,
 } from "@/components/layouts/sidebar/nav-config";
 import { usePermissions } from "@features/auth/queries/usePermissions";
@@ -15,6 +16,11 @@ interface SearchItem {
   breadcrumb: string;
   badge?: string;
 }
+
+const getBadgeClass = (badge: string) =>
+  badge === PLACEHOLDER_BADGE
+    ? "bg-status-alert text-white"
+    : "bg-status-info text-white";
 
 const flattenNavItems = (
   items: NavItem[],
@@ -161,7 +167,9 @@ export const ModuleSearch = () => {
                       </span>
                     </div>
                     {item.badge && (
-                      <span className="rounded-full bg-status-info px-2 py-0.5 text-[10px] text-white">
+                      <span
+                        className={`rounded-full ${getBadgeClass(item.badge)} px-2 py-0.5 text-[10px]`}
+                      >
                         {item.badge}
                       </span>
                     )}
