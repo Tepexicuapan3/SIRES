@@ -57,7 +57,7 @@ describe("Auth Login Flow (MSW)", () => {
     {
       username: "locked",
       password: "password123",
-      code: "USER_LOCKED",
+      code: "ACCOUNT_LOCKED",
       status: 423,
     },
     {
@@ -81,7 +81,7 @@ describe("Auth Login Flow (MSW)", () => {
     {
       username: "broken",
       password: "password123",
-      code: "SERVER_ERROR",
+      code: "INTERNAL_SERVER_ERROR",
       status: 500,
     },
   ])(

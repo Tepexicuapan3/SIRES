@@ -14,6 +14,8 @@ export const createMockAuthUser = (
   const paternalName = faker.person.lastName();
   const maternalName = faker.person.lastName();
   const fullName = `${firstName} ${paternalName} ${maternalName}`;
+  const mustChangePassword = overrides.mustChangePassword ?? false;
+  const requiresOnboarding = overrides.requiresOnboarding ?? mustChangePassword;
 
   return {
     id: faker.number.int({ min: 1, max: 1000 }),
@@ -24,7 +26,8 @@ export const createMockAuthUser = (
     landingRoute: "/dashboard",
     roles: ["ADMIN", "MEDICO"],
     permissions: ["*"],
-    mustChangePassword: false,
+    mustChangePassword,
+    requiresOnboarding,
     ...overrides,
   };
 };

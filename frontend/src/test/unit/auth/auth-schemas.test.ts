@@ -19,7 +19,7 @@ describe("auth schemas", () => {
 
   it("rejects username with invalid characters", () => {
     const result = loginSchema.safeParse({
-      username: "user-123",
+      username: "user+123",
       password: "password123",
       rememberMe: false,
     });
