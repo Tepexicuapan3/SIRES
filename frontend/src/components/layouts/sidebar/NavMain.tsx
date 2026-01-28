@@ -25,11 +25,16 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { useSidebarStore } from "@/store/sidebarStore";
-import type { NavSection, NavItem } from "./nav-config";
+import { PLACEHOLDER_BADGE, type NavSection, type NavItem } from "./nav-config";
 
 interface NavMainProps {
   sections: NavSection[];
 }
+
+const getBadgeClass = (badge: string) =>
+  badge === PLACEHOLDER_BADGE
+    ? "bg-status-alert text-white"
+    : "bg-status-info text-white";
 
 /**
  * Componente recursivo para renderizar items de navegación
@@ -85,7 +90,9 @@ function NavRecursiveItem({
 
               {/* Badge */}
               {item.badge && (
-                <span className="ml-auto text-xs bg-status-info text-white px-2 py-0.5 rounded-full mr-2">
+                <span
+                  className={`ml-auto text-xs ${getBadgeClass(item.badge)} px-2 py-0.5 rounded-full mr-2`}
+                >
                   {item.badge}
                 </span>
               )}
@@ -123,7 +130,9 @@ function NavRecursiveItem({
             {item.icon && <item.icon />}
             <span>{item.title}</span>
             {item.badge && (
-              <span className="ml-auto text-xs bg-status-info text-white px-2 py-0.5 rounded-full">
+              <span
+                className={`ml-auto text-xs ${getBadgeClass(item.badge)} px-2 py-0.5 rounded-full`}
+              >
                 {item.badge}
               </span>
             )}
@@ -139,7 +148,9 @@ function NavRecursiveItem({
         <Link to={item.url || "#"}>
           <span>{item.title}</span>
           {item.badge && (
-            <span className="ml-auto text-xs bg-status-info text-white px-2 py-0.5 rounded-full">
+            <span
+              className={`ml-auto text-xs ${getBadgeClass(item.badge)} px-2 py-0.5 rounded-full`}
+            >
               {item.badge}
             </span>
           )}
