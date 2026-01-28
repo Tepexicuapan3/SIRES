@@ -24,6 +24,7 @@ import type {
   AxiosInstance,
   InternalAxiosRequestConfig,
 } from "axios";
+import Cookies from "js-cookie";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { queryClient } from "@/config/query-client";
 import { clearAuthSession } from "@features/auth/utils/auth-cache";
@@ -108,6 +109,9 @@ async function attemptTokenRefresh(
         "X-Request-ID":
           (originalRequest.headers?.["X-Request-ID"] as string) ||
           crypto.randomUUID(),
+        ...(Cookies.get("csrf_access_token")
+          ? { "X-CSRF-TOKEN": Cookies.get("csrf_access_token") as string }
+          : {}),
       },
     });
 
@@ -183,8 +187,12 @@ function getDefaultErrorCode(status: number): string {
       return ERROR_CODES.USER_NOT_FOUND;
     case 409:
       return ERROR_CODES.USER_EXISTS;
+    case 423:
+      return ERROR_CODES.ACCOUNT_LOCKED;
     case 429:
       return ERROR_CODES.RATE_LIMIT_EXCEEDED;
+    case 503:
+      return ERROR_CODES.SERVICE_UNAVAILABLE;
     default:
       return ERROR_CODES.INTERNAL_SERVER_ERROR;
   }
@@ -207,6 +215,8 @@ function getDefaultMessage(status: number): string {
       return "El recurso ya existe";
     case 429:
       return "Demasiadas solicitudes, intenta en unos minutos";
+    case 503:
+      return "Servicio temporalmente no disponible";
     case 500:
       return "Error interno del servidor";
     default:

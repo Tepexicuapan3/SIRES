@@ -1,15 +1,12 @@
-import type { BaseUser, AuthUser } from "@/api/types/auth.types"; 
-// Nota: Importamos BaseUser de auth.types temporalmente si se re-exporta, 
-// o mejor directamente de users.types para evitar ciclos.
-import type { BaseUser as IBaseUser } from "@/api/types/users.types";
+import type { BaseUser, AuthUser } from "@api/types";
 
 /**
  * Calcula el nombre completo de un usuario
  * Formato: Nombre Paterno Materno
  */
-export const getUserFullName = (user: IBaseUser | null | undefined): string => {
+export const getUserFullName = (user: BaseUser | null | undefined): string => {
   if (!user) return "";
-  return `${user.nombre} ${user.paterno} ${user.materno}`.trim();
+  return `${user.firstName} ${user.paternalName} ${user.maternalName}`.trim();
 };
 
 /**
@@ -24,7 +21,10 @@ export const isUserAdmin = (user: AuthUser | null | undefined): boolean => {
 /**
  * Verifica si un usuario tiene un permiso específico
  */
-export const hasPermission = (user: AuthUser | null, permission: string): boolean => {
+export const hasPermission = (
+  user: AuthUser | null,
+  permission: string,
+): boolean => {
   if (!user) return false;
   if (isUserAdmin(user)) return true;
   return user.permissions.includes(permission);

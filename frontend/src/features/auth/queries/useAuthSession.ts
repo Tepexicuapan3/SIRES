@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authAPI } from "@api/resources/auth.api";
 import { authKeys } from "@features/auth/queries/auth.keys";
@@ -19,6 +20,8 @@ import {
  */
 export const useAuthSession = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const query = useQuery<AuthUser, ApiError>({
     queryKey: authKeys.session(),
@@ -32,6 +35,17 @@ export const useAuthSession = () => {
     // Sincroniza React Query con el store de autenticacion.
     setAuthSession(queryClient, query.data);
   }, [query.data, queryClient]);
+
+  useEffect(() => {
+    if (!query.data) return;
+    const requiresOnboarding = Boolean(
+      query.data.requiresOnboarding ?? query.data.mustChangePassword,
+    );
+
+    if (requiresOnboarding && location.pathname !== "/onboarding") {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [location.pathname, navigate, query.data]);
 
   useEffect(() => {
     if (!query.error) return;

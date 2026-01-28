@@ -25,7 +25,7 @@ interface Props {
 
 /** UX: bloqueo local de intentos, el control real es backend. */
 export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
-  const expiredCode = "CODE_EXPIRED";
+  const expiredCode = ERROR_CODES.CODE_EXPIRED;
   const [code, setCode] = useState("");
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [hasError, setHasError] = useState(false);

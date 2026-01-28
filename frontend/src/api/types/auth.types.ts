@@ -22,10 +22,11 @@ export interface AuthUser {
   fullName: string;
   email: string;
   primaryRole: string;
-  landingRoute: string;
+  landingRoute: string | null;
   roles: string[];
   permissions: string[];
   mustChangePassword: boolean;
+  requiresOnboarding?: boolean;
 }
 
 // =============================================================================

@@ -1,7 +1,5 @@
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
 
-const ADMIN_ROLE = "ADMIN";
-
 /**
  * Evaluacion de permisos basada en la sesion cacheada.
  *
@@ -20,7 +18,7 @@ export const usePermissions = () => {
   const isAdmin = (): boolean => {
     if (!user) return false;
     if (user.permissions.includes("*")) return true;
-    return user.roles.includes(ADMIN_ROLE);
+    return false;
   };
 
   /**

@@ -26,6 +26,9 @@ export const ProtectedRoute = ({
   const location = useLocation();
   // La sesion cacheada es la unica fuente de verdad.
   const isAuthenticated = Boolean(sessionUser);
+  const requiresOnboarding = Boolean(
+    sessionUser?.requiresOnboarding ?? sessionUser?.mustChangePassword,
+  );
 
   if (isLoading && !sessionUser) {
     return <LoadingSpinner fullScreen />;
@@ -38,12 +41,12 @@ export const ProtectedRoute = ({
 
   // LÓGICA DE ONBOARDING
   // CASO A: El usuario DEBE aceptar términos, pero intenta navegar a otro lado
-  if (sessionUser?.mustChangePassword && location.pathname !== "/onboarding") {
+  if (requiresOnboarding && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
   }
 
   // CASO B: El usuario YA cumplió, pero intenta volver a entrar a /onboarding
-  if (!sessionUser?.mustChangePassword && location.pathname === "/onboarding") {
+  if (!requiresOnboarding && location.pathname === "/onboarding") {
     return <Navigate to="/dashboard" replace />;
   }
 
