@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Mail, ArrowLeft } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
@@ -8,11 +7,15 @@ import { useMutation } from "@tanstack/react-query";
 import { authAPI } from "@/api/resources/auth.api";
 import { toast } from "sonner";
 import { ApiError } from "@/api/utils/errors";
-import { recoveryErrorMessages } from "@features/auth/utils/errorMessages";
-
-const schema = z.object({
-  email: z.string().email("Ingresa un correo válido"),
-});
+import {
+  getAuthErrorMessage,
+  recoveryErrorMessages,
+} from "@features/auth/domain/auth.messages";
+import {
+  requestResetCodeSchema,
+  type RequestResetCodeFormData,
+} from "@features/auth/domain/auth.schemas";
+import { OTP_LENGTH } from "@features/auth/domain/auth.rules";
 
 interface Props {
   onSuccess: (email: string) => void;
@@ -24,8 +27,8 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<z.infer<typeof schema>>({
-    resolver: zodResolver(schema),
+  } = useForm<RequestResetCodeFormData>({
+    resolver: zodResolver(requestResetCodeSchema),
   });
 
   const { mutate, isPending } = useMutation({
@@ -38,11 +41,9 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
     },
     onError: (error) => {
       const errorCode = error instanceof ApiError ? error.code : undefined;
-      const message = errorCode
-        ? recoveryErrorMessages[
-            errorCode as keyof typeof recoveryErrorMessages
-          ] || "Error al enviar el código"
-        : "Error al enviar el código";
+      const message =
+        getAuthErrorMessage(recoveryErrorMessages, errorCode) ||
+        "Error al enviar el código";
 
       toast.error("Error", { description: message });
 
@@ -58,7 +59,7 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
       className="space-y-6 animate-fade-in-up"
     >
       <p className="mt-4 text-txt-muted text-sm sm:text-base font-normal max-w-xs mx-auto text-center">
-        Ingresa tu correo y te enviaremos un código de 6 dígitos.
+        Ingresa tu correo y te enviaremos un código de {OTP_LENGTH} dígitos.
       </p>
 
       <FormField

@@ -7,15 +7,16 @@ import { ApiError, ERROR_CODES } from "@/api/utils/errors";
 
 import { authAPI } from "@/api/resources/auth.api";
 import { useLogout } from "@/features/auth/mutations/useLogout";
-import { onboardingErrorMessages } from "@/features/auth/utils/errorMessages";
+import {
+  getAuthErrorMessage,
+  onboardingErrorMessages,
+} from "@features/auth/domain/auth.messages";
 import { setAuthSession } from "@features/auth/utils/auth-cache";
 
 import type { CompleteOnboardingResponse } from "@api/types";
 import { TermsStep } from "@/features/auth/components/onboarding/TermsStep";
-import {
-  AuthPasswordForm,
-  PasswordFormData,
-} from "@/features/auth/components/shared/password/AuthPasswordForm";
+import { AuthPasswordForm } from "@/features/auth/components/shared/password/AuthPasswordForm";
+import type { PasswordFormData } from "@features/auth/domain/auth.schemas";
 import { ParticlesBackground } from "@/features/auth/animations/ParticlesBackground";
 import { AuthCard } from "@/features/auth/components/shared/AuthCard";
 
@@ -61,11 +62,8 @@ export const OnboardingPage = () => {
       const errorMessage =
         error instanceof ApiError ? error.message : undefined;
 
-      const errorKey = errorCode as
-        | keyof typeof onboardingErrorMessages
-        | undefined;
       const displayMessage =
-        (errorKey ? onboardingErrorMessages[errorKey] : undefined) ||
+        getAuthErrorMessage(onboardingErrorMessages, errorCode) ||
         errorMessage ||
         "Error inesperado";
 
@@ -96,7 +94,7 @@ export const OnboardingPage = () => {
         <button
           onClick={() => logout()}
           disabled={isLoggingOut || isPending}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-txt-muted hover:text-status-critical hover:bg-status-critical/10 rounded-lg transition-colors disabled:opacity-50 backdrop-blur-sm bg-paper/30 min-h-[44px]"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-txt-muted hover:text-status-critical hover:bg-status-critical/10 rounded-lg transition-colors disabled:opacity-50 backdrop-blur-sm bg-paper/30 min-h-11"
           aria-label="Cerrar sesión"
         >
           <LogOut size={16} aria-hidden="true" />

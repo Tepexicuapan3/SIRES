@@ -1,25 +1,15 @@
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
 import { useLogin } from "@features/auth/mutations/useLogin";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-
-// Schema
-const loginSchema = z.object({
-  username: z
-    .string()
-    .min(1, "El usuario es requerido")
-    .max(20, "Máximo 20 caracteres")
-    .regex(/^[a-zA-Z0-9]+$/, "Solo letras y números"),
-  password: z.string().min(1, "La contraseña es requerida"),
-  rememberMe: z.boolean(),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+import {
+  loginSchema,
+  type LoginFormData,
+} from "@features/auth/domain/auth.schemas";
 
 interface Props {
   onForgotPassword: () => void;

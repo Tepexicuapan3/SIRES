@@ -1,22 +1,23 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoginForm } from "../components/login/LoginForm";
 import { RequestCodeForm } from "../components/recovery/RequestCodeForm";
 import { VerifyOtpForm } from "../components/recovery/VerifyOtpForm";
-import {
-  AuthPasswordForm,
-  PasswordFormData,
-} from "../components/shared/password/AuthPasswordForm";
+import { AuthPasswordForm } from "../components/shared/password/AuthPasswordForm";
 import { ParticlesBackground } from "../animations/ParticlesBackground";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authAPI } from "@/api/resources/auth.api";
 import { toast } from "sonner";
 import type { ResetPasswordResponse } from "@api/types";
-import { recoveryErrorMessages } from "../utils/errorMessages";
+import {
+  getAuthErrorMessage,
+  recoveryErrorMessages,
+} from "@features/auth/domain/auth.messages";
 import { cn } from "@/lib/utils";
 import { setAuthSession } from "@features/auth/utils/auth-cache";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { AuthCard } from "@features/auth/components/shared/AuthCard";
+import type { PasswordFormData } from "@features/auth/domain/auth.schemas";
 
 export type AuthViewState =
   | "LOGIN"
@@ -44,10 +45,7 @@ export const LoginPage = () => {
   const [viewState, setViewState] = useState<AuthViewState>("LOGIN");
   const [recoveryEmail, setRecoveryEmail] = useState("");
 
-  const recoveryIndex = useMemo(
-    () => recoverySteps.indexOf(viewState),
-    [viewState],
-  );
+  const recoveryIndex = recoverySteps.indexOf(viewState);
 
   const { mutate: resetPassword, isPending: isResetting } = useMutation({
     mutationFn: (data: PasswordFormData) =>
@@ -75,11 +73,11 @@ export const LoginPage = () => {
     onError: (error) => {
       const errorCode = error instanceof ApiError ? error.code : undefined;
 
-      const message = errorCode
-        ? recoveryErrorMessages[
-            errorCode as keyof typeof recoveryErrorMessages
-          ] || "Error al restablecer la contraseña"
-        : "El token ha expirado, solicita uno nuevo";
+      const message =
+        getAuthErrorMessage(recoveryErrorMessages, errorCode) ||
+        (errorCode
+          ? "Error al restablecer la contraseña"
+          : "El token ha expirado, solicita uno nuevo");
 
       toast.error("Error al restablecer", { description: message });
 

@@ -1,5 +1,9 @@
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  PASSWORD_REQUIREMENTS,
+  getPasswordRequirementStatus,
+} from "@features/auth/domain/auth.rules";
 
 /**
  * PasswordRequirements - Validación Visual en Tiempo Real
@@ -20,46 +24,16 @@ interface Props {
   password: string;
 }
 
-interface Requirement {
-  id: string;
-  label: string;
-  test: (pwd: string) => boolean;
-}
-
-const requirements: Requirement[] = [
-  {
-    id: "length",
-    label: "Mínimo 8 caracteres",
-    test: (pwd) => pwd.length >= 8,
-  },
-  {
-    id: "uppercase",
-    label: "Al menos una mayúscula (A-Z)",
-    test: (pwd) => /[A-Z]/.test(pwd),
-  },
-  {
-    id: "number",
-    label: "Al menos un número (0-9)",
-    test: (pwd) => /[0-9]/.test(pwd),
-  },
-  {
-    id: "special",
-    label: "Al menos un carácter especial (@, #, $, etc.)",
-    test: (pwd) => /[^a-zA-Z0-9]/.test(pwd),
-  },
-];
-
 export const PasswordRequirements = ({ password }: Props) => {
-  const results = requirements.map((req) => ({
-    req,
-    isMet: req.test(password),
-  }));
+  const results = getPasswordRequirementStatus(password);
   const metCount = results.filter((item) => item.isMet).length;
-  const progressPercent = Math.round((metCount / requirements.length) * 100);
+  const progressPercent = Math.round(
+    (metCount / PASSWORD_REQUIREMENTS.length) * 100,
+  );
   const progressClass =
     metCount === 0
       ? "w-0 bg-txt-muted"
-      : metCount === requirements.length
+      : metCount === PASSWORD_REQUIREMENTS.length
         ? "w-full bg-status-stable"
         : metCount >= 2
           ? "bg-status-alert"
@@ -71,10 +45,10 @@ export const PasswordRequirements = ({ password }: Props) => {
         Requisitos de Contraseña:
       </p>
       <ul className="space-y-2">
-        {results.map(({ req, isMet }) => {
+        {results.map(({ requirement, isMet }) => {
           return (
             <li
-              key={req.id}
+              key={requirement.id}
               className={cn(
                 "flex items-start gap-2 text-xs transition-colors duration-200",
                 isMet ? "text-status-stable" : "text-txt-muted",
@@ -91,7 +65,7 @@ export const PasswordRequirements = ({ password }: Props) => {
 
               {/* Label del Requisito */}
               <span className={cn("leading-tight", isMet && "font-medium")}>
-                {req.label}
+                {requirement.label}
               </span>
             </li>
           );
@@ -113,7 +87,7 @@ export const PasswordRequirements = ({ password }: Props) => {
             />
           </div>
           <span className="text-xs text-txt-muted font-medium tabular-nums">
-            {metCount}/{requirements.length}
+            {metCount}/{PASSWORD_REQUIREMENTS.length}
           </span>
         </div>
       </div>

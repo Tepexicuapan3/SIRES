@@ -1,30 +1,16 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Lock, Eye, EyeOff, CheckCircle2, ShieldCheck } from "lucide-react";
 
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
 import { PasswordRequirements } from "./PasswordRequirements";
 import { cn } from "@/lib/utils";
-
-const schema = z
-  .object({
-    newPassword: z
-      .string()
-      .min(8, "Mínimo 8 caracteres")
-      .regex(/[A-Z]/, "Al menos una mayúscula")
-      .regex(/[0-9]/, "Al menos un número")
-      .regex(/[^a-zA-Z0-9]/, "Al menos un carácter especial (@, #, etc.)"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
-  });
-
-export type PasswordFormData = z.infer<typeof schema>;
+import {
+  authPasswordSchema,
+  type PasswordFormData,
+} from "@features/auth/domain/auth.schemas";
 
 interface Props {
   onSubmit: (data: PasswordFormData) => void;
@@ -45,7 +31,7 @@ export const AuthPasswordForm = ({
     control,
     formState: { errors },
   } = useForm<PasswordFormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(authPasswordSchema),
   });
 
   // Watch password value para validación en tiempo real
