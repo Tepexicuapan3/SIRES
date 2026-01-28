@@ -33,14 +33,16 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(window, "localStorage", {
-  value: localStorageMock,
-});
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "localStorage", {
+    value: localStorageMock,
+  });
 
-// Mock de sessionStorage
-Object.defineProperty(window, "sessionStorage", {
-  value: localStorageMock,
-});
+  // Mock de sessionStorage
+  Object.defineProperty(window, "sessionStorage", {
+    value: localStorageMock,
+  });
+}
 
 // Mock de import.meta.env
 vi.stubGlobal("import.meta", {
@@ -56,19 +58,27 @@ vi.stubGlobal("import.meta", {
 });
 
 // Mock de window.matchMedia (para dark mode)
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: vi.fn().mockImplementation((query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
+// Forzar Axios a usar adapter de Node (evita XHR en happy-dom)
+if ("XMLHttpRequest" in globalThis) {
+  // @ts-expect-error - solo para entorno de test
+  globalThis.XMLHttpRequest = undefined;
+}
 
 // Mock de IntersectionObserver (para componentes que usan lazy loading)
 global.IntersectionObserver = class IntersectionObserver {

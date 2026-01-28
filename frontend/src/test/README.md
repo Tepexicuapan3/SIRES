@@ -24,7 +24,7 @@ Usá estos usuarios para probar diferentes escenarios y errores en el Login:
 
 | Usuario | Contraseña | Escenario | Resultado Esperado |
 | :--- | :--- | :--- | :--- |
-| **(cualquiera)** | (cualquiera) | **Login Exitoso** | Acceso al Dashboard (`/consultas` por defecto) |
+| **(cualquiera)** | (cualquiera) | **Login Exitoso** | Acceso al Dashboard (`/dashboard` por defecto) |
 | `error` | (cualquiera) | **Credenciales Inválidas** | Error 401 "Usuario o contraseña incorrectos" |
 | `locked` | (cualquiera) | **Usuario Bloqueado** | Error 423 "Cuenta bloqueada temporalmente" |
 | `inactive` | (cualquiera) | **Usuario Inactivo** | Error 403 "Cuenta desactivada" |
@@ -39,11 +39,11 @@ Usá estos usuarios para probar que el Sidebar y la redirección funcionan segú
 
 | Usuario | Rol | Landing Route | Permisos Clave |
 | :--- | :--- | :--- | :--- |
-| `admin` | ADMINISTRADOR | `/admin` | Acceso Total (`*`) |
-| `medico` | MEDICOS | `/consultas` | Consultas, Expedientes, Recetas |
-| `recepcion` | RECEPCION | `/recepcion` | Agendar Citas, Ver Expedientes |
-| `farmacia` | FARMACIA | `/farmacia` | Dispensar, Inventario |
-| `urgencias` | URGENCIAS | `/urgencias` | Triage, Atención Urgencias |
+| `admin` | ADMINISTRADOR | `/admin/panel` | Acceso Total (`*`) |
+| `medico` | MEDICOS | `/clinico/consultas` | Consultas, Expedientes, Somatometría |
+| `recepcion` | RECEPCION | `/recepcion/fichas` | Fichas, Incapacidades |
+| `farmacia` | FARMACIA | `/farmacia/recetas` | Dispensar, Inventario |
+| `urgencias` | URGENCIAS | `/urgencias/triage` | Triage |
 | `hospital` | HOSPITAL | `/hospital` | Coordinación, Admisión |
 
 ### 🔐 Recuperación de Contraseña
@@ -77,24 +77,42 @@ Todo el código de testing vive en `frontend/src/test/`.
 
 ```
 src/test/
-├── factories/        # Generadores de datos falsos (FakerJS)
-│   └── users.ts      # Crea usuarios, roles y perfiles completos
+├── factories/             # Generadores de datos falsos (FakerJS)
+│   └── users.ts           # Crea usuarios, roles y perfiles completos
 │
-├── integration/      # Tests que prueban componentes con datos "reales"
-│   ├── AuthApi.test.ts        # Prueba el cliente API contra MSW
-│   └── UsersDataTable.test.tsx # Prueba que la tabla renderiza datos
+├── integration/           # Tests de integración (UI/API + MSW)
+│   ├── auth/              # Flujos de autenticación (login, recovery, onboarding)
+│   ├── admin/             # RBAC, roles, permisos
+│   ├── catalogos/         # Catálogos (centros de atención)
+│   └── users/             # Tablas, listados y UI de usuarios
 │
-├── mocks/            # Configuración de MSW
-│   ├── handlers/     # Respuestas simuladas por dominio
-│   │   ├── auth.ts   # Login, Logout, Recovery
-│   │   └── users.ts  # CRUD Usuarios
-│   ├── browser.ts    # Configuración para Navegador
-│   ├── server.ts     # Configuración para Vitest (Node)
-│   └── handlers.ts   # Índice de todos los handlers
+├── unit/                  # Tests unitarios (lógica pura)
+│   └── auth/              # Helpers y cache de sesión
 │
-├── setup.ts          # Configuración global de Vitest (beforeAll, etc)
-└── utils.tsx         # Render personalizado (wrappers de Query/Router)
+├── mocks/                 # Configuración de MSW
+│   ├── handlers/          # Respuestas simuladas por dominio
+│   │   ├── auth.ts        # Login, Logout, Recovery, Onboarding
+│   │   └── users.ts       # CRUD Usuarios
+│   ├── browser.ts         # Configuración para Navegador
+│   ├── server.ts          # Configuración para Vitest (Node)
+│   └── handlers.ts        # Índice de todos los handlers
+│
+├── setup.ts               # Configuración global de Vitest (beforeAll, etc)
+└── utils.tsx              # Render personalizado (wrappers de Query/Router)
 ```
+
+
+## ✅ Cobertura Auth (actual)
+
+- `src/test/integration/auth/AuthLoginFlow.test.ts` (login + sesión)
+- `src/test/integration/auth/AuthRecoveryFlow.test.ts` (recovery)
+- `src/test/integration/auth/AuthOnboardingFlow.test.ts` (onboarding)
+- `src/test/integration/auth/ui/AuthLoginPage.ui.test.tsx` (UI login)
+- `src/test/integration/auth/ui/AuthRecoveryFlow.ui.test.tsx` (UI recovery)
+- `src/test/integration/auth/ui/AuthOnboardingPage.ui.test.tsx` (UI onboarding)
+- `src/test/unit/auth/auth-schemas.test.ts` (schemas y validaciones)
+- `src/test/unit/auth/auth-rules.test.ts` (reglas de contraseña y OTP)
+- `src/test/unit/auth/auth-messages.test.ts` (mapeo de errores)
 
 ---
 
