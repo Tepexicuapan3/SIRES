@@ -46,7 +46,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { User } from "@api/types/users.types";
+import type { User } from "@api/types";
 
 export interface UsersDataTableProps {
   /** Callback cuando se hace click en "Ver Detalle" */

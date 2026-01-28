@@ -61,7 +61,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { CreateUserRequest } from "@api/types/users.types";
+import type { CreateUserRequest } from "@api/types";
 
 // ============================================================
 // ZOD SCHEMA - VALIDACIÓN DE FORMULARIO

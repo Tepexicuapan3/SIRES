@@ -31,11 +31,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useDeleteRole } from "../../hooks/useRoles";
-import type { RoleWithCount } from "@/api/types/roles.types";
+import type { RoleWithCounts } from "@api/types";
 import { toast } from "sonner";
 
 interface RolesListProps {
-  roles: RoleWithCount[];
+  roles: RoleWithCounts[];
   isLoading?: boolean;
   onEdit: (roleId: number) => void;
   onViewDetail: (roleId: number) => void;

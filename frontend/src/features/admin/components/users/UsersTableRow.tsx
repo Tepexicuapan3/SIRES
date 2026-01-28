@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { TableRow, TableCell } from "@/components/ui/table";
-import type { User } from "@api/types/users.types";
+import type { User } from "@api/types";
 import { cn } from "@/lib/utils";
 
 /**

@@ -63,13 +63,10 @@ import {
   Building2,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  useCreateUser,
-  useUpdateUser,
-} from "../../hooks/useAdminUsers";
+import { useCreateUser, useUpdateUser } from "../../hooks/useAdminUsers";
 import { useClinics } from "../../hooks/useClinics";
 import { useRoles } from "../../hooks/useRoles";
-import type { UserDetail } from "@api/types/users.types";
+import type { UserDetail } from "@api/types";
 
 // ============================================================
 // VALIDACIÓN CON ZOD

@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { User } from "@api/types/users.types";
+import type { User } from "@api/types";
 
 /**
  * UsersList - Tabla simplificada de usuarios

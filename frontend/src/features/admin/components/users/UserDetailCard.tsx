@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useClinics } from "../../hooks/useClinics";
-import type { UserDetail } from "@api/types/users.types";
+import type { UserDetail } from "@api/types";
 
 /**
  * UserDetailCard - Card con información completa del usuario

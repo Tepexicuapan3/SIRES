@@ -27,7 +27,7 @@ import {
   useRevokeRole,
 } from "../../hooks/useAdminUsers";
 import { useRoles } from "../../hooks/useRoles";
-import type { UserRole } from "@api/types/users.types";
+import type { UserRole } from "@api/types";
 
 /**
  * UserRolesManager - Gestión de roles de un usuario

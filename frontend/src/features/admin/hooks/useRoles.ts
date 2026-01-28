@@ -11,7 +11,9 @@ import type {
   CreateRoleRequest,
   UpdateRoleRequest,
   AssignPermissionsRequest,
-} from "@api/types/roles.types";
+  RolesListResponse,
+  RoleWithCounts,
+} from "@api/types";
 
 /**
  * Hook para listar todos los roles
@@ -22,9 +24,9 @@ import type {
  * para mantener compatibilidad con componentes existentes
  */
 export const useRoles = () => {
-  return useQuery({
+  return useQuery<RolesListResponse, Error, RoleWithCounts[]>({
     queryKey: ["roles"],
-    queryFn: rolesAPI.getRoles,
+    queryFn: () => rolesAPI.getRoles(),
     staleTime: 5 * 60 * 1000, // 5 minutos - los roles no cambian frecuentemente
     select: (data) => data.roles, // Extraer solo el array de roles
   });

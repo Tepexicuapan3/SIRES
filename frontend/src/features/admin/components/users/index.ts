@@ -7,7 +7,6 @@
  */
 
 // Componentes principales (integración completa)
-export { UsersPage } from "./UsersPage";
 export { UsersTableToolbar } from "./UsersTableToolbar";
 export { UsersDataTable } from "./UsersDataTable";
 

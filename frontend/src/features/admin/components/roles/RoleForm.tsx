@@ -33,7 +33,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useCreateRole, useUpdateRole } from "../../hooks/useRoles";
-import type { Role } from "@/api/types/roles.types";
+import type { Role } from "@api/types";
 import { toast } from "sonner";
 
 // Schema de validación con Zod
