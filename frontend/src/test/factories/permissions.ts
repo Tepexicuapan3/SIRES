@@ -1,35 +1,67 @@
 import { faker } from "@faker-js/faker";
-import type { Permission, UserPermissionOverride } from "@/api/types/permissions.types";
+import type { Permission } from "@/api/types/permissions.types";
+import type { UserOverride } from "@/api/types/users.types";
 
-// Categorías comunes en el sistema
-const CATEGORIES = ["EXPEDIENTES", "USUARIOS", "REPORTES", "CONFIGURACION", "CONSULTAS"];
-
-export const createMockPermission = (overrides: Partial<Permission> = {}): Permission => {
-  const resource = faker.helpers.arrayElement(["expedientes", "usuarios", "consultas"]);
-  const action = faker.helpers.arrayElement(["create", "read", "update", "delete"]);
-  const code = `${resource}:${action}`;
+export const createMockPermission = (
+  overrides: Partial<Permission> = {},
+): Permission => {
+  const group = faker.helpers.arrayElement([
+    "admin",
+    "clinico",
+    "recepcion",
+    "farmacia",
+    "urgencias",
+  ]);
+  const moduleName = faker.helpers.arrayElement([
+    "gestion",
+    "catalogos",
+    "consultas",
+    "expedientes",
+    "fichas",
+  ]);
+  const submodule = faker.helpers.arrayElement([
+    "usuarios",
+    "roles",
+    "areas",
+    "medicina_general",
+    "especialidad",
+  ]);
+  const action = faker.helpers.arrayElement([
+    "create",
+    "read",
+    "update",
+    "delete",
+  ]);
+  const code = `${group}:${moduleName}:${submodule}:${action}`;
 
   return {
-    id_permission: faker.number.int({ min: 1, max: 200 }),
+    id: faker.number.int({ min: 1, max: 200 }),
     code,
-    resource,
-    action,
-    description: `Permite ${action} ${resource}`,
-    category: faker.helpers.arrayElement(CATEGORIES),
+    description: `Permite ${action} ${submodule}`,
+    isSystem: true,
     ...overrides,
   };
 };
 
-export const createMockUserOverride = (overrides: Partial<UserPermissionOverride> = {}): UserPermissionOverride => {
+export const createMockUserOverride = (
+  overrides: Partial<UserOverride> = {},
+): UserOverride => {
   const permission = createMockPermission();
-  
+
   return {
-    id_user_permission_override: faker.number.int({ min: 1, max: 1000 }),
-    permission_code: permission.code,
-    permission_description: permission.description,
+    id: faker.number.int({ min: 1, max: 1000 }),
+    permissionCode: permission.code,
+    permissionDescription: permission.description,
     effect: faker.datatype.boolean() ? "ALLOW" : "DENY",
-    expires_at: faker.date.future().toISOString(),
-    is_expired: false,
+    expiresAt: faker.datatype.boolean()
+      ? faker.date.future().toISOString()
+      : null,
+    isExpired: false,
+    assignedAt: faker.date.recent().toISOString(),
+    assignedBy: {
+      id: faker.number.int({ min: 1, max: 1000 }),
+      name: faker.person.fullName(),
+    },
     ...overrides,
   };
 };

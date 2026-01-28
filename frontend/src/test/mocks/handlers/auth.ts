@@ -1,4 +1,5 @@
 import { http, HttpResponse, delay } from "msw";
+import type { AuthUser } from "@/api/types/auth.types";
 import { createMockAuthUser } from "../../factories/users";
 import { getApiUrl } from "../urls";
 
@@ -13,7 +14,7 @@ const isPasswordStrong = (password: string): boolean => {
 };
 
 // Helper para crear respuesta de login consistente
-const createLoginResponse = (user: any, requiresOnboarding = false) => {
+const createLoginResponse = (user: AuthUser, requiresOnboarding = false) => {
   return HttpResponse.json(
     {
       user,
@@ -118,9 +119,9 @@ export const authHandlers = [
       const user = createMockAuthUser({
         username: "admin",
         fullName: "Administrador",
+        landingRoute: "/admin/panel",
         roles: ["ADMIN"],
         permissions: ["*"], // Acceso total
-        landingRoute: "/admin",
       });
       return createLoginResponse(user);
     }
@@ -130,14 +131,15 @@ export const authHandlers = [
       const user = createMockAuthUser({
         username: "medico",
         fullName: "Dr. House",
+        landingRoute: "/clinico/consultas",
         roles: ["MEDICOS"],
         permissions: [
           "clinico:consultas:read",
           "clinico:consultas:create",
           "clinico:expedientes:read",
+          "clinico:somatometria:read",
           "admin:catalogos:centros_atencion:read",
         ],
-        landingRoute: "/clinico/consultas",
       });
       return createLoginResponse(user);
     }
@@ -147,13 +149,15 @@ export const authHandlers = [
       const user = createMockAuthUser({
         username: "recepcion",
         fullName: "Recepcion Central",
+        landingRoute: "/recepcion/fichas",
         roles: ["RECEPCION"],
         permissions: [
-          "recepcion:pacientes:create",
-          "recepcion:citas:create",
+          "recepcion:fichas:medicina_general:create",
+          "recepcion:fichas:especialidad:create",
+          "recepcion:fichas:urgencias:create",
+          "recepcion:incapacidad:create",
           "clinico:expedientes:read",
         ],
-        landingRoute: "/recepcion/pacientes",
       });
       return createLoginResponse(user);
     }
@@ -163,12 +167,12 @@ export const authHandlers = [
       const user = createMockAuthUser({
         username: "farmacia",
         fullName: "Farmacia Principal",
+        landingRoute: "/farmacia/recetas",
         roles: ["FARMACIA"],
         permissions: [
           "farmacia:recetas:dispensar",
           "farmacia:inventario:update",
         ],
-        landingRoute: "/farmacia/recetas",
       });
       return createLoginResponse(user);
     }
@@ -178,9 +182,9 @@ export const authHandlers = [
       const user = createMockAuthUser({
         username: "urgencias",
         fullName: "Medico Urgencias",
+        landingRoute: "/urgencias/triage",
         roles: ["URGENCIAS"],
         permissions: ["urgencias:triage:read"],
-        landingRoute: "/urgencias/triage",
       });
       return createLoginResponse(user);
     }
@@ -196,7 +200,6 @@ export const authHandlers = [
           "hospital:admision",
           "hospital:camas",
         ],
-        landingRoute: "/hospital",
       });
       return createLoginResponse(user);
     }
@@ -269,8 +272,6 @@ export const authHandlers = [
 
     // Convertir a string para asegurar comparación correcta
     const code = String(body.code);
-
-    console.log(`[Mock Auth] Verificando OTP: ${code}`); // Para depuración en consola
 
     if (code === "123456") {
       return HttpResponse.json({

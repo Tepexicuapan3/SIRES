@@ -19,11 +19,11 @@ El handler de autenticación (`handlers/auth.ts`) está configurado para aceptar
 
 | Usuario | Rol | Landing Page | Descripción |
 | :--- | :--- | :--- | :--- |
-| `admin` | **ADMINISTRADOR** | `/admin` | Acceso total (permiso `*`). |
-| `medico` | **MEDICOS** | `/consultas` | Acceso a consultas, recetas, lab. |
-| `recepcion` | **RECEPCION** | `/recepcion` | Registro de pacientes y citas. |
-| `farmacia` | **FARMACIA** | `/farmacia` | Dispensación e inventario. |
-| `urgencias` | **URGENCIAS** | `/urgencias` | Triage y atención de urgencias. |
+| `admin` | **ADMINISTRADOR** | `/admin/panel` | Acceso total (permiso `*`). |
+| `medico` | **MEDICOS** | `/clinico/consultas` | Acceso a consultas, expedientes y somatometría. |
+| `recepcion` | **RECEPCION** | `/recepcion/fichas` | Fichas e incapacidades. |
+| `farmacia` | **FARMACIA** | `/farmacia/recetas` | Dispensación e inventario. |
+| `urgencias` | **URGENCIAS** | `/urgencias/triage` | Triage y atención de urgencias. |
 | `hospital` | **HOSPITAL** | `/hospital` | Coordinación hospitalaria. |
 | `newuser` | (Nuevo) | - | Simula usuario que requiere onboarding. |
 
