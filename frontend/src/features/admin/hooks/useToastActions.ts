@@ -26,7 +26,7 @@
  */
 
 import { toast } from "sonner";
-import type { UserDetail, User } from "@api/types/users.types";
+import type { UserDetail, User } from "@api/types";
 
 /**
  * Tipos de acciones clasificadas por criticidad

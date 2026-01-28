@@ -21,7 +21,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
-import type { UsersListParams } from "@api/types/users.types";
+import type { UsersListParams } from "@api/types";
 
 /**
  * Estado de filtros internos (antes del debounce)

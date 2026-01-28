@@ -43,7 +43,7 @@ import {
   useUserEffectivePermissions,
   usePermissionsCatalog,
 } from "../../hooks/useAdminPermissions";
-import type { UserPermissionOverride } from "@api/types/permissions.types";
+import type { UserPermissionOverride } from "@api/types";
 
 /**
  * UserPermissionOverrides - Gestión de permisos temporales/excepcionales
@@ -88,7 +88,7 @@ export function UserPermissionOverrides({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEffectiveDialog, setShowEffectiveDialog] = useState(false);
   const [overrideToDelete, setOverrideToDelete] =
-    useState<UserPermissionOverride | null>(null);
+    useState<UserOverride | null>(null);
 
   // Form state para agregar override
   const [selectedPermissionCode, setSelectedPermissionCode] =

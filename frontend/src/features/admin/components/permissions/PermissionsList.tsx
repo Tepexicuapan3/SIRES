@@ -37,11 +37,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDeletePermission } from "../../hooks/useAdminPermissions";
-import type { PermissionResponse } from "@/api/types/permissions.types";
+import type { Permission } from "@api/types";
 import { toast } from "sonner";
 
 interface PermissionsListProps {
-  permissions: PermissionResponse[];
+  permissions: Permission[];
   isLoading?: boolean;
   onEdit: (permissionId: number) => void;
 }

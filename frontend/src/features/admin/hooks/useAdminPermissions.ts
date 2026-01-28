@@ -8,27 +8,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { permissionsAPI } from "@api/resources/permissions.api";
 import type {
+  AddUserOverrideRequest,
   CreatePermissionRequest,
   UpdatePermissionRequest,
-  AddUserOverrideRequest,
-} from "@api/types/permissions.types";
+  UserOverride,
+} from "@api/types";
 
 // ========== CRUD DE PERMISOS ==========
 
 /**
- * Hook para obtener catálogo completo de permisos
- * Incluye agrupación por categoría
- */
-export const usePermissionsCatalog = () => {
-  return useQuery({
-    queryKey: ["permissions", "catalog"],
-    queryFn: permissionsAPI.getCatalog,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-  });
-};
-
-/**
  * Hook para listar todos los permisos (lista plana)
+ * Alias: usePermissionsCatalog usa la misma query
  */
 export const usePermissions = () => {
   return useQuery({
@@ -39,8 +29,14 @@ export const usePermissions = () => {
 };
 
 /**
+ * Alias de usePermissions para compatibilidad con componentes
+ * que esperan el nombre "catalog"
+ */
+export const usePermissionsCatalog = usePermissions;
+
+/**
  * Hook para obtener detalle de un permiso
- * @param id - ID del permiso
+ * GET /permissions/:id
  */
 export const usePermission = (id: number | null) => {
   return useQuery({
@@ -52,7 +48,8 @@ export const usePermission = (id: number | null) => {
 };
 
 /**
- * Hook para crear un nuevo permiso
+ * Hook para crear un nuevo permiso custom
+ * POST /permissions
  */
 export const useCreatePermission = () => {
   const queryClient = useQueryClient();
@@ -67,9 +64,8 @@ export const useCreatePermission = () => {
 };
 
 /**
- * Hook para actualizar un permiso
- * NOTA: Solo permite modificar description y category
- * @param id - ID del permiso
+ * Hook para actualizar un permiso existente
+ * PUT /permissions/:id
  */
 export const useUpdatePermission = (id: number) => {
   const queryClient = useQueryClient();
@@ -85,8 +81,8 @@ export const useUpdatePermission = (id: number) => {
 };
 
 /**
- * Hook para eliminar un permiso
- * ADVERTENCIA: Elimina todas las asignaciones a roles
+ * Hook para eliminar un permiso custom (baja lógica)
+ * DELETE /permissions/:id
  */
 export const useDeletePermission = () => {
   const queryClient = useQueryClient();
@@ -101,30 +97,33 @@ export const useDeletePermission = () => {
 
 // ========== USER PERMISSION OVERRIDES ==========
 
-/**
- * Hook para obtener overrides de un usuario
- * @param userId - ID del usuario
- */
+// TODO: Reemplazar stubs cuando existan endpoints reales.
 export const useUserOverrides = (userId: number | null) => {
-  return useQuery({
+  return useQuery<{ overrides: UserOverride[] }>({
     queryKey: ["user-overrides", userId],
-    queryFn: () => permissionsAPI.getUserOverrides(userId!),
-    enabled: !!userId,
-    staleTime: 2 * 60 * 1000, // 2 minutos - overrides cambian más frecuentemente
+    queryFn: async () => ({ overrides: [] }),
+    enabled: false,
+    staleTime: 2 * 60 * 1000,
+    initialData: { overrides: [] },
   });
 };
 
-/**
- * Hook para obtener permisos efectivos de un usuario
- * Resultado de: (permisos de roles + ALLOW overrides) - DENY overrides
- * @param userId - ID del usuario
- */
+type EffectivePermissionOverride = {
+  permission_code: string;
+  effect: "ALLOW" | "DENY";
+  is_expired: boolean;
+};
+
 export const useUserEffectivePermissions = (userId: number | null) => {
-  return useQuery({
+  return useQuery<{
+    permissions: string[];
+    overrides: EffectivePermissionOverride[];
+  }>({
     queryKey: ["user-effective-permissions", userId],
-    queryFn: () => permissionsAPI.getUserEffectivePermissions(userId!),
-    enabled: !!userId,
+    queryFn: async () => ({ permissions: [], overrides: [] }),
+    enabled: false,
     staleTime: 2 * 60 * 1000,
+    initialData: { permissions: [], overrides: [] },
   });
 };
 

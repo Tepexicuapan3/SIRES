@@ -17,7 +17,7 @@ import type {
   UpdateUserRequest,
   AssignRolesRequest,
   SetPrimaryRoleRequest,
-} from "@api/types/users.types";
+} from "@api/types";
 
 // ========== CRUD DE USUARIOS ==========
 

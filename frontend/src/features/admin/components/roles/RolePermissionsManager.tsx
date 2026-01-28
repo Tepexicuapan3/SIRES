@@ -42,7 +42,7 @@ import {
 } from "../../hooks/useRoles";
 import { usePermissionsCatalog } from "../../hooks/useAdminPermissions";
 import { toast } from "sonner";
-import type { Permission } from "@/api/types/permissions.types";
+import type { Permission } from "@api/types";
 
 interface RolePermissionsManagerProps {
   roleId: number;
