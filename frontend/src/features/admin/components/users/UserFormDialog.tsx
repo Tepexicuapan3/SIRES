@@ -560,10 +560,10 @@ export function UserFormDialog({
                           </SelectItem>
                           {clinicas.map((clinica) => (
                             <SelectItem
-                              key={clinica.id_clin}
-                              value={clinica.id_clin.toString()}
+                              key={clinica.id}
+                              value={clinica.id.toString()}
                             >
-                              {clinica.clinica} ({clinica.folio_clin})
+                              {clinica.name} ({clinica.folioCode})
                             </SelectItem>
                           ))}
                         </SelectContent>

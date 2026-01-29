@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import {
   User as UserIcon,
   Mail,
@@ -58,10 +57,10 @@ export function UserDetailCard({
   /**
    * Buscar la clínica asignada al usuario
    */
-  const clinicaUsuario = useMemo(() => {
-    if (!user.id_clin) return null;
-    return clinicas.find((c) => c.id_clin === user.id_clin);
-  }, [user.id_clin, clinicas]);
+  const clinicId = user.clinic?.id;
+  const clinicaUsuario = clinicId
+    ? clinicas.find((c) => c.id === clinicId)
+    : null;
 
   // ============================================================
   // ESTADO Y HELPERS
@@ -185,11 +184,11 @@ export function UserDetailCard({
               <div className="flex-1">
                 <p className="text-sm text-txt-muted">Clínica Asignada</p>
                 <p className="font-medium text-txt-body">
-                  {clinicaUsuario ? (
+                  {clinicaUsuario || user.clinic ? (
                     <>
-                      {clinicaUsuario.clinica}
+                      {(clinicaUsuario?.name ?? user.clinic?.name) || "Clínica"}
                       <span className="text-txt-muted ml-2">
-                        ({clinicaUsuario.folio_clin})
+                        ({clinicaUsuario?.folioCode || "—"})
                       </span>
                     </>
                   ) : (

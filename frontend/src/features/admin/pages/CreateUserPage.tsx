@@ -37,7 +37,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { usersAPI } from "@api/resources/users.api";
-import type { Clinic } from "@api/types";
+import type { CentroAtencionListItem } from "@api/types";
 import { useClinics } from "../hooks/useClinics";
 import { useRoles } from "../hooks/useRoles";
 
@@ -302,12 +302,12 @@ export const CreateUserPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="null">Sin clínica asignada</SelectItem>
-                      {clinicas.map((clinica: Clinic) => (
+                      {clinicas.map((clinica: CentroAtencionListItem) => (
                         <SelectItem
                           key={clinica.id}
                           value={clinica.id.toString()}
                         >
-                          {clinica.name} ({clinica.code})
+                          {clinica.name} ({clinica.folioCode})
                         </SelectItem>
                       ))}
                     </SelectContent>

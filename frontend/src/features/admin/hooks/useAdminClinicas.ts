@@ -5,7 +5,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { clinicasAPI } from "@api/resources/clinicas.api";
+import { centrosAtencionAPI } from "@api/resources/catalogos/centros-atencion.api";
 
 /**
  * Hook para listar todas las clínicas activas
@@ -15,7 +15,8 @@ import { clinicasAPI } from "@api/resources/clinicas.api";
 export const useClinicas = () => {
   return useQuery({
     queryKey: ["clinicas"],
-    queryFn: () => clinicasAPI.getClinicas(),
+    queryFn: () => centrosAtencionAPI.getAll({ isActive: true }),
+    select: (data) => data.items,
     staleTime: 10 * 60 * 1000, // 10 minutos - las clínicas son datos casi estáticos
   });
 };
