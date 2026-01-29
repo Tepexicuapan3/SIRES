@@ -3,6 +3,11 @@ import { UserPlus, Star, Trash2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -325,21 +330,27 @@ export function UserRolesManager({ userId }: UserRolesManagerProps) {
                 </div>
 
                 {/* Botón revocar */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setRoleToRevoke(userRole)}
-                  disabled={!canRevokeRole}
-                  className="gap-2 text-status-critical hover:text-status-critical hover:bg-status-critical/10"
-                  title={
-                    !canRevokeRole
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRoleToRevoke(userRole)}
+                        disabled={!canRevokeRole}
+                        className="gap-2 text-status-critical hover:text-status-critical hover:bg-status-critical/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Revocar
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {!canRevokeRole
                       ? "No podés revocar el último rol"
-                      : "Revocar este rol"
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Revocar
-                </Button>
+                      : "Revocar este rol"}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             ))}
           </div>

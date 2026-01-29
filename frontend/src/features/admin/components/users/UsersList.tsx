@@ -2,6 +2,11 @@ import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Table,
   TableBody,
   TableCell,
@@ -154,16 +159,22 @@ export function UsersList({ users, isLoading, onViewDetails }: UsersListProps) {
 
                 {/* Más Detalles */}
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onViewDetails(user.id_usuario)}
-                    className="gap-2"
-                    title="Ver información completa del usuario"
-                  >
-                    <Eye className="h-4 w-4" />
-                    Más Detalles
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onViewDetails(user.id_usuario)}
+                        className="gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Más Detalles
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Ver información completa del usuario
+                    </TooltipContent>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
             );

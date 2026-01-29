@@ -21,6 +21,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -154,41 +159,72 @@ export const RolesList = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onViewDetail(role.id_rol)}
-                        title="Ver detalle"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(role.id_rol)}
-                        disabled={isSystemRole}
-                        title={
-                          isSystemRole
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onViewDetail(role.id_rol)}
+                              aria-label="Ver detalle"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>Ver detalle</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onEdit(role.id_rol)}
+                              disabled={isSystemRole}
+                              aria-label={
+                                isSystemRole
+                                  ? "No se pueden editar roles del sistema"
+                                  : "Editar rol"
+                              }
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isSystemRole
                             ? "No se pueden editar roles del sistema"
-                            : "Editar rol"
-                        }
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRoleToDelete(role.id_rol)}
-                        disabled={isSystemRole}
-                        title={
-                          isSystemRole
+                            : "Editar rol"}
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setRoleToDelete(role.id_rol)}
+                              disabled={isSystemRole}
+                              aria-label={
+                                isSystemRole
+                                  ? "No se pueden eliminar roles del sistema"
+                                  : "Eliminar rol"
+                              }
+                              className="text-status-critical hover:text-status-critical"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isSystemRole
                             ? "No se pueden eliminar roles del sistema"
-                            : "Eliminar rol"
-                        }
-                        className="text-status-critical hover:text-status-critical"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                            : "Eliminar rol"}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>

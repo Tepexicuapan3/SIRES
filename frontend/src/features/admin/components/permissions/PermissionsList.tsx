@@ -20,6 +20,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -181,35 +186,58 @@ export const PermissionsList = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(permission.id_permission)}
-                        disabled={isSystem}
-                        title={
-                          isSystem
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onEdit(permission.id_permission)}
+                              disabled={isSystem}
+                              aria-label={
+                                isSystem
+                                  ? "No se pueden editar permisos del sistema"
+                                  : "Editar permiso"
+                              }
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isSystem
                             ? "No se pueden editar permisos del sistema"
-                            : "Editar permiso"
-                        }
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setPermissionToDelete(permission.id_permission)
-                        }
-                        disabled={isSystem}
-                        title={
-                          isSystem
+                            : "Editar permiso"}
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setPermissionToDelete(permission.id_permission)
+                              }
+                              disabled={isSystem}
+                              aria-label={
+                                isSystem
+                                  ? "No se pueden eliminar permisos del sistema"
+                                  : "Eliminar permiso"
+                              }
+                              className="text-status-critical hover:text-status-critical"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isSystem
                             ? "No se pueden eliminar permisos del sistema"
-                            : "Eliminar permiso"
-                        }
-                        className="text-status-critical hover:text-status-critical"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                            : "Eliminar permiso"}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>
