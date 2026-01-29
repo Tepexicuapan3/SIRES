@@ -14,6 +14,13 @@ import type {
   UpdateUserRequest,
 } from "@/api/types/users.types";
 
+const MOCK_DELAY = {
+  list: 1200,
+  detail: 900,
+  mutate: 800,
+  fast: 600,
+};
+
 // Base de datos de usuarios en memoria (100 usuarios)
 // INYECTAMOS "PERSONAS" PARA TESTEO VISUAL DE UI/UX
 const usersDB = [
@@ -48,7 +55,8 @@ const usersDB = [
 // Usamos matchers permisivos para evitar problemas con baseURL
 export const usersHandlers = [
   // Listar usuarios (Paginado y Filtrado Real)
-  http.get(getApiUrl("users"), ({ request }) => {
+  http.get(getApiUrl("users"), async ({ request }) => {
+    await delay(MOCK_DELAY.list);
     const url = new URL(request.url);
     const page = Number(url.searchParams.get("page") || 1);
     const pageSize = Number(
@@ -117,7 +125,7 @@ export const usersHandlers = [
 
   // Crear usuario (PERSISTENTE EN MEMORIA)
   http.post(getApiUrl("users"), async ({ request }) => {
-    await delay(500);
+    await delay(MOCK_DELAY.mutate);
     const body = (await request.json()) as CreateUserRequest;
 
     const fullname = [body.firstName, body.paternalName, body.maternalName]
@@ -151,7 +159,8 @@ export const usersHandlers = [
   }),
 
   // Detalle de usuario
-  http.get(getApiUrl("users/:id"), ({ params }) => {
+  http.get(getApiUrl("users/:id"), async ({ params }) => {
+    await delay(MOCK_DELAY.detail);
     const id = Number(params.id);
     const user = usersDB.find((u) => u.id === id);
 
@@ -180,7 +189,7 @@ export const usersHandlers = [
 
   // Actualizar usuario (PERSISTENTE EN MEMORIA)
   http.patch(getApiUrl("users/:id"), async ({ params, request }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.mutate);
     const id = Number(params.id);
     const body = (await request.json()) as UpdateUserRequest;
 
@@ -198,7 +207,7 @@ export const usersHandlers = [
 
   // Activar usuario (PERSISTENTE EN MEMORIA)
   http.patch(getApiUrl("users/:id/activate"), async ({ params }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.fast);
     const id = Number(params.id);
 
     const index = usersDB.findIndex((u) => u.id === id);
@@ -211,7 +220,7 @@ export const usersHandlers = [
 
   // Desactivar usuario (PERSISTENTE EN MEMORIA)
   http.patch(getApiUrl("users/:id/deactivate"), async ({ params }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.fast);
     const id = Number(params.id);
 
     const index = usersDB.findIndex((u) => u.id === id);
@@ -226,7 +235,7 @@ export const usersHandlers = [
 
   // Obtener roles (Redundante con detalle, pero por si se llama directo)
   http.get(getApiUrl("users/:id/roles"), async () => {
-    await delay(200);
+    await delay(MOCK_DELAY.detail);
     const userId = 1;
     const roles = [
       createMockUserRole({ isPrimary: true, name: "MEDICO" }),
@@ -237,7 +246,7 @@ export const usersHandlers = [
 
   // Asignar roles
   http.post(getApiUrl("users/:id/roles"), async ({ params, request }) => {
-    await delay(400);
+    await delay(MOCK_DELAY.mutate);
     const userId = Number(params.id);
     const body = (await request.json()) as AssignRolesRequest;
 
@@ -258,7 +267,7 @@ export const usersHandlers = [
   http.put(
     getApiUrl("users/:id/roles/primary"),
     async ({ params, request }) => {
-      await delay(300);
+      await delay(MOCK_DELAY.fast);
       const userId = Number(params.id);
       const body = (await request.json()) as SetPrimaryRoleRequest;
       const roles = [
@@ -274,7 +283,7 @@ export const usersHandlers = [
 
   // Revocar rol
   http.delete(getApiUrl("users/:id/roles/:roleId"), async ({ params }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.fast);
     const userId = Number(params.id);
     const roleId = Number(params.roleId);
 
@@ -295,7 +304,7 @@ export const usersHandlers = [
   // --- GESTION DE OVERRIDES ---
 
   http.get(getApiUrl("users/:id/overrides"), async ({ params }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.detail);
     const userId = Number(params.id);
     const overrides = Array.from({ length: 3 }).map(() =>
       createMockUserOverride(),
@@ -308,7 +317,7 @@ export const usersHandlers = [
   }),
 
   http.post(getApiUrl("users/:id/overrides"), async ({ params, request }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.mutate);
     const userId = Number(params.id);
     const body = (await request.json()) as AddUserOverrideRequest;
 
@@ -325,7 +334,7 @@ export const usersHandlers = [
   }),
 
   http.delete(getApiUrl("users/:id/overrides/:code"), async ({ params }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.fast);
     return HttpResponse.json({
       userId: Number(params.id),
       overrides: [],

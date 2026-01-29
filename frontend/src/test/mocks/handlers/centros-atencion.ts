@@ -5,6 +5,11 @@ import {
 } from "../../factories/centros-atencion";
 import { getApiUrl } from "../urls";
 
+const MOCK_DELAY = {
+  list: 1200,
+  detail: 900,
+};
+
 const centers = Array.from({ length: 10 }).map(() =>
   createMockCentroAtencionListItem(),
 );
@@ -21,7 +26,7 @@ centers.unshift(
 
 export const centrosAtencionHandlers = [
   http.get(getApiUrl("care-centers"), async ({ request }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.list);
     const url = new URL(request.url);
     const page = Number(url.searchParams.get("page") || 1);
     const pageSize = Number(url.searchParams.get("pageSize") || 20);
@@ -42,7 +47,7 @@ export const centrosAtencionHandlers = [
   }),
 
   http.get(getApiUrl("care-centers/:id"), async ({ params }) => {
-    await delay(200);
+    await delay(MOCK_DELAY.detail);
     const id = Number(params.id);
     const center = centers.find((item) => item.id === id);
 

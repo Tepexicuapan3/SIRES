@@ -3,6 +3,12 @@ import type { AuthUser } from "@/api/types/auth.types";
 import { createMockAuthUser } from "../../factories/users";
 import { getApiUrl } from "../urls";
 
+const MOCK_DELAY = {
+  auth: 900,
+  short: 600,
+  long: 1200,
+};
+
 // Función helper para validar contraseñas robustas (replica lógica de Zod del frontend)
 const isPasswordStrong = (password: string): boolean => {
   const hasMinLength = password.length >= 8;
@@ -35,7 +41,7 @@ export const authHandlers = [
   // ============================================================
 
   http.post(getApiUrl("auth/login"), async ({ request }) => {
-    await delay(400);
+    await delay(MOCK_DELAY.auth);
 
     const body = (await request.json()) as {
       username: string;
@@ -221,7 +227,7 @@ export const authHandlers = [
   }),
 
   http.post(getApiUrl("auth/logout"), async () => {
-    await delay(200);
+    await delay(MOCK_DELAY.short);
     return HttpResponse.json({
       success: true,
       message: "Sesion cerrada correctamente",
@@ -229,12 +235,13 @@ export const authHandlers = [
   }),
 
   http.get(getApiUrl("auth/me"), async () => {
+    await delay(MOCK_DELAY.short);
     const user = createMockAuthUser();
     return HttpResponse.json(user);
   }),
 
   http.post(getApiUrl("auth/refresh"), async () => {
-    await delay(200);
+    await delay(MOCK_DELAY.short);
     return HttpResponse.json({ success: true, message: "Sesion renovada" });
   }),
 
@@ -247,7 +254,7 @@ export const authHandlers = [
   // ============================================================
 
   http.post(getApiUrl("auth/request-reset-code"), async ({ request }) => {
-    await delay(500);
+    await delay(MOCK_DELAY.long);
     const body = (await request.json()) as { email: string };
 
     if (body.email === "error@fail.com") {
@@ -267,7 +274,7 @@ export const authHandlers = [
   }),
 
   http.post(getApiUrl("auth/verify-reset-code"), async ({ request }) => {
-    await delay(500);
+    await delay(MOCK_DELAY.long);
     const body = (await request.json()) as { code: string | number };
 
     // Convertir a string para asegurar comparación correcta
@@ -310,7 +317,7 @@ export const authHandlers = [
   }),
 
   http.post(getApiUrl("auth/reset-password"), async ({ request }) => {
-    await delay(800);
+    await delay(MOCK_DELAY.long);
     const body = (await request.json()) as { newPassword: string };
 
     // Simulación de Token Expirado
@@ -371,7 +378,7 @@ export const authHandlers = [
   // ============================================================
 
   http.post(getApiUrl("auth/complete-onboarding"), async ({ request }) => {
-    await delay(800);
+    await delay(MOCK_DELAY.long);
     const body = (await request.json()) as {
       newPassword: string;
       termsAccepted: boolean;

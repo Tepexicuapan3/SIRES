@@ -6,6 +6,12 @@ import {
 } from "../../factories/roles";
 import { getApiUrl } from "../urls";
 
+const MOCK_DELAY = {
+  list: 1200,
+  detail: 900,
+  mutate: 800,
+};
+
 // Base de datos en memoria para persistencia durante la sesión de test
 // Esto permite que si creo un rol, luego aparezca en la lista
 let rolesDB = Array.from({ length: 5 }).map((_, i) =>
@@ -20,7 +26,7 @@ let rolesDB = Array.from({ length: 5 }).map((_, i) =>
 export const rolesHandlers = [
   // Listar roles
   http.get(getApiUrl("roles"), async ({ request }) => {
-    await delay(300);
+    await delay(MOCK_DELAY.list);
     const url = new URL(request.url);
     const page = Number(url.searchParams.get("page") || 1);
     const pageSize = Number(url.searchParams.get("pageSize") || 20);
@@ -42,7 +48,7 @@ export const rolesHandlers = [
 
   // Detalle de rol
   http.get(getApiUrl("roles/:id"), async ({ params }) => {
-    await delay(200);
+    await delay(MOCK_DELAY.detail);
     const id = Number(params.id);
     const role = rolesDB.find((r) => r.id === id);
 
@@ -65,7 +71,7 @@ export const rolesHandlers = [
 
   // Crear rol
   http.post(getApiUrl("roles"), async ({ request }) => {
-    await delay(400);
+    await delay(MOCK_DELAY.mutate);
     const body = (await request.json()) as {
       name?: string;
       description?: string;
@@ -98,7 +104,7 @@ export const rolesHandlers = [
 
   // Actualizar rol
   http.put(getApiUrl("roles/:id"), async ({ params, request }) => {
-    await delay(400);
+    await delay(MOCK_DELAY.mutate);
     const id = Number(params.id);
 
     const roleIndex = rolesDB.findIndex((r) => r.id === id);
@@ -137,7 +143,7 @@ export const rolesHandlers = [
 
   // Eliminar rol
   http.delete(getApiUrl("roles/:id"), async ({ params }) => {
-    await delay(400);
+    await delay(MOCK_DELAY.mutate);
     const id = Number(params.id);
 
     const roleIndex = rolesDB.findIndex((r) => r.id === id);
