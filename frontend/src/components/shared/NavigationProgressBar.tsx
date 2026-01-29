@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigation } from "react-router-dom";
+import { useIsFetching } from "@tanstack/react-query";
 import NProgress from "nprogress";
 import "@/styles/nprogress.css";
 
@@ -9,6 +10,12 @@ import "@/styles/nprogress.css";
  */
 export const NavigationProgressBar = () => {
   const navigation = useNavigation();
+  const isFetching = useIsFetching();
+  const startTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    NProgress.configure({ parent: "#app-header-progress" });
+  }, []);
 
   useEffect(() => {
     // Configuración minimalista
@@ -22,12 +29,24 @@ export const NavigationProgressBar = () => {
 
   // Manejar estados de carga de loaders
   useEffect(() => {
-    if (navigation.state === "loading") {
-      NProgress.start();
+    const shouldStart = navigation.state === "loading" || isFetching > 0;
+
+    if (shouldStart) {
+      if (startTimeoutRef.current !== null) {
+        return;
+      }
+      startTimeoutRef.current = window.setTimeout(() => {
+        NProgress.start();
+        startTimeoutRef.current = null;
+      }, 120);
       return;
     }
+    if (startTimeoutRef.current !== null) {
+      window.clearTimeout(startTimeoutRef.current);
+      startTimeoutRef.current = null;
+    }
     NProgress.done();
-  }, [navigation.state]);
+  }, [isFetching, navigation.state]);
 
   return null;
 };
