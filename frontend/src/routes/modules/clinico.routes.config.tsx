@@ -1,27 +1,14 @@
-import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import ConsultasPage from "@features/consultas/pages/ConsultasPage";
+import AgendaPage from "@features/consultas/pages/AgendaPage";
+import NuevaConsultaPage from "@features/consultas/pages/NuevaConsultaPage";
+import HistorialPage from "@features/consultas/pages/HistorialPage";
+import ExpedientesListPage from "@features/expedientes/pages/ExpedientesListPage";
+import ExpedienteDetailPage from "@features/expedientes/pages/ExpedienteDetailPage";
+import PlaceholderPage from "@/components/shared/PlaceholderPage";
 
 // Clinico
-const ConsultasPage = lazy(
-  () => import("@features/consultas/pages/ConsultasPage"),
-);
-const AgendaPage = lazy(() => import("@features/consultas/pages/AgendaPage"));
-const NuevaConsultaPage = lazy(
-  () => import("@features/consultas/pages/NuevaConsultaPage"),
-);
-const HistorialPage = lazy(
-  () => import("@features/consultas/pages/HistorialPage"),
-);
-const ExpedientesListPage = lazy(
-  () => import("@features/expedientes/pages/ExpedientesListPage"),
-);
-const ExpedienteDetailPage = lazy(
-  () => import("@features/expedientes/pages/ExpedienteDetailPage"),
-);
-const PlaceholderPage = lazy(
-  () => import("@/components/shared/PlaceholderPage"),
-);
 
 const consultasRoutes: RouteObject[] = [
   {

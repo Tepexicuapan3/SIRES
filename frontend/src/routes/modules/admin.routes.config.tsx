@@ -1,18 +1,13 @@
-import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import AdminPage from "@features/admin/pages/AdminPage";
+import UsersPage from "@features/admin/pages/UsersPage";
+import CreateUserPage from "@features/admin/pages/CreateUserPage";
+import RolesPage from "@features/admin/pages/RolesPage";
+import CatalogosPage from "@features/admin/pages/CatalogosPage";
+import PlaceholderPage from "@/components/shared/PlaceholderPage";
 
 // Administracion
-const AdminPage = lazy(() => import("@features/admin/pages/AdminPage"));
-const UsersPage = lazy(() => import("@features/admin/pages/UsersPage"));
-const CreateUserPage = lazy(
-  () => import("@features/admin/pages/CreateUserPage"),
-);
-const RolesPage = lazy(() => import("@features/admin/pages/RolesPage"));
-const CatalogosPage = lazy(() => import("@features/admin/pages/CatalogosPage"));
-const PlaceholderPage = lazy(
-  () => import("@/components/shared/PlaceholderPage"),
-);
 
 /**
  * Rutas del grupo Administracion.

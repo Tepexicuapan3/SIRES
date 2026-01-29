@@ -24,21 +24,9 @@ const OnboardingPage = lazy(() =>
  * - Centraliza la carga de modulos para evitar duplicacion en UI.
  * - Los modulos se cargan en lazy para reducir el bundle inicial.
  */
-const CoreRoutes = lazy(() =>
-  import("@/routes/modules/core.routes").then((m) => ({
-    default: m.CoreRoutes,
-  })),
-);
-const AdminRoutes = lazy(() =>
-  import("@/routes/modules/admin.routes").then((m) => ({
-    default: m.AdminRoutes,
-  })),
-);
-const ClinicoRoutes = lazy(() =>
-  import("@/routes/modules/clinico.routes").then((m) => ({
-    default: m.ClinicoRoutes,
-  })),
-);
+const CoreRoutes = lazy(() => import("@/routes/modules/core.routes"));
+const AdminRoutes = lazy(() => import("@/routes/modules/admin.routes"));
+const ClinicoRoutes = lazy(() => import("@/routes/modules/clinico.routes"));
 const RecepcionRoutes = lazy(() =>
   import("@/routes/modules/placeholders.routes").then((m) => ({
     default: m.RecepcionRoutes,
