@@ -39,8 +39,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar-context";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
 import { useThemeStore } from "@/store/themeStore";
 import { useLogout } from "@features/auth/mutations/useLogout";
@@ -90,7 +91,7 @@ export function NavUser() {
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src="" alt="" />
                 <AvatarFallback
-                  className="rounded-lg bg-brand text-white font-display text-xs"
+                  className="rounded-md bg-brand text-white font-body font-extrabold text-sm"
                   aria-label={`Usuario ${user.username}`}
                 >
                   {userInitials}
@@ -106,7 +107,7 @@ export function NavUser() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            className="w-[--radix-dropdown-menu-trigger-width] mb-2 min-w-56 rounded-xl"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
@@ -116,7 +117,7 @@ export function NavUser() {
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src="" alt="" />
                   <AvatarFallback
-                    className="rounded-lg bg-brand text-white font-display text-xs"
+                    className="rounded-md bg-brand text-white font-body font-extrabold text-sm"
                     aria-label={`Usuario ${user.username}`}
                   >
                     {userInitials}
@@ -147,7 +148,6 @@ export function NavUser() {
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 {theme === "light" && <Sun className="mr-2 h-4 w-4" />}
@@ -155,7 +155,7 @@ export function NavUser() {
                 {theme === "system" && <Monitor className="mr-2 h-4 w-4" />}
                 Tema
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
+              <DropdownMenuSubContent className="mb-6">
                 <DropdownMenuItem onClick={() => setTheme("light")}>
                   <Sun className="mr-2 h-4 w-4" />
                   Claro
@@ -182,7 +182,7 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => logoutWithToast()}
-              className="text-status-critical cursor-pointer"
+              className="mb-1 text-status-critical cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Cerrar Sesión

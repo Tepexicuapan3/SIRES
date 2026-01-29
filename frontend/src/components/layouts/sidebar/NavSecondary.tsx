@@ -34,9 +34,11 @@ export function NavSecondary({ items }: NavSecondaryProps) {
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild size="sm" isActive={isActive}>
-                  <Link to={href}>
+                  <Link to={href} className="flex min-w-0 items-center gap-2">
                     {item.icon && <item.icon />}
-                    <span>{item.title}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {item.title}
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
