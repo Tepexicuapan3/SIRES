@@ -1,23 +1,22 @@
-from django.contrib.auth.hashers import make_password
 from unittest.mock import patch
 
+from apps.administracion.models import (AuditoriaEvento, RelRolPermiso,
+                                        RelUsuarioRol)
+from apps.authentication.models import DetUsuario, SyUsuario
+from apps.authentication.services.otp_service import store_code
+from apps.authentication.services.token_service import (ACCESS_COOKIE,
+                                                        CSRF_COOKIE,
+                                                        REFRESH_COOKIE,
+                                                        RESET_COOKIE,
+                                                        create_reset_token,
+                                                        generate_csrf_token)
+from apps.catalogos.models import CatPermiso, CatRol
 from django.contrib.auth.hashers import make_password
 from django.core.cache import cache
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
-
-from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
-from apps.authentication.models import DetUsuario, SyUsuario
-from apps.authentication.services.otp_service import store_code
-from apps.authentication.services.token_service import (
-    ACCESS_COOKIE,
-    CSRF_COOKIE,
-    RESET_COOKIE,
-    create_reset_token,
-)
-from apps.catalogos.models import CatPermiso, CatRol
 
 
 @override_settings(
@@ -64,7 +63,7 @@ class AuthApiTests(APITestCase):
     def _login(self):
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "abelb", "clave": "Abel_180903"},
+            {"username": "abelb", "password": "Abel_180903"},
             format="json",
             HTTP_X_REQUEST_ID="11111111-1111-1111-1111-111111111111",
         )
@@ -76,7 +75,10 @@ class AuthApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(ACCESS_COOKIE, response.cookies)
+        self.assertIn(REFRESH_COOKIE, response.cookies)
         self.assertIn(CSRF_COOKIE, response.cookies)
+        self.assertEqual(response.cookies[ACCESS_COOKIE]["samesite"], "Lax")
+        self.assertEqual(response.cookies[REFRESH_COOKIE]["samesite"], "Strict")
         self.assertIn("user", response.data)
         self.assertTrue(response.data["requiresOnboarding"])
         self.assertEqual(response.data["user"]["primaryRole"], "MEDICO")
@@ -91,7 +93,7 @@ class AuthApiTests(APITestCase):
     def test_login_invalid_password_has_request_id(self):
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "abelb", "clave": "ClaveMala1"},
+            {"username": "abelb", "password": "ClaveMala1"},
             format="json",
             HTTP_X_REQUEST_ID="req-123",
         )
@@ -124,10 +126,15 @@ class AuthApiTests(APITestCase):
     def test_refresh_rotates_tokens(self):
         login_response = self._login()
 
-        refresh_token = login_response.cookies.get("refresh_token").value
-        self.client.cookies["refresh_token"] = refresh_token
+        csrf_token = login_response.cookies.get(CSRF_COOKIE).value
 
-        response = self.client.post("/api/v1/auth/refresh")
+        refresh_token = login_response.cookies.get(REFRESH_COOKIE).value
+        self.client.cookies[REFRESH_COOKIE] = refresh_token
+
+        response = self.client.post(
+            "/api/v1/auth/refresh",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(ACCESS_COOKIE, response.cookies)
@@ -139,6 +146,17 @@ class AuthApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["code"], "TOKEN_INVALID")
+
+    def test_refresh_requires_csrf(self):
+        login_response = self._login()
+
+        refresh_token = login_response.cookies.get(REFRESH_COOKIE).value
+        self.client.cookies[REFRESH_COOKIE] = refresh_token
+
+        response = self.client.post("/api/v1/auth/refresh")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_DENIED")
 
     def test_logout_requires_csrf(self):
         login_response = self._login()
@@ -197,7 +215,7 @@ class AuthApiTests(APITestCase):
     def test_request_reset_code(self):
         response = self.client.post(
             "/api/v1/auth/request-reset-code",
-            {"correo": "abel@example.com"},
+            {"email": "abel@example.com"},
             format="json",
         )
 
@@ -207,7 +225,7 @@ class AuthApiTests(APITestCase):
     def test_request_reset_code_user_not_found(self):
         response = self.client.post(
             "/api/v1/auth/request-reset-code",
-            {"correo": "missing@example.com"},
+            {"email": "missing@example.com"},
             format="json",
         )
 
@@ -221,7 +239,7 @@ class AuthApiTests(APITestCase):
 
         response = self.client.post(
             "/api/v1/auth/request-reset-code",
-            {"correo": "abel@example.com"},
+            {"email": "abel@example.com"},
             format="json",
         )
 
@@ -233,20 +251,21 @@ class AuthApiTests(APITestCase):
 
         response = self.client.post(
             "/api/v1/auth/verify-reset-code",
-            {"correo": "abel@example.com", "code": "123456"},
+            {"email": "abel@example.com", "code": "123456"},
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"valid": True})
         self.assertIn(RESET_COOKIE, response.cookies)
+        self.assertIn(CSRF_COOKIE, response.cookies)
 
     def test_verify_reset_code_invalid(self):
         store_code("abel@example.com", "123456")
 
         response = self.client.post(
             "/api/v1/auth/verify-reset-code",
-            {"correo": "abel@example.com", "code": "000000"},
+            {"email": "abel@example.com", "code": "000000"},
             format="json",
         )
 
@@ -260,7 +279,7 @@ class AuthApiTests(APITestCase):
         for _ in range(5):
             response = self.client.post(
                 "/api/v1/auth/verify-reset-code",
-                {"correo": "abel@example.com", "code": "000000"},
+                {"email": "abel@example.com", "code": "000000"},
                 format="json",
             )
 
@@ -270,7 +289,7 @@ class AuthApiTests(APITestCase):
     def test_verify_reset_code_expired(self):
         response = self.client.post(
             "/api/v1/auth/verify-reset-code",
-            {"correo": "abel@example.com", "code": "123456"},
+            {"email": "abel@example.com", "code": "123456"},
             format="json",
         )
 
@@ -281,15 +300,35 @@ class AuthApiTests(APITestCase):
         reset_token = create_reset_token(self.user)
         self.client.cookies[RESET_COOKIE] = reset_token
 
+        csrf_token = generate_csrf_token()
+        self.client.cookies[CSRF_COOKIE] = csrf_token
+
+        response = self.client.post(
+            "/api/v1/auth/reset-password",
+            {"newPassword": "Nueva_Clave_123"},
+            format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(ACCESS_COOKIE, response.cookies)
+        self.assertTrue(response.data["requiresOnboarding"])
+
+    def test_reset_password_requires_csrf(self):
+        reset_token = create_reset_token(self.user)
+        self.client.cookies[RESET_COOKIE] = reset_token
+
+        csrf_token = generate_csrf_token()
+        self.client.cookies[CSRF_COOKIE] = csrf_token
+
         response = self.client.post(
             "/api/v1/auth/reset-password",
             {"newPassword": "Nueva_Clave_123"},
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn(ACCESS_COOKIE, response.cookies)
-        self.assertFalse(response.data["requiresOnboarding"])
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_DENIED")
 
     def test_reset_password_missing_token(self):
         response = self.client.post(
@@ -313,10 +352,14 @@ class AuthApiTests(APITestCase):
         reset_token = create_reset_token(self.user)
         self.client.cookies[RESET_COOKIE] = reset_token
 
+        csrf_token = generate_csrf_token()
+        self.client.cookies[CSRF_COOKIE] = csrf_token
+
         response = self.client.post(
             "/api/v1/auth/reset-password",
             {"newPassword": "corta"},
             format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -325,7 +368,7 @@ class AuthApiTests(APITestCase):
     def test_login_attempts_cleared_after_success(self):
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "abelb", "clave": "ClaveMala1"},
+            {"username": "abelb", "password": "ClaveMala1"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -335,7 +378,7 @@ class AuthApiTests(APITestCase):
 
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "abelb", "clave": "ClaveMala1"},
+            {"username": "abelb", "password": "ClaveMala1"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -346,7 +389,7 @@ class AuthApiTests(APITestCase):
 
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "abelb", "clave": "Abel_180903"},
+            {"username": "abelb", "password": "Abel_180903"},
             format="json",
         )
 
@@ -359,7 +402,7 @@ class AuthApiTests(APITestCase):
 
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "abelb", "clave": "Abel_180903"},
+            {"username": "abelb", "password": "Abel_180903"},
             format="json",
         )
 
@@ -372,7 +415,7 @@ class AuthApiTests(APITestCase):
 
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "abelb", "clave": "Abel_180903"},
+            {"username": "abelb", "password": "Abel_180903"},
             format="json",
         )
 
@@ -382,7 +425,7 @@ class AuthApiTests(APITestCase):
     def test_login_user_not_found(self):
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "missing", "clave": "Abel_180903"},
+            {"username": "missing", "password": "Abel_180903"},
             format="json",
         )
 
@@ -393,7 +436,7 @@ class AuthApiTests(APITestCase):
     def test_login_invalid_password(self):
         response = self.client.post(
             "/api/v1/auth/login",
-            {"usuario": "abelb", "clave": "ClaveMala1"},
+            {"username": "abelb", "password": "ClaveMala1"},
             format="json",
         )
 
@@ -404,7 +447,7 @@ class AuthApiTests(APITestCase):
         for _ in range(5):
             response = self.client.post(
                 "/api/v1/auth/login",
-                {"usuario": "abelb", "clave": "ClaveMala1"},
+                {"username": "abelb", "password": "ClaveMala1"},
                 format="json",
             )
 

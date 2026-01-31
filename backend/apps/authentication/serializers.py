@@ -3,8 +3,8 @@ from rest_framework import serializers
 
 class LoginSerializer(serializers.Serializer):
     # Credenciales de login.
-    usuario = serializers.CharField(min_length=2, max_length=10)
-    clave = serializers.CharField(min_length=8)
+    username = serializers.CharField(min_length=1, max_length=50)
+    password = serializers.CharField(min_length=1, max_length=255)
 
 
 class CompleteOnboardingSerializer(serializers.Serializer):
@@ -15,12 +15,12 @@ class CompleteOnboardingSerializer(serializers.Serializer):
 
 class RequestResetCodeSerializer(serializers.Serializer):
     # Email para recuperar password.
-    correo = serializers.EmailField()
+    email = serializers.EmailField()
 
 
 class VerifyResetCodeSerializer(serializers.Serializer):
     # Validacion de OTP.
-    correo = serializers.EmailField()
+    email = serializers.EmailField()
     code = serializers.CharField(min_length=6, max_length=6)
 
 

@@ -1,22 +1,22 @@
-from django.core.cache import cache
-from django.utils import timezone
-
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.errors import AuthServiceError
-from apps.authentication.services.token_service import create_access_refresh_tokens
+from apps.authentication.services.token_service import \
+    create_access_refresh_tokens
+from django.core.cache import cache
+from django.utils import timezone
 
 LOGIN_ATTEMPT_TTL = 600
 LOGIN_ATTEMPT_LIMIT = 5
 
 
-def login_user(usuario, clave, ip_address):
+def login_user(username, password, ip_address):
     # Autentica usuario y genera tokens.
-    user = UserRepository.get_by_username(usuario)
+    user = UserRepository.get_by_username(username)
 
     if not user:
         raise AuthServiceError("USER_NOT_FOUND", "Usuario no encontrado", 404)
 
-    if not UserRepository.verify_password(user, clave):
+    if not UserRepository.verify_password(user, password):
         # Suma intentos fallidos y retorna error.
         _increment_attempts(user)
         raise AuthServiceError(

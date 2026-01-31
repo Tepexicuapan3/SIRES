@@ -7,8 +7,8 @@ from rest_framework_simplejwt.exceptions import TokenBackendError, TokenError
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-ACCESS_COOKIE = "access_token"
-REFRESH_COOKIE = "refresh_token"
+ACCESS_COOKIE = "access_token_cookie"
+REFRESH_COOKIE = "refresh_token_cookie"
 CSRF_COOKIE = "csrf_token"
 RESET_COOKIE = "reset_token"
 
@@ -16,6 +16,12 @@ ACCESS_MAX_AGE = 60 * 15
 REFRESH_MAX_AGE = 60 * 60 * 24 * 7
 CSRF_MAX_AGE = 60 * 15
 RESET_MAX_AGE = 60 * 10
+
+
+def _cookie_secure() -> bool:
+    # En local (http) los navegadores ignoran cookies `Secure`.
+    # En prod (https) queremos `Secure=True`.
+    return not getattr(settings, "DEBUG", False)
 
 
 def generate_csrf_token():
@@ -72,13 +78,14 @@ def decode_reset_token(raw_token):
 
 def set_auth_cookies(response, access_token, refresh_token, csrf_token):
     # Set de cookies para sesion autenticada.
+    secure = _cookie_secure()
     response.set_cookie(
         ACCESS_COOKIE,
         access_token,
         max_age=ACCESS_MAX_AGE,
         httponly=True,
-        secure=True,
-        samesite="Strict",
+        secure=secure,
+        samesite="Lax",
         path="/api",
     )
     response.set_cookie(
@@ -86,7 +93,7 @@ def set_auth_cookies(response, access_token, refresh_token, csrf_token):
         refresh_token,
         max_age=REFRESH_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=secure,
         samesite="Strict",
         path="/api/v1/auth/refresh",
     )
@@ -94,7 +101,20 @@ def set_auth_cookies(response, access_token, refresh_token, csrf_token):
         CSRF_COOKIE,
         csrf_token,
         max_age=CSRF_MAX_AGE,
-        secure=True,
+        secure=secure,
+        samesite="Strict",
+        path="/",
+    )
+
+
+def set_csrf_cookie(response, csrf_token):
+    # Cookie CSRF (no HttpOnly) leida por el frontend.
+    secure = _cookie_secure()
+    response.set_cookie(
+        CSRF_COOKIE,
+        csrf_token,
+        max_age=CSRF_MAX_AGE,
+        secure=secure,
         samesite="Strict",
         path="/",
     )
@@ -102,12 +122,13 @@ def set_auth_cookies(response, access_token, refresh_token, csrf_token):
 
 def clear_auth_cookies(response):
     # Limpia cookies de sesion.
+    secure = _cookie_secure()
     response.set_cookie(
         ACCESS_COOKIE,
         "",
         max_age=0,
         httponly=True,
-        secure=True,
+        secure=secure,
         samesite="Strict",
         path="/api",
     )
@@ -116,7 +137,7 @@ def clear_auth_cookies(response):
         "",
         max_age=0,
         httponly=True,
-        secure=True,
+        secure=secure,
         samesite="Strict",
         path="/api/v1/auth/refresh",
     )
@@ -124,7 +145,7 @@ def clear_auth_cookies(response):
         CSRF_COOKIE,
         "",
         max_age=0,
-        secure=True,
+        secure=secure,
         samesite="Strict",
         path="/",
     )
@@ -132,12 +153,13 @@ def clear_auth_cookies(response):
 
 def set_reset_cookie(response, reset_token):
     # Cookie temporal para reset password.
+    secure = _cookie_secure()
     response.set_cookie(
         RESET_COOKIE,
         reset_token,
         max_age=RESET_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=secure,
         samesite="Strict",
         path="/api/v1/auth/reset-password",
     )
@@ -145,12 +167,13 @@ def set_reset_cookie(response, reset_token):
 
 def clear_reset_cookie(response):
     # Limpia cookie temporal de reset.
+    secure = _cookie_secure()
     response.set_cookie(
         RESET_COOKIE,
         "",
         max_age=0,
         httponly=True,
-        secure=True,
+        secure=secure,
         samesite="Strict",
         path="/api/v1/auth/reset-password",
     )

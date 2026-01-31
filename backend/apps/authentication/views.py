@@ -1,39 +1,38 @@
+from apps.authentication.repositories.user_repository import UserRepository
+from apps.authentication.serializers import (CompleteOnboardingSerializer,
+                                             LoginSerializer,
+                                             RequestResetCodeSerializer,
+                                             ResetPasswordSerializer,
+                                             VerifyResetCodeSerializer)
+from apps.authentication.services.audit_service import (log_event, mask_email,
+                                                        mask_username)
+from apps.authentication.services.csrf_service import validate_csrf
+from apps.authentication.services.errors import AuthServiceError
+from apps.authentication.services.response_service import (error_response,
+                                                           get_request_id)
+from apps.authentication.services.session_service import authenticate_request
+from apps.authentication.services.token_service import (REFRESH_COOKIE,
+                                                        clear_auth_cookies,
+                                                        clear_reset_cookie,
+                                                        generate_csrf_token,
+                                                        set_auth_cookies,
+                                                        set_csrf_cookie,
+                                                        set_reset_cookie)
+from apps.authentication.uses_case.login_usecase import login_user
+from apps.authentication.uses_case.me_usecase import build_me_response
+from apps.authentication.uses_case.onboarding_usecase import \
+    complete_onboarding
+from apps.authentication.uses_case.refresh_usecase import refresh_tokens
+from apps.authentication.uses_case.request_reset_code_usecase import \
+    request_reset_code
+from apps.authentication.uses_case.reset_password_usecase import reset_password
+from apps.authentication.uses_case.verify_reset_code_usecase import \
+    verify_reset_code
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from apps.authentication.serializers import (
-    LoginSerializer,
-    CompleteOnboardingSerializer,
-    RequestResetCodeSerializer,
-    VerifyResetCodeSerializer,
-    ResetPasswordSerializer,
-)
-from apps.authentication.repositories.user_repository import UserRepository
-from apps.authentication.services.audit_service import log_event, mask_email, mask_username
-from apps.authentication.services.csrf_service import validate_csrf
-from apps.authentication.services.errors import AuthServiceError
-from apps.authentication.services.response_service import (
-    error_response,
-    get_request_id,
-)
-from apps.authentication.services.session_service import authenticate_request
-from apps.authentication.services.token_service import (
-    clear_auth_cookies,
-    clear_reset_cookie,
-    generate_csrf_token,
-    set_auth_cookies,
-    set_reset_cookie,
-)
-from apps.authentication.uses_case.login_usecase import login_user
-from apps.authentication.uses_case.me_usecase import build_me_response
-from apps.authentication.uses_case.onboarding_usecase import complete_onboarding
-from apps.authentication.uses_case.refresh_usecase import refresh_tokens
-from apps.authentication.uses_case.request_reset_code_usecase import request_reset_code
-from apps.authentication.uses_case.reset_password_usecase import reset_password
-from apps.authentication.uses_case.verify_reset_code_usecase import verify_reset_code
 
 
 def _csrf_or_error(request):
@@ -63,7 +62,7 @@ class LoginView(APIView):
                 error_code="INVALID_CREDENTIALS",
                 meta={
                     "endpoint": "/auth/login",
-                    "username": mask_username(request.data.get("usuario")),
+                    "username": mask_username(request.data.get("username")),
                 },
             )
             return error_response(
@@ -76,12 +75,12 @@ class LoginView(APIView):
 
         try:
             result = login_user(
-                serializer.validated_data["usuario"],
-                serializer.validated_data["clave"],
+                serializer.validated_data["username"],
+                serializer.validated_data["password"],
                 request.META.get("REMOTE_ADDR"),
             )
         except AuthServiceError as exc:
-            user = UserRepository.get_by_username(serializer.validated_data.get("usuario"))
+            user = UserRepository.get_by_username(serializer.validated_data.get("username"))
             log_event(
                 request,
                 "LOGIN_FAILED",
@@ -91,7 +90,7 @@ class LoginView(APIView):
                 error_code=exc.code,
                 meta={
                     "endpoint": "/auth/login",
-                    "username": mask_username(serializer.validated_data.get("usuario")),
+                    "username": mask_username(serializer.validated_data.get("username")),
                 },
             )
             return error_response(
@@ -133,11 +132,11 @@ class LoginView(APIView):
             request,
             "LOGIN_SUCCESS",
             "SUCCESS",
-            actor_user=UserRepository.get_by_username(serializer.validated_data["usuario"]),
-            target_user=UserRepository.get_by_username(serializer.validated_data["usuario"]),
+            actor_user=UserRepository.get_by_username(serializer.validated_data["username"]),
+            target_user=UserRepository.get_by_username(serializer.validated_data["username"]),
             meta={
                 "endpoint": "/auth/login",
-                "username": mask_username(serializer.validated_data.get("usuario")),
+                "username": mask_username(serializer.validated_data.get("username")),
             },
         )
         return response
@@ -169,6 +168,15 @@ class LogoutView(APIView):
 
         csrf_error = _csrf_or_error(request)
         if csrf_error:
+            log_event(
+                request,
+                "LOGOUT",
+                "FAIL",
+                actor_user=user,
+                target_user=user,
+                error_code="PERMISSION_DENIED",
+                meta={"endpoint": "/auth/logout"},
+            )
             return csrf_error
 
         response = Response(
@@ -248,7 +256,7 @@ class RefreshView(APIView):
     permission_classes = []
 
     def post(self, request):
-        refresh_token = request.COOKIES.get("refresh_token")
+        refresh_token = request.COOKIES.get(REFRESH_COOKIE)
         if not refresh_token:
             log_event(
                 request,
@@ -263,6 +271,17 @@ class RefreshView(APIView):
                 status.HTTP_401_UNAUTHORIZED,
                 request_id=get_request_id(request),
             )
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            log_event(
+                request,
+                "TOKEN_REFRESH",
+                "FAIL",
+                error_code="PERMISSION_DENIED",
+                meta={"endpoint": "/auth/refresh"},
+            )
+            return csrf_error
 
         try:
             result = refresh_tokens(refresh_token)
@@ -333,6 +352,15 @@ class CompleteOnboardingView(APIView):
 
         csrf_error = _csrf_or_error(request)
         if csrf_error:
+            log_event(
+                request,
+                "ONBOARDING_FAILED",
+                "FAIL",
+                actor_user=user,
+                target_user=user,
+                error_code="PERMISSION_DENIED",
+                meta={"endpoint": "/auth/complete-onboarding"},
+            )
             return csrf_error
 
         serializer = CompleteOnboardingSerializer(data=request.data)
@@ -401,7 +429,10 @@ class CompleteOnboardingView(APIView):
             )
 
         response = Response(
-            {"user": result["user"], "requiresOnboarding": False},
+            {
+                "user": result["user"],
+                "requiresOnboarding": bool(result["user"].get("requiresOnboarding")),
+            },
             status=status.HTTP_200_OK,
         )
         # Re-emite tokens al completar onboarding.
@@ -431,26 +462,28 @@ class RequestResetCodeView(APIView):
     def post(self, request):
         serializer = RequestResetCodeSerializer(data=request.data)
         if not serializer.is_valid():
+            error_code = "INVALID_EMAIL" if "email" in serializer.errors else "VALIDATION_ERROR"
+            message = "Email inválido" if error_code == "INVALID_EMAIL" else "Hay errores en el formulario"
             log_event(
                 request,
                 "RESET_CODE_REQUESTED",
                 "FAIL",
-                error_code="USER_NOT_FOUND",
+                error_code=error_code,
                 meta={
                     "endpoint": "/auth/request-reset-code",
-                    "email": mask_email(request.data.get("correo")),
+                    "email": mask_email(request.data.get("email")),
                 },
             )
             return error_response(
-                "USER_NOT_FOUND",
-                "Usuario no encontrado",
-                status.HTTP_404_NOT_FOUND,
+                error_code,
+                message,
+                status.HTTP_400_BAD_REQUEST,
                 details=serializer.errors,
                 request_id=get_request_id(request),
             )
 
         try:
-            user = request_reset_code(serializer.validated_data["correo"])
+            user = request_reset_code(serializer.validated_data["email"])
         except AuthServiceError as exc:
             log_event(
                 request,
@@ -459,7 +492,7 @@ class RequestResetCodeView(APIView):
                 error_code=exc.code,
                 meta={
                     "endpoint": "/auth/request-reset-code",
-                    "email": mask_email(serializer.validated_data.get("correo")),
+                    "email": mask_email(serializer.validated_data.get("email")),
                 },
             )
             return error_response(
@@ -492,7 +525,7 @@ class RequestResetCodeView(APIView):
             target_user=user,
             meta={
                 "endpoint": "/auth/request-reset-code",
-                "email": mask_email(serializer.validated_data.get("correo")),
+                "email": mask_email(serializer.validated_data.get("email")),
             },
         )
         return Response({"success": True}, status=status.HTTP_200_OK)
@@ -506,19 +539,21 @@ class VerifyResetCodeView(APIView):
     def post(self, request):
         serializer = VerifyResetCodeSerializer(data=request.data)
         if not serializer.is_valid():
+            error_code = "INVALID_EMAIL" if "email" in serializer.errors else "INVALID_CODE"
+            message = "Email inválido" if error_code == "INVALID_EMAIL" else "Código incorrecto"
             log_event(
                 request,
                 "RESET_CODE_FAILED",
                 "FAIL",
-                error_code="INVALID_CODE",
+                error_code=error_code,
                 meta={
                     "endpoint": "/auth/verify-reset-code",
-                    "email": mask_email(request.data.get("correo")),
+                    "email": mask_email(request.data.get("email")),
                 },
             )
             return error_response(
-                "INVALID_CODE",
-                "Código incorrecto",
+                error_code,
+                message,
                 status.HTTP_400_BAD_REQUEST,
                 details=serializer.errors,
                 request_id=get_request_id(request),
@@ -526,7 +561,7 @@ class VerifyResetCodeView(APIView):
 
         try:
             result = verify_reset_code(
-                serializer.validated_data["correo"],
+                serializer.validated_data["email"],
                 serializer.validated_data["code"],
             )
         except AuthServiceError as exc:
@@ -537,7 +572,7 @@ class VerifyResetCodeView(APIView):
                 error_code=exc.code,
                 meta={
                     "endpoint": "/auth/verify-reset-code",
-                    "email": mask_email(serializer.validated_data.get("correo")),
+                    "email": mask_email(serializer.validated_data.get("email")),
                 },
             )
             return error_response(
@@ -565,6 +600,8 @@ class VerifyResetCodeView(APIView):
         response = Response({"valid": True}, status=status.HTTP_200_OK)
         # Token temporal para el reset.
         set_reset_cookie(response, result["reset_token"])
+        # CSRF para el siguiente paso (reset-password) que usa cookie.
+        set_csrf_cookie(response, generate_csrf_token())
         log_event(
             request,
             "RESET_CODE_VERIFIED",
@@ -573,7 +610,7 @@ class VerifyResetCodeView(APIView):
             target_user=result.get("user"),
             meta={
                 "endpoint": "/auth/verify-reset-code",
-                "email": mask_email(serializer.validated_data.get("correo")),
+                "email": mask_email(serializer.validated_data.get("email")),
             },
         )
         return response
@@ -618,6 +655,17 @@ class ResetPasswordView(APIView):
                 request_id=get_request_id(request),
             )
 
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            log_event(
+                request,
+                "PASSWORD_RESET_FAILED",
+                "FAIL",
+                error_code="PERMISSION_DENIED",
+                meta={"endpoint": "/auth/reset-password"},
+            )
+            return csrf_error
+
         try:
             result = reset_password(
                 reset_token,
@@ -655,7 +703,10 @@ class ResetPasswordView(APIView):
             )
 
         response = Response(
-            {"user": result["user"], "requiresOnboarding": False},
+            {
+                "user": result["user"],
+                "requiresOnboarding": bool(result["user"].get("requiresOnboarding")),
+            },
             status=status.HTTP_200_OK,
         )
         # Cierra el flujo de reset con nueva sesion.

@@ -1,17 +1,13 @@
 import time
 from unittest.mock import patch
 
+from apps.authentication.services.otp_service import (OTP_REQUEST_LIMIT,
+                                                      clear_code,
+                                                      generate_code, get_code,
+                                                      increment_attempts,
+                                                      rate_limit_request,
+                                                      store_code)
 from django.test import TestCase, override_settings
-
-from apps.authentication.services.otp_service import (
-    OTP_REQUEST_LIMIT,
-    clear_code,
-    generate_code,
-    get_code,
-    increment_attempts,
-    rate_limit_request,
-    store_code,
-)
 
 
 @override_settings(
@@ -50,7 +46,7 @@ class OtpServiceTests(TestCase):
         clear_code(email)
 
     def test_rate_limit_request(self):
-        email = "user@example.com"
+        email = "rate-limit@example.com"
 
         limited = False
         for _ in range(OTP_REQUEST_LIMIT + 1):
@@ -59,7 +55,7 @@ class OtpServiceTests(TestCase):
         self.assertTrue(limited)
 
     def test_rate_limit_request_resets(self):
-        email = "user@example.com"
+        email = "rate-limit-reset@example.com"
         with patch("apps.authentication.services.otp_service.OTP_REQUEST_LIMIT", 1), patch(
             "apps.authentication.services.otp_service.OTP_REQUEST_TTL_SECONDS", 1
         ):
