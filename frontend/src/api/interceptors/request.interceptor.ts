@@ -37,7 +37,7 @@ export function setupRequestInterceptor(client: AxiosInstance): void {
       config.method &&
       MUTATING_METHODS.includes(config.method.toUpperCase())
     ) {
-      const csrfToken = Cookies.get("csrf_access_token");
+      const csrfToken = Cookies.get("csrf_token");
       if (csrfToken) {
         config.headers["X-CSRF-TOKEN"] = csrfToken;
       }

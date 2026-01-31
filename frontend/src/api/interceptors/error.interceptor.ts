@@ -109,8 +109,8 @@ async function attemptTokenRefresh(
         "X-Request-ID":
           (originalRequest.headers?.["X-Request-ID"] as string) ||
           crypto.randomUUID(),
-        ...(Cookies.get("csrf_access_token")
-          ? { "X-CSRF-TOKEN": Cookies.get("csrf_access_token") as string }
+        ...(Cookies.get("csrf_token")
+          ? { "X-CSRF-TOKEN": Cookies.get("csrf_token") as string }
           : {}),
       },
     });
