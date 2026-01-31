@@ -10,9 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path
-from decouple import config
+import sys
 from datetime import timedelta
+from pathlib import Path
+
+from corsheaders.defaults import default_headers
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -102,6 +105,15 @@ DATABASES = {
     }
 }
 
+# Tests: usar SQLite para evitar depender de privilegios MySQL (crear test DB).
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -158,6 +170,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
+    # Nuestro usuario no usa el campo "id" default de Django.
+    'USER_ID_FIELD': 'id_usuario',
 }
 
 # CORS
@@ -168,8 +182,15 @@ CORS_ALLOWED_ORIGINS = config(
 
 CORS_ALLOW_CREDENTIALS = True
 
+# Headers custom usados por el frontend (trazabilidad + CSRF custom)
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-request-id',
+    'x-csrf-token',
+]
+
 # Email SMTP (configurar via .env)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# En desarrollo (DEBUG=True) usa console backend para evitar errores de SMTP
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
