@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 /**
  * AuthCard - Componente Reutilizable para Flujos de Autenticación
@@ -59,18 +60,24 @@ const BackButton = ({
   onBack: () => void;
   className?: string;
 }) => (
-  <button
+  <Button
     type="button"
+    variant="ghost"
+    size="sm"
     onClick={onBack}
     className={cn(
-      "flex items-center gap-1 text-xs text-txt-muted hover:text-brand transition-colors min-h-11",
+      "group gap-1 text-xs text-txt-muted hover:text-brand",
       className,
     )}
     aria-label="Volver al paso anterior"
   >
-    <ArrowLeft size={16} aria-hidden="true" />
+    <ArrowLeft
+      size={16}
+      className="group-hover:-translate-x-1 transition-transform"
+      aria-hidden="true"
+    />
     <span className="font-medium">Volver</span>
-  </button>
+  </Button>
 );
 
 export const AuthCard = ({

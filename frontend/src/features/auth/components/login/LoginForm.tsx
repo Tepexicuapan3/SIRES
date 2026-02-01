@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, User, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { useLogin } from "@features/auth/mutations/useLogin";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   loginSchema,
   type LoginFormData,
@@ -71,7 +72,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
       <div className="space-y-5">
         <FormField
           id="username"
-          label="Usuario"
+          label="No. Expediente o Usuario"
           placeholder="Ej. mperez123"
           icon={<User size={18} />}
           error={errors.username}
@@ -123,21 +124,23 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
               />
             )}
           />
-          <label
+          <Label
             htmlFor="rememberMe"
-            className="text-sm text-txt-muted hover:text-txt-body transition-colors select-none cursor-pointer"
+            className="text-sm font-normal text-txt-muted hover:text-txt-body cursor-pointer"
           >
             Recordarme
-          </label>
+          </Label>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={onForgotPassword}
-          className="text-sm font-medium text-brand hover:text-brand-hover hover:underline underline-offset-4 decoration-2 transition-all"
+          className="px-0 h-auto"
         >
           ¿Olvidaste tu contraseña?
-        </button>
+        </Button>
       </div>
 
       {/* Botón Principal */}
@@ -148,7 +151,7 @@ export const LoginForm = ({ onForgotPassword }: Props) => {
         size="lg"
       >
         {isPending ? (
-          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          <Loader2 className="size-5 animate-spin" />
         ) : (
           <>
             Iniciar Sesión

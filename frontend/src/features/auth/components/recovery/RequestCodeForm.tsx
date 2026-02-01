@@ -1,6 +1,7 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft, Loader2, Send } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
@@ -20,16 +21,30 @@ import { OTP_LENGTH } from "@features/auth/domain/auth.rules";
 interface Props {
   onSuccess: (email: string) => void;
   onCancel: () => void;
+  /** Auto-focus en el campo de email al montar (ej. cuando viene de reenviar código) */
+  autoFocus?: boolean;
 }
 
-export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
+export const RequestCodeForm = ({ onSuccess, onCancel, autoFocus }: Props) => {
   const {
     register,
     handleSubmit,
+    setFocus,
     formState: { errors },
   } = useForm<RequestResetCodeFormData>({
     resolver: zodResolver(requestResetCodeSchema),
   });
+
+  // Auto-focus en el campo de email cuando viene de reenviar/código expirado
+  useEffect(() => {
+    if (autoFocus) {
+      // Pequeño delay para asegurar que el DOM esté listo después de la animación
+      const timer = setTimeout(() => {
+        setFocus("email");
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus, setFocus]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: authAPI.requestResetCode,
@@ -74,8 +89,22 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
       />
 
       <div className="space-y-3 pt-2">
-        <Button type="submit" disabled={isPending} className="w-full h-12">
-          {isPending ? "Enviando..." : "Enviar Código"}
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="w-full h-12 group"
+        >
+          {isPending ? (
+            <Loader2 className="size-5 animate-spin" />
+          ) : (
+            <>
+              Enviar Código
+              <Send
+                size={18}
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            </>
+          )}
         </Button>
 
         <Button
@@ -83,9 +112,13 @@ export const RequestCodeForm = ({ onSuccess, onCancel }: Props) => {
           variant="ghost"
           onClick={onCancel}
           disabled={isPending}
-          className="w-full h-12 gap-2"
+          className="w-full h-12 group"
         >
-          <ArrowLeft size={16} /> Volver al Login
+          <ArrowLeft
+            size={18}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
+          Volver al Login
         </Button>
       </div>
     </form>

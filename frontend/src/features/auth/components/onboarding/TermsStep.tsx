@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ShieldCheck, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { ScrollArea } from "@/components/ui/ScrollArea";
@@ -92,10 +92,14 @@ export const TermsStep = ({ onAccept }: Props) => {
             onClick={onAccept}
             disabled={!accepted}
             size="lg"
-            className="w-full"
+            className="w-full h-12 group"
             aria-label="Continuar al paso de creación de contraseña"
           >
-            Continuar al Paso 2
+            Continuar
+            <ArrowRight
+              size={18}
+              className="group-hover:translate-x-1 transition-transform"
+            />
           </Button>
         </div>
       </div>
