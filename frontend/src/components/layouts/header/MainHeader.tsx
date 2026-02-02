@@ -14,7 +14,7 @@ export const MainHeader = () => {
   return (
     <header
       role="banner"
-      className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-line-hairline bg-app/95 px-4 backdrop-blur-sm"
+      className="relative flex h-16 shrink-0 items-center gap-3 rounded-t-3xl border-b border-line-hairline bg-app/95 px-4 backdrop-blur-sm"
     >
       <div className="flex min-w-0 items-center gap-2">
         <SidebarTrigger
@@ -33,7 +33,7 @@ export const MainHeader = () => {
 
       <div
         id="app-header-progress"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-0.75"
+        className="pointer-events-none absolute bottom-0 h-0.75 left-2 right-2 md:left-3 md:right-3"
       />
     </header>
   );

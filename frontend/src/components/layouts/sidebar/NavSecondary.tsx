@@ -33,7 +33,12 @@ export function NavSecondary({ items }: NavSecondaryProps) {
 
             return (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild size="sm" isActive={isActive}>
+                <SidebarMenuButton
+                  asChild
+                  size="sm"
+                  isActive={isActive}
+                  tooltip={item.title}
+                >
                   <Link to={href} className="flex min-w-0 items-center gap-2">
                     {item.icon && <item.icon />}
                     <span className="min-w-0 flex-1 truncate">

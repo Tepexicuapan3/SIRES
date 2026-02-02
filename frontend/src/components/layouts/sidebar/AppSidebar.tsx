@@ -32,6 +32,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
     <Sidebar
       variant="inset"
       collapsible="offcanvas"
+      className="border-r-0 border-l-0"
       {...props}
       aria-label="Menú de navegación principal"
     >

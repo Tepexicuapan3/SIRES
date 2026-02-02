@@ -49,7 +49,11 @@ function BreadcrumbLink({ asChild, className, ...props }: BreadcrumbLinkProps) {
 
   return (
     <Comp
-      className={cn("transition-colors hover:text-txt-body", className)}
+      className={cn(
+        "inline-flex items-center rounded-md px-1.5 py-0.5 transition-colors hover:text-txt-body",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-struct focus-visible:border focus-visible:border-line-struct",
+        className,
+      )}
       {...props}
     />
   );

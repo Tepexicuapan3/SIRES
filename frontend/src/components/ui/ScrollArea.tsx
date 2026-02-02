@@ -3,34 +3,57 @@ import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 
 import { cn } from "@/lib/utils";
 
+type ScrollAreaProps = ComponentPropsWithRef<
+  typeof ScrollAreaPrimitive.Root
+> & {
+  scrollbarClassName?: string;
+  thumbClassName?: string;
+  viewportClassName?: string;
+};
+
 function ScrollArea({
   className,
   children,
+  scrollbarClassName,
+  thumbClassName,
+  viewportClassName,
   ref,
   ...props
-}: ComponentPropsWithRef<typeof ScrollAreaPrimitive.Root>) {
+}: ScrollAreaProps) {
   return (
     <ScrollAreaPrimitive.Root
       ref={ref}
       className={cn("relative overflow-hidden", className)}
       {...props}
     >
-      <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+      <ScrollAreaPrimitive.Viewport
+        className={cn("h-full w-full rounded-[inherit]", viewportClassName)}
+      >
         {children}
       </ScrollAreaPrimitive.Viewport>
-      <ScrollBar />
+      <ScrollBar
+        className={scrollbarClassName}
+        thumbClassName={thumbClassName}
+      />
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   );
 }
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName;
 
+type ScrollBarProps = ComponentPropsWithRef<
+  typeof ScrollAreaPrimitive.ScrollAreaScrollbar
+> & {
+  thumbClassName?: string;
+};
+
 function ScrollBar({
   className,
   orientation = "vertical",
+  thumbClassName,
   ref,
   ...props
-}: ComponentPropsWithRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
+}: ScrollBarProps) {
   return (
     <ScrollAreaPrimitive.ScrollAreaScrollbar
       ref={ref}
@@ -45,7 +68,12 @@ function ScrollBar({
       )}
       {...props}
     >
-      <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-line-struct hover:bg-txt-muted/50 transition-colors" />
+      <ScrollAreaPrimitive.ScrollAreaThumb
+        className={cn(
+          "relative flex-1 rounded-full bg-line-struct hover:bg-txt-muted/50 transition-colors",
+          thumbClassName,
+        )}
+      />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
   );
 }

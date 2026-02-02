@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -38,16 +39,16 @@ const buildLabelMap = (items: NavItem[], map: Map<string, string>) => {
   });
 };
 
-const getLabelMap = () => {
+const LABEL_MAP = (() => {
   const map = new Map<string, string>();
   NAV_CONFIG.forEach((section) => buildLabelMap(section.items, map));
   return map;
-};
+})();
 
 const useBreadcrumbs = (): BreadcrumbItemData[] => {
   const location = useLocation();
   const pathSegments = location.pathname.split("/").filter(Boolean);
-  const labelMap = getLabelMap();
+  const labelMap = LABEL_MAP;
 
   if (pathSegments.length === 0) {
     return [];
@@ -131,14 +132,16 @@ const renderBreadcrumbList = (
                   {data.label}
                 </TruncatedTooltip>
               ) : (
-                <Link to={data.path} className="min-w-0">
-                  <TruncatedTooltip
-                    label={data.label}
-                    className={`${classNames.link} block`}
-                  >
-                    {data.label}
-                  </TruncatedTooltip>
-                </Link>
+                <BreadcrumbLink asChild className="min-w-0">
+                  <Link to={data.path}>
+                    <TruncatedTooltip
+                      label={data.label}
+                      className={`${classNames.link} block`}
+                    >
+                      {data.label}
+                    </TruncatedTooltip>
+                  </Link>
+                </BreadcrumbLink>
               )}
             </BreadcrumbItem>
             {!isLast && <BreadcrumbSeparator />}

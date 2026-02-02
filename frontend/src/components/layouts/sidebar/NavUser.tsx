@@ -39,7 +39,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { useSidebar } from "@/components/ui/sidebar-context";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
@@ -91,7 +90,7 @@ export function NavUser() {
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src="" alt="" />
                 <AvatarFallback
-                  className="rounded-md bg-brand text-white font-body font-extrabold text-sm"
+                  className="rounded-md bg-brand text-txt-inverse font-body font-extrabold text-sm"
                   aria-label={`Usuario ${user.username}`}
                 >
                   {userInitials}
@@ -117,7 +116,7 @@ export function NavUser() {
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src="" alt="" />
                   <AvatarFallback
-                    className="rounded-md bg-brand text-white font-body font-extrabold text-sm"
+                    className="rounded-md bg-brand text-txt-inverse font-body font-extrabold text-sm"
                     aria-label={`Usuario ${user.username}`}
                   >
                     {userInitials}
@@ -181,8 +180,9 @@ export function NavUser() {
             </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              variant="destructive"
               onClick={() => logoutWithToast()}
-              className="mb-1 text-status-critical cursor-pointer"
+              className="mb-1 cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Cerrar Sesión

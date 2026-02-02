@@ -13,18 +13,30 @@ export const NavigationProgressBar = () => {
   const isFetching = useIsFetching();
   const startTimeoutRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    NProgress.configure({ parent: "#app-header-progress" });
-  }, []);
+  const ensureParent = () => {
+    const parent = document.querySelector("#app-header-progress");
+    if (!parent) return false;
 
-  useEffect(() => {
-    // Configuración minimalista
     NProgress.configure({
+      parent: "#app-header-progress",
       showSpinner: false,
       speed: 400,
       minimum: 0.1,
       trickleSpeed: 200,
     });
+
+    const existing = document.getElementById("nprogress");
+    if (existing && existing.parentElement !== parent) {
+      existing.remove();
+    }
+
+    return true;
+  };
+
+  useEffect(() => {
+    ensureParent();
+    const frame = requestAnimationFrame(ensureParent);
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   // Manejar estados de carga de loaders
@@ -36,7 +48,9 @@ export const NavigationProgressBar = () => {
         return;
       }
       startTimeoutRef.current = window.setTimeout(() => {
-        NProgress.start();
+        if (ensureParent()) {
+          NProgress.start();
+        }
         startTimeoutRef.current = null;
       }, 120);
       return;

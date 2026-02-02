@@ -306,7 +306,11 @@ function SidebarContent({
       )}
       {...props}
     >
-      <ScrollArea className="flex-1 min-w-0 px-2">
+      <ScrollArea
+        className="flex-1 min-w-0 px-2"
+        scrollbarClassName="w-1.5"
+        viewportClassName="overscroll-contain"
+      >
         <div className="flex flex-col gap-2">{children}</div>
       </ScrollArea>
     </div>
@@ -500,7 +504,7 @@ function SidebarMenuSub({
       ref={ref}
       data-sidebar="menu-sub"
       className={cn(
-        "flex w-full min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border pl-3.5 pr-2.5 py-0.5",
+        "flex w-full min-w-0 flex-col gap-1 border-l border-sidebar-border ml-4 pl-3 pr-2.5 py-0.5",
         "group-data-[collapsible=icon]:hidden",
         className,
       )}
@@ -538,7 +542,7 @@ function SidebarMenuSubButton({
       data-size={size}
       data-active={isActive}
       className={cn(
-        "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
+        "flex h-7 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
         "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
         size === "sm" && "text-xs",
         size === "md" && "text-sm",

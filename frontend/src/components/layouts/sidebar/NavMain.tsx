@@ -15,6 +15,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -41,19 +42,18 @@ interface NavMainProps {
 }
 
 const BADGE_LABELS = {
-  Dev: "Dess",
+  Dev: "Dev",
   New: "Nvo",
   Mantenimiento: "Mtto",
 } as const;
 
 type BadgeKey = keyof typeof BADGE_LABELS;
 
-const BADGE_STYLES: Record<BadgeKey, string> = {
-  Dev: "bg-status-alert/10 text-status-alert ring-1 ring-inset ring-status-alert/20",
-  New: "bg-status-info/10 text-status-info ring-1 ring-inset ring-status-info/20",
-  Mantenimiento:
-    "bg-status-critical/10 text-status-critical ring-1 ring-inset ring-status-critical/20",
-};
+const BADGE_VARIANTS = {
+  Dev: "alert",
+  New: "info",
+  Mantenimiento: "critical",
+} as const;
 
 const BADGE_DOT_STYLES: Record<BadgeKey, string> = {
   Dev: "bg-status-alert",
@@ -61,13 +61,14 @@ const BADGE_DOT_STYLES: Record<BadgeKey, string> = {
   Mantenimiento: "bg-status-critical",
 };
 
-const BADGE_TEXT_CLASSES = "max-w-[4rem] truncate inline-flex";
+const BADGE_TEXT_CLASSES = "max-w-[4rem] truncate";
 const TITLE_TEXT_CLASSES = "max-w-[8.5rem] truncate block";
 
 const resolveBadgeKey = (badge: string): BadgeKey =>
   badge in BADGE_LABELS ? (badge as BadgeKey) : "Dev";
 
-const getBadgeClass = (badge: string) => BADGE_STYLES[resolveBadgeKey(badge)];
+const getBadgeVariant = (badge: string) =>
+  BADGE_VARIANTS[resolveBadgeKey(badge)];
 const BADGE_TOOLTIPS: Record<BadgeKey, string> = {
   Dev: "En desarrollo",
   New: "Nuevo",
@@ -77,6 +78,32 @@ const BADGE_TOOLTIPS: Record<BadgeKey, string> = {
 const getBadgeLabel = (badge: string) => BADGE_LABELS[resolveBadgeKey(badge)];
 const getBadgeTooltip = (badge: string) =>
   BADGE_TOOLTIPS[resolveBadgeKey(badge)];
+
+const renderBadge = (badge: string, withTooltip: boolean) => {
+  const badgeNode = (
+    <Badge
+      variant={getBadgeVariant(badge)}
+      className={cn(
+        "shrink-0 whitespace-nowrap px-2 py-0.5 text-[10px] font-semibold tracking-wide",
+        BADGE_TEXT_CLASSES,
+        getBadgeRingClass(badge),
+      )}
+    >
+      {getBadgeLabel(badge)}
+    </Badge>
+  );
+
+  if (!withTooltip) return badgeNode;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{badgeNode}</TooltipTrigger>
+      <TooltipContent side="top" align="end">
+        {getBadgeTooltip(badge)}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
 
 const getBadgePriority = (items?: NavItem[]): BadgeKey | null => {
   if (!items?.length) return null;
@@ -181,27 +208,7 @@ function NavRecursiveItem({
                 )}
 
                 <span className="flex items-center gap-2">
-                  {item.badge && showInlineTooltips && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span
-                          className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${BADGE_TEXT_CLASSES} ${getBadgeClass(item.badge)}`}
-                        >
-                          {getBadgeLabel(item.badge)}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" align="end">
-                        {getBadgeTooltip(item.badge)}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {item.badge && !showInlineTooltips && (
-                    <span
-                      className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${BADGE_TEXT_CLASSES} ${getBadgeClass(item.badge)}`}
-                    >
-                      {getBadgeLabel(item.badge)}
-                    </span>
-                  )}
+                  {item.badge && renderBadge(item.badge, showInlineTooltips)}
                   <span className="flex items-center gap-1.5">
                     {showBadgeChevron && childBadgePriority && (
                       <span
@@ -266,29 +273,9 @@ function NavRecursiveItem({
                 {item.title}
               </span>
             )}
-            {item.badge && showInlineTooltips && (
+            {item.badge && (
               <span className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${BADGE_TEXT_CLASSES} ${getBadgeClass(item.badge)}`}
-                    >
-                      {getBadgeLabel(item.badge)}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="end">
-                    {getBadgeTooltip(item.badge)}
-                  </TooltipContent>
-                </Tooltip>
-              </span>
-            )}
-            {item.badge && !showInlineTooltips && (
-              <span className="flex items-center gap-2">
-                <span
-                  className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${BADGE_TEXT_CLASSES} ${getBadgeClass(item.badge)}`}
-                >
-                  {getBadgeLabel(item.badge)}
-                </span>
+                {renderBadge(item.badge, showInlineTooltips)}
               </span>
             )}
           </Link>
@@ -318,29 +305,9 @@ function NavRecursiveItem({
               {item.title}
             </span>
           )}
-          {item.badge && showInlineTooltips && (
+          {item.badge && (
             <span className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${BADGE_TEXT_CLASSES} ${getBadgeClass(item.badge)}`}
-                  >
-                    {getBadgeLabel(item.badge)}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" align="end">
-                  {getBadgeTooltip(item.badge)}
-                </TooltipContent>
-              </Tooltip>
-            </span>
-          )}
-          {item.badge && !showInlineTooltips && (
-            <span className="flex items-center gap-2">
-              <span
-                className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${BADGE_TEXT_CLASSES} ${getBadgeClass(item.badge)}`}
-              >
-                {getBadgeLabel(item.badge)}
-              </span>
+              {renderBadge(item.badge, showInlineTooltips)}
             </span>
           )}
         </Link>
@@ -384,3 +351,11 @@ export function NavMain({ sections }: NavMainProps) {
     </>
   );
 }
+const BADGE_RING_STYLES: Record<BadgeKey, string> = {
+  Dev: "ring-1 ring-inset ring-status-alert/20",
+  New: "ring-1 ring-inset ring-status-info/20",
+  Mantenimiento: "ring-1 ring-inset ring-status-critical/20",
+};
+
+const getBadgeRingClass = (badge: string) =>
+  BADGE_RING_STYLES[resolveBadgeKey(badge)];

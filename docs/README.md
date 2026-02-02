@@ -41,7 +41,6 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Auth queries/mutations** | [Auth Queries](./guides/auth-queries-mutations.md) | 15 min |
 | **Implementar CRUD RBAC completo** | [RBAC CRUD Implementation](./guides/rbac-crud-implementation.md) | Plan detallado |
 | **Usar sistema RBAC CRUD** | [RBAC CRUD User Guide](./guides/rbac-crud-user-guide.md) | Guía completa |
-| **Arquitectura Frontend RBAC** | [RBAC Frontend Architecture](./architecture/rbac-frontend.md) | 30 min |
 | **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
 | **Testear código** | [Testing](./guides/testing.md) | 20 min |
 | **Implementar RBAC frontend** | [RBAC Frontend](./guides/rbac-frontend.md) | 25 min |
@@ -59,7 +58,6 @@ docs/
 ├── architecture/
 │   ├── overview.md                 # Capas, stack, flujo general
 │   ├── rbac.md                     # Roles, permisos, guards
-│   ├── rbac-frontend.md            # 🆕 Arquitectura frontend RBAC CRUD
 │   ├── authentication.md           # JWT, cookies, CSRF, refresh
 │   ├── rate-limiting.md            # Rate limiting 3 niveles + Redis
 │   └── otp-redis.md                # Sistema OTP para password recovery

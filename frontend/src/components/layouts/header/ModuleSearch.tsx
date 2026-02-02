@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,27 +25,47 @@ interface SearchItem {
   badge?: string;
 }
 
-// Badge system - identical to NavMain.tsx
+// Badge system - aligned with NavMain.tsx
 const BADGE_LABELS = {
-  Dev: "Dess",
+  Dev: "Dev",
   New: "Nvo",
   Mantenimiento: "Mtto",
 } as const;
 
 type BadgeKey = keyof typeof BADGE_LABELS;
 
-const BADGE_STYLES: Record<BadgeKey, string> = {
-  Dev: "bg-status-alert/10 text-status-alert ring-1 ring-inset ring-status-alert/20",
-  New: "bg-status-info/10 text-status-info ring-1 ring-inset ring-status-info/20",
-  Mantenimiento:
-    "bg-status-critical/10 text-status-critical ring-1 ring-inset ring-status-critical/20",
+const BADGE_VARIANTS = {
+  Dev: "alert",
+  New: "info",
+  Mantenimiento: "critical",
+} as const;
+
+const BADGE_RING_STYLES: Record<BadgeKey, string> = {
+  Dev: "ring-1 ring-inset ring-status-alert/20",
+  New: "ring-1 ring-inset ring-status-info/20",
+  Mantenimiento: "ring-1 ring-inset ring-status-critical/20",
 };
 
 const resolveBadgeKey = (badge: string): BadgeKey =>
   badge in BADGE_LABELS ? (badge as BadgeKey) : "Dev";
 
-const getBadgeClass = (badge: string) => BADGE_STYLES[resolveBadgeKey(badge)];
+const getBadgeVariant = (badge: string) =>
+  BADGE_VARIANTS[resolveBadgeKey(badge)];
 const getBadgeLabel = (badge: string) => BADGE_LABELS[resolveBadgeKey(badge)];
+const getBadgeRingClass = (badge: string) =>
+  BADGE_RING_STYLES[resolveBadgeKey(badge)];
+
+const renderBadge = (badge: string) => (
+  <Badge
+    variant={getBadgeVariant(badge)}
+    className={cn(
+      "shrink-0 whitespace-nowrap px-2 py-0.5 text-[10px] font-semibold tracking-wide",
+      getBadgeRingClass(badge),
+    )}
+  >
+    {getBadgeLabel(badge)}
+  </Badge>
+);
 
 const flattenNavItems = (
   items: NavItem[],
@@ -104,6 +125,7 @@ export const ModuleSearch = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const showPlaceholder = query.length === 0;
 
   // Flatten nav items respetando permisos
   const items = (() => {
@@ -237,7 +259,7 @@ export const ModuleSearch = () => {
     if (!isOpen || results.length === 0) return null;
 
     return (
-      <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 rounded-lg border border-line-struct bg-paper shadow-lg">
+      <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-[100] rounded-lg border border-line-struct bg-paper shadow-modal">
         <ul
           ref={listRef}
           role="listbox"
@@ -254,9 +276,7 @@ export const ModuleSearch = () => {
                 type="button"
                 className={cn(
                   "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-txt-body transition-colors",
-                  index === activeIndex
-                    ? "bg-line-struct/50"
-                    : "hover:bg-line-struct/30",
+                  index === activeIndex ? "bg-subtle" : "hover:bg-subtle/70",
                 )}
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -270,16 +290,7 @@ export const ModuleSearch = () => {
                     {item.section} • {item.breadcrumb}
                   </span>
                 </div>
-                {item.badge && (
-                  <span
-                    className={cn(
-                      "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide",
-                      getBadgeClass(item.badge),
-                    )}
-                  >
-                    {getBadgeLabel(item.badge)}
-                  </span>
-                )}
+                {item.badge && renderBadge(item.badge)}
               </button>
             </li>
           ))}
@@ -291,8 +302,19 @@ export const ModuleSearch = () => {
   return (
     <>
       {/* Desktop: input inline */}
-      <div className="relative hidden w-full md:block">
+      <div className="relative z-[90] hidden w-full md:block">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-txt-muted" />
+        {showPlaceholder && (
+          <div className="pointer-events-none absolute left-8 right-3 top-1/2 flex -translate-y-1/2 items-center justify-between gap-3 text-txt-hint">
+            <span className="min-w-0 truncate text-sm">Buscar módulo</span>
+            <span className="hidden items-center gap-1 text-[10px] font-medium text-txt-muted/70 lg:inline-flex">
+              Ctrl
+              <span className="rounded-sm border border-line-struct bg-paper px-1">
+                K
+              </span>
+            </span>
+          </div>
+        )}
         <Input
           ref={inputRef}
           value={query}
@@ -303,8 +325,8 @@ export const ModuleSearch = () => {
           onFocus={() => setIsOpen(true)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar... (Ctrl+K)"
-          className="h-8 w-full pl-8 pr-3 text-sm"
+          placeholder=""
+          className="h-8 w-full pl-8 pr-16 text-sm focus-visible:border-line-struct focus-visible:ring-line-struct/50 lg:pr-24"
           aria-label="Buscar módulo"
           aria-expanded={isOpen && results.length > 0}
           aria-haspopup="listbox"
@@ -351,7 +373,7 @@ export const ModuleSearch = () => {
               onFocus={() => setIsOpen(true)}
               onKeyDown={handleKeyDown}
               placeholder="Buscar módulo..."
-              className="h-11 w-full pl-9"
+              className="h-11 w-full pl-9 focus-visible:border-line-struct focus-visible:ring-line-struct/50"
               aria-label="Buscar módulo"
               autoComplete="off"
             />
