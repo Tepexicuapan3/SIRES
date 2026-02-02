@@ -35,6 +35,10 @@ def send_reset_code_email(recipient_email, code):
 
 
 def _smtp_is_configured():
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    if backend == "django.core.mail.backends.console.EmailBackend":
+        return True
+
     return bool(
         settings.EMAIL_HOST
         and settings.EMAIL_HOST_USER

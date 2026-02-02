@@ -1,7 +1,11 @@
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.email_service import send_reset_code_email
-from apps.authentication.services.otp_service import generate_code, rate_limit_request, store_code
+from apps.authentication.services.otp_service import (
+    generate_code,
+    rate_limit_request,
+    store_code,
+)
 
 
 def request_reset_code(email):

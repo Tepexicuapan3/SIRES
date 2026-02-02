@@ -48,12 +48,12 @@ export const useAuthSession = () => {
   }, [location.pathname, navigate, query.data]);
 
   useEffect(() => {
-    if (!query.error) return;
+    if (!query.error || query.data) return;
     // Cualquier fallo de auth invalida la sesion local.
     if (query.error.status === 401 || query.error.status === 403) {
       clearAuthSession(queryClient);
     }
-  }, [query.error, queryClient]);
+  }, [query.error, query.data, queryClient]);
 
   return query;
 };
