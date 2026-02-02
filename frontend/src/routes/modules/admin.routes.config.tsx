@@ -1,11 +1,7 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
-import AdminPage from "@features/admin/pages/AdminPage";
-import UsersPage from "@features/admin/pages/UsersPage";
-import CreateUserPage from "@features/admin/pages/CreateUserPage";
-import RolesPage from "@features/admin/pages/RolesPage";
-import CatalogosPage from "@features/admin/pages/CatalogosPage";
-import PlaceholderPage from "@/components/shared/PlaceholderPage";
+import UsersPage from "@features/admin/modules/rbac/users/pages/UsersPage";
+import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
 
 // Administracion
 
@@ -19,15 +15,7 @@ import PlaceholderPage from "@/components/shared/PlaceholderPage";
 export const adminRoutes: RouteObject[] = [
   {
     index: true,
-    element: <Navigate to="panel" replace />, // entrypoint por defecto
-  },
-  {
-    path: "panel",
-    element: (
-      <ProtectedRoute requiredPermission="admin:panel:read">
-        <AdminPage />
-      </ProtectedRoute>
-    ),
+    element: <Navigate to="usuarios" replace />, // entrypoint por defecto
   },
   {
     path: "usuarios",
@@ -38,119 +26,10 @@ export const adminRoutes: RouteObject[] = [
     ),
   },
   {
-    path: "usuarios/nuevo",
-    element: (
-      <ProtectedRoute requiredPermission="admin:gestion:usuarios:create">
-        <CreateUserPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "expedientes-derechohabientes",
-    element: (
-      <ProtectedRoute requiredPermission="admin:gestion:expedientes_derechohabientes:read">
-        <PlaceholderPage
-          title="Expedientes de derechohabientes"
-          description="Gestion de expedientes administrativos de derechohabientes"
-          moduleName="Administracion"
-        />
-      </ProtectedRoute>
-    ),
-  },
-  {
     path: "roles",
     element: (
       <ProtectedRoute requiredPermission="admin:gestion:roles:read">
         <RolesPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "catalogos",
-    element: (
-      <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
-        <CatalogosPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "reportes",
-    element: (
-      <ProtectedRoute requiredPermission="admin:reportes:read">
-        <PlaceholderPage
-          title="Reportes"
-          description="Reportes operativos y ejecutivos del sistema"
-          moduleName="Administracion"
-        />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "estadisticas",
-    element: (
-      <ProtectedRoute requiredPermission="admin:estadisticas:read">
-        <PlaceholderPage
-          title="Estadisticas"
-          description="Panel de estadisticas y analitica administrativa"
-          moduleName="Administracion"
-        />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "autorizacion",
-    children: [
-      {
-        index: true,
-        element: <Navigate to="recetas" replace />,
-      },
-      {
-        path: "recetas",
-        element: (
-          <ProtectedRoute requiredPermission="admin:autorizacion:recetas:read">
-            <PlaceholderPage
-              title="Autorizacion de recetas"
-              description="Control y autorizacion de recetas"
-              moduleName="Autorizacion"
-            />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "estudios",
-        element: (
-          <ProtectedRoute requiredPermission="admin:autorizacion:estudios:read">
-            <PlaceholderPage
-              title="Autorizacion de estudios"
-              description="Control y autorizacion de estudios"
-              moduleName="Autorizacion"
-            />
-          </ProtectedRoute>
-        ),
-      },
-    ],
-  },
-  {
-    path: "licencias",
-    element: (
-      <ProtectedRoute requiredPermission="admin:licencias:read">
-        <PlaceholderPage
-          title="Licencias"
-          description="Administracion de licencias y permisos"
-          moduleName="Administracion"
-        />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "conciliacion",
-    element: (
-      <ProtectedRoute requiredPermission="admin:conciliacion:read">
-        <PlaceholderPage
-          title="Conciliacion"
-          description="Conciliacion de registros y procesos internos"
-          moduleName="Administracion"
-        />
       </ProtectedRoute>
     ),
   },

@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { Toaster as Sonner } from "sonner";
 import {
   CircleCheck,
@@ -8,7 +9,7 @@ import {
 } from "lucide-react";
 import { useThemeStore } from "@/store/themeStore";
 
-type ToasterProps = React.ComponentProps<typeof Sonner>;
+type ToasterProps = ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme } = useThemeStore();

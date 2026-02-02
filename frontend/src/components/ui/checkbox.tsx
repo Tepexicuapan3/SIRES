@@ -1,4 +1,4 @@
-import * as React from "react";
+import type { ComponentPropsWithRef } from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { CheckIcon } from "lucide-react";
 
@@ -15,12 +15,12 @@ import { cn } from "@/lib/utils";
 function Checkbox({
   className,
   ...props
-}: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+}: ComponentPropsWithRef<typeof CheckboxPrimitive.Root>) {
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        "peer size-4 shrink-0 rounded-[4px] border border-line-struct shadow-xs transition-shadow outline-none",
+        "peer size-4 shrink-0 rounded-sm border border-line-struct shadow-xs transition-shadow outline-none",
         "focus-visible:ring-[3px] focus-visible:ring-brand/50 focus-visible:border-brand",
         "data-[state=checked]:bg-brand data-[state=checked]:text-txt-inverse data-[state=checked]:border-brand",
         "aria-invalid:border-status-critical aria-invalid:ring-status-critical/20",

@@ -26,6 +26,7 @@ html {
 @layer base {
   * {
     border-color: var(--border-struct);
+    --tw-ring-offset-color: var(--bg-paper);
   }
   body {
     @apply bg-app text-txt-body;
