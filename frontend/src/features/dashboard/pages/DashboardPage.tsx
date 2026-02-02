@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   LogOut,
   Bell,
@@ -15,6 +16,75 @@ import {
 import { useLogout } from "@features/auth/mutations/useLogout";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { OtpInput } from "@/components/ui/OtpInput";
 import { usePermissions } from "@features/auth/queries/usePermissions";
 import { PermissionGate } from "@/components/shared/PermissionGate";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
@@ -23,6 +93,10 @@ export const DashboardPage = () => {
   const { logoutWithToast, isPending } = useLogout();
   const { hasPermission, isAdmin, permissions } = usePermissions();
   const { data: user } = useAuthSession();
+  const [roleValue, setRoleValue] = useState("");
+  const [radioValue, setRadioValue] = useState("daily");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
 
   const handlePromise = (shouldFail = false) => {
     const promise = () =>
@@ -324,6 +398,292 @@ export const DashboardPage = () => {
               tema dark/light.
             </p>
           </div>
+        </div>
+
+        {/* === SECCIÓN DE FORMULARIOS === */}
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Inputs y Textareas</CardTitle>
+              <CardDescription>
+                Estados base, deshabilitado y con error
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="dashboard-input">Input</Label>
+                <Input id="dashboard-input" placeholder="Nombre completo" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dashboard-input-disabled">
+                  Input deshabilitado
+                </Label>
+                <Input
+                  id="dashboard-input-disabled"
+                  placeholder="Deshabilitado"
+                  disabled
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dashboard-input-error">Input con error</Label>
+                <Input
+                  id="dashboard-input-error"
+                  placeholder="Error de validación"
+                  aria-invalid
+                />
+                <span className="text-xs text-status-critical">
+                  Mensaje de error
+                </span>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dashboard-textarea">Textarea</Label>
+                <Textarea
+                  id="dashboard-textarea"
+                  placeholder="Notas clínicas o comentarios"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Selects y Opciones</CardTitle>
+              <CardDescription>
+                Select, checkbox, radio group y OTP
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2 max-w-sm">
+                <Label htmlFor="dashboard-role">Rol</Label>
+                <Select value={roleValue} onValueChange={setRoleValue}>
+                  <SelectTrigger id="dashboard-role">
+                    <SelectValue placeholder="Seleccioná un rol" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="medico">Médico</SelectItem>
+                    <SelectItem value="recepcion">Recepción</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="dashboard-terms"
+                  checked={acceptTerms}
+                  onCheckedChange={(checked) => {
+                    setAcceptTerms(checked === true);
+                  }}
+                />
+                <Label htmlFor="dashboard-terms">
+                  Acepto términos y condiciones
+                </Label>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Frecuencia de reporte</Label>
+                <RadioGroup
+                  value={radioValue}
+                  onValueChange={setRadioValue}
+                  className="gap-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem id="radio-daily" value="daily" />
+                    <Label htmlFor="radio-daily">Diario</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem id="radio-weekly" value="weekly" />
+                    <Label htmlFor="radio-weekly">Semanal</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem id="radio-monthly" value="monthly" />
+                    <Label htmlFor="radio-monthly">Mensual</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-2">
+                <Label>OTP</Label>
+                <OtpInput value={otpValue} onChange={setOtpValue} />
+              </div>
+            </CardContent>
+            <CardFooter className="text-xs text-txt-muted">
+              Selección: {roleValue || "—"} • Frecuencia: {radioValue}
+            </CardFooter>
+          </Card>
+        </div>
+
+        {/* === SECCIÓN DE NAVEGACIÓN Y FEEDBACK === */}
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Navegación</CardTitle>
+              <CardDescription>Breadcrumb, tabs y paginación</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Breadcrumb</Label>
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink href="#">Inicio</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbLink href="#">Admin</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+
+              <Separator />
+
+              <Tabs defaultValue="overview">
+                <TabsList>
+                  <TabsTrigger value="overview">Resumen</TabsTrigger>
+                  <TabsTrigger value="metrics">Métricas</TabsTrigger>
+                  <TabsTrigger value="activity">Actividad</TabsTrigger>
+                </TabsList>
+                <TabsContent
+                  value="overview"
+                  className="text-sm text-txt-muted"
+                >
+                  Vista general del módulo.
+                </TabsContent>
+                <TabsContent value="metrics" className="text-sm text-txt-muted">
+                  Indicadores principales y KPIs.
+                </TabsContent>
+                <TabsContent
+                  value="activity"
+                  className="text-sm text-txt-muted"
+                >
+                  Últimos movimientos registrados.
+                </TabsContent>
+              </Tabs>
+
+              <Separator />
+
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious href="#" />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink href="#" isActive>
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink href="#">2</PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink href="#">3</PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext href="#" />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Feedback y Overlays</CardTitle>
+              <CardDescription>
+                Alerts, badges, tooltips y dialogs
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar>
+                  <AvatarImage src="https://i.pravatar.cc/40" alt="Avatar" />
+                  <AvatarFallback>SI</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium text-txt-body">
+                    Usuario demo
+                  </p>
+                  <p className="text-xs text-txt-muted">Operador</p>
+                </div>
+                <Badge variant="stable">Activo</Badge>
+              </div>
+
+              <Alert>
+                <AlertTitle>Actualización pendiente</AlertTitle>
+                <AlertDescription>
+                  Hay cambios sin guardar en este formulario.
+                </AlertDescription>
+              </Alert>
+
+              <Alert variant="destructive">
+                <AlertTitle>Error crítico</AlertTitle>
+                <AlertDescription>
+                  Falló la sincronización con el backend.
+                </AlertDescription>
+              </Alert>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline">Tooltip</Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Mostrando info contextual del botón.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <div className="flex flex-wrap gap-3">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">Abrir Dialog</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Dialog de prueba</DialogTitle>
+                      <DialogDescription>
+                        Este modal usa los tokens globales del sistema.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="outline">Cancelar</Button>
+                      <Button>Confirmar</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">Abrir Alert</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmar acción</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        ¿Querés continuar con esta operación?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction>Confirmar</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* === SECCIÓN RBAC 2.0 === */}
