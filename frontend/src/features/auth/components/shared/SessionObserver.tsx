@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { clearAuthSession } from "@features/auth/utils/auth-cache";
 import { subscribeSessionExpired } from "@features/auth/utils/session-events";
@@ -14,21 +14,28 @@ import { queryClient } from "@/config/query-client";
  */
 export const SessionObserver = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleSessionExpired = () => {
-      // 1. Notificar al usuario
-      toast.error("Tu sesión ha expirado. Por favor ingresa nuevamente.");
+      const isAlreadyOnLogin = location.pathname === "/login";
+
+      // 1. Notificar al usuario (evitar ruido cuando ya estas en /login)
+      if (!isAlreadyOnLogin) {
+        toast.error("Tu sesión ha expirado. Por favor ingresa nuevamente.");
+      }
 
       // 2. Navegación suave (sin recargar la página)
-      navigate("/login", { replace: true });
+      if (!isAlreadyOnLogin) {
+        navigate("/login", { replace: true });
+      }
 
       // 3. Limpieza defensiva de la sesión cacheada
       clearAuthSession(queryClient);
     };
 
     return subscribeSessionExpired(handleSessionExpired);
-  }, [navigate]);
+  }, [location.pathname, navigate]);
 
   return null;
 };

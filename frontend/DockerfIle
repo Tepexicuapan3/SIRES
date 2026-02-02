@@ -1,31 +1,25 @@
-FROM oven/bun:1-alpine
+FROM oven/bun:1.3.8
+
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
+ARG NO_PROXY
 
-# === CONFIGURACIÓN DE PROXY ===
-ENV HTTP_PROXY=http://10.15.15.56:3128
-ENV HTTPS_PROXY=http://10.15.15.56:3128
-ENV NO_PROXY=localhost,127.0.0.1,::1
+ENV http_proxy=${HTTP_PROXY} \
+    https_proxy=${HTTPS_PROXY} \
+    no_proxy=${NO_PROXY} \
+    HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    NO_PROXY=${NO_PROXY}
 
-# === SSL CONFIG ===
-RUN echo "[install]" > bunfig.toml && \
-    echo "proxy = \"http://10.15.15.56:3128\"" >> bunfig.toml && \
-    echo "rejectUnauthorized = false" >> bunfig.toml && \
-    echo "registry = \"https://registry.npmjs.org/\"" >> bunfig.toml
+## Nota
+# Vite 7 + React plugin (SWC) corre ok con Bun >= 1.3.x.
 
 WORKDIR /app
 
-# Copiar solo package.json y bun.lock para aprovechar caché de Docker
-COPY package.json bun.lock* ./
+COPY package.json ./
+COPY bun.lock ./
 
-# Instalar dependencias (esto se cachea si package.json no cambió)
-RUN bun install --frozen-lockfile
-
-# Copiar el resto del código (esto NO invalida el cache de node_modules)
-COPY . .
-
-# Exponer el puerto de Vite
 EXPOSE 5173
 
-# Comando para iniciar en modo desarrollo
-CMD ["bun", "run", "dev", "--", "--host"]
+# Deps se instalan al arrancar (docker-compose command) para que queden en el volumen /app/node_modules.
+CMD ["bun", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

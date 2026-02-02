@@ -1,41 +1,52 @@
 services:
-  # === FRONTEND (React) ===
+  # === FRONTEND (React + Bun) ===
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        HTTP_PROXY: http://10.15.15.56:3128
-        HTTPS_PROXY: http://10.15.15.56:3128
+        HTTP_PROXY: ${HTTP_PROXY-}
+        HTTPS_PROXY: ${HTTPS_PROXY-}
+        NO_PROXY: ${NO_PROXY-}
     container_name: sires-frontend
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT-5173}:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_URL=http://localhost:5000/api/v1
+    command: sh -lc "bun install && bun run dev -- --host 0.0.0.0 --port 5173"
     restart: unless-stopped
     depends_on:
       - backend
     networks:
       - sires-network
 
-  # === BACKEND (Flask) ===
+  # === BACKEND (Django/DRF) ===
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY-}
+        HTTPS_PROXY: ${HTTPS_PROXY-}
+        NO_PROXY: ${NO_PROXY-}
     container_name: sires-backend
     ports:
-      - "5000:5000"
+      - "${BACKEND_PORT-5000}:5000"
     volumes:
       - ./backend:/app
+    # Evita que el autoreloader deje el container "up" pero sin responder
+    command: python manage.py runserver 0.0.0.0:5000 --noreload
     environment:
       TZ: "America/Mexico_City"
+      CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT-5173}
     env_file:
       - ./backend/.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -50,7 +61,7 @@ services:
     image: redis:7-alpine
     container_name: sires-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT-6379}:6379"
     networks:
       - sires-network
 

@@ -23,7 +23,7 @@ export const useAuthSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const query = useQuery<AuthUser, ApiError>({
+  const query = useQuery<AuthUser | null, ApiError>({
     queryKey: authKeys.session(),
     queryFn: () => authAPI.getCurrentUser(),
     staleTime: 5 * 60 * 1000,
