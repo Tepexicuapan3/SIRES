@@ -189,8 +189,10 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 ]
 
 # Email SMTP (configurar via .env)
-# En desarrollo (DEBUG=True) usa console backend para evitar errores de SMTP
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.smtp.EmailBackend",
+)
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
