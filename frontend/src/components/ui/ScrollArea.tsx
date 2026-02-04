@@ -23,11 +23,19 @@ function ScrollArea({
   return (
     <ScrollAreaPrimitive.Root
       ref={ref}
-      className={cn("relative overflow-hidden", className)}
+      tabIndex={-1}
+      className={cn(
+        "relative overflow-hidden focus-visible:outline-none",
+        className,
+      )}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
-        className={cn("h-full w-full rounded-[inherit]", viewportClassName)}
+        tabIndex={-1}
+        className={cn(
+          "h-full w-full rounded-[inherit] focus-visible:outline-none",
+          viewportClassName,
+        )}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
@@ -58,8 +66,9 @@ function ScrollBar({
     <ScrollAreaPrimitive.ScrollAreaScrollbar
       ref={ref}
       orientation={orientation}
+      tabIndex={-1}
       className={cn(
-        "flex touch-none select-none transition-colors",
+        "flex touch-none select-none transition-colors focus-visible:outline-none",
         orientation === "vertical" &&
           "h-full w-2.5 border-l border-l-transparent p-px",
         orientation === "horizontal" &&

@@ -30,11 +30,6 @@ export const MainHeader = () => {
       <div className="ml-auto w-48 shrink-0 sm:w-56 md:w-72 lg:w-96">
         <ModuleSearch />
       </div>
-
-      <div
-        id="app-header-progress"
-        className="pointer-events-none absolute bottom-0 h-0.75 left-2 right-2 md:left-3 md:right-3"
-      />
     </header>
   );
 };

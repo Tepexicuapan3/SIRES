@@ -13,7 +13,6 @@
 import { Outlet } from "react-router-dom";
 import { Suspense } from "react";
 
-import { NavigationProgressBar } from "@/components/shared/NavigationProgressBar";
 import { SkipToContent } from "@/components/shared/SkipToContent";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layouts/sidebar";
@@ -24,9 +23,6 @@ export const MainLayout = () => {
     <SidebarProvider>
       {/* Skip link para accesibilidad de teclado */}
       <SkipToContent />
-
-      {/* Barra de progreso invisible que se activa al navegar */}
-      <NavigationProgressBar />
 
       {/* Sidebar con navegación RBAC */}
       <AppSidebar />

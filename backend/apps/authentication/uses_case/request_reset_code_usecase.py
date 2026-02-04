@@ -23,8 +23,21 @@ def request_reset_code(email):
 
     code = generate_code()
     store_code(email, code)
+    profile = getattr(user, "detalle", None)
+    if profile and profile.nombre_completo:
+        user_name = profile.nombre_completo
+    else:
+        name_parts = [
+            profile.nombre if profile else "",
+            profile.paterno if profile else "",
+            profile.materno if profile else "",
+        ]
+        user_name = " ".join([part for part in name_parts if part]).strip()
+        if not user_name:
+            user_name = user.usuario
+
     # Envia el codigo al correo del usuario.
-    if not send_reset_code_email(email, code):
+    if not send_reset_code_email(email, code, user_name=user_name):
         raise AuthServiceError(
             "INTERNAL_SERVER_ERROR",
             "Error del servidor, intenta nuevamente",
