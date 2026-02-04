@@ -26,6 +26,7 @@ import type {
 } from "axios";
 import Cookies from "js-cookie";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
+import { createRequestId } from "@api/utils/request-id";
 import { queryClient } from "@/config/query-client";
 import { clearAuthSession } from "@features/auth/utils/auth-cache";
 import { emitSessionExpired } from "@features/auth/utils/session-events";
@@ -108,7 +109,7 @@ async function attemptTokenRefresh(
         "Content-Type": "application/json",
         "X-Request-ID":
           (originalRequest.headers?.["X-Request-ID"] as string) ||
-          crypto.randomUUID(),
+          createRequestId(),
         ...(Cookies.get("csrf_token")
           ? { "X-CSRF-TOKEN": Cookies.get("csrf_token") as string }
           : {}),

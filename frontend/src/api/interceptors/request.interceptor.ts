@@ -20,6 +20,7 @@
 
 import type { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import Cookies from "js-cookie";
+import { createRequestId } from "@api/utils/request-id";
 
 // Métodos HTTP que modifican datos (requieren CSRF)
 const MUTATING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
@@ -30,7 +31,7 @@ const MUTATING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 export function setupRequestInterceptor(client: AxiosInstance): void {
   client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     // 1. Request ID para traceability
-    config.headers["X-Request-ID"] = crypto.randomUUID();
+    config.headers["X-Request-ID"] = createRequestId();
 
     // 2. CSRF token para métodos mutantes
     if (
