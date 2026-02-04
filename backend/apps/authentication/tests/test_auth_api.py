@@ -90,6 +90,18 @@ class AuthApiTests(APITestCase):
             AuditoriaEvento.objects.filter(accion="LOGIN_SUCCESS").count(), 1
         )
 
+    def test_login_rejects_when_session_active(self):
+        self._login()
+
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "Abel_180903"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["code"], "SESSION_ACTIVE")
+
     def test_login_invalid_password_has_request_id(self):
         response = self.client.post(
             "/api/v1/auth/login",
@@ -375,6 +387,7 @@ class AuthApiTests(APITestCase):
 
         success = self._login()
         self.assertEqual(success.status_code, status.HTTP_200_OK)
+        self.client.cookies.clear()
 
         response = self.client.post(
             "/api/v1/auth/login",

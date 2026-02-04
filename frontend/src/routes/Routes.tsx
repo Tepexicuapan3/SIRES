@@ -1,6 +1,7 @@
 import { lazy } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import { GuestRoute } from "@/routes/GuestRoute";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { RootLayout } from "@/components/layouts/RootLayout";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
@@ -60,9 +61,11 @@ export const router = createBrowserRouter([
       {
         path: "/login",
         element: (
-          <SuspenseWrapper fullScreen>
-            <LoginPage />
-          </SuspenseWrapper>
+          <GuestRoute>
+            <SuspenseWrapper fullScreen>
+              <LoginPage />
+            </SuspenseWrapper>
+          </GuestRoute>
         ),
       },
       {
