@@ -58,6 +58,7 @@ if (process.env.ZEN_BROWSER_PATH) {
  */
 export default defineConfig({
   testDir: "./src/test/e2e",
+  testMatch: "**/*.e2e.ts",
 
   /* Run tests in files in parallel */
   fullyParallel: true,

@@ -39,11 +39,11 @@ Usá estos usuarios para probar que el Sidebar y la redirección funcionan segú
 
 | Usuario | Rol | Landing Route | Permisos Clave |
 | :--- | :--- | :--- | :--- |
-| `admin` | ADMINISTRADOR | `/admin/panel` | Acceso Total (`*`) |
-| `medico` | MEDICOS | `/clinico/consultas` | Consultas, Expedientes, Somatometría |
-| `recepcion` | RECEPCION | `/recepcion/fichas` | Fichas, Incapacidades |
-| `farmacia` | FARMACIA | `/farmacia/recetas` | Dispensar, Inventario |
-| `urgencias` | URGENCIAS | `/urgencias/triage` | Triage |
+| `admin` | Admin | `/admin/panel` | Acceso Total (`*`) |
+| `clinico` | Clinico | `/clinico/consultas` | Consultas, Expedientes, Somatometría |
+| `recepcion` | Recepcion | `/recepcion/fichas` | Fichas, Incapacidades |
+| `farmacia` | Farmacia | `/farmacia/recetas` | Dispensar, Inventario |
+| `urgencias` | Urgencias | `/urgencias/triage` | Triage |
 | `hospital` | HOSPITAL | `/hospital` | Coordinación, Admisión |
 
 ### 🔐 Recuperación de Contraseña

@@ -2,12 +2,32 @@ import { http, HttpResponse, delay } from "msw";
 import type { AuthUser } from "@/api/types/auth.types";
 import { createMockAuthUser } from "../../factories/users";
 import { getApiUrl } from "../urls";
+import {
+  clearMockSessionUser,
+  getMockSessionUser,
+  resetMockSessionUser,
+  setMockSessionUser,
+} from "../session";
+import { resetRolesMockState } from "./roles";
+import { resetUsersMockState } from "./users";
+
+interface LoginScenario {
+  user: AuthUser;
+  requiresOnboarding?: boolean;
+}
 
 const MOCK_DELAY = {
   auth: 900,
   short: 600,
   long: 1200,
 };
+
+const testUserOverrides = new Map<
+  string,
+  { requiresOnboarding?: boolean; mustChangePassword?: boolean }
+>();
+
+const resetCodeStore = new Map<string, string>();
 
 // Función helper para validar contraseñas robustas (replica lógica de Zod del frontend)
 const isPasswordStrong = (password: string): boolean => {
@@ -21,6 +41,9 @@ const isPasswordStrong = (password: string): boolean => {
 
 // Helper para crear respuesta de login consistente
 const createLoginResponse = (user: AuthUser, requiresOnboarding = false) => {
+  const tokenValue = encodeURIComponent(user.username);
+  const csrfToken = `csrf_${tokenValue}`;
+
   return HttpResponse.json(
     {
       user,
@@ -28,11 +51,225 @@ const createLoginResponse = (user: AuthUser, requiresOnboarding = false) => {
     },
     {
       headers: {
-        "Set-Cookie":
-          "access_token_cookie=mock_access_token; Path=/; HttpOnly, refresh_token_cookie=mock_refresh_token; Path=/; HttpOnly",
+        "Set-Cookie": `access_token_cookie=${tokenValue}; Path=/; HttpOnly, refresh_token_cookie=${tokenValue}; Path=/; HttpOnly, csrf_token=${csrfToken}; Path=/`,
       },
     },
   );
+};
+
+const loginSuccessResponse = (user: AuthUser, requiresOnboarding = false) => {
+  setMockSessionUser(user);
+  return createLoginResponse(user, requiresOnboarding);
+};
+
+const getCookieValue = (cookieHeader: string, key: string) => {
+  const pair = cookieHeader
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${key}=`));
+
+  if (!pair) return null;
+  return pair.slice(key.length + 1);
+};
+
+const buildLoginScenario = (username: string): LoginScenario => {
+  if (username === "admin") {
+    return {
+      user: createMockAuthUser({
+        username: "admin",
+        fullName: "Administrador",
+        landingRoute: "/admin/roles",
+        roles: ["Admin"],
+        avatarUrl: "https://i.pravatar.cc/96?img=8",
+        permissions: ["*"],
+      }),
+    };
+  }
+
+  if (username === "admin_usuarios_readonly") {
+    return {
+      user: createMockAuthUser({
+        username: "admin_usuarios_readonly",
+        fullName: "Admin Usuarios Lectura",
+        landingRoute: "/admin/usuarios",
+        roles: ["Admin Usuarios"],
+        avatarUrl: "https://i.pravatar.cc/96?img=9",
+        permissions: [
+          "admin:gestion:usuarios:read",
+          "admin:gestion:roles:read",
+        ],
+      }),
+    };
+  }
+
+  if (username === "admin_roles_readonly") {
+    return {
+      user: createMockAuthUser({
+        username: "admin_roles_readonly",
+        fullName: "Admin Roles Lectura",
+        landingRoute: "/admin/roles",
+        roles: ["Admin Roles"],
+        avatarUrl: "https://i.pravatar.cc/96?img=10",
+        permissions: ["admin:gestion:roles:read"],
+      }),
+    };
+  }
+
+  if (username === "admin_roles_manager") {
+    return {
+      user: createMockAuthUser({
+        username: "admin_roles_manager",
+        fullName: "Admin Gestor Roles",
+        landingRoute: "/admin/roles",
+        roles: ["Admin Roles"],
+        avatarUrl: "https://i.pravatar.cc/96?img=11",
+        permissions: [
+          "admin:gestion:roles:read",
+          "admin:gestion:roles:create",
+          "admin:gestion:roles:update",
+          "admin:gestion:roles:delete",
+          "admin:gestion:permisos:read",
+        ],
+      }),
+    };
+  }
+
+  if (username === "clinico" || username === "medico") {
+    return {
+      user: createMockAuthUser({
+        username: "clinico",
+        fullName: "Dra. Rivera",
+        landingRoute: "/clinico/consultas",
+        roles: ["Clinico"],
+        avatarUrl: "https://i.pravatar.cc/96?img=15",
+        permissions: [
+          "clinico:consultas:read",
+          "clinico:consultas:create",
+          "clinico:expedientes:read",
+          "clinico:somatometria:read",
+          "admin:catalogos:centros_atencion:read",
+        ],
+      }),
+    };
+  }
+
+  if (username === "recepcion") {
+    return {
+      user: createMockAuthUser({
+        username: "recepcion",
+        fullName: "Recepcion Central",
+        landingRoute: "/recepcion/fichas",
+        roles: ["Recepcion"],
+        avatarUrl: "https://i.pravatar.cc/96?img=21",
+        permissions: [
+          "recepcion:fichas:medicina_general:create",
+          "recepcion:fichas:especialidad:create",
+          "recepcion:fichas:urgencias:create",
+          "recepcion:incapacidad:create",
+          "clinico:expedientes:read",
+        ],
+      }),
+    };
+  }
+
+  if (username === "farmacia") {
+    return {
+      user: createMockAuthUser({
+        username: "farmacia",
+        fullName: "Farmacia Principal",
+        landingRoute: "/farmacia/recetas",
+        roles: ["Farmacia"],
+        avatarUrl: "https://i.pravatar.cc/96?img=31",
+        permissions: [
+          "farmacia:recetas:dispensar",
+          "farmacia:inventario:update",
+        ],
+      }),
+    };
+  }
+
+  if (username === "urgencias") {
+    return {
+      user: createMockAuthUser({
+        username: "urgencias",
+        fullName: "Medico Urgencias",
+        landingRoute: "/urgencias/triage",
+        roles: ["Urgencias"],
+        avatarUrl: "https://i.pravatar.cc/96?img=45",
+        permissions: ["urgencias:triage:read"],
+      }),
+    };
+  }
+
+  if (username === "hospital") {
+    return {
+      user: createMockAuthUser({
+        username: "hospital",
+        fullName: "Coord. Hospitalaria",
+        roles: ["HOSPITAL"],
+        permissions: [
+          "hospital:coordinacion",
+          "hospital:admision",
+          "hospital:camas",
+        ],
+      }),
+    };
+  }
+
+  if (username === "newuser") {
+    return {
+      user: createMockAuthUser({
+        username: "newuser",
+        mustChangePassword: true,
+        requiresOnboarding: true,
+      }),
+      requiresOnboarding: true,
+    };
+  }
+
+  return {
+    user: createMockAuthUser({ username }),
+  };
+};
+
+const applyTestUserOverride = (
+  username: string,
+  scenario: LoginScenario,
+): LoginScenario => {
+  const override = testUserOverrides.get(username);
+  if (!override) return scenario;
+
+  return {
+    user: {
+      ...scenario.user,
+      ...(override.mustChangePassword !== undefined
+        ? { mustChangePassword: override.mustChangePassword }
+        : {}),
+      ...(override.requiresOnboarding !== undefined
+        ? { requiresOnboarding: override.requiresOnboarding }
+        : {}),
+    },
+    requiresOnboarding:
+      override.requiresOnboarding ?? scenario.requiresOnboarding,
+  };
+};
+
+const resolveSessionUser = (request: Request) => {
+  const currentSessionUser = getMockSessionUser();
+  if (currentSessionUser) return currentSessionUser;
+
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const accessToken = getCookieValue(cookieHeader, "access_token_cookie");
+
+  if (!accessToken) return null;
+
+  const username = decodeURIComponent(accessToken);
+  const { user } = applyTestUserOverride(
+    username,
+    buildLoginScenario(username),
+  );
+  setMockSessionUser(user);
+  return user;
 };
 
 export const authHandlers = [
@@ -118,134 +355,88 @@ export const authHandlers = [
       );
     }
 
-    // --- ESCENARIOS DE ROLES (PARA TESTING DE NAVEGACIÓN) ---
-
-    // A. Administrador
-    if (username === "admin") {
-      const user = createMockAuthUser({
-        username: "admin",
-        fullName: "Administrador",
-        landingRoute: "/admin/panel",
-        roles: ["ADMIN"],
-        permissions: ["*"], // Acceso total
-      });
-      return createLoginResponse(user);
-    }
-
-    // B. Médico (MODIFICADO PARA PRUEBA DE SIDEBAR)
-    if (username === "medico") {
-      const user = createMockAuthUser({
-        username: "medico",
-        fullName: "Dr. House",
-        landingRoute: "/clinico/consultas",
-        roles: ["MEDICOS"],
-        permissions: [
-          "clinico:consultas:read",
-          "clinico:consultas:create",
-          "clinico:expedientes:read",
-          "clinico:somatometria:read",
-          "admin:catalogos:centros_atencion:read",
-        ],
-      });
-      return createLoginResponse(user);
-    }
-
-    // C. Recepción
-    if (username === "recepcion") {
-      const user = createMockAuthUser({
-        username: "recepcion",
-        fullName: "Recepcion Central",
-        landingRoute: "/recepcion/fichas",
-        roles: ["RECEPCION"],
-        permissions: [
-          "recepcion:fichas:medicina_general:create",
-          "recepcion:fichas:especialidad:create",
-          "recepcion:fichas:urgencias:create",
-          "recepcion:incapacidad:create",
-          "clinico:expedientes:read",
-        ],
-      });
-      return createLoginResponse(user);
-    }
-
-    // D. Farmacia
-    if (username === "farmacia") {
-      const user = createMockAuthUser({
-        username: "farmacia",
-        fullName: "Farmacia Principal",
-        landingRoute: "/farmacia/recetas",
-        roles: ["FARMACIA"],
-        permissions: [
-          "farmacia:recetas:dispensar",
-          "farmacia:inventario:update",
-        ],
-      });
-      return createLoginResponse(user);
-    }
-
-    // E. Urgencias
-    if (username === "urgencias") {
-      const user = createMockAuthUser({
-        username: "urgencias",
-        fullName: "Medico Urgencias",
-        landingRoute: "/urgencias/triage",
-        roles: ["URGENCIAS"],
-        permissions: ["urgencias:triage:read"],
-      });
-      return createLoginResponse(user);
-    }
-
-    // F. Hospital
-    if (username === "hospital") {
-      const user = createMockAuthUser({
-        username: "hospital",
-        fullName: "Coord. Hospitalaria",
-        roles: ["HOSPITAL"],
-        permissions: [
-          "hospital:coordinacion",
-          "hospital:admision",
-          "hospital:camas",
-        ],
-      });
-      return createLoginResponse(user);
-    }
-
-    // --- ESCENARIOS DE ÉXITO GENÉRICOS ---
-
-    // 7. Usuario Nuevo (Requiere Onboarding)
-    if (username === "newuser") {
-      const user = createMockAuthUser({
-        username: "newuser",
-        mustChangePassword: true,
-      });
-      return createLoginResponse(user, true);
-    }
-
-    // 8. Login Exitoso (Default)
-    const user = createMockAuthUser({ username });
-    return createLoginResponse(user);
+    const scenario = applyTestUserOverride(
+      username,
+      buildLoginScenario(username),
+    );
+    return loginSuccessResponse(
+      scenario.user,
+      scenario.requiresOnboarding ?? false,
+    );
   }),
 
   http.post(getApiUrl("auth/logout"), async () => {
     await delay(MOCK_DELAY.short);
-    return HttpResponse.json({
-      success: true,
-      message: "Sesion cerrada correctamente",
-    });
+    clearMockSessionUser();
+
+    return HttpResponse.json(
+      {
+        success: true,
+        message: "Sesion cerrada correctamente",
+      },
+      {
+        headers: {
+          "Set-Cookie":
+            "access_token_cookie=; Path=/; Max-Age=0, refresh_token_cookie=; Path=/; Max-Age=0, csrf_token=; Path=/; Max-Age=0",
+        },
+      },
+    );
   }),
 
-  http.get(getApiUrl("auth/me"), async () => {
+  http.get(getApiUrl("auth/me"), async ({ request }) => {
     await delay(MOCK_DELAY.short);
-    const user = createMockAuthUser();
+    const user = resolveSessionUser(request);
+
+    if (!user) {
+      return HttpResponse.json(
+        {
+          code: "SESSION_EXPIRED",
+          message: "La sesion no es valida o ha expirado.",
+        },
+        { status: 401 },
+      );
+    }
+
     return HttpResponse.json(user);
   }),
 
-  http.post(getApiUrl("auth/refresh"), async () => {
+  http.post(getApiUrl("auth/refresh"), async ({ request }) => {
     await delay(MOCK_DELAY.short);
-    return HttpResponse.json({ success: true, message: "Sesion renovada" });
+    const user = resolveSessionUser(request);
+
+    if (!user) {
+      return HttpResponse.json(
+        {
+          code: "REFRESH_TOKEN_EXPIRED",
+          message: "No hay refresh token valido.",
+        },
+        { status: 401 },
+      );
+    }
+
+    return HttpResponse.json(
+      { success: true, message: "Sesion renovada" },
+      {
+        headers: {
+          "Set-Cookie": `csrf_token=csrf_${encodeURIComponent(user.username)}; Path=/`,
+        },
+      },
+    );
   }),
 
-  http.get(getApiUrl("auth/verify"), async () => {
+  http.get(getApiUrl("auth/verify"), async ({ request }) => {
+    const user = resolveSessionUser(request);
+
+    if (!user) {
+      return HttpResponse.json(
+        {
+          code: "SESSION_EXPIRED",
+          message: "La sesion no es valida o ha expirado.",
+        },
+        { status: 401 },
+      );
+    }
+
     return HttpResponse.json({ valid: true });
   }),
 
@@ -257,7 +448,10 @@ export const authHandlers = [
     await delay(MOCK_DELAY.long);
     const body = (await request.json()) as { email: string };
 
-    if (body.email === "error@fail.com") {
+    if (
+      body.email === "error@fail.com" ||
+      body.email.toLowerCase().includes("noexiste")
+    ) {
       return HttpResponse.json(
         {
           code: "USER_NOT_FOUND",
@@ -267,6 +461,8 @@ export const authHandlers = [
       );
     }
 
+    resetCodeStore.set(body.email.toLowerCase(), "123456");
+
     return HttpResponse.json({
       success: true,
       message: "Si el correo existe, se ha enviado un codigo de verificacion.",
@@ -275,12 +471,17 @@ export const authHandlers = [
 
   http.post(getApiUrl("auth/verify-reset-code"), async ({ request }) => {
     await delay(MOCK_DELAY.long);
-    const body = (await request.json()) as { code: string | number };
+    const body = (await request.json()) as {
+      email: string;
+      code: string | number;
+    };
 
     // Convertir a string para asegurar comparación correcta
     const code = String(body.code);
+    const expectedCode =
+      resetCodeStore.get(body.email.toLowerCase()) ?? "123456";
 
-    if (code === "123456") {
+    if (code === expectedCode) {
       return HttpResponse.json({
         valid: true,
       });
@@ -366,6 +567,7 @@ export const authHandlers = [
     }
 
     const user = createMockAuthUser();
+    setMockSessionUser(user);
 
     return HttpResponse.json({
       user,
@@ -432,10 +634,48 @@ export const authHandlers = [
     const user = createMockAuthUser({
       mustChangePassword: false,
     });
+    setMockSessionUser(user);
 
     return HttpResponse.json({
       user,
       requiresOnboarding: false,
     });
+  }),
+
+  // ============================================================
+  // TEST HELPERS
+  // ============================================================
+
+  http.post(getApiUrl("auth/test-reset-state"), async () => {
+    resetRolesMockState();
+    resetUsersMockState();
+    resetMockSessionUser();
+    testUserOverrides.clear();
+    resetCodeStore.clear();
+
+    return HttpResponse.json({ success: true });
+  }),
+
+  http.post(getApiUrl("auth/test-reset-user"), async ({ request }) => {
+    const body = (await request.json()) as {
+      username: string;
+      requiresOnboarding?: boolean;
+      mustChangePassword?: boolean;
+    };
+
+    testUserOverrides.set(body.username, {
+      requiresOnboarding: body.requiresOnboarding,
+      mustChangePassword: body.mustChangePassword,
+    });
+
+    return HttpResponse.json({ success: true });
+  }),
+
+  http.get(getApiUrl("auth/test-get-otp"), async ({ request }) => {
+    const url = new URL(request.url);
+    const email = url.searchParams.get("email")?.toLowerCase() ?? "";
+    const code = resetCodeStore.get(email) ?? "123456";
+
+    return HttpResponse.json({ code });
   }),
 ];

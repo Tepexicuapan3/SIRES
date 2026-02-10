@@ -93,6 +93,11 @@ describe("Auth Login Flow (MSW)", () => {
   );
 
   it("returns current user profile", async () => {
+    await authAPI.login({
+      username: "admin",
+      password: "password123",
+    });
+
     const response = await authAPI.getCurrentUser();
 
     expect(response).toBeDefined();
@@ -102,12 +107,22 @@ describe("Auth Login Flow (MSW)", () => {
   });
 
   it("refreshes the session token", async () => {
+    await authAPI.login({
+      username: "admin",
+      password: "password123",
+    });
+
     const response = await authAPI.refreshToken();
 
     expect(response.success).toBe(true);
   });
 
   it("verifies token validity", async () => {
+    await authAPI.login({
+      username: "admin",
+      password: "password123",
+    });
+
     const response = await authAPI.verifyToken();
 
     expect(response.valid).toBe(true);

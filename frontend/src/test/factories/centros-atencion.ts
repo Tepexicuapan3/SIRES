@@ -17,7 +17,7 @@ export const createMockCentroAtencionRef = (
   overrides: Partial<CentroAtencionRef> = {},
 ): CentroAtencionRef => ({
   id: faker.number.int({ min: 1, max: 1000 }),
-  name: `CENTRO ${faker.location.street().toUpperCase()}`,
+  name: `Centro ${faker.location.street()}`,
   ...overrides,
 });
 
@@ -34,7 +34,7 @@ export const createMockCentroAtencionListItem = (
   overrides: Partial<CentroAtencionListItem> = {},
 ): CentroAtencionListItem => ({
   id: faker.number.int({ min: 1, max: 1000 }),
-  name: `CENTRO ${faker.location.street().toUpperCase()}`,
+  name: `Centro ${faker.location.street()}`,
   folioCode: faker.string.alpha({ length: 3, casing: "upper" }),
   isExternal: faker.datatype.boolean(),
   isActive: faker.datatype.boolean(),

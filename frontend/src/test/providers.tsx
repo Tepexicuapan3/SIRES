@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -17,7 +18,9 @@ export const TestProviders = ({ children }: { children: ReactNode }) => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter>
+        <TooltipProvider>{children}</TooltipProvider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 };

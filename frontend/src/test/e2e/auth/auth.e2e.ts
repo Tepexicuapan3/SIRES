@@ -1,11 +1,5 @@
-import {
-  test,
-  expect,
-  Page,
-  BrowserContext,
-  type APIRequestContext,
-} from "@playwright/test";
-import { AuthPage, AuthAPI, LoginData } from "./auth-page";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+import { AuthPage, AuthAPI } from "./auth-page";
 
 /**
  * ============================================================
@@ -122,7 +116,7 @@ test.describe("Auth: Login / Logout", () => {
   test(
     "TC001: Login exitoso con credenciales válidas - Admin",
     { tag: ["@critical", "@e2e", "@auth", "@login", "@AUTH-E2E-001"] },
-    async ({ page, request }) => {
+    async ({ page }) => {
       const authPage = new AuthPage(page);
 
       await authPage.login(TEST_USERS.admin);
@@ -136,7 +130,7 @@ test.describe("Auth: Login / Logout", () => {
   test(
     "TC002: Login exitoso con diferentes roles",
     { tag: ["@high", "@e2e", "@auth", "@login", "@AUTH-E2E-002"] },
-    async ({ page, context }) => {
+    async ({ context }) => {
       test.setTimeout(120000);
       // Test cada rol en un contexto separado para aislar sesiones
       const roles = [
@@ -158,7 +152,7 @@ test.describe("Auth: Login / Logout", () => {
         },
       ];
 
-      for (const { name, credentials, route } of roles) {
+      for (const { credentials, route } of roles) {
         // Crear nuevo contexto para cada rol (sesión limpia)
         const newContext = await context.browser().newContext();
         const newPage = await newContext.newPage();
@@ -182,7 +176,7 @@ test.describe("Auth: Login / Logout", () => {
   test(
     "TC003: Login fallido - Contraseña incorrecta",
     { tag: ["@critical", "@e2e", "@auth", "@login", "@AUTH-E2E-003"] },
-    async ({ page, request }) => {
+    async ({ page }) => {
       const authPage = new AuthPage(page);
 
       await authPage.login({
@@ -198,7 +192,7 @@ test.describe("Auth: Login / Logout", () => {
   test(
     "TC004: Login fallido - Usuario inactivo",
     { tag: ["@critical", "@e2e", "@auth", "@login", "@AUTH-E2E-004"] },
-    async ({ page, request }) => {
+    async ({ page }) => {
       const authPage = new AuthPage(page);
 
       await authPage.login(TEST_USERS.inactivo);
@@ -211,7 +205,7 @@ test.describe("Auth: Login / Logout", () => {
   test(
     "TC005: Login fallido - Usuario bloqueado",
     { tag: ["@critical", "@e2e", "@auth", "@login", "@AUTH-E2E-005"] },
-    async ({ page, request }) => {
+    async ({ page }) => {
       const authPage = new AuthPage(page);
 
       await authPage.login(TEST_USERS.bloqueado);
@@ -579,16 +573,13 @@ test.describe("Auth: Session Management", () => {
   test(
     "TC015: Sesión expirada detectada automáticamente",
     { tag: ["@critical", "@e2e", "@auth", "@session", "@AUTH-E2E-015"] },
-    async ({ page, context, browser }) => {
+    async ({ page, context }) => {
       const authPage = new AuthPage(page);
 
       // Login
       await authPage.gotoLogin();
       await authPage.login(TEST_USERS.admin);
       await authPage.expectSuccessfulLogin();
-
-      // Store current URL (dashboard)
-      const dashboardUrl = page.url();
 
       // Open new tab and trigger session expiration
       const newPage = await context.newPage();
@@ -736,7 +727,7 @@ test.describe("Auth: API Contract", () => {
   test(
     "TC021: API Logout invalida sesión",
     { tag: ["@critical", "@e2e", "@auth", "@api", "@AUTH-E2E-021"] },
-    async ({ page, context }) => {
+    async ({ page }) => {
       const authPage = new AuthPage(page);
 
       // Login via UI para establecer cookies

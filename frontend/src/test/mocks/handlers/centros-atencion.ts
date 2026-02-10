@@ -10,14 +10,14 @@ const MOCK_DELAY = {
   detail: 900,
 };
 
-const centers = Array.from({ length: 10 }).map(() =>
+export const centrosAtencionDB = Array.from({ length: 10 }).map(() =>
   createMockCentroAtencionListItem(),
 );
 
-centers.unshift(
+centrosAtencionDB.unshift(
   createMockCentroAtencionListItem({
     id: 1,
-    name: "CENTRO CENTRAL",
+    name: "Centro Central",
     folioCode: "CEN",
     isExternal: false,
     isActive: true,
@@ -30,12 +30,12 @@ export const centrosAtencionHandlers = [
     const url = new URL(request.url);
     const page = Number(url.searchParams.get("page") || 1);
     const pageSize = Number(url.searchParams.get("pageSize") || 20);
-    const total = centers.length;
+    const total = centrosAtencionDB.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
-    const items = centers.slice(start, end);
+    const items = centrosAtencionDB.slice(start, end);
 
     return HttpResponse.json({
       items,
@@ -49,7 +49,7 @@ export const centrosAtencionHandlers = [
   http.get(getApiUrl("care-centers/:id"), async ({ params }) => {
     await delay(MOCK_DELAY.detail);
     const id = Number(params.id);
-    const center = centers.find((item) => item.id === id);
+    const center = centrosAtencionDB.find((item) => item.id === id);
 
     if (!center) {
       return HttpResponse.json(

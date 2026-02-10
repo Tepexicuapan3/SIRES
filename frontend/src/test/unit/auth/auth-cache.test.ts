@@ -26,6 +26,6 @@ describe("auth-cache", () => {
     clearAuthSession(queryClient);
 
     const cachedUser = queryClient.getQueryData(authKeys.session());
-    expect(cachedUser).toBeUndefined();
+    expect(cachedUser).toBeNull();
   });
 });

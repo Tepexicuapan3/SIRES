@@ -3,6 +3,7 @@ import {
   Locator,
   expect,
   APIRequestContext,
+  type BrowserContext,
   type APIResponse,
 } from "@playwright/test";
 
@@ -324,19 +325,21 @@ export class AuthAPI {
 
   constructor(
     private request: APIRequestContext,
-    private context?: any, // BrowserContext opcional para extraer cookies
+    private context?: BrowserContext, // BrowserContext opcional para extraer cookies
   ) {}
 
   private async extractCsrfFromCookies() {
     if (this.context) {
       const cookies = await this.context.cookies();
-      const csrfCookie = cookies.find((c: any) => c.name === "csrf_token");
+      const csrfCookie = cookies.find((cookie) => cookie.name === "csrf_token");
       if (csrfCookie) {
         this.csrfToken = csrfCookie.value;
       }
 
       // Build cookie string for requests
-      this.cookies = cookies.map((c: any) => `${c.name}=${c.value}`).join("; ");
+      this.cookies = cookies
+        .map((cookie) => `${cookie.name}=${cookie.value}`)
+        .join("; ");
     }
   }
 
