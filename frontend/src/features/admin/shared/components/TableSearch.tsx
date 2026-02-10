@@ -25,14 +25,24 @@ export function TableSearch({
   };
 
   return (
-    <div className={cn("relative w-full min-w-45 max-w-65", className)}>
-      <Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-txt-muted" />
+    <div
+      className={cn(
+        "relative w-full min-w-0 sm:max-w-xs lg:max-w-sm",
+        className,
+      )}
+    >
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-txt-muted" />
       <Input
+        type="search"
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
         disabled={disabled}
-        className={cn("pl-9", inputClassName)}
+        className={cn(
+          "h-9 rounded-xl bg-subtle pl-9 text-sm focus:bg-paper",
+          "focus:border-line-struct focus:ring-0 focus-visible:border-line-struct focus-visible:ring-2 focus-visible:ring-line-struct/50 focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+          inputClassName,
+        )}
       />
     </div>
   );

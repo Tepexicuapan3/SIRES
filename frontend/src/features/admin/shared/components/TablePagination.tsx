@@ -1,10 +1,15 @@
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
 } from "@/components/ui/pagination";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,8 +20,6 @@ import {
 import { cn } from "@/lib/utils";
 
 const DEFAULT_PAGE_SIZES = [10, 20, 50] as const;
-
-type PaginationToken = number | "ellipsis";
 
 export interface TablePaginationProps {
   page: number;
@@ -29,69 +32,20 @@ export interface TablePaginationProps {
   className?: string;
 }
 
-const buildPaginationItems = (
-  page: number,
-  totalPages: number,
-): PaginationToken[] => {
-  if (totalPages <= 1) {
-    return [1];
-  }
-
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1);
-  }
-
-  const pages = new Set<number>();
-  pages.add(1);
-  pages.add(totalPages);
-  pages.add(page);
-  pages.add(page - 1);
-  pages.add(page + 1);
-
-  const ordered = Array.from(pages)
-    .filter((value) => value >= 1 && value <= totalPages)
-    .sort((a, b) => a - b);
-
-  const result: PaginationToken[] = [];
-  ordered.forEach((value, index) => {
-    if (index === 0) {
-      result.push(value);
-      return;
-    }
-
-    const previous = ordered[index - 1] ?? 0;
-    if (value - previous > 1) {
-      result.push("ellipsis");
-    }
-    result.push(value);
-  });
-
-  return result;
-};
-
-const getRangeLabel = (page: number, pageSize: number, total: number) => {
-  if (total === 0) {
-    return "Mostrando 0 resultados";
-  }
-
-  const start = (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, total);
-  return `Mostrando ${start}-${end} de ${total}`;
-};
-
 export function TablePagination({
   page,
   pageSize,
-  total,
   totalPages,
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [...DEFAULT_PAGE_SIZES],
   className,
 }: TablePaginationProps) {
-  const items = buildPaginationItems(page, totalPages);
   const isFirstPage = page <= 1;
   const isLastPage = page >= totalPages;
+  const showPageSize = Boolean(onPageSizeChange);
+  const navButtonClassName =
+    "border border-line-struct bg-paper text-txt-body hover:bg-subtle hover:border-line-struct/80";
 
   const handlePageChange = (nextPage: number) => {
     if (nextPage === page || nextPage < 1 || nextPage > totalPages) {
@@ -111,16 +65,14 @@ export function TablePagination({
   return (
     <div
       className={cn(
-        "flex w-full flex-col gap-4 md:flex-row md:items-center md:justify-between",
+        "flex w-full flex-col gap-3 sm:flex-row sm:items-center",
+        showPageSize ? "sm:justify-between" : "sm:justify-end",
         className,
       )}
     >
-      <div className="text-sm text-txt-muted">
-        {getRangeLabel(page, pageSize, total)}
-      </div>
       {onPageSizeChange ? (
-        <div className="flex items-center gap-2 text-sm text-txt-muted">
-          <span>Filas por pagina</span>
+        <div className="flex w-full items-center gap-2 text-xs text-txt-muted sm:w-auto sm:text-sm">
+          <span className="whitespace-nowrap">Filas por pagina</span>
           <Select value={pageSize.toString()} onValueChange={handleSelect}>
             <SelectTrigger className="h-8 w-22.5">
               <SelectValue />
@@ -135,54 +87,83 @@ export function TablePagination({
           </Select>
         </div>
       ) : null}
-      <Pagination className="md:mx-0 md:justify-end">
-        <PaginationContent>
+      <Pagination className="mx-0 w-full justify-end sm:w-auto">
+        <PaginationContent className="w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
           <PaginationItem>
             <PaginationLink
               href="#"
-              size="default"
+              size="icon-sm"
+              onClick={(event) => {
+                event.preventDefault();
+                handlePageChange(1);
+              }}
+              aria-disabled={isFirstPage}
+              className={cn(
+                navButtonClassName,
+                isFirstPage && "pointer-events-none opacity-50",
+              )}
+            >
+              <ChevronsLeft className="size-4" />
+              <span className="sr-only">Primera pagina</span>
+            </PaginationLink>
+          </PaginationItem>
+          <PaginationItem>
+            <PaginationLink
+              href="#"
+              size="icon-sm"
               onClick={(event) => {
                 event.preventDefault();
                 handlePageChange(page - 1);
               }}
               aria-disabled={isFirstPage}
-              className={cn(isFirstPage && "pointer-events-none opacity-50")}
+              className={cn(
+                navButtonClassName,
+                isFirstPage && "pointer-events-none opacity-50",
+              )}
             >
-              Anterior
+              <ChevronLeft className="size-4" />
+              <span className="sr-only">Pagina anterior</span>
             </PaginationLink>
           </PaginationItem>
-          {items.map((item, index) =>
-            item === "ellipsis" ? (
-              <PaginationItem key={`ellipsis-${index}`}>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : (
-              <PaginationItem key={`page-${item}`}>
-                <PaginationLink
-                  href="#"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    handlePageChange(item);
-                  }}
-                  isActive={item === page}
-                >
-                  {item}
-                </PaginationLink>
-              </PaginationItem>
-            ),
-          )}
+          <PaginationItem>
+            <span className="px-1 text-xs text-txt-muted sm:text-sm sm:whitespace-nowrap">
+              Pagina {page} de {totalPages}
+            </span>
+          </PaginationItem>
           <PaginationItem>
             <PaginationLink
               href="#"
-              size="default"
+              size="icon-sm"
               onClick={(event) => {
                 event.preventDefault();
                 handlePageChange(page + 1);
               }}
               aria-disabled={isLastPage}
-              className={cn(isLastPage && "pointer-events-none opacity-50")}
+              className={cn(
+                navButtonClassName,
+                isLastPage && "pointer-events-none opacity-50",
+              )}
             >
-              Siguiente
+              <ChevronRight className="size-4" />
+              <span className="sr-only">Pagina siguiente</span>
+            </PaginationLink>
+          </PaginationItem>
+          <PaginationItem>
+            <PaginationLink
+              href="#"
+              size="icon-sm"
+              onClick={(event) => {
+                event.preventDefault();
+                handlePageChange(totalPages);
+              }}
+              aria-disabled={isLastPage}
+              className={cn(
+                navButtonClassName,
+                isLastPage && "pointer-events-none opacity-50",
+              )}
+            >
+              <ChevronsRight className="size-4" />
+              <span className="sr-only">Ultima pagina</span>
             </PaginationLink>
           </PaginationItem>
         </PaginationContent>

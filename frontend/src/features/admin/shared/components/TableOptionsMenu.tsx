@@ -31,9 +31,8 @@ export function TableOptionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="w-9 p-0">
+        <Button variant="outline" size="icon-sm" aria-label={label}>
           <MoreVertical className="size-4 text-txt-muted" />
-          <span className="sr-only">{label}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-40">

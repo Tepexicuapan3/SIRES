@@ -1,15 +1,25 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import {
-  AlertTriangle,
   Download,
   Eye,
   Pencil,
   Plus,
   RotateCcw,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DataTable,
   type DataTableColumn,
@@ -33,6 +43,10 @@ import {
   type TableAction,
 } from "@features/admin/shared/components/TableToolbar";
 import { useRolesList } from "@features/admin/modules/rbac/roles/queries/useRolesList";
+import { useDeleteRole } from "@features/admin/modules/rbac/roles/mutations/useDeleteRole";
+import { RoleDetailsDialog } from "@features/admin/modules/rbac/roles/components/RoleDetailsDialog";
+import { RoleCreateDialog } from "@features/admin/modules/rbac/roles/components/RoleCreateDialog";
+import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
 import type { RoleListItem } from "@api/types";
 import { usePermissions } from "@features/auth/queries/usePermissions";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -75,9 +89,14 @@ export function RolesPage() {
       isActive: true,
       actions: true,
     });
+  const [selectedRole, setSelectedRole] = useState<RoleListItem | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const debouncedSearch = useDebounce(search, 400);
+  const deleteRole = useDeleteRole();
 
-  const { data, isLoading, error } = useRolesList({
+  const { data, isLoading, error, refetch } = useRolesList({
     page,
     pageSize,
     search: debouncedSearch || undefined,
@@ -96,6 +115,33 @@ export function RolesPage() {
   const canDeleteRole = hasPermission("admin:gestion:roles:delete");
   const canReadRole = hasPermission("admin:gestion:roles:read");
   const showActions = canReadRole || canUpdateRole || canDeleteRole;
+  const canEditDialog = canUpdateRole;
+
+  const handleOpenDetails = (role: RoleListItem) => {
+    setSelectedRole(role);
+    setDetailsOpen(true);
+  };
+
+  const handleCloseDetails = () => {
+    setDetailsOpen(false);
+    setSelectedRole(null);
+  };
+
+  const handleDeleteRole = async () => {
+    if (!selectedRole) return;
+    try {
+      await deleteRole.mutateAsync({ roleId: selectedRole.id });
+      toast.success("Rol eliminado", {
+        description: `El rol ${selectedRole.name} se elimino correctamente.`,
+      });
+      setDeleteOpen(false);
+      setSelectedRole(null);
+    } catch (error) {
+      toast.error("No se pudo eliminar", {
+        description: getRoleErrorMessage(error, "Error al eliminar rol"),
+      });
+    }
+  };
 
   const baseColumns: DataTableColumn<RoleListItem>[] = [
     {
@@ -150,7 +196,8 @@ export function RolesPage() {
     key: "actions",
     header: <TableActionsHeader />,
     align: "center",
-    className: "w-10",
+    className: "w-9 px-0",
+    headerClassName: "w-9 px-0",
     render: (row) => {
       const actions: TableAction[] = [];
 
@@ -159,6 +206,7 @@ export function RolesPage() {
           id: `view-${row.id}`,
           label: "Ver detalles",
           icon: Eye,
+          onSelect: () => handleOpenDetails(row),
         });
       }
 
@@ -168,6 +216,7 @@ export function RolesPage() {
           label: "Editar",
           icon: Pencil,
           disabled: row.isSystem,
+          onSelect: () => handleOpenDetails(row),
         });
       }
 
@@ -181,10 +230,21 @@ export function RolesPage() {
           icon: Trash2,
           disabled: row.isSystem,
           variant: "destructive",
+          onSelect: () => {
+            setSelectedRole(row);
+            setDeleteOpen(true);
+          },
         });
       }
 
-      return actions.length > 0 ? <TableToolbar actions={actions} /> : null;
+      return actions.length > 0 ? (
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <TableToolbar actions={actions} />
+        </div>
+      ) : null;
     },
   };
 
@@ -215,6 +275,22 @@ export function RolesPage() {
     statusFilter !== ROLE_STATUS_FILTER.ALL,
     typeFilter !== ROLE_TYPE_FILTER.ALL,
   ].filter(Boolean).length;
+
+  const isSearchPending = search.trim() !== debouncedSearch.trim();
+  const hasFilters = Boolean(debouncedSearch.trim()) || appliedFiltersCount > 0;
+  const tableErrorDescription = error
+    ? getRoleErrorMessage(
+        error,
+        "No se pudo obtener el listado de roles. Intenta nuevamente.",
+      )
+    : undefined;
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setStatusFilter(ROLE_STATUS_FILTER.ALL);
+    setTypeFilter(ROLE_TYPE_FILTER.ALL);
+    setPage(1);
+  };
 
   const tableOptions: TableOptionItem[] = [
     {
@@ -301,10 +377,17 @@ export function RolesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-txt-body">Roles</h1>
-        <p className="mt-1 text-sm text-txt-muted">
-          Listado base de roles configurados en el sistema
-        </p>
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex size-9 items-center justify-center rounded-xl border border-line-struct bg-subtle/40 text-txt-muted">
+            <ShieldCheck className="size-5" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold text-txt-body">Roles</h1>
+            <p className="mt-1 text-sm text-txt-muted">
+              Listado base de roles configurados en el sistema
+            </p>
+          </div>
+        </div>
       </div>
 
       <TableHeaderBar
@@ -316,8 +399,6 @@ export function RolesPage() {
               setPage(1);
             }}
             placeholder="Buscar en la tabla"
-            className="w-full max-w-[240px]"
-            inputClassName="h-8 text-sm bg-contrast text-txt-contrast border-contrast focus:border-contrast focus:ring-0"
           />
         }
         actions={
@@ -325,11 +406,7 @@ export function RolesPage() {
             <TableFilterMenu
               sections={filterSections}
               appliedCount={appliedFiltersCount}
-              onClear={() => {
-                setStatusFilter(ROLE_STATUS_FILTER.ALL);
-                setTypeFilter(ROLE_TYPE_FILTER.ALL);
-                setPage(1);
-              }}
+              onClear={handleClearFilters}
             />
             <TableColumnVisibility
               columns={visibilityOptions}
@@ -341,25 +418,25 @@ export function RolesPage() {
               permission="admin:gestion:roles:create"
               label="Nuevo"
               icon={<Plus className="size-4" />}
+              onClick={() => setCreateOpen(true)}
             />
           </>
         }
       />
 
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>No se pudo cargar el listado</AlertTitle>
-          <AlertDescription>
-            Ocurrió un error al consultar los roles. Intentá nuevamente.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       <DataTable
         columns={visibleColumns}
         rows={rows}
-        isLoading={isLoading}
+        isLoading={isLoading || isSearchPending}
+        isError={Boolean(error)}
+        errorTitle="No se pudo cargar roles"
+        errorDescription={tableErrorDescription}
+        hasFilters={hasFilters}
+        onRowClick={canReadRole ? handleOpenDetails : undefined}
+        onRetry={() => {
+          void refetch();
+        }}
+        onClearFilters={handleClearFilters}
         pagination={{
           page,
           pageSize,
@@ -371,11 +448,44 @@ export function RolesPage() {
             setPage(1);
           },
         }}
-        footerNote={`Página ${page} de ${data?.totalPages ?? 1}`}
         getRowKey={(row) => row.id.toString()}
         emptyTitle="Sin roles"
         emptyDescription="Cuando existan roles configurados se listarán aquí."
       />
+      <RoleDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        roleSummary={selectedRole}
+        canEdit={canEditDialog}
+        onClose={handleCloseDetails}
+      />
+      <RoleCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar rol</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta accion dara de baja el rol y lo quitara del catalogo.
+              {selectedRole?.usersCount ? (
+                <span className="mt-2 block text-xs text-status-alert">
+                  El rol tiene usuarios asignados y no podra eliminarse.
+                </span>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleDeleteRole()}
+              disabled={
+                deleteRole.isPending || Boolean(selectedRole?.usersCount)
+              }
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

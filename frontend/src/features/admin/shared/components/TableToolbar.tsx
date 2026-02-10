@@ -58,11 +58,11 @@ export function TableToolbar({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           aria-label={label}
-          className={cn("h-8 w-8", className)}
+          className={cn("text-txt-muted", className)}
         >
-          <MoreVertical className="size-4 text-txt-muted" />
+          <MoreVertical className="size-4" />
           <span className="sr-only">{label}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -79,14 +79,11 @@ export function TableToolbar({
             <DropdownMenuItem
               key={action.id}
               disabled={action.disabled}
+              variant={isDestructive ? "destructive" : "default"}
               onSelect={(event) => {
                 event.preventDefault();
                 action.onSelect?.();
               }}
-              className={cn(
-                isDestructive &&
-                  "text-status-critical focus:bg-status-critical/10 focus:text-status-critical",
-              )}
             >
               {Icon ? <Icon className="mr-2 size-4" /> : null}
               {action.label}
@@ -99,5 +96,5 @@ export function TableToolbar({
 }
 
 export function TableActionsHeader() {
-  return <MoreVertical className="size-4 text-txt-muted" />;
+  return <span className="sr-only">Acciones</span>;
 }

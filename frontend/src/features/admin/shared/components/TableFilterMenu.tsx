@@ -34,14 +34,16 @@ export function TableFilterMenu({
   appliedCount,
   onClear,
 }: TableFilterMenuProps) {
+  const hasActiveFilters = appliedCount > 0;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Filter className="size-4" />
           Filtros
-          {appliedCount > 0 ? (
-            <span className="ml-1 inline-flex size-5 items-center justify-center rounded-full bg-contrast text-xs font-semibold text-txt-contrast">
+          {hasActiveFilters ? (
+            <span className="ml-1 inline-flex size-4 items-center justify-center rounded-full border-2 border-line-struct text-[10px] font-bold leading-none text-txt-body">
               {appliedCount}
             </span>
           ) : null}

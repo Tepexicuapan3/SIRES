@@ -47,4 +47,18 @@ function AvatarFallback({ className, ...props }: AvatarFallbackProps) {
 }
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
-export { Avatar, AvatarImage, AvatarFallback };
+type AvatarBadgeProps = ComponentPropsWithRef<"span">;
+
+function AvatarBadge({ className, ...props }: AvatarBadgeProps) {
+  return (
+    <span
+      className={cn(
+        "absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-paper",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Avatar, AvatarImage, AvatarFallback, AvatarBadge };

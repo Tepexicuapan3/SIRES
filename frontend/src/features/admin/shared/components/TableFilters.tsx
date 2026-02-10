@@ -2,9 +2,9 @@ import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const FILTER_ALIGN = {
-  start: "justify-start",
-  end: "justify-end",
-  between: "justify-between",
+  start: "sm:justify-start",
+  end: "sm:justify-end",
+  between: "sm:justify-between",
 } as const;
 
 type FilterAlign = keyof typeof FILTER_ALIGN;
@@ -23,12 +23,15 @@ export function TableFilters({
   return (
     <div
       className={cn(
-        "rounded-lg border border-line-struct bg-subtle p-2",
+        "rounded-xl border border-line-struct bg-paper p-3 shadow-soft",
         className,
       )}
     >
       <div
-        className={cn("flex flex-wrap items-end gap-2", FILTER_ALIGN[align])}
+        className={cn(
+          "flex w-full flex-col gap-3 sm:flex-row sm:items-center",
+          FILTER_ALIGN[align],
+        )}
       >
         {children}
       </div>

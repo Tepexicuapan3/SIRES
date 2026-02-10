@@ -77,6 +77,9 @@ export function NavUser() {
 
   const userInitials = getInitials(user.fullName || user.username || "U");
   const primaryRole = user.primaryRole || user.roles?.[0] || "Usuario";
+  const avatarUrl =
+    (user as { avatarUrl?: string | null }).avatarUrl ?? undefined;
+  const avatarAlt = user.fullName || user.username || "Usuario";
 
   return (
     <SidebarMenu className="px-2">
@@ -87,10 +90,12 @@ export function NavUser() {
               size="lg"
               className="group data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src="" alt="" />
+              <Avatar className="h-8 w-8">
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt={avatarAlt} />
+                ) : null}
                 <AvatarFallback
-                  className="rounded-md bg-brand text-txt-inverse font-body font-extrabold text-sm"
+                  className="text-xs font-semibold text-txt-muted"
                   aria-label={`Usuario ${user.username}`}
                 >
                   {userInitials}
@@ -113,10 +118,12 @@ export function NavUser() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src="" alt="" />
+                <Avatar className="h-8 w-8">
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt={avatarAlt} />
+                  ) : null}
                   <AvatarFallback
-                    className="rounded-md bg-brand text-txt-inverse font-body font-extrabold text-sm"
+                    className="text-xs font-semibold text-txt-muted"
                     aria-label={`Usuario ${user.username}`}
                   >
                     {userInitials}

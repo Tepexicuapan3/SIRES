@@ -152,11 +152,6 @@ export const ModuleSearch = () => {
       .slice(0, 8);
   })();
 
-  // Reset activeIndex cuando cambian los resultados
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
-
   // Scroll al item activo
   useEffect(() => {
     if (activeIndex < 0 || !listRef.current) return;
@@ -320,6 +315,7 @@ export const ModuleSearch = () => {
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
+            setActiveIndex(0);
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
@@ -368,6 +364,7 @@ export const ModuleSearch = () => {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
+                setActiveIndex(0);
                 setIsOpen(true);
               }}
               onFocus={() => setIsOpen(true)}

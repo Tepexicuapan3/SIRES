@@ -21,6 +21,7 @@ export interface AuthUser {
   username: string;
   fullName: string;
   email: string;
+  avatarUrl?: string | null;
   primaryRole: string;
   landingRoute: string | null;
   roles: string[];

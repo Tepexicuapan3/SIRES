@@ -277,7 +277,7 @@ export interface AddUserOverrideResponse {
 
 /**
  * Response al eliminar un override.
- * DELETE /api/v1/users/:id/overrides/:overrideId
+ * DELETE /api/v1/users/:id/overrides/:code
  */
 export interface RemoveUserOverrideResponse {
   userId: number;

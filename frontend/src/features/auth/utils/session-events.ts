@@ -12,7 +12,9 @@ export const emitSessionExpired = () => {
       Date.now().toString(),
     );
     window.localStorage.removeItem(SESSION_EXPIRED_STORAGE_KEY);
-  } catch {}
+  } catch {
+    // localStorage puede estar bloqueado en algunos entornos.
+  }
 
   if (typeof BroadcastChannel !== "undefined") {
     const channel = new BroadcastChannel(SESSION_EXPIRED_CHANNEL);
