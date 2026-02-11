@@ -36,6 +36,7 @@ const renderGeneralTab = ({
         formId="role-details-form"
         roleDetail={roleDetail}
         onSubmit={vi.fn()}
+        activeStatus={roleDetail.isActive}
         onStatusChange={onStatusChange}
       />
     );

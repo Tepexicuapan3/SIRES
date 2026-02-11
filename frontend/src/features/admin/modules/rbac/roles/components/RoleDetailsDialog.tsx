@@ -5,43 +5,28 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePermissionsCatalog } from "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog";
-import { useRoleDetail } from "@features/admin/modules/rbac/roles/queries/useRoleDetail";
-import { useUpdateRole } from "@features/admin/modules/rbac/roles/mutations/useUpdateRole";
+import { RoleDetailsGeneralTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsGeneralTab";
+import { RoleDetailsFooter } from "@features/admin/modules/rbac/roles/components/RoleDetailsFooter";
+import { RoleDetailsPermissionsTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsPermissionsTab";
+import { RoleDialogHeader } from "@features/admin/modules/rbac/roles/components/RoleDialogHeader";
 import {
   roleDetailsSchema,
   type RoleDetailsFormValues,
 } from "@features/admin/modules/rbac/roles/domain/roles.schemas";
+import { useAssignRolePermissions } from "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions";
+import { useUpdateRole } from "@features/admin/modules/rbac/roles/mutations/useUpdateRole";
+import { useRoleDetail } from "@features/admin/modules/rbac/roles/queries/useRoleDetail";
 import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
 import {
   formatDate,
   formatDateTime,
 } from "@features/admin/modules/rbac/roles/utils/roles.format";
-import { RoleDialogHeader } from "@features/admin/modules/rbac/roles/components/RoleDialogHeader";
-import { RoleDetailsFooter } from "@features/admin/modules/rbac/roles/components/RoleDetailsFooter";
-import { RoleDetailsGeneralTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsGeneralTab";
-import { RoleDetailsPermissionsTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsPermissionsTab";
+import { AdminDetailsDialogShell } from "@features/admin/shared/components/details/AdminDetailsDialogShell";
+import { useDetailsDialogCloseGuard } from "@features/admin/shared/hooks/useDetailsDialogCloseGuard";
+import type { AdminDetailsDialogSection } from "@features/admin/shared/types/details-dialog.types";
 import type { RoleListItem, UpdateRoleRequest } from "@api/types";
 
 interface RoleDetailsDialogProps {
@@ -67,6 +52,8 @@ export function RoleDetailsDialog({
   roleSummary,
   canEdit,
 }: RoleDetailsDialogProps) {
+  const { isClosing, markClosing, handleOpenChange } =
+    useDetailsDialogCloseGuard(onOpenChange);
   const roleId = roleSummary?.id;
   const {
     data: roleDetailResponse,
@@ -85,28 +72,67 @@ export function RoleDetailsDialog({
 
   const roleDetail = roleDetailResponse?.role;
   const assignedPermissions = roleDetailResponse?.permissions ?? [];
+  const permissionCatalog = permissionsData?.items ?? [];
 
   const updateRole = useUpdateRole();
+  const assignPermissions = useAssignRolePermissions();
 
-  const [activeTab, setActiveTab] = useState("general");
-  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const [draftRoleId, setDraftRoleId] = useState<number | null>(null);
+  const [draftIsActive, setDraftIsActive] = useState<boolean>(
+    roleSummary?.isActive ?? true,
+  );
+  const [draftPermissions, setDraftPermissions] = useState<
+    typeof assignedPermissions
+  >([]);
+  const [isSavingAll, setIsSavingAll] = useState(false);
 
   const form = useForm<RoleDetailsFormValues>({
     resolver: zodResolver(roleDetailsSchema),
     defaultValues: DEFAULT_FORM_VALUES,
   });
-  const isDirty = form.formState.isDirty;
+  const isFormDirty = form.formState.isDirty;
+
+  const hasDraftForCurrentRole =
+    roleDetail !== undefined && draftRoleId === roleDetail.id;
+  const workingPermissions = hasDraftForCurrentRole
+    ? draftPermissions
+    : assignedPermissions;
+  const workingIsActive = hasDraftForCurrentRole
+    ? draftIsActive
+    : (roleDetail?.isActive ?? roleSummary?.isActive ?? true);
+
+  const originalPermissionIds = new Set(
+    assignedPermissions.map((item) => item.id),
+  );
+  const workingPermissionIds = new Set(
+    workingPermissions.map((item) => item.id),
+  );
+
+  const permissionsDirty =
+    originalPermissionIds.size !== workingPermissionIds.size ||
+    [...originalPermissionIds].some((id) => !workingPermissionIds.has(id));
+  const statusDirty =
+    roleDetail !== undefined ? roleDetail.isActive !== workingIsActive : false;
+  const isDirty = isFormDirty || permissionsDirty || statusDirty;
 
   useEffect(() => {
-    if (!roleDetail || !open || isDirty) return;
+    if (!roleDetail || !open || isFormDirty) return;
     form.reset({
       name: roleDetail.name ?? "",
       description: roleDetail.description ?? "",
       landingRoute: roleDetail.landingRoute ?? "",
     });
-  }, [form, isDirty, open, roleDetail]);
+  }, [form, isFormDirty, open, roleDetail]);
+
+  useEffect(() => {
+    if (!open || !roleDetailResponse) return;
+    setDraftRoleId(roleDetailResponse.role.id);
+    setDraftIsActive(roleDetailResponse.role.isActive);
+    setDraftPermissions(roleDetailResponse.permissions);
+  }, [open, roleDetailResponse]);
 
   const closeDialog = () => {
+    markClosing();
     if (roleDetail) {
       form.reset({
         name: roleDetail.name ?? "",
@@ -116,27 +142,70 @@ export function RoleDetailsDialog({
     } else {
       form.reset(DEFAULT_FORM_VALUES);
     }
-    setActiveTab("general");
+    setDraftRoleId(null);
+    setDraftIsActive(roleDetail?.isActive ?? roleSummary?.isActive ?? true);
+    setDraftPermissions([]);
     onClose?.();
     onOpenChange(false);
   };
 
-  const handleDialogOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      if (isDirty) {
-        setConfirmCloseOpen(true);
-        return;
+  const shouldShowLoading = open && isLoading && !isClosing;
+  const shouldShowError =
+    open && !isClosing && (isError || (!isLoading && !roleDetail));
+  const isSystem = roleDetail?.isSystem ?? roleSummary?.isSystem;
+  const isEditable = canEdit && !isSystem;
+
+  const isSaving =
+    isSavingAll || updateRole.isPending || assignPermissions.isPending;
+
+  const handleAddPermissionDraft = (permissionId: number) => {
+    if (!isEditable || !roleDetail) return;
+
+    const selectedPermission = permissionCatalog.find(
+      (permission) => permission.id === permissionId,
+    );
+    if (!selectedPermission) return;
+
+    setDraftRoleId(roleDetail.id);
+    setDraftPermissions((previousPermissions) => {
+      const basePermissions = hasDraftForCurrentRole
+        ? previousPermissions
+        : assignedPermissions;
+      if (
+        basePermissions.some((permission) => permission.id === permissionId)
+      ) {
+        return basePermissions;
       }
 
-      closeDialog();
-      return;
-    }
+      return [
+        ...basePermissions,
+        {
+          id: selectedPermission.id,
+          code: selectedPermission.code,
+          description: selectedPermission.description,
+          assignedAt: new Date().toISOString(),
+          assignedBy: { id: 0, name: "Pendiente de guardar" },
+        },
+      ];
+    });
+  };
 
-    onOpenChange(true);
+  const handleRemovePermissionDraft = (permissionId: number) => {
+    if (!isEditable || !roleDetail) return;
+
+    setDraftRoleId(roleDetail.id);
+    setDraftPermissions((previousPermissions) => {
+      const basePermissions = hasDraftForCurrentRole
+        ? previousPermissions
+        : assignedPermissions;
+      return basePermissions.filter(
+        (permission) => permission.id !== permissionId,
+      );
+    });
   };
 
   const handleSave = async (values: RoleDetailsFormValues) => {
-    if (!roleDetail || !canEdit) return;
+    if (!roleDetail || !isEditable || isSaving) return;
     const payload: UpdateRoleRequest = {};
     const { dirtyFields } = form.formState;
 
@@ -146,43 +215,95 @@ export function RoleDetailsDialog({
       payload.landingRoute = values.landingRoute?.trim() || undefined;
     }
 
-    if (Object.keys(payload).length === 0) return;
+    if (statusDirty) {
+      payload.isActive = workingIsActive;
+    }
+
+    const hasRoleChanges = Object.keys(payload).length > 0;
+    const hasPermissionsChanges = permissionsDirty;
+
+    if (!hasRoleChanges && !hasPermissionsChanges) return;
+
+    setIsSavingAll(true);
+    let completedGroups = 0;
 
     try {
-      await updateRole.mutateAsync({ roleId: roleDetail.id, data: payload });
-      toast.success("Rol actualizado", {
-        description: "Los cambios se guardaron correctamente.",
+      if (hasRoleChanges) {
+        await updateRole.mutateAsync({ roleId: roleDetail.id, data: payload });
+        completedGroups += 1;
+      }
+
+      if (hasPermissionsChanges) {
+        await assignPermissions.mutateAsync({
+          data: {
+            roleId: roleDetail.id,
+            permissionIds: workingPermissions.map(
+              (permission) => permission.id,
+            ),
+          },
+        });
+        completedGroups += 1;
+      }
+
+      const refreshedDetail = await refetch();
+      const refreshedData = refreshedDetail.data;
+
+      if (refreshedData) {
+        form.reset({
+          name: refreshedData.role.name ?? "",
+          description: refreshedData.role.description ?? "",
+          landingRoute: refreshedData.role.landingRoute ?? "",
+        });
+        setDraftRoleId(refreshedData.role.id);
+        setDraftIsActive(refreshedData.role.isActive);
+        setDraftPermissions(refreshedData.permissions);
+      } else {
+        form.reset(values);
+      }
+
+      toast.success("Cambios guardados", {
+        description: "Configuracion y permisos del rol actualizados.",
       });
-      form.reset(values);
     } catch (error) {
-      toast.error("No se pudo guardar", {
-        description: getRoleErrorMessage(error, "Error al guardar cambios"),
+      const fallbackMessage =
+        completedGroups > 0
+          ? "Se aplicaron cambios parciales. Revisa el detalle y vuelve a intentar."
+          : "No se pudieron guardar los cambios del rol.";
+
+      toast.error("No se pudieron guardar todos los cambios", {
+        description: getRoleErrorMessage(error, fallbackMessage),
       });
+
+      try {
+        const refreshedDetail = await refetch();
+        const refreshedData = refreshedDetail.data;
+        if (refreshedData) {
+          form.reset({
+            name: refreshedData.role.name ?? "",
+            description: refreshedData.role.description ?? "",
+            landingRoute: refreshedData.role.landingRoute ?? "",
+          });
+          setDraftRoleId(refreshedData.role.id);
+          setDraftIsActive(refreshedData.role.isActive);
+          setDraftPermissions(refreshedData.permissions);
+        }
+      } catch {
+        // Si falla el refetch, mantenemos el borrador local para no perder cambios.
+      }
+    } finally {
+      setIsSavingAll(false);
     }
   };
 
-  const handleStatusChange = async (nextActive: boolean) => {
-    if (!roleDetail || !canEdit || roleDetail.isSystem) return;
-    try {
-      await updateRole.mutateAsync({
-        roleId: roleDetail.id,
-        data: { isActive: nextActive },
-      });
-      toast.success("Estado actualizado", {
-        description: "El estado del rol se actualizo correctamente.",
-      });
-    } catch (error) {
-      toast.error("No se pudo actualizar", {
-        description: getRoleErrorMessage(error, "Error al actualizar estado"),
-      });
-    }
+  const handleStatusChange = (nextActive: boolean) => {
+    if (!roleDetail || !isEditable) return;
+    setDraftRoleId(roleDetail.id);
+    setDraftIsActive(nextActive);
   };
 
   const title = roleDetail?.name || roleSummary?.name || "Rol";
   const subtitle = roleDetail?.description || roleSummary?.description || null;
-  const isActive = roleDetail?.isActive ?? roleSummary?.isActive;
-  const isSystem = roleDetail?.isSystem ?? roleSummary?.isSystem;
-  const isEditable = canEdit && !isSystem;
+  const isActive = workingIsActive;
 
   const statusBadge =
     typeof isActive === "boolean" ? (
@@ -198,195 +319,183 @@ export function RoleDetailsDialog({
       </Badge>
     ) : null;
 
-  const createdMeta = roleDetail ? (
-    <span className="inline-flex items-center gap-2">
-      <CalendarDays className="size-4" />
-      Creado {formatDate(roleDetail.createdAt)} por{" "}
-      {roleDetail.createdBy?.name ?? "-"}
+  const createdMetaLabel = roleDetail
+    ? `Creado ${formatDate(roleDetail.createdAt)} por ${roleDetail.createdBy?.name ?? "-"}`
+    : null;
+
+  const createdMeta = createdMetaLabel ? (
+    <span className="inline-flex max-w-full min-w-0 items-center gap-2">
+      <CalendarDays className="size-4 shrink-0" />
+      <span className="truncate" title={createdMetaLabel}>
+        {createdMetaLabel}
+      </span>
     </span>
   ) : null;
 
-  const updatedMeta = roleDetail?.updatedAt ? (
-    <span className="inline-flex items-center gap-2">
-      <Pencil className="size-4" />
-      Actualizado {formatDateTime(roleDetail.updatedAt)} por{" "}
-      {roleDetail.updatedBy?.name ?? "-"}
+  const updatedMetaLabel = roleDetail?.updatedAt
+    ? `Actualizado ${formatDateTime(roleDetail.updatedAt)} por ${roleDetail.updatedBy?.name ?? "-"}`
+    : null;
+
+  const updatedMeta = updatedMetaLabel ? (
+    <span className="inline-flex max-w-full min-w-0 items-center gap-2">
+      <Pencil className="size-4 shrink-0" />
+      <span className="truncate" title={updatedMetaLabel}>
+        {updatedMetaLabel}
+      </span>
     </span>
   ) : null;
+
+  const loadingContent = (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Skeleton className="size-12 rounded-2xl" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-64" />
+        </div>
+      </div>
+      <div className="flex gap-3">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <Skeleton key={`tab-skel-${index}`} className="h-9 w-28" />
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={`field-skel-${index}`} className="h-12" />
+        ))}
+      </div>
+    </div>
+  );
+
+  const errorContent = (
+    <div className="rounded-2xl border border-line-struct bg-paper p-6 text-center">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-status-critical/10 text-status-critical">
+        <AlertTriangle className="size-6" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-txt-body">
+        No se pudo cargar el rol
+      </h3>
+      <p className="mt-1 text-sm text-txt-muted">
+        {getRoleErrorMessage(
+          roleDetailError,
+          "Intenta nuevamente para ver el detalle completo.",
+        )}
+      </p>
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-4"
+        onClick={() => void refetch()}
+      >
+        Reintentar
+      </Button>
+    </div>
+  );
+
+  const sections: AdminDetailsDialogSection[] = roleDetail
+    ? [
+        {
+          id: "general",
+          label: "General",
+          content: (
+            <>
+              <RoleDetailsGeneralTab
+                form={form}
+                formId={FORM_ID}
+                roleDetail={roleDetail}
+                activeStatus={workingIsActive}
+                onSubmit={handleSave}
+                onStatusChange={handleStatusChange}
+                isStatusPending={isSaving}
+                isEditable={isEditable}
+              />
+              {!isEditable ? (
+                <div className="mt-4 rounded-xl border border-line-struct bg-subtle/40 px-4 py-3 text-xs text-txt-muted">
+                  Este rol es de sistema o no tienes permisos para modificarlo.
+                </div>
+              ) : null}
+            </>
+          ),
+        },
+        {
+          id: "permissions",
+          label: "Permisos",
+          badge: (
+            <Badge variant="outline" className="h-5 px-1.5 text-[11px]">
+              {workingPermissions.length}
+            </Badge>
+          ),
+          content: (
+            <RoleDetailsPermissionsTab
+              permissions={workingPermissions}
+              permissionCatalog={permissionCatalog}
+              isLoadingPermissions={isLoadingPermissions}
+              isEditable={isEditable}
+              isSaving={isSaving}
+              catalogErrorMessage={
+                isPermissionsCatalogError
+                  ? getRoleErrorMessage(
+                      permissionsCatalogError,
+                      "No se pudo cargar el catalogo de permisos. Verifica que tengas admin:gestion:permisos:read.",
+                    )
+                  : null
+              }
+              onRetryCatalog={() => {
+                void refetchPermissionsCatalog();
+              }}
+              onAddPermission={handleAddPermissionDraft}
+              onRemovePermission={handleRemovePermissionDraft}
+            />
+          ),
+        },
+      ]
+    : [];
 
   return (
-    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="w-[95vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[92vw] lg:w-[1120px] xl:w-[1260px]">
-        <div className="flex max-h-[88vh] flex-col">
-          <DialogHeader className="px-8 pt-8">
-            <DialogTitle className="sr-only">Detalle de rol</DialogTitle>
-            <DialogDescription className="sr-only">
-              Gestiona la configuracion del rol y sus permisos.
-            </DialogDescription>
-            {roleSummary || roleDetail ? (
-              <RoleDialogHeader
-                title={title}
-                subtitle={subtitle}
-                status={statusBadge}
-                meta={
-                  roleDetail ? (
-                    <span className="flex flex-wrap gap-3">
-                      {createdMeta}
-                      {updatedMeta}
-                    </span>
-                  ) : null
-                }
-              />
-            ) : null}
-          </DialogHeader>
-          <ScrollArea className="flex-1 px-8 pb-8">
-            <div className="space-y-6 pt-4">
-              {isLoading ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="size-12 rounded-2xl" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-40" />
-                      <Skeleton className="h-3 w-64" />
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    {Array.from({ length: 2 }).map((_, index) => (
-                      <Skeleton
-                        key={`tab-skel-${index}`}
-                        className="h-9 w-28"
-                      />
-                    ))}
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {Array.from({ length: 4 }).map((_, index) => (
-                      <Skeleton key={`field-skel-${index}`} className="h-12" />
-                    ))}
-                  </div>
-                </div>
-              ) : isError || !roleDetail ? (
-                <div className="rounded-2xl border border-line-struct bg-paper p-6 text-center">
-                  <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-status-critical/10 text-status-critical">
-                    <AlertTriangle className="size-6" />
-                  </div>
-                  <h3 className="mt-4 text-base font-semibold text-txt-body">
-                    No se pudo cargar el rol
-                  </h3>
-                  <p className="mt-1 text-sm text-txt-muted">
-                    {getRoleErrorMessage(
-                      roleDetailError,
-                      "Intenta nuevamente para ver el detalle completo.",
-                    )}
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => void refetch()}
-                  >
-                    Reintentar
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <Separator />
-
-                  <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="w-full justify-start gap-2 rounded-xl border border-line-struct/60 bg-subtle/40 p-1">
-                      <TabsTrigger
-                        value="general"
-                        className="gap-2 px-4 data-[state=active]:border-line-struct data-[state=active]:shadow-sm"
-                      >
-                        General
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="permissions"
-                        className="gap-2 px-4 data-[state=active]:border-line-struct data-[state=active]:shadow-sm"
-                      >
-                        Permisos
-                        <Badge
-                          variant="outline"
-                          className="h-5 px-1.5 text-[11px]"
-                        >
-                          {assignedPermissions.length}
-                        </Badge>
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="general" className="pt-4">
-                      <RoleDetailsGeneralTab
-                        form={form}
-                        formId={FORM_ID}
-                        roleDetail={roleDetail}
-                        onSubmit={handleSave}
-                        onStatusChange={handleStatusChange}
-                        isStatusPending={updateRole.isPending}
-                        isEditable={isEditable}
-                      />
-                      {!isEditable ? (
-                        <div className="mt-4 rounded-xl border border-line-struct bg-subtle/40 px-4 py-3 text-xs text-txt-muted">
-                          Este rol es de sistema o no tienes permisos para
-                          modificarlo.
-                        </div>
-                      ) : null}
-                    </TabsContent>
-
-                    <TabsContent value="permissions" className="pt-4">
-                      <RoleDetailsPermissionsTab
-                        roleId={roleDetail.id}
-                        permissions={assignedPermissions}
-                        permissionCatalog={permissionsData?.items ?? []}
-                        isLoadingPermissions={isLoadingPermissions}
-                        isEditable={isEditable}
-                        catalogErrorMessage={
-                          isPermissionsCatalogError
-                            ? getRoleErrorMessage(
-                                permissionsCatalogError,
-                                "No se pudo cargar el catalogo de permisos. Verifica que tengas admin:gestion:permisos:read.",
-                              )
-                            : null
-                        }
-                        onRetryCatalog={() => {
-                          void refetchPermissionsCatalog();
-                        }}
-                      />
-                    </TabsContent>
-                  </Tabs>
-                </>
-              )}
-            </div>
-          </ScrollArea>
-          <RoleDetailsFooter
-            isDirty={isDirty}
-            isSaving={updateRole.isPending}
-            formId={FORM_ID}
-            onCancel={() => handleDialogOpenChange(false)}
-            disableSave={!isEditable}
+    <AdminDetailsDialogShell
+      open={open}
+      onOpenChange={handleOpenChange}
+      onRequestClose={closeDialog}
+      titleSrOnly="Detalle de rol"
+      descriptionSrOnly="Gestiona la configuracion del rol y sus permisos."
+      header={
+        roleSummary || roleDetail ? (
+          <RoleDialogHeader
+            title={title}
+            subtitle={subtitle}
+            status={statusBadge}
+            meta={
+              roleDetail ? (
+                <span className="flex min-w-0 flex-wrap gap-3">
+                  {createdMeta}
+                  {updatedMeta}
+                </span>
+              ) : null
+            }
           />
-        </div>
-      </DialogContent>
-      <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Salir sin guardar</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tienes cambios sin guardar. Si sales ahora, perderas la
-              informacion capturada en este formulario.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Continuar editando</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setConfirmCloseOpen(false);
-                closeDialog();
-              }}
-            >
-              Salir sin guardar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Dialog>
+        ) : null
+      }
+      topContent={<Separator />}
+      isDirty={isDirty}
+      isLoading={shouldShowLoading}
+      isError={shouldShowError}
+      loadingContent={loadingContent}
+      errorContent={errorContent}
+      sections={sections}
+      defaultSectionId="general"
+      dialogContentClassName="h-auto max-h-[90vh] w-[86vw] max-w-none rounded-3xl bg-paper p-0 sm:max-w-[880px]"
+      footer={({ onCancel }) => (
+        <RoleDetailsFooter
+          isDirty={isDirty}
+          isSaving={isSaving}
+          formId={FORM_ID}
+          onCancel={onCancel}
+          onSave={() => {
+            void form.handleSubmit(handleSave)();
+          }}
+          disableSave={!isEditable}
+        />
+      )}
+    />
   );
 }

@@ -9,6 +9,7 @@ import {
 } from "@/test/factories/roles";
 import { useRoleDetail } from "@features/admin/modules/rbac/roles/queries/useRoleDetail";
 import { usePermissionsCatalog } from "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog";
+import { useAssignRolePermissions } from "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions";
 import { useUpdateRole } from "@features/admin/modules/rbac/roles/mutations/useUpdateRole";
 import { toast } from "sonner";
 
@@ -34,9 +35,17 @@ vi.mock("@features/admin/modules/rbac/roles/mutations/useUpdateRole", () => ({
   useUpdateRole: vi.fn(),
 }));
 
+vi.mock(
+  "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions",
+  () => ({
+    useAssignRolePermissions: vi.fn(),
+  }),
+);
+
 describe("RoleDetailsDialog UI", () => {
   const refetch = vi.fn();
   const updateMutate = vi.fn();
+  const assignPermissionsMutate = vi.fn();
   const onOpenChange = vi.fn();
   const onClose = vi.fn();
 
@@ -59,9 +68,19 @@ describe("RoleDetailsDialog UI", () => {
       isPending: false,
     } as ReturnType<typeof useUpdateRole>);
 
+    vi.mocked(useAssignRolePermissions).mockReturnValue({
+      mutateAsync: assignPermissionsMutate,
+      isPending: false,
+    } as ReturnType<typeof useAssignRolePermissions>);
+
     updateMutate.mockResolvedValue({
       role: createMockRoleDetail({ id: 77, name: "Auditoria" }),
     });
+    assignPermissionsMutate.mockResolvedValue({ roleId: 77, permissions: [] });
+    updateMutate.mockClear();
+    assignPermissionsMutate.mockClear();
+    refetch.mockClear();
+    refetch.mockResolvedValue({ data: undefined });
     vi.mocked(toast.success).mockClear();
     vi.mocked(toast.error).mockClear();
     onOpenChange.mockClear();
@@ -112,6 +131,12 @@ describe("RoleDetailsDialog UI", () => {
       isError: false,
       refetch,
     } as ReturnType<typeof useRoleDetail>);
+    refetch.mockResolvedValue({
+      data: {
+        role: { ...roleDetail, name: "Auditoria QA" },
+        permissions: [createMockRolePermission({ id: 1 })],
+      },
+    });
 
     const user = userEvent.setup();
     render(
@@ -135,13 +160,13 @@ describe("RoleDetailsDialog UI", () => {
         data: { name: "Auditoria QA" },
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Rol actualizado",
+        "Cambios guardados",
         expect.any(Object),
       );
     });
   });
 
-  it("updates role status from the general tab", async () => {
+  it("stages role status and applies it on save", async () => {
     const roleDetail = createMockRoleDetail({
       id: 77,
       name: "Auditoria",
@@ -159,6 +184,12 @@ describe("RoleDetailsDialog UI", () => {
       isError: false,
       refetch,
     } as ReturnType<typeof useRoleDetail>);
+    refetch.mockResolvedValue({
+      data: {
+        role: { ...roleDetail, isActive: false },
+        permissions: [],
+      },
+    });
 
     const user = userEvent.setup();
     render(
@@ -182,13 +213,87 @@ describe("RoleDetailsDialog UI", () => {
     const listbox = screen.getByRole("listbox");
     await user.click(within(listbox).getByText("Inactivo"));
 
+    expect(updateMutate).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
     await waitFor(() => {
       expect(updateMutate).toHaveBeenCalledWith({
         roleId: 77,
         data: { isActive: false },
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Estado actualizado",
+        "Cambios guardados",
+        expect.any(Object),
+      );
+    });
+  });
+
+  it("stages permissions changes and saves them together", async () => {
+    const roleDetail = createMockRoleDetail({
+      id: 77,
+      name: "Auditoria",
+      description: "Rol auditoria",
+      isActive: true,
+      isSystem: false,
+    });
+
+    vi.mocked(useRoleDetail).mockReturnValue({
+      data: {
+        role: roleDetail,
+        permissions: [createMockRolePermission({ id: 1, code: "perm:a" })],
+      },
+      isLoading: false,
+      isError: false,
+      refetch,
+    } as ReturnType<typeof useRoleDetail>);
+    refetch.mockResolvedValue({
+      data: {
+        role: roleDetail,
+        permissions: [
+          createMockRolePermission({ id: 1, code: "perm:a" }),
+          createMockRolePermission({ id: 2, code: "perm:b" }),
+        ],
+      },
+    });
+
+    vi.mocked(usePermissionsCatalog).mockReturnValue({
+      data: {
+        items: [
+          { id: 1, code: "perm:a", description: "A", isSystem: false },
+          { id: 2, code: "perm:b", description: "B", isSystem: false },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof usePermissionsCatalog>);
+
+    const user = userEvent.setup();
+    render(
+      <RoleDetailsDialog
+        open
+        onOpenChange={onOpenChange}
+        onClose={onClose}
+        roleSummary={roleSummary}
+        canEdit
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: /Permisos/i }));
+    await user.click(
+      screen.getByRole("button", { name: "Agregar permiso perm:b" }),
+    );
+
+    expect(assignPermissionsMutate).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() => {
+      expect(assignPermissionsMutate).toHaveBeenCalledWith({
+        data: { roleId: 77, permissionIds: [1, 2] },
+      });
+      expect(toast.success).toHaveBeenCalledWith(
+        "Cambios guardados",
         expect.any(Object),
       );
     });
@@ -319,7 +424,7 @@ describe("RoleDetailsDialog UI", () => {
       screen.getByRole("heading", { name: "Salir sin guardar" }),
     ).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Salir sin guardar" }));
+    await user.click(screen.getByRole("button", { name: "Salir" }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onClose).toHaveBeenCalled();

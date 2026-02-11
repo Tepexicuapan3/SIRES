@@ -1,35 +1,32 @@
 import { Plus, X } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { useAssignRolePermissions } from "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions";
-import { useRevokeRolePermission } from "@features/admin/modules/rbac/roles/mutations/useRevokeRolePermission";
-import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
 import { formatDateTime } from "@features/admin/modules/rbac/roles/utils/roles.format";
 import { PermissionHierarchyExplorer } from "@features/admin/modules/rbac/shared/components/PermissionHierarchyExplorer";
 import type { Permission, RolePermission } from "@api/types";
 
 interface RoleDetailsPermissionsTabProps {
-  roleId: number;
   permissions: RolePermission[];
   permissionCatalog: Permission[];
   isLoadingPermissions: boolean;
   isEditable?: boolean;
+  isSaving?: boolean;
   catalogErrorMessage?: string | null;
   onRetryCatalog?: () => void;
+  onAddPermission: (permissionId: number) => void;
+  onRemovePermission: (permissionId: number) => void;
 }
 
 export function RoleDetailsPermissionsTab({
-  roleId,
   permissions,
   permissionCatalog,
   isLoadingPermissions,
   isEditable = true,
+  isSaving = false,
   catalogErrorMessage = null,
   onRetryCatalog,
+  onAddPermission,
+  onRemovePermission,
 }: RoleDetailsPermissionsTabProps) {
-  const assignPermissions = useAssignRolePermissions();
-  const revokePermission = useRevokeRolePermission();
-
   const assignedIds = new Set(permissions.map((permission) => permission.id));
   const availablePermissions = permissionCatalog.filter(
     (permission) => !assignedIds.has(permission.id),
@@ -48,45 +45,6 @@ export function RoleDetailsPermissionsTab({
     description: permission.description,
     payload: permission,
   }));
-
-  const handleAddPermission = async (permissionId: number) => {
-    if (!isEditable || catalogErrorMessage) return;
-
-    const finalPermissionIds = Array.from(
-      new Set([
-        ...permissions.map((permission) => permission.id),
-        permissionId,
-      ]),
-    );
-
-    try {
-      await assignPermissions.mutateAsync({
-        data: { roleId, permissionIds: finalPermissionIds },
-      });
-      toast.success("Permiso agregado", {
-        description: "El permiso se agrego correctamente al rol.",
-      });
-    } catch (error) {
-      toast.error("No se pudo agregar", {
-        description: getRoleErrorMessage(error, "Error al agregar permiso"),
-      });
-    }
-  };
-
-  const handleRemovePermission = async (permissionId: number) => {
-    if (!isEditable) return;
-
-    try {
-      await revokePermission.mutateAsync({ roleId, permissionId });
-      toast.success("Permiso removido", {
-        description: "El permiso se elimino del rol.",
-      });
-    } catch (error) {
-      toast.error("No se pudo remover", {
-        description: getRoleErrorMessage(error, "Error al remover permiso"),
-      });
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -116,10 +74,12 @@ export function RoleDetailsPermissionsTab({
         actionLabel="Agregar"
         actionIcon={<Plus className="size-4" />}
         actionVariant="outline"
-        isActionPending={assignPermissions.isPending}
-        isActionDisabled={() => !isEditable || Boolean(catalogErrorMessage)}
+        isActionPending={isSaving}
+        isActionDisabled={() =>
+          !isEditable || isSaving || Boolean(catalogErrorMessage)
+        }
         onAction={(item) => {
-          void handleAddPermission(item.payload.id);
+          onAddPermission(item.payload.id);
         }}
         actionAriaLabel={(item) => `Agregar permiso ${item.code}`}
       />
@@ -132,10 +92,10 @@ export function RoleDetailsPermissionsTab({
         actionDisplay="icon"
         actionIcon={<X className="size-4" />}
         actionVariant="ghost"
-        isActionPending={revokePermission.isPending}
-        isActionDisabled={() => !isEditable}
+        isActionPending={isSaving}
+        isActionDisabled={() => !isEditable || isSaving}
         onAction={(item) => {
-          void handleRemovePermission(item.payload.id);
+          onRemovePermission(item.payload.id);
         }}
         actionAriaLabel={(item) => `Remover permiso ${item.code}`}
         renderMeta={(item) => (

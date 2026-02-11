@@ -26,6 +26,7 @@ interface RoleDetailsGeneralTabProps {
   formId: string;
   roleDetail: RoleDetail;
   onSubmit: (values: RoleDetailsFormValues) => void;
+  activeStatus: boolean;
   onStatusChange?: (nextActive: boolean) => void;
   isStatusPending?: boolean;
   isEditable?: boolean;
@@ -43,11 +44,12 @@ export function RoleDetailsGeneralTab({
   formId,
   roleDetail,
   onSubmit,
+  activeStatus,
   onStatusChange,
   isStatusPending = false,
   isEditable = true,
 }: RoleDetailsGeneralTabProps) {
-  const statusValue: StatusOption = roleDetail.isActive
+  const statusValue: StatusOption = activeStatus
     ? STATUS_OPTIONS.ACTIVE
     : STATUS_OPTIONS.INACTIVE;
 

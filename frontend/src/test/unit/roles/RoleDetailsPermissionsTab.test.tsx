@@ -1,32 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { fireEvent, render, screen, waitFor } from "@/test/utils";
+import { fireEvent, render, screen } from "@/test/utils";
 import { RoleDetailsPermissionsTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsPermissionsTab";
-import { useAssignRolePermissions } from "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions";
-import { useRevokeRolePermission } from "@features/admin/modules/rbac/roles/mutations/useRevokeRolePermission";
-import { toast } from "sonner";
 import type { Permission, RolePermission } from "@api/types";
-
-vi.mock("sonner", () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-vi.mock(
-  "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions",
-  () => ({
-    useAssignRolePermissions: vi.fn(),
-  }),
-);
-
-vi.mock(
-  "@features/admin/modules/rbac/roles/mutations/useRevokeRolePermission",
-  () => ({
-    useRevokeRolePermission: vi.fn(),
-  }),
-);
 
 const createPermission = (overrides: Partial<Permission> = {}): Permission => ({
   id: 1,
@@ -48,8 +24,8 @@ const createRolePermission = (
 });
 
 describe("RoleDetailsPermissionsTab", () => {
-  const assignMutate = vi.fn();
-  const revokeMutate = vi.fn();
+  const onAddPermission = vi.fn();
+  const onRemovePermission = vi.fn();
 
   const catalog = [
     createPermission({ id: 1, code: "admin:gestion:roles:update" }),
@@ -57,31 +33,19 @@ describe("RoleDetailsPermissionsTab", () => {
   ];
 
   beforeEach(() => {
-    vi.mocked(useAssignRolePermissions).mockReturnValue({
-      mutateAsync: assignMutate,
-      isPending: false,
-    } as ReturnType<typeof useAssignRolePermissions>);
-
-    vi.mocked(useRevokeRolePermission).mockReturnValue({
-      mutateAsync: revokeMutate,
-      isPending: false,
-    } as ReturnType<typeof useRevokeRolePermission>);
-
-    assignMutate.mockResolvedValue({ roleId: 10, permissions: [] });
-    revokeMutate.mockResolvedValue({ roleId: 10, permissions: [] });
-    assignMutate.mockClear();
-    revokeMutate.mockClear();
-    vi.mocked(toast.success).mockClear();
+    onAddPermission.mockClear();
+    onRemovePermission.mockClear();
   });
 
-  it("adds a permission", async () => {
+  it("calls add callback when adding a permission", async () => {
     const user = userEvent.setup();
     render(
       <RoleDetailsPermissionsTab
-        roleId={10}
         permissions={[createRolePermission({ id: 1 })]}
         permissionCatalog={catalog}
         isLoadingPermissions={false}
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
       />,
     );
 
@@ -91,23 +55,18 @@ describe("RoleDetailsPermissionsTab", () => {
       }),
     );
 
-    expect(assignMutate).toHaveBeenCalledWith({
-      data: { roleId: 10, permissionIds: [1, 2] },
-    });
-    expect(toast.success).toHaveBeenCalledWith(
-      "Permiso agregado",
-      expect.any(Object),
-    );
+    expect(onAddPermission).toHaveBeenCalledWith(2);
   });
 
   it("shows catalog error and disables add action", () => {
     render(
       <RoleDetailsPermissionsTab
-        roleId={10}
         permissions={[]}
         permissionCatalog={catalog}
         isLoadingPermissions={false}
         catalogErrorMessage="No se pudo cargar el catalogo"
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
       />,
     );
 
@@ -119,13 +78,14 @@ describe("RoleDetailsPermissionsTab", () => {
     ).toBeDisabled();
   });
 
-  it("removes a permission", async () => {
+  it("calls remove callback when removing a permission", async () => {
     render(
       <RoleDetailsPermissionsTab
-        roleId={10}
         permissions={[createRolePermission()]}
         permissionCatalog={catalog}
         isLoadingPermissions={false}
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
       />,
     );
 
@@ -135,25 +95,17 @@ describe("RoleDetailsPermissionsTab", () => {
 
     fireEvent.click(removeButton);
 
-    await waitFor(() => {
-      expect(revokeMutate).toHaveBeenCalledWith({
-        roleId: 10,
-        permissionId: 1,
-      });
-      expect(toast.success).toHaveBeenCalledWith(
-        "Permiso removido",
-        expect.any(Object),
-      );
-    });
+    expect(onRemovePermission).toHaveBeenCalledWith(1);
   });
 
   it("shows empty state when no permissions assigned", () => {
     render(
       <RoleDetailsPermissionsTab
-        roleId={10}
         permissions={[]}
         permissionCatalog={catalog}
         isLoadingPermissions={false}
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
       />,
     );
 
@@ -165,10 +117,11 @@ describe("RoleDetailsPermissionsTab", () => {
   it("shows skeletons while loading", () => {
     const { container } = render(
       <RoleDetailsPermissionsTab
-        roleId={10}
         permissions={[]}
         permissionCatalog={catalog}
         isLoadingPermissions
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
       />,
     );
 
@@ -180,11 +133,12 @@ describe("RoleDetailsPermissionsTab", () => {
   it("renders permissions as read-only when editing is disabled", () => {
     render(
       <RoleDetailsPermissionsTab
-        roleId={10}
         permissions={[createRolePermission()]}
         permissionCatalog={catalog}
         isLoadingPermissions={false}
         isEditable={false}
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
       />,
     );
 
