@@ -29,6 +29,12 @@ const testUserOverrides = new Map<
 
 const resetCodeStore = new Map<string, string>();
 
+const ACCESS_TOKEN_COOKIE = "access_token_cookie";
+const REFRESH_TOKEN_COOKIE = "refresh_token_cookie";
+const CSRF_COOKIE = "csrf_token";
+const COOKIE_PATH = "Path=/";
+const COOKIE_SAME_SITE = "SameSite=Lax";
+
 // Función helper para validar contraseñas robustas (replica lógica de Zod del frontend)
 const isPasswordStrong = (password: string): boolean => {
   const hasMinLength = password.length >= 8;
@@ -44,17 +50,57 @@ const createLoginResponse = (user: AuthUser, requiresOnboarding = false) => {
   const tokenValue = encodeURIComponent(user.username);
   const csrfToken = `csrf_${tokenValue}`;
 
+  const headers = new Headers();
+  headers.append(
+    "Set-Cookie",
+    `${ACCESS_TOKEN_COOKIE}=${tokenValue}; ${COOKIE_PATH}; HttpOnly; ${COOKIE_SAME_SITE}`,
+  );
+  headers.append(
+    "Set-Cookie",
+    `${REFRESH_TOKEN_COOKIE}=${tokenValue}; ${COOKIE_PATH}; HttpOnly; ${COOKIE_SAME_SITE}`,
+  );
+  headers.append(
+    "Set-Cookie",
+    `${CSRF_COOKIE}=${csrfToken}; ${COOKIE_PATH}; ${COOKIE_SAME_SITE}`,
+  );
+
   return HttpResponse.json(
     {
       user,
       requiresOnboarding,
     },
     {
-      headers: {
-        "Set-Cookie": `access_token_cookie=${tokenValue}; Path=/; HttpOnly, refresh_token_cookie=${tokenValue}; Path=/; HttpOnly, csrf_token=${csrfToken}; Path=/`,
-      },
+      headers,
     },
   );
+};
+
+const createLogoutHeaders = () => {
+  const headers = new Headers();
+
+  headers.append(
+    "Set-Cookie",
+    `${ACCESS_TOKEN_COOKIE}=; ${COOKIE_PATH}; Max-Age=0; ${COOKIE_SAME_SITE}`,
+  );
+  headers.append(
+    "Set-Cookie",
+    `${REFRESH_TOKEN_COOKIE}=; ${COOKIE_PATH}; Max-Age=0; ${COOKIE_SAME_SITE}`,
+  );
+  headers.append(
+    "Set-Cookie",
+    `${CSRF_COOKIE}=; ${COOKIE_PATH}; Max-Age=0; ${COOKIE_SAME_SITE}`,
+  );
+
+  return headers;
+};
+
+const createRefreshHeaders = (username: string) => {
+  const headers = new Headers();
+  headers.append(
+    "Set-Cookie",
+    `${CSRF_COOKIE}=csrf_${encodeURIComponent(username)}; ${COOKIE_PATH}; ${COOKIE_SAME_SITE}`,
+  );
+  return headers;
 };
 
 const loginSuccessResponse = (user: AuthUser, requiresOnboarding = false) => {
@@ -380,10 +426,7 @@ export const authHandlers = [
         message: "Sesion cerrada correctamente",
       },
       {
-        headers: {
-          "Set-Cookie":
-            "access_token_cookie=; Path=/; Max-Age=0, refresh_token_cookie=; Path=/; Max-Age=0, csrf_token=; Path=/; Max-Age=0",
-        },
+        headers: createLogoutHeaders(),
       },
     );
   }),
@@ -422,9 +465,7 @@ export const authHandlers = [
     return HttpResponse.json(
       { success: true, message: "Sesion renovada" },
       {
-        headers: {
-          "Set-Cookie": `csrf_token=csrf_${encodeURIComponent(user.username)}; Path=/`,
-        },
+        headers: createRefreshHeaders(user.username),
       },
     );
   }),
@@ -574,10 +615,7 @@ export const authHandlers = [
     const user = createMockAuthUser();
     setMockSessionUser(user);
 
-    return HttpResponse.json({
-      user,
-      requiresOnboarding: false,
-    });
+    return createLoginResponse(user, false);
   }),
 
   // ============================================================
@@ -641,10 +679,7 @@ export const authHandlers = [
     });
     setMockSessionUser(user);
 
-    return HttpResponse.json({
-      user,
-      requiresOnboarding: false,
-    });
+    return createLoginResponse(user, false);
   }),
 
   // ============================================================
