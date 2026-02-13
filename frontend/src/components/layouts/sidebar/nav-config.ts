@@ -50,10 +50,9 @@ export const NAV_CONFIG: NavSection[] = [
         icon: ShieldUser,
         items: [
           {
-            title: "Usuarios y Perfiles de Acceso",
+            title: "Usuarios",
             url: "/admin/usuarios",
             permissions: ["admin:gestion:usuarios:read"],
-            badge: "Mantenimiento",
           },
           {
             title: "Expedientes",
@@ -71,11 +70,19 @@ export const NAV_CONFIG: NavSection[] = [
       },
       {
         title: "Catalogos",
-        url: "/admin/catalogos",
         icon: BookOpen,
-        permissions: [
-          "admin:catalogos:centros_atencion:read",
-          "admin:catalogos:areas:read",
+        items: [
+          {
+            title: "Areas",
+            url: "/admin/catalogos/areas",
+            permissions: ["admin:catalogos:areas:read"],
+          },
+          {
+            title: "Centros de atencion",
+            url: "/admin/catalogos/centros-atencion",
+            permissions: ["admin:catalogos:centros_atencion:read"],
+            badge: PLACEHOLDER_BADGE,
+          },
         ],
       },
       {

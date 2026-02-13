@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import UsersPage from "@features/admin/modules/rbac/users/pages/UsersPage";
 import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
+import AreasPage from "@features/admin/modules/catalogos/areas/pages/AreasPage";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
 
 // Administracion
@@ -33,6 +34,35 @@ export const adminRoutes: RouteObject[] = [
         <RolesPage />
       </ProtectedRoute>
     ),
+  },
+  {
+    path: "catalogos",
+    children: [
+      {
+        index: true,
+        element: <Navigate to="areas" replace />,
+      },
+      {
+        path: "areas",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:areas:read">
+            <AreasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "centros-atencion",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
+            <PlaceholderPage
+              title="Centros de atencion"
+              description="Catalogo de centros de atencion con datos operativos"
+              moduleName="Administracion"
+            />
+          </ProtectedRoute>
+        ),
+      },
+    ],
   },
   {
     path: "expedientes",
