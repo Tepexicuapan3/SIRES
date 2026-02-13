@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, CalendarDays, Pencil } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock3,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePermissionsCatalog } from "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog";
+import { RoleDetailsAuditTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsAuditTab";
 import { RoleDetailsGeneralTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsGeneralTab";
 import { RoleDetailsFooter } from "@features/admin/modules/rbac/roles/components/RoleDetailsFooter";
 import { RoleDetailsPermissionsTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsPermissionsTab";
+import { RoleDetailsSidePanel } from "@features/admin/modules/rbac/roles/components/RoleDetailsSidePanel";
 import { RoleDialogHeader } from "@features/admin/modules/rbac/roles/components/RoleDialogHeader";
 import {
   roleDetailsSchema,
@@ -19,11 +25,18 @@ import {
 import { useAssignRolePermissions } from "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions";
 import { useUpdateRole } from "@features/admin/modules/rbac/roles/mutations/useUpdateRole";
 import { useRoleDetail } from "@features/admin/modules/rbac/roles/queries/useRoleDetail";
-import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
 import {
-  formatDate,
-  formatDateTime,
-} from "@features/admin/modules/rbac/roles/utils/roles.format";
+  addPermissionToDraft,
+  arePermissionSetsDifferent,
+  mapRoleDetailToFormValues,
+  removePermissionFromDraft,
+} from "@features/admin/modules/rbac/roles/utils/roles.details-draft";
+import {
+  applyRoleDetailsSavePlan,
+  hasRoleDetailsChanges,
+} from "@features/admin/modules/rbac/roles/utils/roles.details-save";
+import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
+import { formatDateTime } from "@features/admin/modules/rbac/roles/utils/roles.format";
 import { AdminDetailsDialogShell } from "@features/admin/shared/components/details/AdminDetailsDialogShell";
 import { useDetailsDialogCloseGuard } from "@features/admin/shared/hooks/useDetailsDialogCloseGuard";
 import type { AdminDetailsDialogSection } from "@features/admin/shared/types/details-dialog.types";
@@ -101,27 +114,17 @@ export function RoleDetailsDialog({
     ? draftIsActive
     : (roleDetail?.isActive ?? roleSummary?.isActive ?? true);
 
-  const originalPermissionIds = new Set(
-    assignedPermissions.map((item) => item.id),
+  const permissionsDirty = arePermissionSetsDifferent(
+    assignedPermissions,
+    workingPermissions,
   );
-  const workingPermissionIds = new Set(
-    workingPermissions.map((item) => item.id),
-  );
-
-  const permissionsDirty =
-    originalPermissionIds.size !== workingPermissionIds.size ||
-    [...originalPermissionIds].some((id) => !workingPermissionIds.has(id));
   const statusDirty =
     roleDetail !== undefined ? roleDetail.isActive !== workingIsActive : false;
   const isDirty = isFormDirty || permissionsDirty || statusDirty;
 
   useEffect(() => {
     if (!roleDetail || !open || isFormDirty) return;
-    form.reset({
-      name: roleDetail.name ?? "",
-      description: roleDetail.description ?? "",
-      landingRoute: roleDetail.landingRoute ?? "",
-    });
+    form.reset(mapRoleDetailToFormValues(roleDetail));
   }, [form, isFormDirty, open, roleDetail]);
 
   useEffect(() => {
@@ -134,11 +137,7 @@ export function RoleDetailsDialog({
   const closeDialog = () => {
     markClosing();
     if (roleDetail) {
-      form.reset({
-        name: roleDetail.name ?? "",
-        description: roleDetail.description ?? "",
-        landingRoute: roleDetail.landingRoute ?? "",
-      });
+      form.reset(mapRoleDetailToFormValues(roleDetail));
     } else {
       form.reset(DEFAULT_FORM_VALUES);
     }
@@ -161,32 +160,16 @@ export function RoleDetailsDialog({
   const handleAddPermissionDraft = (permissionId: number) => {
     if (!isEditable || !roleDetail) return;
 
-    const selectedPermission = permissionCatalog.find(
-      (permission) => permission.id === permissionId,
-    );
-    if (!selectedPermission) return;
-
     setDraftRoleId(roleDetail.id);
     setDraftPermissions((previousPermissions) => {
       const basePermissions = hasDraftForCurrentRole
         ? previousPermissions
         : assignedPermissions;
-      if (
-        basePermissions.some((permission) => permission.id === permissionId)
-      ) {
-        return basePermissions;
-      }
-
-      return [
-        ...basePermissions,
-        {
-          id: selectedPermission.id,
-          code: selectedPermission.code,
-          description: selectedPermission.description,
-          assignedAt: new Date().toISOString(),
-          assignedBy: { id: 0, name: "Pendiente de guardar" },
-        },
-      ];
+      return addPermissionToDraft(
+        basePermissions,
+        permissionCatalog,
+        permissionId,
+      );
     });
   };
 
@@ -198,10 +181,18 @@ export function RoleDetailsDialog({
       const basePermissions = hasDraftForCurrentRole
         ? previousPermissions
         : assignedPermissions;
-      return basePermissions.filter(
-        (permission) => permission.id !== permissionId,
-      );
+      return removePermissionFromDraft(basePermissions, permissionId);
     });
+  };
+
+  const syncRoleDraftState = (nextData?: typeof roleDetailResponse) => {
+    if (!nextData) return false;
+
+    form.reset(mapRoleDetailToFormValues(nextData.role));
+    setDraftRoleId(nextData.role.id);
+    setDraftIsActive(nextData.role.isActive);
+    setDraftPermissions(nextData.permissions);
+    return true;
   };
 
   const handleSave = async (values: RoleDetailsFormValues) => {
@@ -219,45 +210,32 @@ export function RoleDetailsDialog({
       payload.isActive = workingIsActive;
     }
 
-    const hasRoleChanges = Object.keys(payload).length > 0;
-    const hasPermissionsChanges = permissionsDirty;
+    const savePlan = {
+      rolePayload: payload,
+      permissionsDirty,
+      permissionIds: workingPermissions.map((permission) => permission.id),
+    };
 
-    if (!hasRoleChanges && !hasPermissionsChanges) return;
+    if (!hasRoleDetailsChanges(savePlan)) return;
 
     setIsSavingAll(true);
     let completedGroups = 0;
 
     try {
-      if (hasRoleChanges) {
-        await updateRole.mutateAsync({ roleId: roleDetail.id, data: payload });
-        completedGroups += 1;
-      }
-
-      if (hasPermissionsChanges) {
-        await assignPermissions.mutateAsync({
-          data: {
-            roleId: roleDetail.id,
-            permissionIds: workingPermissions.map(
-              (permission) => permission.id,
-            ),
-          },
-        });
-        completedGroups += 1;
-      }
+      completedGroups = await applyRoleDetailsSavePlan(savePlan, {
+        updateRole: (rolePayload) =>
+          updateRole.mutateAsync({ roleId: roleDetail.id, data: rolePayload }),
+        assignPermissions: (permissionIds) =>
+          assignPermissions.mutateAsync({
+            data: {
+              roleId: roleDetail.id,
+              permissionIds,
+            },
+          }),
+      });
 
       const refreshedDetail = await refetch();
-      const refreshedData = refreshedDetail.data;
-
-      if (refreshedData) {
-        form.reset({
-          name: refreshedData.role.name ?? "",
-          description: refreshedData.role.description ?? "",
-          landingRoute: refreshedData.role.landingRoute ?? "",
-        });
-        setDraftRoleId(refreshedData.role.id);
-        setDraftIsActive(refreshedData.role.isActive);
-        setDraftPermissions(refreshedData.permissions);
-      } else {
+      if (!syncRoleDraftState(refreshedDetail.data)) {
         form.reset(values);
       }
 
@@ -276,17 +254,7 @@ export function RoleDetailsDialog({
 
       try {
         const refreshedDetail = await refetch();
-        const refreshedData = refreshedDetail.data;
-        if (refreshedData) {
-          form.reset({
-            name: refreshedData.role.name ?? "",
-            description: refreshedData.role.description ?? "",
-            landingRoute: refreshedData.role.landingRoute ?? "",
-          });
-          setDraftRoleId(refreshedData.role.id);
-          setDraftIsActive(refreshedData.role.isActive);
-          setDraftPermissions(refreshedData.permissions);
-        }
+        syncRoleDraftState(refreshedDetail.data);
       } catch {
         // Si falla el refetch, mantenemos el borrador local para no perder cambios.
       }
@@ -319,31 +287,12 @@ export function RoleDetailsDialog({
       </Badge>
     ) : null;
 
-  const createdMetaLabel = roleDetail
-    ? `Creado ${formatDate(roleDetail.createdAt)} por ${roleDetail.createdBy?.name ?? "-"}`
-    : null;
-
-  const createdMeta = createdMetaLabel ? (
-    <span className="inline-flex max-w-full min-w-0 items-center gap-2">
-      <CalendarDays className="size-4 shrink-0" />
-      <span className="truncate" title={createdMetaLabel}>
-        {createdMetaLabel}
-      </span>
-    </span>
-  ) : null;
-
-  const updatedMetaLabel = roleDetail?.updatedAt
-    ? `Actualizado ${formatDateTime(roleDetail.updatedAt)} por ${roleDetail.updatedBy?.name ?? "-"}`
-    : null;
-
-  const updatedMeta = updatedMetaLabel ? (
-    <span className="inline-flex max-w-full min-w-0 items-center gap-2">
-      <Pencil className="size-4 shrink-0" />
-      <span className="truncate" title={updatedMetaLabel}>
-        {updatedMetaLabel}
-      </span>
-    </span>
-  ) : null;
+  const createdByLabel = roleDetail
+    ? `${roleDetail.createdBy?.name ?? "-"} ${formatDateTime(roleDetail.createdAt)}`
+    : "-";
+  const updatedByLabel = roleDetail?.updatedAt
+    ? `${roleDetail.updatedBy?.name ?? "-"} ${formatDateTime(roleDetail.updatedAt)}`
+    : "Sin actualizaciones registradas.";
 
   const loadingContent = (
     <div className="space-y-4">
@@ -355,7 +304,7 @@ export function RoleDetailsDialog({
         </div>
       </div>
       <div className="flex gap-3">
-        {Array.from({ length: 2 }).map((_, index) => (
+        {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton key={`tab-skel-${index}`} className="h-9 w-28" />
         ))}
       </div>
@@ -397,6 +346,7 @@ export function RoleDetailsDialog({
         {
           id: "general",
           label: "General",
+          icon: <SlidersHorizontal className="size-4" />,
           content: (
             <>
               <RoleDetailsGeneralTab
@@ -420,8 +370,12 @@ export function RoleDetailsDialog({
         {
           id: "permissions",
           label: "Permisos",
+          icon: <ShieldCheck className="size-4" />,
           badge: (
-            <Badge variant="outline" className="h-5 px-1.5 text-[11px]">
+            <Badge
+              variant="secondary"
+              className="ml-1 h-5 min-w-5 rounded-full px-1 text-[10px]"
+            >
               {workingPermissions.length}
             </Badge>
           ),
@@ -448,6 +402,12 @@ export function RoleDetailsDialog({
             />
           ),
         },
+        {
+          id: "audit",
+          label: "Auditoria",
+          icon: <Clock3 className="size-4" />,
+          content: <RoleDetailsAuditTab roleDetail={roleDetail} />,
+        },
       ]
     : [];
 
@@ -458,24 +418,43 @@ export function RoleDetailsDialog({
       onRequestClose={closeDialog}
       titleSrOnly="Detalle de rol"
       descriptionSrOnly="Gestiona la configuracion del rol y sus permisos."
-      header={
+      sidePanel={
         roleSummary || roleDetail ? (
-          <RoleDialogHeader
-            title={title}
-            subtitle={subtitle}
+          <RoleDetailsSidePanel
+            name={title}
+            description={subtitle}
             status={statusBadge}
-            meta={
-              roleDetail ? (
-                <span className="flex min-w-0 flex-wrap gap-3">
-                  {createdMeta}
-                  {updatedMeta}
-                </span>
-              ) : null
+            isSystem={Boolean(isSystem)}
+            landingRoute={roleDetail?.landingRoute ?? roleSummary?.landingRoute}
+            permissionsCount={
+              roleDetail?.permissionsCount ?? roleSummary?.permissionsCount ?? 0
             }
+            usersCount={roleDetail?.usersCount ?? roleSummary?.usersCount ?? 0}
+            createdByLabel={createdByLabel}
+            updatedByLabel={updatedByLabel}
           />
         ) : null
       }
-      topContent={<Separator />}
+      sidePanelClassName="hidden min-h-0 w-[292px] shrink-0 border-r border-line-struct/70 bg-subtle/20 lg:flex"
+      splitBodyClassName="flex h-full min-h-0"
+      header={
+        roleSummary || roleDetail ? (
+          <div className="lg:hidden">
+            <RoleDialogHeader
+              title={title}
+              subtitle={subtitle}
+              status={statusBadge}
+            />
+          </div>
+        ) : null
+      }
+      headerClassName="px-5 pt-5 lg:px-8 lg:pt-5"
+      scrollAreaClassName="min-h-0 flex-1 px-5 pb-8 lg:px-8 lg:pb-10"
+      contentClassName="min-w-0 space-y-5 overflow-x-auto pt-3"
+      tabsContainerClassName="gap-3"
+      tabsListClassName="h-auto w-full items-center gap-1 rounded-full border border-line-struct/60 bg-subtle/30 p-1"
+      tabsTriggerClassName="h-8 min-w-0 flex-1 rounded-full border-0 px-3 text-sm font-semibold text-txt-muted shadow-none hover:text-txt-body data-[state=active]:bg-paper data-[state=active]:text-txt-body data-[state=active]:shadow-sm"
+      tabsContentClassName="pt-5"
       isDirty={isDirty}
       isLoading={shouldShowLoading}
       isError={shouldShowError}
@@ -483,7 +462,8 @@ export function RoleDetailsDialog({
       errorContent={errorContent}
       sections={sections}
       defaultSectionId="general"
-      dialogContentClassName="h-auto max-h-[90vh] w-[86vw] max-w-none rounded-3xl bg-paper p-0 sm:max-w-[880px]"
+      dialogContentClassName="h-[70vh] max-h-[70vh] w-[96vw] max-w-none overflow-hidden rounded-3xl bg-paper p-0 sm:max-w-none lg:w-[980px] xl:w-[1060px]"
+      showCloseButton={false}
       footer={({ onCancel }) => (
         <RoleDetailsFooter
           isDirty={isDirty}

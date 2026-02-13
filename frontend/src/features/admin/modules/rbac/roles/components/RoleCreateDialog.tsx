@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FileText, Route, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -91,22 +92,64 @@ export function RoleCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="w-[95vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[92vw] lg:w-[980px] xl:w-[1120px]">
-        <div className="flex max-h-[88vh] flex-col">
-          <DialogHeader className="px-8 pt-8">
+      <DialogContent
+        showCloseButton={false}
+        className="h-[70vh] max-h-[70vh] w-[96vw] max-w-none overflow-hidden rounded-3xl bg-paper p-0 sm:max-w-none lg:w-[980px] xl:w-[1060px]"
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          <DialogHeader className="px-5 pt-5 lg:px-8 lg:pt-5">
             <DialogTitle className="sr-only">Nuevo rol</DialogTitle>
             <DialogDescription className="sr-only">
               Crea un rol para administrar permisos.
             </DialogDescription>
             <RoleDialogHeader
               title="Nuevo rol"
-              subtitle="Configura los datos base y su landing route"
+              subtitle="Configura alcance operativo y punto de entrada del rol"
               status={<Badge variant="outline">Plantilla</Badge>}
             />
           </DialogHeader>
-          <ScrollArea className="flex-1 px-8 pb-8">
-            <div className="space-y-6 pt-4">
+          <ScrollArea
+            className="min-h-0 flex-1 px-5 pb-6 lg:px-8 lg:pb-8"
+            viewportClassName="overflow-x-auto"
+          >
+            <div className="space-y-5 pt-2">
               <div className="rounded-2xl border border-line-struct bg-paper p-4">
+                <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                  <div className="flex items-start gap-2.5 rounded-xl border border-line-struct/60 bg-subtle/30 px-3 py-3">
+                    <ShieldCheck className="mt-0.5 size-4 shrink-0 text-txt-muted" />
+                    <div>
+                      <p className="text-xs font-semibold text-txt-body">
+                        Identidad
+                      </p>
+                      <p className="text-[11px] text-txt-muted">
+                        Nombre unico para identificar el rol.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 rounded-xl border border-line-struct/60 bg-subtle/30 px-3 py-3">
+                    <Route className="mt-0.5 size-4 shrink-0 text-txt-muted" />
+                    <div>
+                      <p className="text-xs font-semibold text-txt-body">
+                        Landing route
+                      </p>
+                      <p className="text-[11px] text-txt-muted">
+                        Ruta inicial sugerida al iniciar sesion.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 rounded-xl border border-line-struct/60 bg-subtle/30 px-3 py-3">
+                    <FileText className="mt-0.5 size-4 shrink-0 text-txt-muted" />
+                    <div>
+                      <p className="text-xs font-semibold text-txt-body">
+                        Contexto
+                      </p>
+                      <p className="text-[11px] text-txt-muted">
+                        Describe alcance y uso operativo del rol.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <Form {...form}>
                   <form
                     id={FORM_ID}
@@ -193,7 +236,7 @@ export function RoleCreateDialog({
               ) : null}
             </div>
           </ScrollArea>
-          <DialogFooter className="flex flex-col gap-3 border-t border-line-struct px-8 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <DialogFooter className="flex flex-col gap-3 border-t border-line-struct px-5 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-8">
             <div className="text-xs text-txt-muted">
               Completa los campos requeridos.
             </div>
