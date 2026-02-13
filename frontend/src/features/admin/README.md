@@ -44,6 +44,15 @@ admin/
 
 UI (components/pages) → queries/mutations → `api/resources` → backend.
 
+## Patron para paginas de listado
+
+- `shared/components/AdminPageIntro.tsx` unifica encabezados de modulo (titulo, descripcion e icono).
+- `shared/components/ConfirmDestructiveDialog.tsx` evita duplicacion en confirmaciones de borrado.
+- Cada modulo define sus columnas en componentes dedicados (`UsersTableColumns`, `RolesTableColumns`, `AreasTableColumns`) para mantener las pages delgadas y con una sola responsabilidad.
+- Logica densa (busqueda/ranking de permisos) debe vivir en `utils/` (`users.permissions-search.ts`) y no dentro de componentes de UI.
+- Guardado incremental y transformaciones de borrador en dialogs se extraen a `utils/` (`users.details-save.ts`, `roles.details-save.ts`, `users.details-draft.ts`, `roles.details-draft.ts`).
+- Dialogos complejos se componen por bloques chicos (`UserCreateSidePanel`, `UserCreatedCredentialsCard`) para aislar layout de negocio.
+
 ## Patron reutilizable para detalles CRUD
 
 ### Base compartida
