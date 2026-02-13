@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { AreaDialogHeader } from "@features/admin/modules/catalogos/areas/components/AreaDialogHeader";
+import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/shared/components/CatalogCreateResultCard";
 import {
   createAreaSchema,
   type CreateAreaFormValues,
@@ -144,33 +145,15 @@ export function AreaCreateDialog({
               </div>
 
               {createdArea ? (
-                <div className="rounded-2xl border border-line-struct bg-subtle/40 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-txt-body">
-                        Area creada
-                      </p>
-                      <p className="text-xs text-txt-muted">
-                        El area ya esta disponible en el catalogo.
-                      </p>
-                    </div>
-                    <Badge variant="stable">Activa</Badge>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-line-struct/60 bg-paper px-3 py-2">
-                      <p className="text-xs text-txt-muted">Nombre</p>
-                      <p className="text-sm font-medium text-txt-body">
-                        {createdArea.name}
-                      </p>
-                    </div>
-                    <div className="rounded-xl border border-line-struct/60 bg-paper px-3 py-2">
-                      <p className="text-xs text-txt-muted">ID</p>
-                      <p className="text-sm font-medium text-txt-body">
-                        {createdArea.id}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <CatalogCreateResultCard
+                  title="Area creada"
+                  description="El area ya esta disponible en el catalogo."
+                  badgeLabel="Activa"
+                  fields={[
+                    { label: "Nombre", value: createdArea.name },
+                    { label: "ID", value: createdArea.id },
+                  ]}
+                />
               ) : null}
             </div>
           </ScrollArea>

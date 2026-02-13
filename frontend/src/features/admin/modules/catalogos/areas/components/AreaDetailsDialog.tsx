@@ -3,13 +3,13 @@ import { AlertTriangle, CalendarDays, Pencil } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AreaDetailsFooter } from "@features/admin/modules/catalogos/areas/components/AreaDetailsFooter";
 import { AreaDetailsGeneralSection } from "@features/admin/modules/catalogos/areas/components/AreaDetailsGeneralSection";
 import { AreaDialogHeader } from "@features/admin/modules/catalogos/areas/components/AreaDialogHeader";
+import { CatalogDetailsFooter } from "@features/admin/modules/catalogos/shared/components/CatalogDetailsFooter";
+import { CatalogStatusBadge } from "@features/admin/modules/catalogos/shared/components/CatalogStatusBadge";
 import {
   areaDetailsSchema,
   type AreaDetailsFormValues,
@@ -141,16 +141,7 @@ export function AreaDetailsDialog({
 
   const statusBadge =
     typeof isActive === "boolean" ? (
-      <Badge variant={isActive ? "stable" : "secondary"} className="gap-2">
-        <span
-          className={
-            isActive
-              ? "size-1.5 shrink-0 rounded-full bg-status-stable"
-              : "size-1.5 shrink-0 rounded-full bg-txt-muted"
-          }
-        />
-        {isActive ? "Activo" : "Inactivo"}
-      </Badge>
+      <CatalogStatusBadge isActive={isActive} />
     ) : null;
 
   const createdMetaLabel = areaDetail
@@ -282,7 +273,7 @@ export function AreaDetailsDialog({
       defaultSectionId="general"
       dialogContentClassName="h-auto max-h-[90vh] w-[86vw] max-w-none rounded-3xl bg-paper p-0 sm:max-w-[880px]"
       footer={({ onCancel }) => (
-        <AreaDetailsFooter
+        <CatalogDetailsFooter
           isDirty={isDirty}
           isSaving={updateArea.isPending}
           formId={FORM_ID}

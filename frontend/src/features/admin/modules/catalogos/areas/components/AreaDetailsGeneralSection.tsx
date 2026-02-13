@@ -18,6 +18,10 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import type { AreaDetail } from "@api/types";
+import {
+  CATALOG_STATUS,
+  type CatalogStatus,
+} from "@features/admin/modules/catalogos/shared/domain/catalog-status";
 import type { AreaDetailsFormValues } from "@features/admin/modules/catalogos/areas/domain/areas.schemas";
 
 interface AreaDetailsGeneralSectionProps {
@@ -30,13 +34,6 @@ interface AreaDetailsGeneralSectionProps {
   isEditable?: boolean;
 }
 
-const STATUS_OPTIONS = {
-  ACTIVE: "active",
-  INACTIVE: "inactive",
-} as const;
-
-type StatusOption = (typeof STATUS_OPTIONS)[keyof typeof STATUS_OPTIONS];
-
 export function AreaDetailsGeneralSection({
   form,
   formId,
@@ -46,9 +43,9 @@ export function AreaDetailsGeneralSection({
   isStatusPending = false,
   isEditable = true,
 }: AreaDetailsGeneralSectionProps) {
-  const statusValue: StatusOption = areaDetail.isActive
-    ? STATUS_OPTIONS.ACTIVE
-    : STATUS_OPTIONS.INACTIVE;
+  const statusValue: CatalogStatus = areaDetail.isActive
+    ? CATALOG_STATUS.ACTIVE
+    : CATALOG_STATUS.INACTIVE;
 
   return (
     <Form {...form}>
@@ -98,7 +95,7 @@ export function AreaDetailsGeneralSection({
               onValueChange={(value) => {
                 if (!onStatusChange || !isEditable) return;
                 if (value === statusValue) return;
-                onStatusChange(value === STATUS_OPTIONS.ACTIVE);
+                onStatusChange(value === CATALOG_STATUS.ACTIVE);
               }}
               disabled={!onStatusChange || isStatusPending || !isEditable}
             >
@@ -106,8 +103,8 @@ export function AreaDetailsGeneralSection({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={STATUS_OPTIONS.ACTIVE}>Activo</SelectItem>
-                <SelectItem value={STATUS_OPTIONS.INACTIVE}>
+                <SelectItem value={CATALOG_STATUS.ACTIVE}>Activo</SelectItem>
+                <SelectItem value={CATALOG_STATUS.INACTIVE}>
                   Inactivo
                 </SelectItem>
               </SelectContent>

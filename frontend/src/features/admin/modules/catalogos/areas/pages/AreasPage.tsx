@@ -15,9 +15,9 @@ import {
 } from "@features/admin/shared/components/TableOptionsMenu";
 import { TablePrimaryAction } from "@features/admin/shared/components/TablePrimaryAction";
 import { TableSearch } from "@features/admin/shared/components/TableSearch";
-import { AdminPageIntro } from "@features/admin/shared/components/AdminPageIntro";
 import { ConfirmDestructiveDialog } from "@features/admin/shared/components/ConfirmDestructiveDialog";
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
+import { CatalogModuleLayout } from "@features/admin/modules/catalogos/shared/components/CatalogModuleLayout";
 import { useDeleteArea } from "@features/admin/modules/catalogos/areas/mutations/useDeleteArea";
 import { useUpdateArea } from "@features/admin/modules/catalogos/areas/mutations/useUpdateArea";
 import { useAreasList } from "@features/admin/modules/catalogos/areas/queries/useAreasList";
@@ -225,13 +225,11 @@ export function AreasPage() {
   ];
 
   return (
-    <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-[1360px] lg:px-8 xl:px-10">
-      <AdminPageIntro
-        title="Areas"
-        description="Catalogo base de areas operativas del sistema."
-        icon={<BookOpen className="size-12" />}
-      />
-
+    <CatalogModuleLayout
+      title="Areas"
+      description="Catalogo base de areas operativas del sistema."
+      icon={<BookOpen className="size-12" />}
+    >
       <TableHeaderBar
         search={
           <TableSearch
@@ -322,7 +320,7 @@ export function AreasPage() {
         }}
         confirmDisabled={deleteArea.isPending}
       />
-    </div>
+    </CatalogModuleLayout>
   );
 }
 

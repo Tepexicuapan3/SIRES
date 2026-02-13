@@ -1,6 +1,6 @@
 import { AdminDetailsFooter } from "@features/admin/shared/components/details/AdminDetailsFooter";
 
-interface AreaDetailsFooterProps {
+interface CatalogDetailsFooterProps {
   isDirty: boolean;
   isSaving: boolean;
   formId: string;
@@ -8,13 +8,13 @@ interface AreaDetailsFooterProps {
   disableSave?: boolean;
 }
 
-export function AreaDetailsFooter({
+export function CatalogDetailsFooter({
   isDirty,
   isSaving,
   formId,
   onCancel,
   disableSave = false,
-}: AreaDetailsFooterProps) {
+}: CatalogDetailsFooterProps) {
   return (
     <AdminDetailsFooter
       isDirty={isDirty}

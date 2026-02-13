@@ -1,6 +1,6 @@
 import { Eye, Pencil, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import type { AreaListItem } from "@api/types";
+import { CatalogStatusBadge } from "@features/admin/modules/catalogos/shared/components/CatalogStatusBadge";
 import { type DataTableColumn } from "@features/admin/shared/components/DataTable";
 import { type TableColumnVisibilityItem } from "@features/admin/shared/components/TableColumnVisibility";
 import {
@@ -49,18 +49,13 @@ export const buildAreasTableColumns = ({
       align: "center",
       accessorKey: "isActive",
       className: "w-[130px]",
-      render: (row) =>
-        row.isActive ? (
-          <Badge variant="stable" className="gap-2">
-            <span className="size-1.5 shrink-0 rounded-full bg-status-stable" />
-            Activa
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="gap-2">
-            <span className="size-1.5 shrink-0 rounded-full bg-txt-muted" />
-            Inactiva
-          </Badge>
-        ),
+      render: (row) => (
+        <CatalogStatusBadge
+          isActive={row.isActive}
+          activeLabel="Activa"
+          inactiveLabel="Inactiva"
+        />
+      ),
     },
   ];
 

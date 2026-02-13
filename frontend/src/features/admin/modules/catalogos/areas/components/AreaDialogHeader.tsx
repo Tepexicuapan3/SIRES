@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Building2 } from "lucide-react";
-import { AdminDetailsHeader } from "@features/admin/shared/components/details/AdminDetailsHeader";
+import { CatalogDialogHeader } from "@features/admin/modules/catalogos/shared/components/CatalogDialogHeader";
 
 interface AreaDialogHeaderProps {
   title: string;
@@ -16,16 +16,12 @@ export function AreaDialogHeader({
   meta,
 }: AreaDialogHeaderProps) {
   return (
-    <AdminDetailsHeader
+    <CatalogDialogHeader
       title={title}
       subtitle={subtitle}
       status={status}
       meta={meta}
-      leadingVisual={
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-line-struct/60 bg-subtle/50 text-brand">
-          <Building2 className="size-7" />
-        </div>
-      }
+      icon={<Building2 className="size-7" />}
     />
   );
 }

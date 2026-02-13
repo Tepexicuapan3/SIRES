@@ -1,18 +1,7 @@
-export const formatDateTime = (value: string | null | undefined) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-};
+import {
+  formatCatalogDate,
+  formatCatalogDateTime,
+} from "@features/admin/modules/catalogos/shared/utils/catalog-format";
 
-export const formatDate = (value: string | null | undefined) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "medium",
-  }).format(date);
-};
+export const formatDateTime = formatCatalogDateTime;
+export const formatDate = formatCatalogDate;
