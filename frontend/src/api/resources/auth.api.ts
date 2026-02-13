@@ -7,6 +7,7 @@
 
 import apiClient from "@api/client";
 import { AxiosError } from "axios";
+import Cookies from "js-cookie";
 import { ApiError } from "@api/utils/errors";
 
 import type {
@@ -26,6 +27,37 @@ import type {
   MeResponse,
 } from "@api/types";
 
+const ACCESS_TOKEN_COOKIE = "access_token_cookie";
+const REFRESH_TOKEN_COOKIE = "refresh_token_cookie";
+const CSRF_COOKIE = "csrf_token";
+const MOCK_SESSION_COOKIE_DAYS = 7;
+
+const isMswSessionMode =
+  import.meta.env.DEV && import.meta.env.VITE_USE_MSW === "true";
+
+const persistMockSessionCookies = (username: string) => {
+  if (!isMswSessionMode) return;
+
+  const tokenValue = encodeURIComponent(username);
+  const cookieOptions = {
+    path: "/",
+    sameSite: "lax" as const,
+    expires: MOCK_SESSION_COOKIE_DAYS,
+  };
+
+  Cookies.set(ACCESS_TOKEN_COOKIE, tokenValue, cookieOptions);
+  Cookies.set(REFRESH_TOKEN_COOKIE, tokenValue, cookieOptions);
+  Cookies.set(CSRF_COOKIE, `csrf_${tokenValue}`, cookieOptions);
+};
+
+const clearMockSessionCookies = () => {
+  if (!isMswSessionMode) return;
+
+  Cookies.remove(ACCESS_TOKEN_COOKIE, { path: "/" });
+  Cookies.remove(REFRESH_TOKEN_COOKIE, { path: "/" });
+  Cookies.remove(CSRF_COOKIE, { path: "/" });
+};
+
 const authAPI = {
   /**
    * Iniciar sesión en el sistema.
@@ -39,6 +71,7 @@ const authAPI = {
    */
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>("/auth/login", data);
+    persistMockSessionCookies(response.data.user.username);
     return response.data;
   },
 
@@ -51,6 +84,7 @@ const authAPI = {
    */
   logout: async (): Promise<LogoutResponse> => {
     const response = await apiClient.post<LogoutResponse>("/auth/logout");
+    clearMockSessionCookies();
     return response.data;
   },
 
@@ -136,6 +170,7 @@ const authAPI = {
       "/auth/complete-onboarding",
       data,
     );
+    persistMockSessionCookies(response.data.user.username);
     return response.data;
   },
 
@@ -196,6 +231,7 @@ const authAPI = {
       "/auth/reset-password",
       data,
     );
+    persistMockSessionCookies(response.data.user.username);
     return response.data;
   },
 };

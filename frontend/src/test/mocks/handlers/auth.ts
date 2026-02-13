@@ -254,12 +254,17 @@ const applyTestUserOverride = (
   };
 };
 
-const resolveSessionUser = (request: Request) => {
+const resolveSessionUser = (
+  request: Request,
+  cookies?: Record<string, string>,
+) => {
   const currentSessionUser = getMockSessionUser();
   if (currentSessionUser) return currentSessionUser;
 
+  const accessTokenFromStore = cookies?.access_token_cookie;
   const cookieHeader = request.headers.get("cookie") ?? "";
-  const accessToken = getCookieValue(cookieHeader, "access_token_cookie");
+  const accessToken =
+    accessTokenFromStore ?? getCookieValue(cookieHeader, "access_token_cookie");
 
   if (!accessToken) return null;
 
@@ -383,9 +388,9 @@ export const authHandlers = [
     );
   }),
 
-  http.get(getApiUrl("auth/me"), async ({ request }) => {
+  http.get(getApiUrl("auth/me"), async ({ request, cookies }) => {
     await delay(MOCK_DELAY.short);
-    const user = resolveSessionUser(request);
+    const user = resolveSessionUser(request, cookies);
 
     if (!user) {
       return HttpResponse.json(
@@ -400,9 +405,9 @@ export const authHandlers = [
     return HttpResponse.json(user);
   }),
 
-  http.post(getApiUrl("auth/refresh"), async ({ request }) => {
+  http.post(getApiUrl("auth/refresh"), async ({ request, cookies }) => {
     await delay(MOCK_DELAY.short);
-    const user = resolveSessionUser(request);
+    const user = resolveSessionUser(request, cookies);
 
     if (!user) {
       return HttpResponse.json(
@@ -424,8 +429,8 @@ export const authHandlers = [
     );
   }),
 
-  http.get(getApiUrl("auth/verify"), async ({ request }) => {
-    const user = resolveSessionUser(request);
+  http.get(getApiUrl("auth/verify"), async ({ request, cookies }) => {
+    const user = resolveSessionUser(request, cookies);
 
     if (!user) {
       return HttpResponse.json(
