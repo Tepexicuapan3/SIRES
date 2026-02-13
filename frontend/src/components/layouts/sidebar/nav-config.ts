@@ -81,7 +81,6 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Centros de atencion",
             url: "/admin/catalogos/centros-atencion",
             permissions: ["admin:catalogos:centros_atencion:read"],
-            badge: PLACEHOLDER_BADGE,
           },
         ],
       },

@@ -3,6 +3,7 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import UsersPage from "@features/admin/modules/rbac/users/pages/UsersPage";
 import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
 import AreasPage from "@features/admin/modules/catalogos/areas/pages/AreasPage";
+import CentrosAtencionPage from "@features/admin/modules/catalogos/centros-atencion/pages/CentrosAtencionPage";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
 
 // Administracion
@@ -54,11 +55,7 @@ export const adminRoutes: RouteObject[] = [
         path: "centros-atencion",
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
-            <PlaceholderPage
-              title="Centros de atencion"
-              description="Catalogo de centros de atencion con datos operativos"
-              moduleName="Administracion"
-            />
+            <CentrosAtencionPage />
           </ProtectedRoute>
         ),
       },

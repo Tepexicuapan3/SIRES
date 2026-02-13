@@ -83,6 +83,42 @@ export const permissionsCatalog: Permission[] = [
     isSystem: true,
   },
   {
+    id: 16,
+    code: "admin:catalogos:areas:create",
+    description: "Crear areas",
+    isSystem: true,
+  },
+  {
+    id: 17,
+    code: "admin:catalogos:areas:update",
+    description: "Editar areas",
+    isSystem: true,
+  },
+  {
+    id: 18,
+    code: "admin:catalogos:areas:delete",
+    description: "Eliminar areas",
+    isSystem: true,
+  },
+  {
+    id: 19,
+    code: "admin:catalogos:centros_atencion:create",
+    description: "Crear centros de atencion",
+    isSystem: true,
+  },
+  {
+    id: 20,
+    code: "admin:catalogos:centros_atencion:update",
+    description: "Editar centros de atencion",
+    isSystem: true,
+  },
+  {
+    id: 21,
+    code: "admin:catalogos:centros_atencion:delete",
+    description: "Eliminar centros de atencion",
+    isSystem: true,
+  },
+  {
     id: 12,
     code: "admin:reportes:read",
     description: "Ver reportes",
