@@ -43,3 +43,29 @@ admin/
 ## Flujo de datos
 
 UI (components/pages) → queries/mutations → `api/resources` → backend.
+
+## Patron reutilizable para detalles CRUD
+
+### Base compartida
+
+- `shared/components/details/AdminDetailsDialogShell.tsx` centraliza layout, confirmacion por cambios sin guardar, loading/error y footer configurable.
+- `shared/components/details/AdminDetailsHeader.tsx` y `AdminDetailsFooter.tsx` evitan duplicar estructura visual en cada modulo.
+- `shared/types/details-dialog.types.ts` define el contrato de secciones para tabs dinamicas.
+
+### Caso con tabs (RBAC)
+
+- Construir `sections` con mas de un bloque (`general`, `roles`, `permissions`, etc.).
+- Cada bloque mantiene su propia UI y hooks de mutation/query.
+
+### Caso sin tabs (catalogos solo formulario)
+
+- Definir `sections` con **una sola** seccion (`general`).
+- El shell detecta `sections.length === 1` y renderiza contenido directo, sin `TabsList`.
+- Reusar el mismo footer para guardar/cancelar y confirmacion de salida.
+
+### Checklist para agregar un nuevo catalogo
+
+1. Crear queries/mutations y keys del catalogo (`modules/catalogos/<catalogo>/queries|mutations`).
+2. Implementar `DetailsDialog` del catalogo usando `AdminDetailsDialogShell` con una sola seccion.
+3. Conectar accion `Ver detalles` desde la tabla (`TableToolbar` o `onRowClick`).
+4. Cubrir test de UI: abrir detalle, editar, guardar, confirmar salida con cambios.
