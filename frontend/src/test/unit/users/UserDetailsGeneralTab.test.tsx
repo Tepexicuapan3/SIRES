@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
-import { render, screen, within } from "@/test/utils";
+import { render, screen } from "@/test/utils";
 import { UserDetailsGeneralTab } from "@features/admin/modules/rbac/users/components/UserDetailsGeneralTab";
 import { createMockUserDetail } from "@/test/factories/users";
 import type { UserDetailsFormValues } from "@features/admin/modules/rbac/users/domain/users.schemas";
@@ -18,11 +18,7 @@ const createClinicOption = (
   ...overrides,
 });
 
-const renderGeneralTab = ({
-  onStatusChange,
-}: {
-  onStatusChange?: (nextActive: boolean) => void;
-} = {}) => {
+const renderGeneralTab = () => {
   const userDetail = createMockUserDetail({
     id: 17,
     username: "jperez",
@@ -48,10 +44,9 @@ const renderGeneralTab = ({
         formId="user-details-form"
         clinicOptions={clinicOptions}
         userDetail={userDetail}
+        accountIsActive
         onSubmit={vi.fn()}
-        onStatusChange={onStatusChange}
-        lastLoginLabel="hoy"
-        lastIpLabel="127.0.0.1"
+        onAccountStatusChange={vi.fn()}
       />
     );
   };
@@ -60,31 +55,59 @@ const renderGeneralTab = ({
 };
 
 describe("UserDetailsGeneralTab", () => {
-  it("renders readonly fields and metadata", () => {
+  it("renders account summary and audit metadata", () => {
     renderGeneralTab();
 
-    expect(screen.getByDisplayValue("jperez")).toBeDisabled();
-    expect(screen.getByDisplayValue("Clinico")).toBeDisabled();
-    expect(screen.getByText("Ultimo acceso: hoy")).toBeVisible();
-    expect(screen.getByText("Ultima IP: 127.0.0.1")).toBeVisible();
+    expect(screen.getByText("Usuario")).toBeVisible();
+    expect(screen.getByText("Rol principal")).toBeVisible();
+    expect(screen.getByLabelText("Nombre")).toBeVisible();
+    expect(screen.getByLabelText("Correo")).toBeVisible();
+    expect(screen.getByText("Centro de atencion")).toBeVisible();
+    expect(screen.getByText("Estado de la cuenta")).toBeVisible();
   });
 
-  it("notifies status change", async () => {
-    const onStatusChange = vi.fn();
+  it("notifies account status change", async () => {
+    const onAccountStatusChange = vi.fn();
     const user = userEvent.setup();
-    renderGeneralTab({ onStatusChange });
 
-    const statusContainer = screen.getByText("Estado").closest("div");
-    expect(statusContainer).not.toBeNull();
-    const statusSelect = (statusContainer as HTMLElement).querySelector(
-      "[data-slot='select-trigger']",
-    );
-    expect(statusSelect).not.toBeNull();
+    const userDetail = createMockUserDetail({
+      id: 17,
+      username: "jperez",
+      primaryRole: "Clinico",
+      isActive: true,
+    });
+    const clinicOptions = [createClinicOption({ id: 1, name: "Centro 1" })];
 
-    await user.click(statusSelect as HTMLElement);
-    const listbox = screen.getByRole("listbox");
-    await user.click(within(listbox).getByText("Inactivo"));
+    const Wrapper = () => {
+      const form = useForm<UserDetailsFormValues>({
+        defaultValues: {
+          firstName: userDetail.firstName,
+          paternalName: userDetail.paternalName,
+          maternalName: userDetail.maternalName,
+          email: userDetail.email,
+          clinicId: userDetail.clinic?.id ?? null,
+        },
+      });
 
-    expect(onStatusChange).toHaveBeenCalledWith(false);
+      return (
+        <UserDetailsGeneralTab
+          form={form}
+          formId="user-details-form"
+          clinicOptions={clinicOptions}
+          userDetail={userDetail}
+          accountIsActive
+          onSubmit={vi.fn()}
+          onAccountStatusChange={onAccountStatusChange}
+        />
+      );
+    };
+
+    render(<Wrapper />);
+
+    const comboboxes = screen.getAllByRole("combobox");
+    await user.click(comboboxes[1]);
+    await user.click(screen.getByRole("option", { name: "Inactivo" }));
+
+    expect(onAccountStatusChange).toHaveBeenCalledWith(false);
   });
 });

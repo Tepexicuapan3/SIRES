@@ -1,38 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { fireEvent, render, screen, waitFor, within } from "@/test/utils";
+import { fireEvent, render, screen, within } from "@/test/utils";
 import { UserDetailsRolesTab } from "@features/admin/modules/rbac/users/components/UserDetailsRolesTab";
 import { createMockUserRole } from "@/test/factories/users";
-import { useAssignRoles } from "@features/admin/modules/rbac/users/mutations/useAssignRoles";
-import { useRevokeUserRole } from "@features/admin/modules/rbac/users/mutations/useRevokeUserRole";
-import { useSetPrimaryRole } from "@features/admin/modules/rbac/users/mutations/useSetPrimaryRole";
-import { toast } from "sonner";
 import type { RoleListItem } from "@api/types";
-
-vi.mock("sonner", () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-vi.mock("@features/admin/modules/rbac/users/mutations/useAssignRoles", () => ({
-  useAssignRoles: vi.fn(),
-}));
-
-vi.mock(
-  "@features/admin/modules/rbac/users/mutations/useRevokeUserRole",
-  () => ({
-    useRevokeUserRole: vi.fn(),
-  }),
-);
-
-vi.mock(
-  "@features/admin/modules/rbac/users/mutations/useSetPrimaryRole",
-  () => ({
-    useSetPrimaryRole: vi.fn(),
-  }),
-);
 
 const createRoleOption = (
   overrides: Partial<RoleListItem> = {},
@@ -49,9 +20,9 @@ const createRoleOption = (
 });
 
 describe("UserDetailsRolesTab", () => {
-  const assignMutate = vi.fn();
-  const setPrimaryMutate = vi.fn();
-  const revokeMutate = vi.fn();
+  const onAddRole = vi.fn();
+  const onSetPrimaryRole = vi.fn();
+  const onRemoveRole = vi.fn();
 
   const roles = [
     createMockUserRole({ id: 1, name: "Admin", isPrimary: true }),
@@ -65,37 +36,20 @@ describe("UserDetailsRolesTab", () => {
   ];
 
   beforeEach(() => {
-    vi.mocked(useAssignRoles).mockReturnValue({
-      mutateAsync: assignMutate,
-      isPending: false,
-    } as ReturnType<typeof useAssignRoles>);
-
-    vi.mocked(useSetPrimaryRole).mockReturnValue({
-      mutateAsync: setPrimaryMutate,
-      isPending: false,
-    } as ReturnType<typeof useSetPrimaryRole>);
-
-    vi.mocked(useRevokeUserRole).mockReturnValue({
-      mutateAsync: revokeMutate,
-      isPending: false,
-    } as ReturnType<typeof useRevokeUserRole>);
-
-    assignMutate.mockResolvedValue({ userId: 10, roles: [] });
-    setPrimaryMutate.mockResolvedValue({ userId: 10, roles: [] });
-    revokeMutate.mockResolvedValue({ userId: 10, roles: [] });
-    assignMutate.mockClear();
-    setPrimaryMutate.mockClear();
-    revokeMutate.mockClear();
-    vi.mocked(toast.success).mockClear();
+    onAddRole.mockClear();
+    onSetPrimaryRole.mockClear();
+    onRemoveRole.mockClear();
   });
 
-  it("assigns a new role", async () => {
+  it("stages a new role", async () => {
     const user = userEvent.setup();
     const { container } = render(
       <UserDetailsRolesTab
-        userId={10}
         roles={roles}
         roleOptions={roleOptions}
+        onAddRole={onAddRole}
+        onSetPrimaryRole={onSetPrimaryRole}
+        onRemoveRole={onRemoveRole}
       />,
     );
 
@@ -105,25 +59,19 @@ describe("UserDetailsRolesTab", () => {
     expect(selectTriggers.length).toBeGreaterThan(1);
     await user.click(selectTriggers[1] as HTMLElement);
     await user.click(screen.getByText("Auditoria"));
-    await user.click(screen.getByRole("button", { name: "Agregar" }));
 
-    expect(assignMutate).toHaveBeenCalledWith({
-      userId: 10,
-      data: { roleIds: [3] },
-    });
-    expect(toast.success).toHaveBeenCalledWith(
-      "Rol agregado",
-      expect.any(Object),
-    );
+    expect(onAddRole).toHaveBeenCalledWith(3);
   });
 
-  it("updates the primary role", async () => {
+  it("stages primary role change", async () => {
     const user = userEvent.setup();
     const { container } = render(
       <UserDetailsRolesTab
-        userId={10}
         roles={roles}
         roleOptions={roleOptions}
+        onAddRole={onAddRole}
+        onSetPrimaryRole={onSetPrimaryRole}
+        onRemoveRole={onRemoveRole}
       />,
     );
 
@@ -135,19 +83,17 @@ describe("UserDetailsRolesTab", () => {
     const listbox = screen.getByRole("listbox");
     await user.click(within(listbox).getByText("Clinico"));
 
-    expect(setPrimaryMutate).toHaveBeenCalledWith({
-      userId: 10,
-      data: { roleId: 2 },
-    });
-    expect(toast.success).toHaveBeenCalledWith("Rol principal actualizado");
+    expect(onSetPrimaryRole).toHaveBeenCalledWith(2);
   });
 
-  it("removes a secondary role", async () => {
+  it("stages secondary role removal", async () => {
     render(
       <UserDetailsRolesTab
-        userId={10}
         roles={roles}
         roleOptions={roleOptions}
+        onAddRole={onAddRole}
+        onSetPrimaryRole={onSetPrimaryRole}
+        onRemoveRole={onRemoveRole}
       />,
     );
 
@@ -157,19 +103,18 @@ describe("UserDetailsRolesTab", () => {
 
     fireEvent.click(removeButton);
 
-    await waitFor(() => {
-      expect(revokeMutate).toHaveBeenCalledWith({ userId: 10, roleId: 2 });
-      expect(toast.success).toHaveBeenCalledWith("Rol removido");
-    });
+    expect(onRemoveRole).toHaveBeenCalledWith(2);
   });
 
   it("disables role management in read-only mode", () => {
     const { container } = render(
       <UserDetailsRolesTab
-        userId={10}
         roles={roles}
         roleOptions={roleOptions}
         isEditable={false}
+        onAddRole={onAddRole}
+        onSetPrimaryRole={onSetPrimaryRole}
+        onRemoveRole={onRemoveRole}
       />,
     );
 
@@ -177,9 +122,9 @@ describe("UserDetailsRolesTab", () => {
       "[data-slot='select-trigger']",
     );
 
-    expect(selectTriggers.length).toBeGreaterThan(0);
+    expect(selectTriggers.length).toBeGreaterThan(1);
     expect(selectTriggers[0]).toHaveAttribute("data-disabled");
-    expect(screen.getByRole("button", { name: "Agregar" })).toBeDisabled();
+    expect(selectTriggers[1]).toHaveAttribute("data-disabled");
     expect(
       screen.getByRole("button", { name: "Remover rol Clinico" }),
     ).toBeDisabled();

@@ -40,6 +40,16 @@ const getRandomClinic = () => {
   return clinicRefs[index] ?? null;
 };
 
+const getMockLastLoginAt = (offset: number) => {
+  return new Date(Date.now() - (offset + 1) * 36e5).toISOString();
+};
+
+const getMockLastIp = (offset: number) => {
+  const segment = 10 + (offset % 200);
+  const host = 20 + ((offset * 7) % 200);
+  return `192.168.${segment}.${host}`;
+};
+
 const usersDB = [
   createMockUser({
     id: 1,
@@ -61,6 +71,7 @@ const usersDB = [
     primaryRole: "Admin",
     avatarUrl: "https://i.pravatar.cc/80?img=32",
     isActive: true,
+    termsAccepted: false,
   }),
   createMockUser({
     id: 3,
@@ -71,6 +82,7 @@ const usersDB = [
     primaryRole: "Auditoria",
     avatarUrl: null,
     isActive: false,
+    mustChangePassword: true,
   }),
   ...Array.from({ length: 97 }).map((_, i) =>
     createMockUser({ id: i + 4, clinic: getRandomClinic() }),
@@ -88,13 +100,13 @@ const userProfilesDB = new Map(
 );
 
 const userSecurityDB = new Map(
-  usersDB.map((user) => [
+  usersDB.map((user, index) => [
     user.id,
     {
-      termsAccepted: true,
-      mustChangePassword: false,
-      lastLoginAt: null as string | null,
-      lastIp: null as string | null,
+      termsAccepted: user.termsAccepted ?? true,
+      mustChangePassword: user.mustChangePassword ?? false,
+      lastLoginAt: getMockLastLoginAt(index),
+      lastIp: getMockLastIp(index),
     },
   ]),
 );
@@ -299,6 +311,7 @@ export const usersHandlers = [
       url.searchParams.get("clinicId") || url.searchParams.get("clinic_id");
     const estado = url.searchParams.get("estado");
     const isActiveParam = url.searchParams.get("isActive");
+    const status = url.searchParams.get("status");
 
     // 1. Filtrado
     let filteredUsers = usersDB;
@@ -318,6 +331,20 @@ export const usersHandlers = [
     } else if (estado) {
       const isActive = estado === "A";
       filteredUsers = filteredUsers.filter((u) => u.isActive === isActive);
+    }
+
+    if (status === "pending") {
+      filteredUsers = filteredUsers.filter((user) => {
+        const security = userSecurityDB.get(user.id);
+        const termsAccepted = security?.termsAccepted ?? user.termsAccepted;
+        const mustChangePassword =
+          security?.mustChangePassword ?? user.mustChangePassword;
+        return !termsAccepted || mustChangePassword;
+      });
+    } else if (status === "active") {
+      filteredUsers = filteredUsers.filter((user) => user.isActive);
+    } else if (status === "inactive") {
+      filteredUsers = filteredUsers.filter((user) => !user.isActive);
     }
 
     if (roleId) {
@@ -349,7 +376,17 @@ export const usersHandlers = [
         const comparison = compareUsers(firstUser, secondUser, sortBy);
         return sortOrder === "asc" ? comparison : comparison * -1;
       })
-      .slice(start, end);
+      .slice(start, end)
+      .map((user) => {
+        const security = userSecurityDB.get(user.id);
+
+        return {
+          ...user,
+          termsAccepted: security?.termsAccepted ?? user.termsAccepted ?? true,
+          mustChangePassword:
+            security?.mustChangePassword ?? user.mustChangePassword ?? false,
+        };
+      });
 
     return HttpResponse.json({
       items,
@@ -446,6 +483,8 @@ export const usersHandlers = [
         : null,
       primaryRole: primaryRole.name,
       isActive: true,
+      termsAccepted: false,
+      mustChangePassword: true,
     });
 
     // GUARDAR EN MEMORIA

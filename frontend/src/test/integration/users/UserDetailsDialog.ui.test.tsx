@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor, within } from "@/test/utils";
+import { render, screen, waitFor } from "@/test/utils";
 import { UserDetailsDialog } from "@features/admin/modules/rbac/users/components/UserDetailsDialog";
 import {
   createMockUser,
@@ -9,9 +9,12 @@ import {
 } from "@/test/factories/users";
 import { useUserDetail } from "@features/admin/modules/rbac/users/queries/useUserDetail";
 import { usePermissionsCatalog } from "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog";
+import { useAddUserOverride } from "@features/admin/modules/rbac/users/mutations/useAddUserOverride";
+import { useAssignRoles } from "@features/admin/modules/rbac/users/mutations/useAssignRoles";
+import { useRemoveUserOverride } from "@features/admin/modules/rbac/users/mutations/useRemoveUserOverride";
+import { useRevokeUserRole } from "@features/admin/modules/rbac/users/mutations/useRevokeUserRole";
+import { useSetPrimaryRole } from "@features/admin/modules/rbac/users/mutations/useSetPrimaryRole";
 import { useUpdateUser } from "@features/admin/modules/rbac/users/mutations/useUpdateUser";
-import { useActivateUser } from "@features/admin/modules/rbac/users/mutations/useActivateUser";
-import { useDeactivateUser } from "@features/admin/modules/rbac/users/mutations/useDeactivateUser";
 import { toast } from "sonner";
 import type { CentroAtencionListItem, RoleListItem } from "@api/types";
 
@@ -37,14 +40,35 @@ vi.mock("@features/admin/modules/rbac/users/mutations/useUpdateUser", () => ({
   useUpdateUser: vi.fn(),
 }));
 
-vi.mock("@features/admin/modules/rbac/users/mutations/useActivateUser", () => ({
-  useActivateUser: vi.fn(),
+vi.mock("@features/admin/modules/rbac/users/mutations/useAssignRoles", () => ({
+  useAssignRoles: vi.fn(),
 }));
 
 vi.mock(
-  "@features/admin/modules/rbac/users/mutations/useDeactivateUser",
+  "@features/admin/modules/rbac/users/mutations/useSetPrimaryRole",
   () => ({
-    useDeactivateUser: vi.fn(),
+    useSetPrimaryRole: vi.fn(),
+  }),
+);
+
+vi.mock(
+  "@features/admin/modules/rbac/users/mutations/useRevokeUserRole",
+  () => ({
+    useRevokeUserRole: vi.fn(),
+  }),
+);
+
+vi.mock(
+  "@features/admin/modules/rbac/users/mutations/useAddUserOverride",
+  () => ({
+    useAddUserOverride: vi.fn(),
+  }),
+);
+
+vi.mock(
+  "@features/admin/modules/rbac/users/mutations/useRemoveUserOverride",
+  () => ({
+    useRemoveUserOverride: vi.fn(),
   }),
 );
 
@@ -76,12 +100,19 @@ const createClinicOption = (
 describe("UserDetailsDialog UI", () => {
   const refetch = vi.fn();
   const updateMutate = vi.fn();
-  const activateMutate = vi.fn();
-  const deactivateMutate = vi.fn();
+  const assignRolesMutate = vi.fn();
+  const setPrimaryRoleMutate = vi.fn();
+  const revokeUserRoleMutate = vi.fn();
+  const addOverrideMutate = vi.fn();
+  const removeOverrideMutate = vi.fn();
   const onOpenChange = vi.fn();
   const onClose = vi.fn();
 
-  const roleOptions = [createRoleOption({ id: 1, name: "Admin" })];
+  const roleOptions = [
+    createRoleOption({ id: 1, name: "Admin" }),
+    createRoleOption({ id: 2, name: "Clinico" }),
+    createRoleOption({ id: 3, name: "Auditoria" }),
+  ];
   const clinicOptions = [createClinicOption({ id: 1, name: "Centro 1" })];
 
   const userSummary = createMockUser({
@@ -105,21 +136,50 @@ describe("UserDetailsDialog UI", () => {
       isPending: false,
     } as ReturnType<typeof useUpdateUser>);
 
-    vi.mocked(useActivateUser).mockReturnValue({
-      mutateAsync: activateMutate,
+    vi.mocked(useAssignRoles).mockReturnValue({
+      mutateAsync: assignRolesMutate,
       isPending: false,
-    } as ReturnType<typeof useActivateUser>);
+    } as ReturnType<typeof useAssignRoles>);
 
-    vi.mocked(useDeactivateUser).mockReturnValue({
-      mutateAsync: deactivateMutate,
+    vi.mocked(useSetPrimaryRole).mockReturnValue({
+      mutateAsync: setPrimaryRoleMutate,
       isPending: false,
-    } as ReturnType<typeof useDeactivateUser>);
+    } as ReturnType<typeof useSetPrimaryRole>);
+
+    vi.mocked(useRevokeUserRole).mockReturnValue({
+      mutateAsync: revokeUserRoleMutate,
+      isPending: false,
+    } as ReturnType<typeof useRevokeUserRole>);
+
+    vi.mocked(useAddUserOverride).mockReturnValue({
+      mutateAsync: addOverrideMutate,
+      isPending: false,
+    } as ReturnType<typeof useAddUserOverride>);
+
+    vi.mocked(useRemoveUserOverride).mockReturnValue({
+      mutateAsync: removeOverrideMutate,
+      isPending: false,
+    } as ReturnType<typeof useRemoveUserOverride>);
 
     updateMutate.mockResolvedValue({
       user: createMockUserDetail({ id: 77, email: "mlopez@metro.cdmx.gob.mx" }),
     });
-    activateMutate.mockResolvedValue({ id: 77, isActive: true });
-    deactivateMutate.mockResolvedValue({ id: 77, isActive: false });
+    updateMutate.mockClear();
+    assignRolesMutate.mockResolvedValue({ userId: 77, roles: [] });
+    setPrimaryRoleMutate.mockResolvedValue({ userId: 77, roles: [] });
+    revokeUserRoleMutate.mockResolvedValue({ userId: 77, roles: [] });
+    addOverrideMutate.mockResolvedValue({ userId: 77, overrides: [] });
+    removeOverrideMutate.mockResolvedValue({ userId: 77, overrides: [] });
+
+    refetch.mockResolvedValue({ data: undefined });
+    refetch.mockClear();
+
+    assignRolesMutate.mockClear();
+    setPrimaryRoleMutate.mockClear();
+    revokeUserRoleMutate.mockClear();
+    addOverrideMutate.mockClear();
+    removeOverrideMutate.mockClear();
+
     vi.mocked(toast.success).mockClear();
     vi.mocked(toast.error).mockClear();
     onOpenChange.mockClear();
@@ -192,6 +252,16 @@ describe("UserDetailsDialog UI", () => {
     const emailInput = await screen.findByLabelText("Correo");
     await user.clear(emailInput);
     await user.type(emailInput, "nuevo@metro.cdmx.gob.mx");
+    refetch.mockResolvedValueOnce({
+      data: {
+        user: createMockUserDetail({
+          id: 77,
+          email: "nuevo@metro.cdmx.gob.mx",
+        }),
+        roles: [createMockUserRole({ id: 1, name: "Admin", isPrimary: true })],
+        overrides: [],
+      },
+    });
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     await waitFor(() => {
@@ -200,13 +270,107 @@ describe("UserDetailsDialog UI", () => {
         data: { email: "nuevo@metro.cdmx.gob.mx" },
       });
       expect(toast.success).toHaveBeenCalledWith(
-        "Perfil actualizado",
+        "Cambios guardados",
         expect.any(Object),
       );
     });
   });
 
-  it("updates user status from the general tab", async () => {
+  it("stages permission changes and applies them only on save", async () => {
+    vi.mocked(usePermissionsCatalog).mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 901,
+            code: "admin:gestion:usuarios:update",
+            description: "Actualizar usuarios",
+            isSystem: false,
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof usePermissionsCatalog>);
+
+    vi.mocked(useUserDetail).mockReturnValue({
+      data: {
+        user: createMockUserDetail({ id: 77, primaryRole: "Admin" }),
+        roles: [createMockUserRole({ id: 1, name: "Admin", isPrimary: true })],
+        overrides: [],
+      },
+      isLoading: false,
+      isError: false,
+      refetch,
+    } as ReturnType<typeof useUserDetail>);
+
+    const user = userEvent.setup();
+    render(
+      <UserDetailsDialog
+        open
+        onOpenChange={onOpenChange}
+        onClose={onClose}
+        userSummary={userSummary}
+        roleOptions={roleOptions}
+        clinicOptions={clinicOptions}
+        canEdit
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: /Permisos/i }));
+    await user.type(
+      screen.getByRole("textbox", { name: /buscar permiso para override/i }),
+      "actualizar usuarios",
+    );
+    await user.click(
+      screen.getByRole("option", {
+        name: "Agregar override admin:gestion:usuarios:update",
+      }),
+    );
+
+    expect(addOverrideMutate).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Guardar" })).toBeEnabled();
+
+    refetch.mockResolvedValueOnce({
+      data: {
+        user: createMockUserDetail({ id: 77, primaryRole: "Admin" }),
+        roles: [createMockUserRole({ id: 1, name: "Admin", isPrimary: true })],
+        overrides: [
+          {
+            id: 700,
+            permissionCode: "admin:gestion:usuarios:update",
+            permissionDescription: "Actualizar usuarios",
+            effect: "ALLOW",
+            expiresAt: null,
+            isExpired: false,
+            assignedAt: "2024-01-01T00:00:00Z",
+            assignedBy: { id: 1, name: "Admin" },
+          },
+        ],
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() => {
+      expect(addOverrideMutate).toHaveBeenCalledWith({
+        userId: 77,
+        data: {
+          permissionCode: "admin:gestion:usuarios:update",
+          effect: "ALLOW",
+          expiresAt: undefined,
+        },
+      });
+    });
+
+    expect(toast.success).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith(
+      "Cambios guardados",
+      expect.any(Object),
+    );
+  });
+
+  it("shows account and audit summary data in general tab", () => {
     const userDetail = createMockUserDetail({
       id: 77,
       firstName: "Maria",
@@ -229,7 +393,6 @@ describe("UserDetailsDialog UI", () => {
       refetch,
     } as ReturnType<typeof useUserDetail>);
 
-    const user = userEvent.setup();
     render(
       <UserDetailsDialog
         open
@@ -242,20 +405,12 @@ describe("UserDetailsDialog UI", () => {
       />,
     );
 
-    const statusContainer = screen.getByText("Estado").closest("div");
-    expect(statusContainer).not.toBeNull();
-    const statusSelect = (statusContainer as HTMLElement).querySelector(
-      "[data-slot='select-trigger']",
-    );
-    expect(statusSelect).not.toBeNull();
-    await user.click(statusSelect as HTMLElement);
-    const listbox = screen.getByRole("listbox");
-    await user.click(within(listbox).getByText("Inactivo"));
-
-    await waitFor(() => {
-      expect(deactivateMutate).toHaveBeenCalledWith({ userId: 77 });
-      expect(toast.success).toHaveBeenCalledWith("Usuario desactivado");
-    });
+    expect(screen.getByText("Centro de atencion")).toBeVisible();
+    expect(screen.getByText("Estado de la cuenta")).toBeVisible();
+    expect(screen.getByText("Ultimo acceso")).toBeVisible();
+    expect(screen.getByText("Ultima IP")).toBeVisible();
+    expect(screen.getByText("Creado por")).toBeVisible();
+    expect(screen.getByText("Actualizado por")).toBeVisible();
   });
 
   it("renders read-only mode when user lacks update permission", async () => {
@@ -289,6 +444,38 @@ describe("UserDetailsDialog UI", () => {
     ).toBeVisible();
     expect(screen.getByLabelText("Correo")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Guardar" })).toBeDisabled();
+  });
+
+  it("shows pending status when terms are not accepted", async () => {
+    vi.mocked(useUserDetail).mockReturnValue({
+      data: {
+        user: createMockUserDetail({
+          id: 77,
+          isActive: true,
+          termsAccepted: false,
+          mustChangePassword: false,
+        }),
+        roles: [createMockUserRole({ id: 1, name: "Admin", isPrimary: true })],
+        overrides: [],
+      },
+      isLoading: false,
+      isError: false,
+      refetch,
+    } as ReturnType<typeof useUserDetail>);
+
+    render(
+      <UserDetailsDialog
+        open
+        onOpenChange={onOpenChange}
+        onClose={onClose}
+        userSummary={userSummary}
+        roleOptions={roleOptions}
+        clinicOptions={clinicOptions}
+        canEdit
+      />,
+    );
+
+    expect(screen.getAllByText("Pendiente").length).toBeGreaterThan(0);
   });
 
   it("shows explicit error when permissions catalog fails", async () => {
@@ -405,7 +592,7 @@ describe("UserDetailsDialog UI", () => {
       screen.getByRole("heading", { name: "Salir sin guardar" }),
     ).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Salir sin guardar" }));
+    await user.click(screen.getByRole("button", { name: "Salir" }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onClose).toHaveBeenCalled();

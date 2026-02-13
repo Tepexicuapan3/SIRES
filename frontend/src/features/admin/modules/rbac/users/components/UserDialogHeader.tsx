@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AdminDetailsHeader } from "@features/admin/shared/components/details/AdminDetailsHeader";
 
 interface UserDialogHeaderProps {
   title: string;
@@ -31,29 +32,19 @@ export function UserDialogHeader({
   const initials = getInitials(title || fallbackLabel);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+    <AdminDetailsHeader
+      title={title}
+      subtitle={subtitle}
+      status={status}
+      meta={meta}
+      leadingVisual={
         <Avatar className="h-16 w-16 border border-line-struct/60 bg-subtle/50">
           {avatarUrl ? <AvatarImage src={avatarUrl} alt={title} /> : null}
           <AvatarFallback className="text-xs font-semibold text-txt-muted">
             {initials}
           </AvatarFallback>
         </Avatar>
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-lg font-semibold text-txt-body">{title}</span>
-          </div>
-          {subtitle ? (
-            <div className="text-sm text-txt-muted">{subtitle}</div>
-          ) : null}
-          {status || meta ? (
-            <div className="flex flex-wrap items-center gap-3 text-xs text-txt-muted">
-              {status}
-              {meta}
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

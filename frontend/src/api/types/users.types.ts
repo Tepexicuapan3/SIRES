@@ -51,6 +51,8 @@ export interface UserListItem {
   clinic: CentroAtencionRef | null;
   primaryRole: string;
   isActive: boolean;
+  termsAccepted?: boolean;
+  mustChangePassword?: boolean;
 }
 
 /**
@@ -183,6 +185,7 @@ export interface UsersListParams extends PaginationParams {
   isActive?: boolean;
   roleId?: number;
   clinicId?: number;
+  status?: "active" | "inactive" | "pending";
 }
 
 /**

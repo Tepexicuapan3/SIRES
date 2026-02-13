@@ -212,6 +212,13 @@ Si luego se exponen en API RBAC, usar nombres estandar:
 | PATCH | `/users/:id/activate` | - | `UserStatusResponse` | 200 | `admin:gestion:usuarios:update` |
 | PATCH | `/users/:id/deactivate` | - | `UserStatusResponse` | 200 | `admin:gestion:usuarios:update` |
 
+##### UsersListParams
+
+Filtros soportados en `GET /users`:
+
+- `status`: `active | inactive | pending`
+  - `pending` = usuario con `terminos_acept = false` **o** `cambiar_clave = true`.
+
 #### Usuarios - roles
 
 | Metodo | Ruta | Request | Response | Status | Permiso |

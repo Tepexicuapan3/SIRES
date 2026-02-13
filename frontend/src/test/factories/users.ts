@@ -64,6 +64,8 @@ export const createMockUser = (
       : faker.datatype.boolean()
         ? faker.image.avatar()
         : null;
+  const termsAccepted = overrides.termsAccepted ?? true;
+  const mustChangePassword = overrides.mustChangePassword ?? false;
 
   return {
     id: faker.number.int({ min: 1, max: 1000 }),
@@ -73,6 +75,8 @@ export const createMockUser = (
     clinic,
     primaryRole: faker.helpers.arrayElement(USER_ROLE_POOL),
     isActive: faker.datatype.boolean(),
+    termsAccepted,
+    mustChangePassword,
     avatarUrl,
     ...overrides,
   };

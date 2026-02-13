@@ -241,7 +241,21 @@ describe("UsersPage UI", () => {
 
     await waitFor(() => {
       expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
-        expect.objectContaining({ isActive: false }),
+        expect.objectContaining({ status: "inactive" }),
+      );
+    });
+  });
+
+  it("applies pending status filter and updates query params", async () => {
+    const user = userEvent.setup();
+    render(<UsersPage />);
+
+    await user.click(screen.getByRole("button", { name: "Filtros" }));
+    await user.click(screen.getByText("Pendientes"));
+
+    await waitFor(() => {
+      expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: "pending" }),
       );
     });
   });

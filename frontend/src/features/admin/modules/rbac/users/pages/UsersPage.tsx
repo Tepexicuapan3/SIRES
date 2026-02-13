@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Eye, Plus, RotateCcw, UserCheck, UserX } from "lucide-react";
+import {
+  Download,
+  Eye,
+  Plus,
+  RotateCcw,
+  ShieldUser,
+  UserCheck,
+  UserX,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,16 +41,19 @@ import { useActivateUser } from "@features/admin/modules/rbac/users/mutations/us
 import { useDeactivateUser } from "@features/admin/modules/rbac/users/mutations/useDeactivateUser";
 import { useRolesList } from "@features/admin/modules/rbac/roles/queries/useRolesList";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
+import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import { getRoleBadgeVariant } from "@features/admin/shared/utils/roleBadge";
 import { UserDetailsDialog } from "@features/admin/modules/rbac/users/components/UserDetailsDialog";
 import { UserCreateDialog } from "@features/admin/modules/rbac/users/components/UserCreateDialog";
 import { getUserErrorMessage } from "@features/admin/modules/rbac/users/utils/users.feedback";
+import { resolveUserUiStatus } from "@features/admin/modules/rbac/users/utils/users.format";
 import type { UserListItem } from "@api/types";
 
 const USER_STATUS_FILTER = {
   ALL: "all",
   ACTIVE: "active",
   INACTIVE: "inactive",
+  PENDING: "pending",
 } as const;
 
 const ROLE_FILTER_ALL = "all";
@@ -83,9 +94,14 @@ export function UsersPage() {
       isActive: true,
       actions: true,
     });
-  const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const {
+    open: detailsOpen,
+    selectedItem: selectedUser,
+    openDetails: handleOpenDetails,
+    closeDetails: handleCloseDetails,
+    setOpen: setDetailsOpen,
+  } = useTableDetailsDialog<UserListItem>();
   const debouncedSearch = useDebounce(search, 400);
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
@@ -94,10 +110,7 @@ export function UsersPage() {
     page,
     pageSize,
     search: debouncedSearch || undefined,
-    isActive:
-      statusFilter === USER_STATUS_FILTER.ALL
-        ? undefined
-        : statusFilter === USER_STATUS_FILTER.ACTIVE,
+    status: statusFilter === USER_STATUS_FILTER.ALL ? undefined : statusFilter,
     roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
     clinicId:
       clinicFilter === CLINIC_FILTER_ALL ? undefined : Number(clinicFilter),
@@ -121,16 +134,6 @@ export function UsersPage() {
   const canReadUser = hasPermission("admin:gestion:usuarios:read");
   const showActions = canReadUser || canUpdateUser;
   const isStatusPending = activateUser.isPending || deactivateUser.isPending;
-
-  const handleOpenDetails = (user: UserListItem) => {
-    setSelectedUser(user);
-    setDetailsOpen(true);
-  };
-
-  const handleCloseDetails = () => {
-    setDetailsOpen(false);
-    setSelectedUser(null);
-  };
 
   const handleToggleStatus = async (user: UserListItem) => {
     try {
@@ -227,8 +230,19 @@ export function UsersPage() {
       align: "center",
       accessorKey: "isActive",
       className: "w-24",
-      render: (row) =>
-        row.isActive ? (
+      render: (row) => {
+        const uiStatus = resolveUserUiStatus(row);
+
+        if (uiStatus === "pending") {
+          return (
+            <Badge variant="alert" className="gap-2">
+              <span className="size-1.5 shrink-0 rounded-full bg-status-alert" />
+              Pendiente
+            </Badge>
+          );
+        }
+
+        return uiStatus === "active" ? (
           <Badge variant="stable" className="gap-2">
             <span className="size-1.5 shrink-0 rounded-full bg-status-stable" />
             Activo
@@ -238,7 +252,8 @@ export function UsersPage() {
             <span className="size-1.5 shrink-0 rounded-full bg-txt-muted" />
             Inactivo
           </Badge>
-        ),
+        );
+      },
     },
   ];
 
@@ -363,6 +378,15 @@ export function UsersPage() {
             setPage(1);
           },
         },
+        {
+          id: USER_STATUS_FILTER.PENDING,
+          label: "Pendientes",
+          selected: statusFilter === USER_STATUS_FILTER.PENDING,
+          onSelect: () => {
+            setStatusFilter(USER_STATUS_FILTER.PENDING);
+            setPage(1);
+          },
+        },
       ],
     },
     {
@@ -398,12 +422,22 @@ export function UsersPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-txt-body">Usuarios</h1>
-        <p className="mt-1 text-sm text-txt-muted">
-          Listado base de usuarios registrados en el sistema
-        </p>
+    <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-[1360px] lg:px-8 xl:px-10">
+      <div className="px-1 py-1 sm:px-0 lg:pl-5">
+        <div className="flex items-stretch gap-3">
+          <span className="flex shrink-0 self-stretch items-center justify-center text-brand">
+            <ShieldUser className="size-12" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-txt-body">
+              Usuarios
+            </h1>
+            <p className="mt-1.5 max-w-3xl text-sm text-txt-muted">
+              Administra cuentas, rol primario y estado de acceso desde un solo
+              tablero operativo.
+            </p>
+          </div>
+        </div>
       </div>
 
       <TableHeaderBar
