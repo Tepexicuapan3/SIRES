@@ -1,27 +1,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  Download,
-  Eye,
-  Plus,
-  RotateCcw,
-  ShieldUser,
-  UserCheck,
-  UserX,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Download, Plus, RotateCcw, ShieldUser } from "lucide-react";
 import { usePermissions } from "@features/auth/queries/usePermissions";
 import { useDebounce } from "@/hooks/useDebounce";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@features/admin/shared/components/DataTable";
+import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
   TableColumnVisibility,
   type ColumnVisibilityState,
-  type TableColumnVisibilityItem,
 } from "@features/admin/shared/components/TableColumnVisibility";
 import { TableFilterMenu } from "@features/admin/shared/components/TableFilterMenu";
 import { TableHeaderBar } from "@features/admin/shared/components/TableHeaderBar";
@@ -31,22 +16,20 @@ import {
 } from "@features/admin/shared/components/TableOptionsMenu";
 import { TablePrimaryAction } from "@features/admin/shared/components/TablePrimaryAction";
 import { TableSearch } from "@features/admin/shared/components/TableSearch";
-import {
-  TableActionsHeader,
-  TableToolbar,
-  type TableAction,
-} from "@features/admin/shared/components/TableToolbar";
+import { AdminPageIntro } from "@features/admin/shared/components/AdminPageIntro";
 import { useUsersList } from "@features/admin/modules/rbac/users/queries/useUsersList";
 import { useActivateUser } from "@features/admin/modules/rbac/users/mutations/useActivateUser";
 import { useDeactivateUser } from "@features/admin/modules/rbac/users/mutations/useDeactivateUser";
 import { useRolesList } from "@features/admin/modules/rbac/roles/queries/useRolesList";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
-import { getRoleBadgeVariant } from "@features/admin/shared/utils/roleBadge";
 import { UserDetailsDialog } from "@features/admin/modules/rbac/users/components/UserDetailsDialog";
 import { UserCreateDialog } from "@features/admin/modules/rbac/users/components/UserCreateDialog";
+import {
+  buildUsersTableColumns,
+  buildUsersVisibilityOptions,
+} from "@features/admin/modules/rbac/users/components/UsersTableColumns";
 import { getUserErrorMessage } from "@features/admin/modules/rbac/users/utils/users.feedback";
-import { resolveUserUiStatus } from "@features/admin/modules/rbac/users/utils/users.format";
 import type { UserListItem } from "@api/types";
 
 const USER_STATUS_FILTER = {
@@ -61,19 +44,6 @@ const CLINIC_FILTER_ALL = "all";
 
 type UserStatusFilter =
   (typeof USER_STATUS_FILTER)[keyof typeof USER_STATUS_FILTER];
-
-const getInitials = (value: string) => {
-  const parts = value.split(" ").filter(Boolean);
-  if (parts.length === 0) return "??";
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-};
-
-const getAvatarUrl = (row: UserListItem) =>
-  (row as { avatarUrl?: string | null }).avatarUrl ?? undefined;
 
 export function UsersPage() {
   const { hasPermission } = usePermissions();
@@ -151,169 +121,16 @@ export function UsersPage() {
     }
   };
 
-  const baseColumns: DataTableColumn<UserListItem>[] = [
-    {
-      key: "user",
-      header: "Usuario",
-      className: "w-[260px]",
-      skeleton: (
-        <div className="flex items-center gap-3">
-          <Skeleton className="size-8 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-32" />
-            <Skeleton className="h-3 w-20" />
-          </div>
-        </div>
-      ),
-      render: (row) => {
-        const displayName = row.fullname || row.username;
-        const initials = getInitials(displayName || row.username);
-        const avatarUrl = getAvatarUrl(row);
-
-        return (
-          <div className="flex min-w-0 items-center gap-3">
-            <Avatar className="h-8 w-8">
-              {avatarUrl ? (
-                <AvatarImage src={avatarUrl} alt={displayName} />
-              ) : null}
-              <AvatarFallback className="text-xs font-semibold text-txt-muted">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-txt-body">
-                {displayName || "Sin nombre"}
-              </div>
-              <div className="truncate text-xs text-txt-muted">
-                {row.username}
-              </div>
-            </div>
-          </div>
-        );
-      },
+  const columns = buildUsersTableColumns({
+    canReadUser,
+    canUpdateUser,
+    isStatusPending,
+    onOpenDetails: handleOpenDetails,
+    onToggleStatus: (user) => {
+      void handleToggleStatus(user);
     },
-    {
-      key: "email",
-      header: "Correo",
-      accessorKey: "email",
-      className: "w-[240px]",
-      cellContentClassName: "max-w-[220px]",
-    },
-    {
-      key: "clinic",
-      header: "Centro",
-      accessorKey: "clinic",
-      className: "w-[200px]",
-      cellContentClassName: "max-w-[200px]",
-      render: (row) => row.clinic?.name ?? "Sin centro",
-    },
-    {
-      key: "primaryRole",
-      header: "Rol",
-      align: "center",
-      accessorKey: "primaryRole",
-      className: "w-[160px]",
-      render: (row) => {
-        const roleLabel = row.primaryRole?.trim() || "Sin rol";
-        const roleVariant = getRoleBadgeVariant(roleLabel);
-
-        return (
-          <Badge variant={roleVariant} className="max-w-35 truncate">
-            {roleLabel}
-          </Badge>
-        );
-      },
-    },
-    {
-      key: "isActive",
-      header: "Estado",
-      align: "center",
-      accessorKey: "isActive",
-      className: "w-24",
-      render: (row) => {
-        const uiStatus = resolveUserUiStatus(row);
-
-        if (uiStatus === "pending") {
-          return (
-            <Badge variant="alert" className="gap-2">
-              <span className="size-1.5 shrink-0 rounded-full bg-status-alert" />
-              Pendiente
-            </Badge>
-          );
-        }
-
-        return uiStatus === "active" ? (
-          <Badge variant="stable" className="gap-2">
-            <span className="size-1.5 shrink-0 rounded-full bg-status-stable" />
-            Activo
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="gap-2">
-            <span className="size-1.5 shrink-0 rounded-full bg-txt-muted" />
-            Inactivo
-          </Badge>
-        );
-      },
-    },
-  ];
-
-  const actionColumn: DataTableColumn<UserListItem> = {
-    key: "actions",
-    header: <TableActionsHeader />,
-    align: "center",
-    className: "w-9 px-0",
-    headerClassName: "w-9 px-0",
-    render: (row) => {
-      const actions: TableAction[] = [];
-
-      if (canReadUser) {
-        actions.push({
-          id: `view-${row.id}`,
-          label: "Ver detalles",
-          icon: Eye,
-          onSelect: () => handleOpenDetails(row),
-        });
-      }
-
-      if (canUpdateUser) {
-        actions.push({
-          id: `status-${row.id}`,
-          label: row.isActive ? "Desactivar" : "Activar",
-          icon: row.isActive ? UserX : UserCheck,
-          variant: row.isActive ? "destructive" : "default",
-          disabled: isStatusPending,
-          onSelect: () => void handleToggleStatus(row),
-        });
-      }
-
-      return actions.length > 0 ? (
-        <div
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          <TableToolbar actions={actions} />
-        </div>
-      ) : null;
-    },
-  };
-
-  const columns = showActions ? [...baseColumns, actionColumn] : baseColumns;
-
-  const visibilityOptions: TableColumnVisibilityItem[] = [
-    { key: "user", label: "Usuario" },
-    { key: "email", label: "Correo" },
-    { key: "clinic", label: "Centro" },
-    { key: "primaryRole", label: "Rol" },
-    { key: "isActive", label: "Estado" },
-  ];
-
-  if (showActions) {
-    visibilityOptions.push({
-      key: "actions",
-      label: "Acciones",
-      canHide: false,
-    });
-  }
+  });
+  const visibilityOptions = buildUsersVisibilityOptions(showActions);
 
   const visibleColumns = columns.filter(
     (column) => columnVisibility[column.key] ?? true,
@@ -347,6 +164,9 @@ export function UsersPage() {
       id: "refresh-users",
       label: "Actualizar",
       icon: RotateCcw,
+      onSelect: () => {
+        void refetch();
+      },
     },
     {
       id: "export-users",
@@ -423,22 +243,11 @@ export function UsersPage() {
 
   return (
     <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-[1360px] lg:px-8 xl:px-10">
-      <div className="px-1 py-1 sm:px-0 lg:pl-5">
-        <div className="flex items-stretch gap-3">
-          <span className="flex shrink-0 self-stretch items-center justify-center text-brand">
-            <ShieldUser className="size-12" />
-          </span>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-txt-body">
-              Usuarios
-            </h1>
-            <p className="mt-1.5 max-w-3xl text-sm text-txt-muted">
-              Administra cuentas, rol primario y estado de acceso desde un solo
-              tablero operativo.
-            </p>
-          </div>
-        </div>
-      </div>
+      <AdminPageIntro
+        title="Usuarios"
+        description="Administra cuentas, rol primario y estado de acceso desde un solo tablero operativo."
+        icon={<ShieldUser className="size-12" />}
+      />
 
       <TableHeaderBar
         search={

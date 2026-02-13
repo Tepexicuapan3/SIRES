@@ -1,36 +1,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  BookOpen,
-  Download,
-  Eye,
-  Pencil,
-  Plus,
-  RotateCcw,
-  ToggleLeft,
-  ToggleRight,
-  Trash2,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { BookOpen, Download, Plus, RotateCcw } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@features/admin/shared/components/DataTable";
+import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
   TableColumnVisibility,
   type ColumnVisibilityState,
-  type TableColumnVisibilityItem,
 } from "@features/admin/shared/components/TableColumnVisibility";
 import { TableFilterMenu } from "@features/admin/shared/components/TableFilterMenu";
 import { TableHeaderBar } from "@features/admin/shared/components/TableHeaderBar";
@@ -40,15 +15,16 @@ import {
 } from "@features/admin/shared/components/TableOptionsMenu";
 import { TablePrimaryAction } from "@features/admin/shared/components/TablePrimaryAction";
 import { TableSearch } from "@features/admin/shared/components/TableSearch";
-import {
-  TableActionsHeader,
-  TableToolbar,
-  type TableAction,
-} from "@features/admin/shared/components/TableToolbar";
+import { AdminPageIntro } from "@features/admin/shared/components/AdminPageIntro";
+import { ConfirmDestructiveDialog } from "@features/admin/shared/components/ConfirmDestructiveDialog";
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import { useDeleteArea } from "@features/admin/modules/catalogos/areas/mutations/useDeleteArea";
 import { useUpdateArea } from "@features/admin/modules/catalogos/areas/mutations/useUpdateArea";
 import { useAreasList } from "@features/admin/modules/catalogos/areas/queries/useAreasList";
+import {
+  buildAreasTableColumns,
+  buildAreasVisibilityOptions,
+} from "@features/admin/modules/catalogos/areas/components/AreasTableColumns";
 import { AreaCreateDialog } from "@features/admin/modules/catalogos/areas/components/AreaCreateDialog";
 import { AreaDetailsDialog } from "@features/admin/modules/catalogos/areas/components/AreaDetailsDialog";
 import { getAreaErrorMessage } from "@features/admin/modules/catalogos/areas/utils/areas.feedback";
@@ -166,119 +142,21 @@ export function AreasPage() {
     }
   };
 
-  const baseColumns: DataTableColumn<AreaListItem>[] = [
-    {
-      key: "name",
-      header: "Area",
-      accessorKey: "name",
-      className: "w-[260px]",
-      cellContentClassName: "max-w-[260px]",
+  const columns = buildAreasTableColumns({
+    canReadArea,
+    canUpdateArea,
+    canDeleteArea,
+    isStatusPending,
+    onOpenDetails: handleOpenDetails,
+    onToggleStatus: (area) => {
+      void handleToggleStatus(area);
     },
-    {
-      key: "code",
-      header: "Codigo",
-      accessorKey: "code",
-      className: "w-[180px]",
-      cellContentClassName: "max-w-[160px]",
+    onRequestDelete: (area) => {
+      setAreaToDelete(area);
+      setDeleteOpen(true);
     },
-    {
-      key: "isActive",
-      header: "Estado",
-      align: "center",
-      accessorKey: "isActive",
-      className: "w-[130px]",
-      render: (row) =>
-        row.isActive ? (
-          <Badge variant="stable" className="gap-2">
-            <span className="size-1.5 shrink-0 rounded-full bg-status-stable" />
-            Activa
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="gap-2">
-            <span className="size-1.5 shrink-0 rounded-full bg-txt-muted" />
-            Inactiva
-          </Badge>
-        ),
-    },
-  ];
-
-  const actionColumn: DataTableColumn<AreaListItem> = {
-    key: "actions",
-    header: <TableActionsHeader />,
-    align: "center",
-    className: "w-9 px-0",
-    headerClassName: "w-9 px-0",
-    render: (row) => {
-      const actions: TableAction[] = [];
-
-      if (canReadArea) {
-        actions.push({
-          id: `view-${row.id}`,
-          label: "Ver detalles",
-          icon: Eye,
-          onSelect: () => handleOpenDetails(row),
-        });
-      }
-
-      if (canUpdateArea) {
-        actions.push({
-          id: `edit-${row.id}`,
-          label: "Editar",
-          icon: Pencil,
-          onSelect: () => handleOpenDetails(row),
-        });
-        actions.push({
-          id: `status-${row.id}`,
-          label: row.isActive ? "Desactivar" : "Activar",
-          icon: row.isActive ? ToggleLeft : ToggleRight,
-          disabled: isStatusPending,
-          onSelect: () => void handleToggleStatus(row),
-        });
-      }
-
-      if (canDeleteArea) {
-        if (actions.length > 0) {
-          actions.push({ id: `divider-${row.id}`, type: "separator" });
-        }
-
-        actions.push({
-          id: `delete-${row.id}`,
-          label: "Eliminar",
-          icon: Trash2,
-          variant: "destructive",
-          onSelect: () => {
-            setAreaToDelete(row);
-            setDeleteOpen(true);
-          },
-        });
-      }
-
-      return actions.length > 0 ? (
-        <div
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          <TableToolbar actions={actions} />
-        </div>
-      ) : null;
-    },
-  };
-
-  const columns = showActions ? [...baseColumns, actionColumn] : baseColumns;
-
-  const visibilityOptions: TableColumnVisibilityItem[] = [
-    { key: "name", label: "Area" },
-    { key: "code", label: "Codigo" },
-    { key: "isActive", label: "Estado" },
-  ];
-
-  if (showActions) {
-    visibilityOptions.push({
-      key: "actions",
-      label: "Acciones",
-      canHide: false,
-    });
-  }
+  });
+  const visibilityOptions = buildAreasVisibilityOptions(showActions);
 
   const visibleColumns = columns.filter(
     (column) => columnVisibility[column.key] ?? true,
@@ -347,20 +225,12 @@ export function AreasPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex size-9 items-center justify-center rounded-xl border border-line-struct bg-subtle/40 text-txt-muted">
-            <BookOpen className="size-5" />
-          </span>
-          <div>
-            <h1 className="text-2xl font-semibold text-txt-body">Areas</h1>
-            <p className="mt-1 text-sm text-txt-muted">
-              Catalogo base de areas operativas del sistema
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-[1360px] lg:px-8 xl:px-10">
+      <AdminPageIntro
+        title="Areas"
+        description="Catalogo base de areas operativas del sistema."
+        icon={<BookOpen className="size-12" />}
+      />
 
       <TableHeaderBar
         search={
@@ -437,7 +307,7 @@ export function AreasPage() {
 
       <AreaCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
 
-      <AlertDialog
+      <ConfirmDestructiveDialog
         open={deleteOpen}
         onOpenChange={(nextOpen) => {
           setDeleteOpen(nextOpen);
@@ -445,25 +315,13 @@ export function AreasPage() {
             setAreaToDelete(null);
           }
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar area</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta accion dara de baja el area y la quitara del catalogo.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => void handleDeleteArea()}
-              disabled={deleteArea.isPending}
-            >
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Eliminar area"
+        description="Esta accion dara de baja el area y la quitara del catalogo."
+        onConfirm={() => {
+          void handleDeleteArea();
+        }}
+        confirmDisabled={deleteArea.isPending}
+      />
     </div>
   );
 }

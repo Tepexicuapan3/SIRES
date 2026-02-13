@@ -1,33 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  Download,
-  Eye,
-  Pencil,
-  Plus,
-  RotateCcw,
-  ShieldCheck,
-  Trash2,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@features/admin/shared/components/DataTable";
+import { Download, Plus, RotateCcw, ShieldCheck } from "lucide-react";
+import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
   TableColumnVisibility,
   type ColumnVisibilityState,
-  type TableColumnVisibilityItem,
 } from "@features/admin/shared/components/TableColumnVisibility";
 import { TableFilterMenu } from "@features/admin/shared/components/TableFilterMenu";
 import { TableHeaderBar } from "@features/admin/shared/components/TableHeaderBar";
@@ -37,13 +14,14 @@ import {
 } from "@features/admin/shared/components/TableOptionsMenu";
 import { TablePrimaryAction } from "@features/admin/shared/components/TablePrimaryAction";
 import { TableSearch } from "@features/admin/shared/components/TableSearch";
-import {
-  TableActionsHeader,
-  TableToolbar,
-  type TableAction,
-} from "@features/admin/shared/components/TableToolbar";
+import { AdminPageIntro } from "@features/admin/shared/components/AdminPageIntro";
+import { ConfirmDestructiveDialog } from "@features/admin/shared/components/ConfirmDestructiveDialog";
 import { useRolesList } from "@features/admin/modules/rbac/roles/queries/useRolesList";
 import { useDeleteRole } from "@features/admin/modules/rbac/roles/mutations/useDeleteRole";
+import {
+  buildRolesTableColumns,
+  buildRolesVisibilityOptions,
+} from "@features/admin/modules/rbac/roles/components/RolesTableColumns";
 import { RoleDetailsDialog } from "@features/admin/modules/rbac/roles/components/RoleDetailsDialog";
 import { RoleCreateDialog } from "@features/admin/modules/rbac/roles/components/RoleCreateDialog";
 import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
@@ -121,7 +99,8 @@ export function RolesPage() {
   const canUpdateRole = hasPermission("admin:gestion:roles:update");
   const canDeleteRole = hasPermission("admin:gestion:roles:delete");
   const canReadRole = hasPermission("admin:gestion:roles:read");
-  const showActions = canReadRole || canUpdateRole || canDeleteRole;
+  const canOpenDetails = canReadRole || canUpdateRole;
+  const showActions = canOpenDetails || canDeleteRole;
   const canEditDialog = canUpdateRole;
 
   const handleDeleteRole = async () => {
@@ -140,137 +119,17 @@ export function RolesPage() {
     }
   };
 
-  const baseColumns: DataTableColumn<RoleListItem>[] = [
-    {
-      key: "name",
-      header: "Rol",
-      accessorKey: "name",
-      className: "w-[220px]",
-      cellContentClassName: "max-w-[220px]",
+  const columns = buildRolesTableColumns({
+    canReadRole,
+    canUpdateRole,
+    canDeleteRole,
+    onOpenDetails: handleOpenDetails,
+    onRequestDelete: (role) => {
+      setRoleToDelete(role);
+      setDeleteOpen(true);
     },
-    {
-      key: "description",
-      header: "Descripción",
-      accessorKey: "description",
-      className: "w-[360px]",
-      cellContentClassName: "max-w-[340px]",
-    },
-    {
-      key: "permissionsCount",
-      header: "Permisos",
-      align: "center",
-      accessorKey: "permissionsCount",
-      className: "w-[120px]",
-    },
-    {
-      key: "usersCount",
-      header: "Usuarios",
-      align: "center",
-      accessorKey: "usersCount",
-      className: "w-[120px]",
-    },
-    {
-      key: "isSystem",
-      header: "Tipo",
-      align: "center",
-      accessorKey: "isSystem",
-      className: "w-[130px]",
-      render: (row) =>
-        row.isSystem ? (
-          <Badge variant="outline">Sistema</Badge>
-        ) : (
-          <Badge variant="secondary">Custom</Badge>
-        ),
-    },
-    {
-      key: "isActive",
-      header: "Estado",
-      align: "center",
-      accessorKey: "isActive",
-      className: "w-[130px]",
-      render: (row) =>
-        row.isActive ? (
-          <Badge variant="stable">Activo</Badge>
-        ) : (
-          <Badge variant="secondary">Inactivo</Badge>
-        ),
-    },
-  ];
-
-  const actionColumn: DataTableColumn<RoleListItem> = {
-    key: "actions",
-    header: <TableActionsHeader />,
-    align: "center",
-    className: "w-9 px-0",
-    headerClassName: "w-9 px-0",
-    render: (row) => {
-      const actions: TableAction[] = [];
-
-      if (canReadRole) {
-        actions.push({
-          id: `view-${row.id}`,
-          label: "Ver detalles",
-          icon: Eye,
-          onSelect: () => handleOpenDetails(row),
-        });
-      }
-
-      if (canUpdateRole) {
-        actions.push({
-          id: `edit-${row.id}`,
-          label: "Editar",
-          icon: Pencil,
-          disabled: row.isSystem,
-          onSelect: () => handleOpenDetails(row),
-        });
-      }
-
-      if (canDeleteRole) {
-        if (actions.length > 0) {
-          actions.push({ id: `divider-${row.id}`, type: "separator" });
-        }
-        actions.push({
-          id: `delete-${row.id}`,
-          label: "Eliminar",
-          icon: Trash2,
-          disabled: row.isSystem,
-          variant: "destructive",
-          onSelect: () => {
-            setRoleToDelete(row);
-            setDeleteOpen(true);
-          },
-        });
-      }
-
-      return actions.length > 0 ? (
-        <div
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          <TableToolbar actions={actions} />
-        </div>
-      ) : null;
-    },
-  };
-
-  const columns = showActions ? [...baseColumns, actionColumn] : baseColumns;
-
-  const visibilityOptions: TableColumnVisibilityItem[] = [
-    { key: "name", label: "Rol" },
-    { key: "description", label: "Descripción" },
-    { key: "permissionsCount", label: "Permisos" },
-    { key: "usersCount", label: "Usuarios" },
-    { key: "isSystem", label: "Tipo" },
-    { key: "isActive", label: "Estado" },
-  ];
-
-  if (showActions) {
-    visibilityOptions.push({
-      key: "actions",
-      label: "Acciones",
-      canHide: false,
-    });
-  }
+  });
+  const visibilityOptions = buildRolesVisibilityOptions(showActions);
 
   const visibleColumns = columns.filter(
     (column) => columnVisibility[column.key] ?? true,
@@ -302,6 +161,9 @@ export function RolesPage() {
       id: "refresh-roles",
       label: "Actualizar",
       icon: RotateCcw,
+      onSelect: () => {
+        void refetch();
+      },
     },
     {
       id: "export-roles",
@@ -315,15 +177,6 @@ export function RolesPage() {
       id: "status",
       label: "Estado",
       options: [
-        {
-          id: ROLE_STATUS_FILTER.ALL,
-          label: "Todos",
-          selected: statusFilter === ROLE_STATUS_FILTER.ALL,
-          onSelect: () => {
-            setStatusFilter(ROLE_STATUS_FILTER.ALL);
-            setPage(1);
-          },
-        },
         {
           id: ROLE_STATUS_FILTER.ACTIVE,
           label: "Activos",
@@ -349,15 +202,6 @@ export function RolesPage() {
       label: "Tipo",
       options: [
         {
-          id: ROLE_TYPE_FILTER.ALL,
-          label: "Todos",
-          selected: typeFilter === ROLE_TYPE_FILTER.ALL,
-          onSelect: () => {
-            setTypeFilter(ROLE_TYPE_FILTER.ALL);
-            setPage(1);
-          },
-        },
-        {
           id: ROLE_TYPE_FILTER.SYSTEM,
           label: "Sistema",
           selected: typeFilter === ROLE_TYPE_FILTER.SYSTEM,
@@ -381,22 +225,11 @@ export function RolesPage() {
 
   return (
     <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-[1360px] lg:px-8 xl:px-10">
-      <div className="px-1 py-1 sm:px-0 lg:pl-5">
-        <div className="flex items-stretch gap-3">
-          <span className="flex shrink-0 self-stretch items-center justify-center text-brand">
-            <ShieldCheck className="size-12" />
-          </span>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-txt-body">
-              Roles
-            </h1>
-            <p className="mt-1.5 max-w-3xl text-sm text-txt-muted">
-              Configura el catalogo de roles, su alcance de permisos y el estado
-              operativo para controlar accesos.
-            </p>
-          </div>
-        </div>
-      </div>
+      <AdminPageIntro
+        title="Roles"
+        description="Configura el catalogo de roles, su alcance de permisos y el estado operativo para controlar accesos."
+        icon={<ShieldCheck className="size-12" />}
+      />
 
       <TableHeaderBar
         search={
@@ -440,7 +273,7 @@ export function RolesPage() {
         errorTitle="No se pudo cargar roles"
         errorDescription={tableErrorDescription}
         hasFilters={hasFilters}
-        onRowClick={canReadRole ? handleOpenDetails : undefined}
+        onRowClick={canOpenDetails ? handleOpenDetails : undefined}
         onRetry={() => {
           void refetch();
         }}
@@ -468,7 +301,7 @@ export function RolesPage() {
         onClose={handleCloseDetails}
       />
       <RoleCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <AlertDialog
+      <ConfirmDestructiveDialog
         open={deleteOpen}
         onOpenChange={(nextOpen) => {
           setDeleteOpen(nextOpen);
@@ -476,32 +309,28 @@ export function RolesPage() {
             setRoleToDelete(null);
           }
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar rol</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta accion dara de baja el rol y lo quitara del catalogo.
-              {roleToDelete?.usersCount ? (
-                <span className="mt-2 block text-xs text-status-alert">
-                  El rol tiene usuarios asignados y no podra eliminarse.
-                </span>
-              ) : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => void handleDeleteRole()}
-              disabled={
-                deleteRole.isPending || Boolean(roleToDelete?.usersCount)
-              }
-            >
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Eliminar rol"
+        description={
+          roleToDelete
+            ? `Se eliminara el rol ${roleToDelete.name} del catalogo operativo.`
+            : "Se eliminara este rol del catalogo operativo."
+        }
+        warning={
+          roleToDelete?.usersCount ? (
+            <span>
+              {`No se puede eliminar: el rol tiene ${roleToDelete.usersCount} usuario${roleToDelete.usersCount === 1 ? "" : "s"} asignado${roleToDelete.usersCount === 1 ? "" : "s"}. Reasigna esos usuarios y vuelve a intentarlo.`}
+            </span>
+          ) : null
+        }
+        textAlign="right"
+        confirmLabel="Eliminar"
+        onConfirm={() => {
+          void handleDeleteRole();
+        }}
+        confirmDisabled={
+          deleteRole.isPending || Boolean(roleToDelete?.usersCount)
+        }
+      />
     </div>
   );
 }
