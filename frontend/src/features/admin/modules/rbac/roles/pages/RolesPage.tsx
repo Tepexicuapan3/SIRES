@@ -47,6 +47,7 @@ import { useDeleteRole } from "@features/admin/modules/rbac/roles/mutations/useD
 import { RoleDetailsDialog } from "@features/admin/modules/rbac/roles/components/RoleDetailsDialog";
 import { RoleCreateDialog } from "@features/admin/modules/rbac/roles/components/RoleCreateDialog";
 import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
+import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import type { RoleListItem } from "@api/types";
 import { usePermissions } from "@features/auth/queries/usePermissions";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -89,10 +90,16 @@ export function RolesPage() {
       isActive: true,
       actions: true,
     });
-  const [selectedRole, setSelectedRole] = useState<RoleListItem | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const {
+    open: detailsOpen,
+    selectedItem: selectedRole,
+    openDetails: handleOpenDetails,
+    closeDetails: handleCloseDetails,
+    setOpen: setDetailsOpen,
+  } = useTableDetailsDialog<RoleListItem>();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<RoleListItem | null>(null);
   const debouncedSearch = useDebounce(search, 400);
   const deleteRole = useDeleteRole();
 
@@ -117,25 +124,15 @@ export function RolesPage() {
   const showActions = canReadRole || canUpdateRole || canDeleteRole;
   const canEditDialog = canUpdateRole;
 
-  const handleOpenDetails = (role: RoleListItem) => {
-    setSelectedRole(role);
-    setDetailsOpen(true);
-  };
-
-  const handleCloseDetails = () => {
-    setDetailsOpen(false);
-    setSelectedRole(null);
-  };
-
   const handleDeleteRole = async () => {
-    if (!selectedRole) return;
+    if (!roleToDelete) return;
     try {
-      await deleteRole.mutateAsync({ roleId: selectedRole.id });
+      await deleteRole.mutateAsync({ roleId: roleToDelete.id });
       toast.success("Rol eliminado", {
-        description: `El rol ${selectedRole.name} se elimino correctamente.`,
+        description: `El rol ${roleToDelete.name} se elimino correctamente.`,
       });
       setDeleteOpen(false);
-      setSelectedRole(null);
+      setRoleToDelete(null);
     } catch (error) {
       toast.error("No se pudo eliminar", {
         description: getRoleErrorMessage(error, "Error al eliminar rol"),
@@ -148,29 +145,36 @@ export function RolesPage() {
       key: "name",
       header: "Rol",
       accessorKey: "name",
+      className: "w-[220px]",
+      cellContentClassName: "max-w-[220px]",
     },
     {
       key: "description",
       header: "Descripción",
       accessorKey: "description",
+      className: "w-[360px]",
+      cellContentClassName: "max-w-[340px]",
     },
     {
       key: "permissionsCount",
       header: "Permisos",
       align: "center",
       accessorKey: "permissionsCount",
+      className: "w-[120px]",
     },
     {
       key: "usersCount",
       header: "Usuarios",
       align: "center",
       accessorKey: "usersCount",
+      className: "w-[120px]",
     },
     {
       key: "isSystem",
       header: "Tipo",
       align: "center",
       accessorKey: "isSystem",
+      className: "w-[130px]",
       render: (row) =>
         row.isSystem ? (
           <Badge variant="outline">Sistema</Badge>
@@ -183,6 +187,7 @@ export function RolesPage() {
       header: "Estado",
       align: "center",
       accessorKey: "isActive",
+      className: "w-[130px]",
       render: (row) =>
         row.isActive ? (
           <Badge variant="stable">Activo</Badge>
@@ -231,7 +236,7 @@ export function RolesPage() {
           disabled: row.isSystem,
           variant: "destructive",
           onSelect: () => {
-            setSelectedRole(row);
+            setRoleToDelete(row);
             setDeleteOpen(true);
           },
         });
@@ -375,16 +380,19 @@ export function RolesPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex size-9 items-center justify-center rounded-xl border border-line-struct bg-subtle/40 text-txt-muted">
-            <ShieldCheck className="size-5" />
+    <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-[1360px] lg:px-8 xl:px-10">
+      <div className="px-1 py-1 sm:px-0 lg:pl-5">
+        <div className="flex items-stretch gap-3">
+          <span className="flex shrink-0 self-stretch items-center justify-center text-brand">
+            <ShieldCheck className="size-12" />
           </span>
           <div>
-            <h1 className="text-2xl font-semibold text-txt-body">Roles</h1>
-            <p className="mt-1 text-sm text-txt-muted">
-              Listado base de roles configurados en el sistema
+            <h1 className="text-2xl font-semibold tracking-tight text-txt-body">
+              Roles
+            </h1>
+            <p className="mt-1.5 max-w-3xl text-sm text-txt-muted">
+              Configura el catalogo de roles, su alcance de permisos y el estado
+              operativo para controlar accesos.
             </p>
           </div>
         </div>
@@ -460,13 +468,21 @@ export function RolesPage() {
         onClose={handleCloseDetails}
       />
       <RoleCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(nextOpen) => {
+          setDeleteOpen(nextOpen);
+          if (!nextOpen) {
+            setRoleToDelete(null);
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar rol</AlertDialogTitle>
             <AlertDialogDescription>
               Esta accion dara de baja el rol y lo quitara del catalogo.
-              {selectedRole?.usersCount ? (
+              {roleToDelete?.usersCount ? (
                 <span className="mt-2 block text-xs text-status-alert">
                   El rol tiene usuarios asignados y no podra eliminarse.
                 </span>
@@ -478,7 +494,7 @@ export function RolesPage() {
             <AlertDialogAction
               onClick={() => void handleDeleteRole()}
               disabled={
-                deleteRole.isPending || Boolean(selectedRole?.usersCount)
+                deleteRole.isPending || Boolean(roleToDelete?.usersCount)
               }
             >
               Confirmar

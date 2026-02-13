@@ -222,7 +222,7 @@ describe("RolesPage UI", () => {
   });
 
   it("disables delete when role has users", async () => {
-    const user = userEvent.setup({
+    userEvent.setup({
       pointerEventsCheck: PointerEventsCheckLevel.Never,
     });
     render(<RolesPage />);
