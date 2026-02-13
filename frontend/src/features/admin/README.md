@@ -53,6 +53,21 @@ UI (components/pages) → queries/mutations → `api/resources` → backend.
 - Guardado incremental y transformaciones de borrador en dialogs se extraen a `utils/` (`users.details-save.ts`, `roles.details-save.ts`, `users.details-draft.ts`, `roles.details-draft.ts`).
 - Dialogos complejos se componen por bloques chicos (`UserCreateSidePanel`, `UserCreatedCredentialsCard`) para aislar layout de negocio.
 
+## Patron base para catalogos CRUD
+
+- Reutilizar componentes de `modules/catalogos/shared/components/`:
+  - `CatalogModuleLayout`
+  - `CatalogDialogHeader`
+  - `CatalogStatusBadge`
+  - `CatalogDetailsFooter`
+  - `CatalogCreateResultCard`
+- Reutilizar utilitarios de `modules/catalogos/shared/utils/`:
+  - `catalog-feedback.ts` para errores de API normalizados
+  - `catalog-format.ts` para fechas/hora de auditoria
+- Casos de referencia implementados:
+  - `catalogos/areas`
+  - `catalogos/centros-atencion`
+
 ## Patron reutilizable para detalles CRUD
 
 ### Base compartida
