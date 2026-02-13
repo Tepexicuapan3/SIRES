@@ -37,7 +37,21 @@ import {
   buildUserOverridesDiff,
   buildUserRolesDiff,
 } from "@features/admin/modules/rbac/users/utils/users.access-draft";
+import {
+  addOverrideToDraft,
+  addRoleToDraft,
+  mapUserDetailToFormValues,
+  removeOverrideFromDraft,
+  removeRoleFromDraft,
+  setOverrideDateInDraft,
+  setPrimaryRoleInDraft,
+  toggleOverrideEffectInDraft,
+} from "@features/admin/modules/rbac/users/utils/users.details-draft";
 import { getUserErrorMessage } from "@features/admin/modules/rbac/users/utils/users.feedback";
+import {
+  applyUserDetailsSavePlan,
+  hasUserDetailsChanges,
+} from "@features/admin/modules/rbac/users/utils/users.details-save";
 import {
   formatDateTime,
   resolveUserUiStatus,
@@ -75,22 +89,6 @@ const DRAFT_ASSIGNER = {
   id: 0,
   name: "Tu (ahora)",
 } as const;
-
-const mapUserDetailToFormValues = (
-  detail?: {
-    firstName?: string | null;
-    paternalName?: string | null;
-    maternalName?: string | null;
-    email?: string | null;
-    clinic?: { id: number } | null;
-  } | null,
-): UserDetailsFormValues => ({
-  firstName: detail?.firstName ?? "",
-  paternalName: detail?.paternalName ?? "",
-  maternalName: detail?.maternalName ?? "",
-  email: detail?.email ?? "",
-  clinicId: detail?.clinic?.id ?? null,
-});
 
 const FORM_ID = "user-details-form";
 
@@ -221,26 +219,10 @@ export function UserDetailsDialog({
   const handleAddRoleDraft = (roleId: number) => {
     if (!isEditable || !userDetail) return;
 
-    const selectedRole = roleOptions.find((role) => role.id === roleId);
-    if (!selectedRole) return;
-
     setDraftUserId(userDetail.id);
     setDraftRoles((previousRoles) => {
       const baseRoles = hasDraftForCurrentUser ? previousRoles : roles;
-      if (baseRoles.some((role) => role.id === roleId)) return baseRoles;
-
-      const hasPrimary = baseRoles.some((role) => role.isPrimary);
-      return [
-        ...baseRoles,
-        {
-          id: selectedRole.id,
-          name: selectedRole.name,
-          description: selectedRole.description,
-          isPrimary: !hasPrimary,
-          assignedAt: new Date().toISOString(),
-          assignedBy: { ...DRAFT_ASSIGNER },
-        },
-      ];
+      return addRoleToDraft(baseRoles, roleOptions, roleId, DRAFT_ASSIGNER);
     });
   };
 
@@ -250,17 +232,7 @@ export function UserDetailsDialog({
     setDraftUserId(userDetail.id);
     setDraftRoles((previousRoles) => {
       const baseRoles = hasDraftForCurrentUser ? previousRoles : roles;
-      const now = new Date().toISOString();
-      return baseRoles.map((role) => ({
-        ...role,
-        isPrimary: role.id === roleId,
-        ...(role.id === roleId
-          ? {
-              assignedAt: now,
-              assignedBy: { ...DRAFT_ASSIGNER },
-            }
-          : {}),
-      }));
+      return setPrimaryRoleInDraft(baseRoles, roleId, DRAFT_ASSIGNER);
     });
   };
 
@@ -270,54 +242,28 @@ export function UserDetailsDialog({
     setDraftUserId(userDetail.id);
     setDraftRoles((previousRoles) => {
       const baseRoles = hasDraftForCurrentUser ? previousRoles : roles;
-      const remainingRoles = baseRoles.filter((role) => role.id !== roleId);
-
-      if (remainingRoles.length === 0) return remainingRoles;
-      if (remainingRoles.some((role) => role.isPrimary)) return remainingRoles;
-
-      return [
-        { ...remainingRoles[0], isPrimary: true },
-        ...remainingRoles.slice(1),
-      ];
+      return removeRoleFromDraft(baseRoles, roleId);
     });
   };
 
   const handleAddOverrideDraft = (permissionCode: string) => {
     if (!isEditable || !userDetail) return;
 
-    const permission = permissionsData?.items.find(
-      (item) => item.code === permissionCode,
-    );
-
     setDraftUserId(userDetail.id);
     setDraftOverrides((previousOverrides) => {
       const baseOverrides = hasDraftForCurrentUser
         ? previousOverrides
         : overrides;
-      if (
-        baseOverrides.some(
-          (override) => override.permissionCode === permissionCode,
-        )
-      ) {
-        return baseOverrides;
-      }
 
-      const nextId = draftOverrideIdRef.current;
-      draftOverrideIdRef.current -= 1;
-
-      return [
-        ...baseOverrides,
-        {
-          id: nextId,
-          permissionCode,
-          permissionDescription: permission?.description ?? permissionCode,
-          effect: "ALLOW",
-          expiresAt: null,
-          isExpired: false,
-          assignedAt: new Date().toISOString(),
-          assignedBy: { ...DRAFT_ASSIGNER },
-        },
-      ];
+      const draftResult = addOverrideToDraft({
+        baseOverrides,
+        permissions: permissionsData?.items ?? [],
+        permissionCode,
+        nextOverrideId: draftOverrideIdRef.current,
+        assigner: DRAFT_ASSIGNER,
+      });
+      draftOverrideIdRef.current = draftResult.nextOverrideId;
+      return draftResult.overrides;
     });
   };
 
@@ -329,14 +275,7 @@ export function UserDetailsDialog({
       const baseOverrides = hasDraftForCurrentUser
         ? previousOverrides
         : overrides;
-      return baseOverrides.map((override) =>
-        override.permissionCode === permissionCode
-          ? {
-              ...override,
-              effect: override.effect === "ALLOW" ? "DENY" : "ALLOW",
-            }
-          : override,
-      );
+      return toggleOverrideEffectInDraft(baseOverrides, permissionCode);
     });
   };
 
@@ -348,14 +287,7 @@ export function UserDetailsDialog({
       const baseOverrides = hasDraftForCurrentUser
         ? previousOverrides
         : overrides;
-      return baseOverrides.map((override) =>
-        override.permissionCode === permissionCode
-          ? {
-              ...override,
-              expiresAt: value || null,
-            }
-          : override,
-      );
+      return setOverrideDateInDraft(baseOverrides, permissionCode, value);
     });
   };
 
@@ -367,10 +299,19 @@ export function UserDetailsDialog({
       const baseOverrides = hasDraftForCurrentUser
         ? previousOverrides
         : overrides;
-      return baseOverrides.filter(
-        (override) => override.permissionCode !== permissionCode,
-      );
+      return removeOverrideFromDraft(baseOverrides, permissionCode);
     });
+  };
+
+  const syncDraftStateFromServer = (nextData?: typeof userDetailResponse) => {
+    if (!nextData) return false;
+
+    form.reset(mapUserDetailToFormValues(nextData.user));
+    setDraftUserId(nextData.user.id);
+    setDraftRoles(nextData.roles);
+    setDraftOverrides(nextData.overrides);
+    setDraftAccountIsActive(nextData.user.isActive);
+    return true;
   };
 
   const handleSave = async (values: UserDetailsFormValues) => {
@@ -387,22 +328,17 @@ export function UserDetailsDialog({
 
     const rolesDiff = buildUserRolesDiff(roles, workingRoles);
     const overridesDiff = buildUserOverridesDiff(overrides, workingOverrides);
-
-    const hasProfileChanges = Object.keys(payload).length > 0;
-    const hasRolesChanges =
-      rolesDiff.toAdd.length > 0 ||
-      rolesDiff.toRemove.length > 0 ||
-      rolesDiff.shouldSetPrimary;
-    const hasOverridesChanges =
-      overridesDiff.toUpsert.length > 0 || overridesDiff.toRemove.length > 0;
     const hasStatusChanges = workingAccountIsActive !== userDetail.isActive;
 
-    if (
-      !hasProfileChanges &&
-      !hasRolesChanges &&
-      !hasOverridesChanges &&
-      !hasStatusChanges
-    ) {
+    const savePlan = {
+      profilePayload: payload,
+      hasStatusChanges,
+      nextIsActive: workingAccountIsActive,
+      rolesDiff,
+      overridesDiff,
+    };
+
+    if (!hasUserDetailsChanges(savePlan)) {
       return;
     }
 
@@ -411,73 +347,43 @@ export function UserDetailsDialog({
     let shouldClose = false;
 
     try {
-      if (hasProfileChanges) {
-        await updateUser.mutateAsync({ userId: userDetail.id, data: payload });
-        completedGroups += 1;
-      }
-
-      if (hasStatusChanges) {
-        if (workingAccountIsActive) {
-          await activateUser.mutateAsync({ userId: userDetail.id });
-        } else {
-          await deactivateUser.mutateAsync({ userId: userDetail.id });
-        }
-        completedGroups += 1;
-      }
-
-      if (rolesDiff.toAdd.length > 0) {
-        await assignRoles.mutateAsync({
-          userId: userDetail.id,
-          data: { roleIds: rolesDiff.toAdd },
-        });
-        completedGroups += 1;
-      }
-
-      if (rolesDiff.shouldSetPrimary && rolesDiff.primaryRoleId !== null) {
-        await setPrimaryRole.mutateAsync({
-          userId: userDetail.id,
-          data: { roleId: rolesDiff.primaryRoleId },
-        });
-        completedGroups += 1;
-      }
-
-      if (rolesDiff.toRemove.length > 0) {
-        for (const roleId of rolesDiff.toRemove) {
-          await revokeUserRole.mutateAsync({ userId: userDetail.id, roleId });
-        }
-        completedGroups += 1;
-      }
-
-      if (overridesDiff.toUpsert.length > 0) {
-        for (const override of overridesDiff.toUpsert) {
-          await addUserOverride.mutateAsync({
+      completedGroups = await applyUserDetailsSavePlan(savePlan, {
+        updateProfile: (profilePayload) =>
+          updateUser.mutateAsync({
             userId: userDetail.id,
-            data: override,
-          });
-        }
-        completedGroups += 1;
-      }
-
-      if (overridesDiff.toRemove.length > 0) {
-        for (const permissionCode of overridesDiff.toRemove) {
-          await removeUserOverride.mutateAsync({
+            data: profilePayload,
+          }),
+        activateUser: () => activateUser.mutateAsync({ userId: userDetail.id }),
+        deactivateUser: () =>
+          deactivateUser.mutateAsync({ userId: userDetail.id }),
+        assignRoles: (roleIds) =>
+          assignRoles.mutateAsync({
+            userId: userDetail.id,
+            data: { roleIds },
+          }),
+        setPrimaryRole: (roleId) =>
+          setPrimaryRole.mutateAsync({
+            userId: userDetail.id,
+            data: { roleId },
+          }),
+        revokeRole: (roleId) =>
+          revokeUserRole.mutateAsync({ userId: userDetail.id, roleId }),
+        upsertOverride: (overridePayload) =>
+          addUserOverride.mutateAsync({
+            userId: userDetail.id,
+            data: overridePayload,
+          }),
+        removeOverride: (permissionCode) =>
+          removeUserOverride.mutateAsync({
             userId: userDetail.id,
             permissionCode,
-          });
-        }
-        completedGroups += 1;
-      }
+          }),
+      });
 
       const refreshedDetail = await refetch();
       const refreshedData = refreshedDetail.data;
 
-      if (refreshedData) {
-        form.reset(mapUserDetailToFormValues(refreshedData.user));
-        setDraftUserId(refreshedData.user.id);
-        setDraftRoles(refreshedData.roles);
-        setDraftOverrides(refreshedData.overrides);
-        setDraftAccountIsActive(refreshedData.user.isActive);
-      } else {
+      if (!syncDraftStateFromServer(refreshedData)) {
         form.reset(values);
       }
 
@@ -498,14 +404,7 @@ export function UserDetailsDialog({
 
       try {
         const refreshedDetail = await refetch();
-        const refreshedData = refreshedDetail.data;
-        if (refreshedData) {
-          form.reset(mapUserDetailToFormValues(refreshedData.user));
-          setDraftUserId(refreshedData.user.id);
-          setDraftRoles(refreshedData.roles);
-          setDraftOverrides(refreshedData.overrides);
-          setDraftAccountIsActive(refreshedData.user.isActive);
-        }
+        syncDraftStateFromServer(refreshedDetail.data);
       } catch {
         // Si el refetch falla, mantenemos estado local actual para no bloquear al usuario.
       }
