@@ -46,11 +46,11 @@ const renderGeneralTab = ({
 };
 
 describe("RoleDetailsGeneralTab", () => {
-  it("renders readonly counters", () => {
+  it("renders readonly metadata fields", () => {
     renderGeneralTab();
 
-    expect(screen.getByDisplayValue("3")).toBeDisabled();
-    expect(screen.getByDisplayValue("1")).toBeDisabled();
+    expect(screen.getByDisplayValue("Custom")).toBeDisabled();
+    expect(screen.getByRole("combobox")).toHaveTextContent("Activo");
   });
 
   it("notifies status change", async () => {

@@ -98,6 +98,7 @@ describe("UserCreateDialog UI", () => {
       mutateAsync,
       isPending: false,
     } as ReturnType<typeof useCreateUser>);
+    onOpenChange.mockReset();
     mutateAsync.mockReset();
     vi.mocked(toast.success).mockClear();
     vi.mocked(toast.error).mockClear();
@@ -173,63 +174,15 @@ describe("UserCreateDialog UI", () => {
       });
     });
 
-    expect(await screen.findByText("Acceso generado")).toBeVisible();
-    expect(screen.getByText("jperez")).toBeVisible();
-    expect(screen.getByText("TempPassword123!")).toBeVisible();
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
     expect(toast.success).toHaveBeenCalledWith(
       "Usuario creado",
       expect.objectContaining({
-        description: expect.stringContaining("TempPassword123!"),
+        description: expect.stringContaining("jperez"),
       }),
     );
-  });
-
-  it("copies credentials to clipboard", async () => {
-    const user = userEvent.setup();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-
-    Object.defineProperty(navigator, "clipboard", {
-      value: { writeText },
-      configurable: true,
-    });
-
-    mutateAsync.mockResolvedValue({
-      id: 88,
-      username: "jperez",
-      temporaryPassword: "TempPassword123!",
-    });
-
-    render(
-      <UserCreateDialog
-        open
-        onOpenChange={onOpenChange}
-        roleOptions={roleOptions}
-        clinicOptions={clinicOptions}
-      />,
-    );
-
-    await user.type(screen.getByLabelText("Nombre"), "Juan");
-    await user.type(screen.getByLabelText("Apellido paterno"), "Perez");
-    await user.type(
-      screen.getByLabelText("Correo"),
-      "jperez@metro.cdmx.gob.mx",
-    );
-    await user.type(screen.getByLabelText("Usuario"), "jperez");
-    await user.click(screen.getByText("Selecciona un rol"));
-    await user.click(screen.getByText("Admin"));
-    await user.click(screen.getByRole("button", { name: "Crear usuario" }));
-
-    await screen.findByText("Acceso generado");
-    await user.click(
-      screen.getByRole("button", { name: "Copiar credenciales" }),
-    );
-
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith(
-        "Usuario: jperez\nClave: TempPassword123!",
-      );
-      expect(toast.success).toHaveBeenCalledWith("Credenciales copiadas");
-    });
   });
 
   it("shows error toast when creation fails", async () => {

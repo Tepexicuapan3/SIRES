@@ -25,6 +25,7 @@ describe("RoleCreateDialog UI", () => {
       mutateAsync,
       isPending: false,
     } as ReturnType<typeof useCreateRole>);
+    onOpenChange.mockReset();
     mutateAsync.mockReset();
     vi.mocked(toast.success).mockClear();
     vi.mocked(toast.error).mockClear();
@@ -62,11 +63,14 @@ describe("RoleCreateDialog UI", () => {
       });
     });
 
-    expect(await screen.findByText("Rol creado")).toBeVisible();
-    expect(screen.getByText("AUDITORIA")).toBeVisible();
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
     expect(toast.success).toHaveBeenCalledWith(
       "Rol creado",
-      expect.any(Object),
+      expect.objectContaining({
+        description: expect.stringContaining("AUDITORIA"),
+      }),
     );
   });
 

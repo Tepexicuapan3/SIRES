@@ -58,8 +58,8 @@ describe("UserDetailsGeneralTab", () => {
   it("renders account summary and audit metadata", () => {
     renderGeneralTab();
 
-    expect(screen.getByText("Usuario")).toBeVisible();
-    expect(screen.getByText("Rol principal")).toBeVisible();
+    expect(screen.getByText("jperez")).toBeVisible();
+    expect(screen.getByText("Clinico")).toBeVisible();
     expect(screen.getByLabelText("Nombre")).toBeVisible();
     expect(screen.getByLabelText("Correo")).toBeVisible();
     expect(screen.getByText("Centro de atencion")).toBeVisible();
@@ -104,8 +104,9 @@ describe("UserDetailsGeneralTab", () => {
 
     render(<Wrapper />);
 
-    const comboboxes = screen.getAllByRole("combobox");
-    await user.click(comboboxes[1]);
+    await user.click(
+      screen.getByRole("combobox", { name: "Estado de la cuenta" }),
+    );
     await user.click(screen.getByRole("option", { name: "Inactivo" }));
 
     expect(onAccountStatusChange).toHaveBeenCalledWith(false);
