@@ -1,17 +1,10 @@
-import { CircleAlert, ShieldCheck, UserRound } from "lucide-react";
+import { ShieldCheck, UserRound } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Separator } from "@/components/ui/separator";
-import type { CreateUserResponse } from "@api/types";
 
-interface UserCreateSidePanelProps {
-  createdCredentials: CreateUserResponse | null;
-}
-
-export function UserCreateSidePanel({
-  createdCredentials,
-}: UserCreateSidePanelProps) {
+export function UserCreateSidePanel() {
   return (
     <aside className="hidden w-[310px] shrink-0 border-r border-line-struct/70 bg-subtle/20 lg:flex">
       <div className="flex min-h-0 w-full flex-1 flex-col">
@@ -54,22 +47,6 @@ export function UserCreateSidePanel({
                 </p>
               </div>
             </div>
-
-            {createdCredentials ? (
-              <div className="rounded-xl border border-status-alert/40 bg-status-alert/10 px-3 py-3">
-                <div className="flex items-start gap-2.5">
-                  <CircleAlert className="mt-0.5 size-4 shrink-0 text-status-alert" />
-                  <div className="space-y-1">
-                    <p className="font-medium text-txt-body">
-                      Clave temporal generada
-                    </p>
-                    <p className="text-xs text-txt-muted">
-                      Copia y comparte la clave. Solo se muestra una vez.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </div>
         </ScrollArea>
       </div>

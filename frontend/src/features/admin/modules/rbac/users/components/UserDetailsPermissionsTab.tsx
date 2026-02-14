@@ -2,21 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import {
   CalendarDays,
   ChevronDown,
-  Search,
+  KeyRound,
   ShieldAlert,
   ShieldCheck,
   UserRound,
   X,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
+import { TruncatedTooltip } from "@/components/ui/truncated-tooltip";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { comparePermissionCodesByHierarchy } from "@features/admin/modules/rbac/shared/utils/permission-hierarchy";
+import { PermissionSearchField } from "@features/admin/modules/rbac/shared/components/PermissionSearchField";
+import {
+  comparePermissionCodesByHierarchy,
+  formatPermissionSegment,
+  parsePermissionCode,
+} from "@features/admin/modules/rbac/shared/utils/permission-hierarchy";
 import { formatDateTime } from "@features/admin/modules/rbac/users/utils/users.format";
 import {
   formatLocalDisplayDate,
@@ -204,116 +210,139 @@ export function UserDetailsPermissionsTab({
         </div>
 
         <div className="mt-4 space-y-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-txt-muted" />
-            <Input
-              value={searchQuery}
-              onChange={(event) => {
-                setSearchQuery(event.target.value);
-                setActiveResultIndex(0);
-              }}
-              onKeyDown={(event) => {
-                if (!hasMinSearchLength || visiblePermissions.length === 0) {
-                  if (event.key === "Escape") {
-                    setSearchQuery("");
-                    setActiveResultIndex(-1);
-                  }
-                  return;
-                }
-
-                if (event.key === "ArrowDown") {
-                  event.preventDefault();
-                  setActiveResultIndex((previous) =>
-                    previous >= visiblePermissions.length - 1
-                      ? 0
-                      : previous + 1,
-                  );
-                  return;
-                }
-
-                if (event.key === "ArrowUp") {
-                  event.preventDefault();
-                  setActiveResultIndex((previous) =>
-                    previous <= 0
-                      ? visiblePermissions.length - 1
-                      : previous - 1,
-                  );
-                  return;
-                }
-
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  handleSearchEnter();
-                  return;
-                }
-
+          <PermissionSearchField
+            value={searchQuery}
+            onValueChange={(value) => {
+              setSearchQuery(value);
+              setActiveResultIndex(value.trim().length > 0 ? 0 : -1);
+            }}
+            onClear={() => {
+              setSearchQuery("");
+              setActiveResultIndex(-1);
+            }}
+            onKeyDown={(event) => {
+              if (!hasMinSearchLength || visiblePermissions.length === 0) {
                 if (event.key === "Escape") {
-                  event.preventDefault();
                   setSearchQuery("");
                   setActiveResultIndex(-1);
                 }
-              }}
-              aria-label="Buscar permiso para override"
-              aria-expanded={hasMinSearchLength}
-              aria-controls={
-                hasMinSearchLength ? "permission-search-results" : undefined
+                return;
               }
-              aria-activedescendant={
-                hasMinSearchLength ? activeOptionId : undefined
+
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setActiveResultIndex((previous) =>
+                  previous >= visiblePermissions.length - 1 ? 0 : previous + 1,
+                );
+                return;
               }
-              placeholder="Buscar permiso por nombre o codigo..."
-              disabled={
-                !isEditable ||
-                isBusy ||
-                isLoadingPermissions ||
-                Boolean(catalogErrorMessage)
+
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setActiveResultIndex((previous) =>
+                  previous <= 0 ? visiblePermissions.length - 1 : previous - 1,
+                );
+                return;
               }
-              className="h-10 pl-9 focus:border-line-struct/70 focus:ring-2 focus:ring-line-struct/20 focus-visible:ring-2 focus-visible:ring-line-struct/20"
-            />
+
+              if (event.key === "Enter") {
+                event.preventDefault();
+                handleSearchEnter();
+                return;
+              }
+
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setSearchQuery("");
+                setActiveResultIndex(-1);
+              }
+            }}
+            ariaLabel="Buscar permiso para override"
+            isExpanded={hasMinSearchLength}
+            controlsId="permission-search-results"
+            activeDescendantId={activeOptionId}
+            placeholder="Buscar permiso por nombre o codigo..."
+            disabled={
+              !isEditable ||
+              isBusy ||
+              isLoadingPermissions ||
+              Boolean(catalogErrorMessage)
+            }
+          >
             {hasMinSearchLength ? (
               <div
                 id="permission-search-results"
                 role="listbox"
                 aria-label="Resultados de permisos"
-                className="absolute top-[calc(100%+0.25rem)] right-0 left-0 z-40 max-h-56 overflow-y-auto rounded-xl border border-line-struct/60 bg-paper p-1 shadow-modal"
+                className="absolute top-[calc(100%+0.25rem)] right-0 left-0 z-40 max-h-56 overflow-y-auto rounded-xl border border-line-struct/60 bg-paper p-2 shadow-modal"
               >
                 {visiblePermissions.length === 0 ? (
                   <p className="px-2 py-3 text-xs text-txt-muted">
                     {`No se encontraron permisos para "${searchQuery}".`}
                   </p>
                 ) : (
-                  visiblePermissions.map(({ permission }, index) => (
-                    <button
-                      key={permission.id}
-                      id={`permission-search-option-${permission.id}`}
-                      type="button"
-                      ref={(element) => {
-                        resultsRefs.current[index] = element;
-                      }}
-                      role="option"
-                      aria-selected={highlightedIndex === index}
-                      className={cn(
-                        "w-full rounded-lg px-2 py-2 text-left transition-colors hover:bg-subtle/70 focus-visible:ring-2 focus-visible:ring-line-struct/60 focus-visible:outline-none",
-                        highlightedIndex === index &&
-                          "bg-subtle/70 ring-1 ring-line-struct/60",
-                      )}
-                      onClick={() => handleAddSelectedOverride(permission.code)}
-                      onMouseEnter={() => setActiveResultIndex(index)}
-                      aria-label={`Agregar override ${permission.code}`}
-                      disabled={!isEditable || isBusy}
-                    >
-                      <div className="truncate text-sm text-txt-body">
-                        {permission.description}
-                      </div>
-                      <div className="truncate text-[11px] text-txt-muted">
-                        {permission.code}
-                      </div>
-                    </button>
-                  ))
+                  visiblePermissions.map(({ permission }, index) => {
+                    const permissionActionLabel = formatPermissionSegment(
+                      parsePermissionCode(permission.code).action,
+                    );
+
+                    return (
+                      <button
+                        key={permission.id}
+                        id={`permission-search-option-${permission.id}`}
+                        type="button"
+                        ref={(element) => {
+                          resultsRefs.current[index] = element;
+                        }}
+                        role="option"
+                        aria-selected={highlightedIndex === index}
+                        className={cn(
+                          "w-full rounded-lg border border-line-struct/60 bg-paper px-2.5 py-2 text-left transition-colors hover:bg-subtle/40 focus-visible:ring-2 focus-visible:ring-line-struct/60 focus-visible:outline-none",
+                          highlightedIndex === index &&
+                            "bg-subtle/70 ring-1 ring-line-struct/60",
+                        )}
+                        onClick={() =>
+                          handleAddSelectedOverride(permission.code)
+                        }
+                        onMouseEnter={() => setActiveResultIndex(index)}
+                        aria-label={`Agregar override ${permission.code}`}
+                        disabled={!isEditable || isBusy}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <KeyRound className="size-4 shrink-0 text-status-stable" />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-txt-body">
+                                {permissionActionLabel}
+                              </p>
+                              <p className="truncate text-xs text-txt-muted">
+                                {permission.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <Badge
+                              variant="outline"
+                              className="max-w-[220px] px-2 py-0.5 font-mono text-[11px]"
+                            >
+                              <TruncatedTooltip
+                                label={permission.code}
+                                className="block min-w-0 max-w-full truncate"
+                                align="end"
+                              >
+                                {permission.code}
+                              </TruncatedTooltip>
+                            </Badge>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             ) : null}
-          </div>
+          </PermissionSearchField>
 
           {hasMinSearchLength && visiblePermissions.length > 0 ? (
             <p className="text-[11px] text-txt-muted">

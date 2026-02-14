@@ -19,7 +19,7 @@ function TooltipContent({
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 max-w-[18rem] overflow-hidden rounded-md border border-line-struct bg-paper-lift px-2 py-1 text-xs text-txt-body shadow-modal",
+          "z-[220] max-w-[18rem] overflow-hidden rounded-md border border-line-struct bg-paper-lift px-2 py-1 text-xs text-txt-body shadow-modal",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type {
+  UserDetail,
   UserDetailResponse,
   UserListItem,
   UserOverride,
@@ -12,6 +13,17 @@ import { usersKeys } from "@features/admin/modules/rbac/users/queries/users.keys
 
 const getPrimaryRoleName = (roles: UserRole[]) =>
   roles.find((role) => role.isPrimary)?.name ?? roles[0]?.name ?? "";
+
+const mapDetailToListPatch = (user: UserDetail): Partial<UserListItem> => ({
+  username: user.username,
+  fullname: user.fullname,
+  email: user.email,
+  clinic: user.clinic,
+  primaryRole: user.primaryRole,
+  isActive: user.isActive,
+  termsAccepted: user.termsAccepted,
+  mustChangePassword: user.mustChangePassword,
+});
 
 const updateUserDetailCache = (
   queryClient: QueryClient,
@@ -76,5 +88,42 @@ export const syncUserOverridesCache = (
   updateUserDetailCache(queryClient, userId, (current) => ({
     ...current,
     overrides,
+  }));
+};
+
+export const syncUserStatusCache = (
+  queryClient: QueryClient,
+  userId: number,
+  isActive: boolean,
+) => {
+  updateUserDetailCache(queryClient, userId, (current) => ({
+    ...current,
+    user: {
+      ...current.user,
+      isActive,
+    },
+  }));
+
+  updateUsersListCache(queryClient, userId, (item) => ({
+    ...item,
+    isActive,
+  }));
+};
+
+export const syncUserProfileCache = (
+  queryClient: QueryClient,
+  user: UserDetail,
+) => {
+  updateUserDetailCache(queryClient, user.id, (current) => ({
+    ...current,
+    user: {
+      ...current.user,
+      ...user,
+    },
+  }));
+
+  updateUsersListCache(queryClient, user.id, (item) => ({
+    ...item,
+    ...mapDetailToListPatch(user),
   }));
 };

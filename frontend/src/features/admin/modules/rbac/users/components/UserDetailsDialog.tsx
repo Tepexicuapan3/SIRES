@@ -344,7 +344,6 @@ export function UserDetailsDialog({
 
     setIsSavingAll(true);
     let completedGroups = 0;
-    let shouldClose = false;
 
     try {
       completedGroups = await applyUserDetailsSavePlan(savePlan, {
@@ -391,7 +390,6 @@ export function UserDetailsDialog({
         description:
           "Perfil, estado de cuenta, roles y permisos actualizados correctamente.",
       });
-      shouldClose = true;
     } catch (error) {
       const fallbackMessage =
         completedGroups > 0
@@ -410,10 +408,6 @@ export function UserDetailsDialog({
       }
     } finally {
       setIsSavingAll(false);
-    }
-
-    if (shouldClose) {
-      closeDialog();
     }
   };
 

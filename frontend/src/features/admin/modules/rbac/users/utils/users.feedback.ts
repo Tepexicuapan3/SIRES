@@ -1,4 +1,4 @@
-import { ApiError } from "@api/utils/errors";
+import { resolveApiErrorMessage } from "@features/admin/modules/rbac/shared/utils/rbac-feedback";
 
 const USER_ERROR_MESSAGES: Record<string, string> = {
   USER_NOT_FOUND: "El usuario ya no existe o fue eliminado.",
@@ -14,25 +14,6 @@ const USER_ERROR_MESSAGES: Record<string, string> = {
   NETWORK_ERROR: "No hay conexion con el servidor. Intenta nuevamente.",
 };
 
-const formatDetails = (details?: Record<string, string[]>) => {
-  if (!details) return "";
-
-  const lines = Object.entries(details)
-    .flatMap(([field, messages]) =>
-      messages.map((message) => `${field}: ${message}`),
-    )
-    .filter(Boolean);
-
-  if (lines.length === 0) return "";
-  return ` ${lines.join(" | ")}`;
-};
-
 export const getUserErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof ApiError) {
-    const mappedMessage = USER_ERROR_MESSAGES[error.code];
-    const baseMessage = mappedMessage || error.message || fallback;
-    return `${baseMessage}${formatDetails(error.details)}`;
-  }
-
-  return fallback;
+  return resolveApiErrorMessage(error, fallback, USER_ERROR_MESSAGES);
 };

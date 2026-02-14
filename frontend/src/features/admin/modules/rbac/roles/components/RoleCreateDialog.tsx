@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { FileText, Route, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
@@ -31,7 +30,6 @@ import {
 } from "@features/admin/modules/rbac/roles/domain/roles.schemas";
 import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
 import { RoleDialogHeader } from "@features/admin/modules/rbac/roles/components/RoleDialogHeader";
-import type { CreateRoleResponse } from "@api/types";
 
 interface RoleCreateDialogProps {
   open: boolean;
@@ -50,9 +48,6 @@ export function RoleCreateDialog({
   open,
   onOpenChange,
 }: RoleCreateDialogProps) {
-  const [createdRole, setCreatedRole] = useState<CreateRoleResponse | null>(
-    null,
-  );
   const createRole = useCreateRole();
 
   const form = useForm<CreateRoleFormValues>({
@@ -63,7 +58,6 @@ export function RoleCreateDialog({
   const handleDialogOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       form.reset(DEFAULT_VALUES);
-      setCreatedRole(null);
     }
     onOpenChange(nextOpen);
   };
@@ -78,11 +72,10 @@ export function RoleCreateDialog({
         },
       });
 
-      setCreatedRole(result);
       toast.success("Rol creado", {
         description: `El rol ${result.name} se creo correctamente.`,
       });
-      form.reset(DEFAULT_VALUES);
+      handleDialogOpenChange(false);
     } catch (error) {
       toast.error("No se pudo crear el rol", {
         description: getRoleErrorMessage(error, "Error al crear rol"),
@@ -204,36 +197,6 @@ export function RoleCreateDialog({
                   </form>
                 </Form>
               </div>
-
-              {createdRole ? (
-                <div className="rounded-2xl border border-line-struct bg-subtle/40 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-txt-body">
-                        Rol creado
-                      </p>
-                      <p className="text-xs text-txt-muted">
-                        El rol ya esta disponible en el catalogo.
-                      </p>
-                    </div>
-                    <Badge variant="stable">Activo</Badge>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-line-struct/60 bg-paper px-3 py-2">
-                      <p className="text-xs text-txt-muted">Nombre</p>
-                      <p className="text-sm font-medium text-txt-body">
-                        {createdRole.name}
-                      </p>
-                    </div>
-                    <div className="rounded-xl border border-line-struct/60 bg-paper px-3 py-2">
-                      <p className="text-xs text-txt-muted">ID</p>
-                      <p className="text-sm font-medium text-txt-body">
-                        {createdRole.id}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
             </div>
           </ScrollArea>
           <DialogFooter className="flex flex-col gap-3 border-t border-line-struct px-5 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-8">

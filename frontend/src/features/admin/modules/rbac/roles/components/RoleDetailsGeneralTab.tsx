@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { RoleDetail } from "@api/types";
 import type { RoleDetailsFormValues } from "@features/admin/modules/rbac/roles/domain/roles.schemas";
@@ -139,19 +138,6 @@ export function RoleDetailsGeneralTab({
             </Select>
           </div>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Permisos asignados</Label>
-            <Input value={roleDetail.permissionsCount.toString()} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Usuarios asignados</Label>
-            <Input value={roleDetail.usersCount.toString()} disabled />
-          </div>
-        </div>
-
-        <Separator />
       </form>
     </Form>
   );

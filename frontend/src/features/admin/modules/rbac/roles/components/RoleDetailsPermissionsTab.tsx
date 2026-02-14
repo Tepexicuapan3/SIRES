@@ -1,7 +1,7 @@
-import { Plus, X } from "lucide-react";
+import { CalendarDays, Plus, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@features/admin/modules/rbac/roles/utils/roles.format";
-import { PermissionHierarchyExplorer } from "@features/admin/modules/rbac/shared/components/PermissionHierarchyExplorer";
+import { PermissionsHierarchyExplorer } from "@features/admin/modules/rbac/shared/components/PermissionHierarchyExplorer";
 import type { Permission, RolePermission } from "@api/types";
 
 interface RoleDetailsPermissionsTabProps {
@@ -32,20 +32,6 @@ export function RoleDetailsPermissionsTab({
     (permission) => !assignedIds.has(permission.id),
   );
 
-  const availableEntries = availablePermissions.map((permission) => ({
-    id: permission.id.toString(),
-    code: permission.code,
-    description: permission.description,
-    payload: permission,
-  }));
-
-  const assignedEntries = permissions.map((permission) => ({
-    id: permission.id.toString(),
-    code: permission.code,
-    description: permission.description,
-    payload: permission,
-  }));
-
   return (
     <div className="space-y-6">
       {catalogErrorMessage ? (
@@ -65,44 +51,61 @@ export function RoleDetailsPermissionsTab({
         </div>
       ) : null}
 
-      <PermissionHierarchyExplorer
+      <PermissionsHierarchyExplorer
         title="Catalogo de permisos"
         description="Busca y agrega permisos organizados por Grupo -> Modulo -> Submodulo -> Accion."
-        entries={availableEntries}
+        permissions={availablePermissions}
         isLoading={isLoadingPermissions}
         emptyMessage="No hay permisos disponibles para agregar."
         actionLabel="Agregar"
         actionIcon={<Plus className="size-4" />}
         actionVariant="outline"
+        actionDisplay="icon"
+        viewportHeightClassName="h-[360px]"
         isActionPending={isSaving}
         isActionDisabled={() =>
           !isEditable || isSaving || Boolean(catalogErrorMessage)
         }
-        onAction={(item) => {
-          onAddPermission(item.payload.id);
+        onAction={(permission) => {
+          onAddPermission(permission.id);
         }}
-        actionAriaLabel={(item) => `Agregar permiso ${item.code}`}
+        actionAriaLabel={(permission) => `Agregar permiso ${permission.code}`}
       />
 
-      <PermissionHierarchyExplorer
+      <PermissionsHierarchyExplorer
         title="Permisos asignados al rol"
         description="Visualiza y gestiona los permisos activos del rol de forma jerarquica."
-        entries={assignedEntries}
+        permissions={permissions}
         emptyMessage="Este rol no tiene permisos asignados."
         actionDisplay="icon"
         actionIcon={<X className="size-4" />}
         actionVariant="ghost"
+        actionClassName="size-8 shrink-0 rounded-lg"
+        metaDisplay="footer"
+        showCodeBadge={false}
+        viewportHeightClassName="h-[360px]"
         isActionPending={isSaving}
         isActionDisabled={() => !isEditable || isSaving}
-        onAction={(item) => {
-          onRemovePermission(item.payload.id);
+        onAction={(permission) => {
+          onRemovePermission(permission.id);
         }}
-        actionAriaLabel={(item) => `Remover permiso ${item.code}`}
-        renderMeta={(item) => (
-          <p className="text-[11px] text-txt-muted">
-            Asignado {formatDateTime(item.payload.assignedAt)} por{" "}
-            {item.payload.assignedBy?.name ?? "-"}
-          </p>
+        actionAriaLabel={(permission) => `Remover permiso ${permission.code}`}
+        renderMeta={(permission) => (
+          <>
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <UserRound className="size-3.5" />
+              <span className="truncate">
+                {permission.assignedBy?.name ?? "-"}
+              </span>
+            </span>
+
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <CalendarDays className="size-3.5" />
+              {permission.assignedAt
+                ? formatDateTime(permission.assignedAt)
+                : "-"}
+            </span>
+          </>
         )}
       />
     </div>

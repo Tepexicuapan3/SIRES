@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -29,12 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/ScrollArea";
-import type {
-  CentroAtencionListItem,
-  CreateUserResponse,
-  RoleListItem,
-} from "@api/types";
-import { UserCreatedCredentialsCard } from "@features/admin/modules/rbac/users/components/UserCreatedCredentialsCard";
+import type { CentroAtencionListItem, RoleListItem } from "@api/types";
 import { useCreateUser } from "@features/admin/modules/rbac/users/mutations/useCreateUser";
 import { UserCreateSidePanel } from "@features/admin/modules/rbac/users/components/UserCreateSidePanel";
 import {
@@ -69,8 +63,6 @@ export function UserCreateDialog({
   roleOptions,
   clinicOptions,
 }: UserCreateDialogProps) {
-  const [createdCredentials, setCreatedCredentials] =
-    useState<CreateUserResponse | null>(null);
   const createUser = useCreateUser();
 
   const form = useForm<CreateUserFormValues>({
@@ -81,7 +73,6 @@ export function UserCreateDialog({
   const handleDialogOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       form.reset(DEFAULT_VALUES);
-      setCreatedCredentials(null);
     }
     onOpenChange(nextOpen);
   };
@@ -100,27 +91,21 @@ export function UserCreateDialog({
         },
       });
 
-      setCreatedCredentials(result);
+      if (import.meta.env.DEV) {
+        console.info("[DEV][RBAC] Credenciales temporales de nuevo usuario", {
+          username: result.username,
+          temporaryPassword: result.temporaryPassword,
+        });
+      }
+
       toast.success("Usuario creado", {
-        description: `Usuario ${result.username} creado. Clave temporal: ${result.temporaryPassword}`,
+        description: `El usuario ${result.username} se creo correctamente.`,
       });
-      form.reset(DEFAULT_VALUES);
+      handleDialogOpenChange(false);
     } catch (error) {
       toast.error("No se pudo crear el usuario", {
         description: getUserErrorMessage(error, "Error al crear usuario"),
       });
-    }
-  };
-
-  const handleCopyCredentials = async () => {
-    if (!createdCredentials || !navigator?.clipboard) return;
-    try {
-      await navigator.clipboard.writeText(
-        `Usuario: ${createdCredentials.username}\nClave: ${createdCredentials.temporaryPassword}`,
-      );
-      toast.success("Credenciales copiadas");
-    } catch {
-      toast.error("No se pudieron copiar las credenciales");
     }
   };
 
@@ -131,7 +116,7 @@ export function UserCreateDialog({
         className="h-[70vh] max-h-[70vh] w-[96vw] max-w-none overflow-hidden rounded-3xl bg-paper p-0 sm:max-w-none lg:w-[980px] xl:w-[1060px]"
       >
         <div className="flex h-full min-h-0">
-          <UserCreateSidePanel createdCredentials={createdCredentials} />
+          <UserCreateSidePanel />
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <DialogHeader className="px-5 pt-5 lg:px-8 lg:pt-5">
@@ -309,15 +294,6 @@ export function UserCreateDialog({
                     </form>
                   </Form>
                 </div>
-
-                {createdCredentials ? (
-                  <UserCreatedCredentialsCard
-                    createdCredentials={createdCredentials}
-                    onCopyCredentials={() => {
-                      void handleCopyCredentials();
-                    }}
-                  />
-                ) : null}
               </div>
             </ScrollArea>
 

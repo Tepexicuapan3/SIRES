@@ -323,7 +323,6 @@ export function RolesPage() {
           ) : null
         }
         textAlign="right"
-        confirmLabel="Eliminar"
         onConfirm={() => {
           void handleDeleteRole();
         }}

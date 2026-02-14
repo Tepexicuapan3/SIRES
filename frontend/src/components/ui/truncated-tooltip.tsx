@@ -73,20 +73,21 @@ export const TruncatedTooltip = ({
   className,
 }: TruncatedTooltipProps) => {
   const { ref, isOverflowed } = useIsOverflowed();
-  const [isHovering, setIsHovering] = useState(false);
 
   // Determinar si el tooltip debe mostrarse
   const shouldShowTooltip = forceShow || isOverflowed;
 
+  if (!shouldShowTooltip) {
+    return (
+      <span ref={ref} className={className}>
+        {children}
+      </span>
+    );
+  }
+
   return (
-    <Tooltip open={shouldShowTooltip && isHovering}>
-      <TooltipTrigger
-        asChild
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        onFocus={() => setIsHovering(true)}
-        onBlur={() => setIsHovering(false)}
-      >
+    <Tooltip>
+      <TooltipTrigger asChild>
         <span ref={ref} className={className}>
           {children}
         </span>

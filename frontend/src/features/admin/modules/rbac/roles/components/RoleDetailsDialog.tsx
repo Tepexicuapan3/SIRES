@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  AlertTriangle,
-  Clock3,
-  ShieldCheck,
-  SlidersHorizontal,
-} from "lucide-react";
+import { AlertTriangle, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -12,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePermissionsCatalog } from "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog";
-import { RoleDetailsAuditTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsAuditTab";
 import { RoleDetailsGeneralTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsGeneralTab";
 import { RoleDetailsFooter } from "@features/admin/modules/rbac/roles/components/RoleDetailsFooter";
 import { RoleDetailsPermissionsTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsPermissionsTab";
@@ -304,7 +298,7 @@ export function RoleDetailsDialog({
         </div>
       </div>
       <div className="flex gap-3">
-        {Array.from({ length: 3 }).map((_, index) => (
+        {Array.from({ length: 2 }).map((_, index) => (
           <Skeleton key={`tab-skel-${index}`} className="h-9 w-28" />
         ))}
       </div>
@@ -349,6 +343,11 @@ export function RoleDetailsDialog({
           icon: <SlidersHorizontal className="size-4" />,
           content: (
             <>
+              {!isEditable ? (
+                <div className="mb-4 rounded-xl border border-line-struct bg-subtle/40 px-4 py-3 text-xs text-txt-muted">
+                  Este rol es de sistema o no tienes permisos para modificarlo.
+                </div>
+              ) : null}
               <RoleDetailsGeneralTab
                 form={form}
                 formId={FORM_ID}
@@ -359,11 +358,6 @@ export function RoleDetailsDialog({
                 isStatusPending={isSaving}
                 isEditable={isEditable}
               />
-              {!isEditable ? (
-                <div className="mt-4 rounded-xl border border-line-struct bg-subtle/40 px-4 py-3 text-xs text-txt-muted">
-                  Este rol es de sistema o no tienes permisos para modificarlo.
-                </div>
-              ) : null}
             </>
           ),
         },
@@ -401,12 +395,6 @@ export function RoleDetailsDialog({
               onRemovePermission={handleRemovePermissionDraft}
             />
           ),
-        },
-        {
-          id: "audit",
-          label: "Auditoria",
-          icon: <Clock3 className="size-4" />,
-          content: <RoleDetailsAuditTab roleDetail={roleDetail} />,
         },
       ]
     : [];
