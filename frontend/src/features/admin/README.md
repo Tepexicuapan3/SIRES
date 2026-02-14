@@ -51,7 +51,14 @@ UI (components/pages) → queries/mutations → `api/resources` → backend.
 - Cada modulo define sus columnas en componentes dedicados (`UsersTableColumns`, `RolesTableColumns`, `AreasTableColumns`) para mantener las pages delgadas y con una sola responsabilidad.
 - Logica densa (busqueda/ranking de permisos) debe vivir en `utils/` (`users.permissions-search.ts`) y no dentro de componentes de UI.
 - Guardado incremental y transformaciones de borrador en dialogs se extraen a `utils/` (`users.details-save.ts`, `roles.details-save.ts`, `users.details-draft.ts`, `roles.details-draft.ts`).
-- Dialogos complejos se componen por bloques chicos (`UserCreateSidePanel`, `UserCreatedCredentialsCard`) para aislar layout de negocio.
+- Dialogos complejos se componen por bloques chicos (`UserCreateSidePanel`, `RoleDialogHeader`, `UserDialogHeader`) para aislar layout de negocio.
+
+## Patron RBAC para permisos
+
+- `modules/rbac/shared/components/PermissionHierarchyExplorer.tsx` centraliza el arbol jerarquico (grupo/modulo/submodulo/accion), seleccion, acciones y virtualizacion para catalogos grandes.
+- `modules/rbac/shared/components/PermissionSearchField.tsx` unifica UX de busqueda con teclado (flechas/enter/escape), boton limpiar y a11y (`aria-controls`, `aria-activedescendant`).
+- Badges con codigo de permiso usan `TruncatedTooltip` y deben pasar `className="block min-w-0 max-w-full truncate"` para que el tooltip aparezca solo si hay truncado real.
+- Formularios de alta (`RoleCreateDialog`, `UserCreateDialog`) cierran al guardar y confirman por toast; no se mantiene una tarjeta de credenciales en pantalla.
 
 ## Patron base para catalogos CRUD
 
