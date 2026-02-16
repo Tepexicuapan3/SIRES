@@ -4,40 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Recuperacion de contrasena</title>
-    <style>
-      @media screen and (max-width: 600px) {
-        .email-container {
-          width: 100% !important;
-        }
-        .header-cell {
-          padding: 20px 18px 12px !important;
-        }
-        .logo-text {
-          font-size: 11px !important;
-          letter-spacing: 0.1em !important;
-        }
-        .metro-logo {
-          display: none !important;
-        }
-      }
-    </style>
   </head>
   <body style="margin:0;padding:0;background-color:#f9f9f9;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#111827;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f9f9f9;">
       <tr>
         <td align="center" style="padding:32px 16px;">
-          <table role="presentation" width="600" cellspacing="0" cellpadding="0" class="email-container" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e6e6e6;border-radius:12px;overflow:hidden;">
+          <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e6e6e6;border-radius:12px;overflow:hidden;">
             <tr>
-              <td class="header-cell" style="padding:28px 28px 16px;">
+              <td style="padding:28px 28px 16px;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                   <tr>
                     <td align="left" style="padding:0;">
                       <table role="presentation" cellspacing="0" cellpadding="0">
                         <tr>
                           <td style="padding:0;">
-                            <img src="{{ logo_url }}" alt="Logo SIRES" style="display:block;height:52px;width:auto;border:0;" />
+                            <img src="https://i.ibb.co/zhdkzrZp/SIRES.webp" alt="Logo SIRES" style="display:block;height:52px;width:auto;border:0;" />
                           </td>
-                          <td class="logo-text" style="padding-left:14px;font-size:14px;letter-spacing:0.14em;text-transform:uppercase;color:#6b7280;white-space:nowrap;">
+                          <td style="padding-left:14px;font-size:14px;letter-spacing:0.14em;text-transform:uppercase;color:#6b7280;white-space:nowrap;">
                             SIRES STC METRO
                           </td>
                         </tr>
@@ -55,7 +38,7 @@
             <tr>
               <td style="padding:16px 28px 8px;">
                 <h1 style="margin:0 0 10px;font-size:24px;line-height:1.35;font-weight:700;color:#111827;">Recupera tu contrasena</h1>
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#4b5563;">Hola {{ user_name }}, recibimos una solicitud para restablecer la contrasena de tu cuenta.</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#4b5563;">Hola Carlos Garcia, recibimos una solicitud para restablecer la contrasena de tu cuenta.</p>
               </td>
             </tr>
             <tr>
@@ -66,14 +49,15 @@
                       <p style="margin:0 0 12px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#6b7280;">Tu codigo de verificacion</p>
                       <table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:8px;">
                         <tr>
-                          {% for digit in verification_code|stringformat:"s"|slice:":6" %}
-                          <td align="center" style="width:44px;height:54px;border:1px solid #d7d7d7;border-radius:8px;background-color:#ffffff;font-size:20px;font-weight:600;color:#111827;line-height:54px;">
-                            {{ digit }}
-                          </td>
-                          {% endfor %}
+                          <td align="center" style="width:44px;height:54px;border:1px solid #d7d7d7;border-radius:8px;background-color:#ffffff;font-size:20px;font-weight:600;color:#111827;line-height:54px;">1</td>
+                          <td align="center" style="width:44px;height:54px;border:1px solid #d7d7d7;border-radius:8px;background-color:#ffffff;font-size:20px;font-weight:600;color:#111827;line-height:54px;">2</td>
+                          <td align="center" style="width:44px;height:54px;border:1px solid #d7d7d7;border-radius:8px;background-color:#ffffff;font-size:20px;font-weight:600;color:#111827;line-height:54px;">3</td>
+                          <td align="center" style="width:44px;height:54px;border:1px solid #d7d7d7;border-radius:8px;background-color:#ffffff;font-size:20px;font-weight:600;color:#111827;line-height:54px;">4</td>
+                          <td align="center" style="width:44px;height:54px;border:1px solid #d7d7d7;border-radius:8px;background-color:#ffffff;font-size:20px;font-weight:600;color:#111827;line-height:54px;">5</td>
+                          <td align="center" style="width:44px;height:54px;border:1px solid #d7d7d7;border-radius:8px;background-color:#ffffff;font-size:20px;font-weight:600;color:#111827;line-height:54px;">6</td>
                         </tr>
                       </table>
-                      <p style="margin:14px 0 0;font-size:12px;color:#6b7280;">Valido por {{ expiration_minutes }} minutos</p>
+                      <p style="margin:14px 0 0;font-size:12px;color:#6b7280;">Valido por 10 minutos</p>
                     </td>
                   </tr>
                 </table>
@@ -123,7 +107,7 @@
                   </tr>
                   <tr>
                     <td align="center" style="padding-top:8px;font-size:11px;line-height:1.6;color:#9ca3af;">
-                      &copy; {{ current_year }} SIRES STC. Todos los derechos reservados.
+                      &copy; 2026 SIRES STC. Todos los derechos reservados.
                     </td>
                   </tr>
                 </table>
