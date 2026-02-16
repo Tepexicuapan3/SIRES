@@ -29,7 +29,7 @@ function SidePanelInfoItem({ icon, label, value }: SidePanelInfoItemProps) {
         {icon}
         {label}
       </p>
-      <p className="text-xs leading-relaxed break-words text-txt-muted">
+      <p className="text-xs leading-relaxed wrap-break-word text-txt-muted">
         {value}
       </p>
     </div>
@@ -66,7 +66,7 @@ function SidePanelActivityItem({
         <p className="text-[11px] tracking-wide uppercase text-txt-muted">
           {label}
         </p>
-        <p className="w-full break-words text-xs leading-relaxed text-txt-muted">
+        <p className="w-full wrap-break-word text-xs leading-relaxed text-txt-muted">
           {value}
         </p>
       </div>
@@ -109,11 +109,11 @@ export function RoleDetailsSidePanel({
               </span>
 
               <div className="w-full min-w-0 space-y-2">
-                <h3 className="w-full max-w-full break-words text-[16px] leading-tight font-semibold text-txt-body uppercase">
+                <h3 className="w-full max-w-full wrap-break-word text-[16px] leading-tight font-semibold text-txt-body uppercase">
                   {name}
                 </h3>
                 {description ? (
-                  <p className="w-full max-w-full break-words text-xs text-txt-muted">
+                  <p className="w-full max-w-full wrap-break-word text-xs text-txt-muted">
                     {description}
                   </p>
                 ) : null}

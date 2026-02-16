@@ -224,7 +224,7 @@ export function RolesPage() {
   ];
 
   return (
-    <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-[1360px] lg:px-8 xl:px-10">
+    <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-340 lg:px-8 xl:px-10">
       <AdminPageIntro
         title="Roles"
         description="Configura el catalogo de roles, su alcance de permisos y el estado operativo para controlar accesos."

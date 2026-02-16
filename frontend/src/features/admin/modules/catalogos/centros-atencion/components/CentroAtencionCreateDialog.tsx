@@ -127,7 +127,7 @@ export function CentroAtencionCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="w-[95vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[92vw] lg:w-[940px] xl:w-[1020px]">
+      <DialogContent className="w-[95vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[92vw] lg:w-235 xl:w-255">
         <div className="flex max-h-[88vh] flex-col">
           <DialogHeader className="px-8 pt-8">
             <DialogTitle className="sr-only">

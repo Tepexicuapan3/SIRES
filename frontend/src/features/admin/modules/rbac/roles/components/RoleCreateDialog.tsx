@@ -87,7 +87,7 @@ export function RoleCreateDialog({
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="h-[70vh] max-h-[70vh] w-[96vw] max-w-none overflow-hidden rounded-3xl bg-paper p-0 sm:max-w-none lg:w-[980px] xl:w-[1060px]"
+        className="h-[70vh] max-h-[70vh] w-[96vw] max-w-none overflow-hidden rounded-3xl bg-paper p-0 sm:max-w-none lg:w-245 xl:w-265"
       >
         <div className="flex h-full min-h-0 flex-col">
           <DialogHeader className="px-5 pt-5 lg:px-8 lg:pt-5">

@@ -905,7 +905,7 @@ export function PermissionsHierarchyExplorer<
         {showCodeBadge ? (
           <Badge
             variant="outline"
-            className="max-w-[260px] px-2 py-0.5 font-mono text-[11px]"
+            className="max-w-65 px-2 py-0.5 font-mono text-[11px]"
           >
             <TruncatedTooltip
               label={permission.code}

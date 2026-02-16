@@ -15,7 +15,7 @@ export function CatalogModuleLayout({
   children,
 }: CatalogModuleLayoutProps) {
   return (
-    <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-[1360px] lg:px-8 xl:px-10">
+    <div className="mx-auto w-full space-y-6 px-4 pb-2 sm:px-6 lg:max-w-340 lg:px-8 xl:px-10">
       <AdminPageIntro title={title} description={description} icon={icon} />
       {children}
     </div>
