@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     
     # Local apps
     'apps.authentication',
+    'apps.recepcion',
+    'apps.somatometria',
     'apps.catalogos',
     'apps.administracion',
 ]
