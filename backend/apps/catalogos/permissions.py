@@ -1,6 +1,12 @@
-from rest_framework.permissions import BasePermission
-from rest_framework.exceptions import APIException
 from typing import Optional
+
+from rest_framework.exceptions import APIException
+from rest_framework.permissions import BasePermission
+
+from apps.authentication.repositories.user_repository import UserRepository
+from apps.authentication.services.csrf_service import validate_csrf
+from apps.authentication.services.errors import AuthServiceError
+from apps.authentication.services.session_service import authenticate_request
 
 
 class CatalogApiException(APIException):
@@ -16,35 +22,57 @@ class CatalogApiException(APIException):
             "requestId": request_id,
         }
 
+
 class HasCatalogPermission(BasePermission):
-    action: Optional[str] = None  # "read" | "create" | "update" | "delete"
-    catalog: Optional[str] = None  # "permission", "care_center", etc.
-    
+    action: Optional[str] = None
+    catalog: Optional[str] = None
+
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
+        request_id = request.headers.get("X-Request-ID")
+
+        try:
+            user = authenticate_request(request)
+        except AuthServiceError as exc:
             raise CatalogApiException(
-                code="TOKEN_INVALID",
-                message="No autenticado o token inválido",
-                http_status=401,
-                request_id=request.headers.get("X-Request-ID"),
+                code=exc.code,
+                message=exc.message,
+                http_status=exc.status_code,
+                request_id=request_id,
+                details=exc.details,
             )
+
+        request.user = user
+
         if not self.action or not self.catalog:
             raise CatalogApiException(
                 code="PERMISSION_DENIED",
-                message="Permiso de catálogo mal configurado",
+                message="No tienes permiso para esta acción",
                 http_status=403,
-                request_id=request.headers.get("X-Request-ID"),
+                request_id=request_id,
             )
-        # Ajustá al sistema real:
-        if not request.user.has_perm(f"{self.catalog}:{self.action}"):
+
+        required_permission = f"{self.catalog}:{self.action}"
+        user_permissions = UserRepository.build_auth_user(user).get("permissions", [])
+
+        if "*" not in user_permissions and required_permission not in user_permissions:
             raise CatalogApiException(
                 code="PERMISSION_DENIED",
-                message="Sin permiso para este recurso",
+                message="No tienes permiso para esta acción",
                 http_status=403,
-                request_id=request.headers.get("X-Request-ID"),
+                request_id=request_id,
             )
+
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and not validate_csrf(request):
+            raise CatalogApiException(
+                code="PERMISSION_DENIED",
+                message="No tienes permiso para esta acción",
+                http_status=403,
+                request_id=request_id,
+            )
+
         return True
-    
+
+
 class CatalogPermissionMixin:
     catalog = None
 
@@ -58,11 +86,14 @@ class CatalogPermissionMixin:
             "PATCH": "update",
             "DELETE": "delete",
         }
+
         request = getattr(self, "request", None)
         action = action_map.get(request.method) if request else None
+
         if not action or not self.catalog:
             return []
-        perm = HasCatalogPermission()
-        perm.action = action
-        perm.catalog = f"admin:catalogos:{self.catalog}"
-        return [perm]
+
+        permission = HasCatalogPermission()
+        permission.action = action
+        permission.catalog = f"admin:catalogos:{self.catalog}"
+        return [permission]

@@ -440,58 +440,124 @@ class PasesWriteSerializer(CatalogWriteSerializer):
 
 
 #######Permisos
-class PermisosListSerializer(CatalogListWithCodeSerializer):
-    class Meta(CatalogListWithCodeSerializer.Meta):
+class PermisosListSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source="id_permiso")
+    name = serializers.CharField(source="descripcion")
+    code = serializers.CharField(source="codigo")
+    isActive = serializers.BooleanField(source="is_active")
+    isSystem = serializers.BooleanField(source="es_sistema")
+
+    class Meta:
         model = Permisos
-                
-class PermisosDetailSerializer(CatalogDetailWithCodeSerializer):
-    isSystem = serializers.BooleanField(source="is_system")
-    class Meta(CatalogDetailWithCodeSerializer.Meta):
+        fields = ("id", "name", "code", "isActive", "isSystem")
+
+
+class PermisosDetailSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source="id_permiso")
+    name = serializers.CharField(source="descripcion")
+    code = serializers.CharField(source="codigo")
+    description = serializers.CharField(source="descripcion")
+    isActive = serializers.BooleanField(source="is_active")
+    isSystem = serializers.BooleanField(source="es_sistema")
+    createdAt = serializers.DateTimeField(source="created_at", format="%Y-%m-%dT%H:%M:%SZ")
+    createdBy = serializers.SerializerMethodField()
+    updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%dT%H:%M:%SZ")
+    updatedBy = serializers.SerializerMethodField()
+
+    class Meta:
         model = Permisos
-        fields = CatalogDetailWithCodeSerializer.Meta.fields + (
-            "isSystem",
+        fields = (
+            "id",
+            "name",
+            "code",
+            "description",
             "isActive",
+            "isSystem",
             "createdAt",
             "createdBy",
             "updatedAt",
             "updatedBy",
         )
 
-class PermisosWriteSerializer(CatalogWriteSerializer):
-    isSystem = serializers.BooleanField(source="is_system", required=False)
-    code = serializers.CharField()
+    def get_createdBy(self, obj):
+        return CatalogDetailSerializer._build_user_ref(self, obj.created_by_id)
 
-    class Meta(CatalogWriteSerializer.Meta):
+    def get_updatedBy(self, obj):
+        return CatalogDetailSerializer._build_user_ref(self, obj.updated_by_id)
+
+
+class PermisosWriteSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source="descripcion")
+    code = serializers.CharField(source="codigo")
+    isActive = serializers.BooleanField(source="is_active", required=False)
+    isSystem = serializers.BooleanField(source="es_sistema", required=False)
+
+    class Meta:
         model = Permisos
-        fields = CatalogWriteSerializer.Meta.fields + ("code", "isSystem")
+        fields = ("name", "code", "isActive", "isSystem")
 
 
 #######Roles
-class RolesListSerializer(CatalogListSerializer):
-    class Meta(CatalogListSerializer.Meta):
-        model = Roles
+class RolesListSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source="id_rol")
+    name = serializers.CharField(source="rol")
+    description = serializers.CharField(source="desc_rol")
+    isActive = serializers.BooleanField(source="is_active")
+    isSystem = serializers.BooleanField(source="es_sistema")
+    landingRoute = serializers.CharField(source="landing_route", allow_null=True)
 
-class RolesDetailSerializer(CatalogDetailSerializer):
-    landingRoute = serializers.CharField(source="landing_route")
-    isAdmin = serializers.BooleanField(source="is_admin")
-    isSystem = serializers.BooleanField(source="is_system")
-    class Meta(CatalogDetailSerializer.Meta):
+    class Meta:
         model = Roles
-        fields = CatalogDetailSerializer.Meta.fields + (
+        fields = ("id", "name", "description", "isActive", "isSystem", "landingRoute")
+
+
+class RolesDetailSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source="id_rol")
+    name = serializers.CharField(source="rol")
+    description = serializers.CharField(source="desc_rol")
+    landingRoute = serializers.CharField(source="landing_route", allow_null=True)
+    isActive = serializers.BooleanField(source="is_active")
+    isAdmin = serializers.BooleanField(source="is_admin")
+    isSystem = serializers.BooleanField(source="es_sistema")
+    createdAt = serializers.DateTimeField(source="created_at", format="%Y-%m-%dT%H:%M:%SZ")
+    createdBy = serializers.SerializerMethodField()
+    updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%dT%H:%M:%SZ")
+    updatedBy = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Roles
+        fields = (
+            "id",
+            "name",
             "description",
             "landingRoute",
+            "isActive",
             "isAdmin",
             "isSystem",
+            "createdAt",
+            "createdBy",
+            "updatedAt",
+            "updatedBy",
         )
 
-class RolesWriteSerializer(CatalogWriteSerializer):
-    landingRoute = serializers.CharField(source="landing_route")
-    isAdmin = serializers.BooleanField(source="is_admin", required=False)
-    isSystem = serializers.BooleanField(source="is_system", required=False)
+    def get_createdBy(self, obj):
+        return CatalogDetailSerializer._build_user_ref(self, obj.created_by_id)
 
-    class Meta(CatalogWriteSerializer.Meta):
+    def get_updatedBy(self, obj):
+        return CatalogDetailSerializer._build_user_ref(self, obj.updated_by_id)
+
+
+class RolesWriteSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source="rol")
+    description = serializers.CharField(source="desc_rol")
+    landingRoute = serializers.CharField(source="landing_route", required=False, allow_null=True, allow_blank=True)
+    isActive = serializers.BooleanField(source="is_active", required=False)
+    isAdmin = serializers.BooleanField(source="is_admin", required=False)
+    isSystem = serializers.BooleanField(source="es_sistema", required=False)
+
+    class Meta:
         model = Roles
-        fields = CatalogWriteSerializer.Meta.fields + ("description", "landingRoute", "isAdmin", "isSystem")
+        fields = ("name", "description", "landingRoute", "isActive", "isAdmin", "isSystem")
 
 
 #######Tipo de areas
@@ -577,5 +643,4 @@ class TurnosDetailSerializer(CatalogDetailSerializer):
 class TurnosWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = Turnos
-
 

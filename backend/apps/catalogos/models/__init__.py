@@ -19,6 +19,8 @@ from .parentescos import Parentesco
 from .pases import Pases
 
 # 🔑 ALIAS IMPORTANTES
+from .roles import Roles
+from .permisos import Permisos
 from .roles import Roles as CatRol
 from .permisos import Permisos as CatPermiso
 
@@ -49,8 +51,10 @@ __all__ = [
     "OrigenCons",
     "Parentesco",
     "Pases",
-    "CatRol",        # 👈 alias
-    "CatPermiso",    # 👈 alias
+    "Roles",
+    "Permisos",
+    "CatRol",        # alias
+    "CatPermiso",    # alias
     "TiposAreas",
     "TpAutorizacion",
     "TipoDeCitas",

@@ -22,7 +22,7 @@ class RBACResolver:
             permisos_rol = RelRolPermiso.objects.filter(
                 id_rol=rel.id_rol,
                 fch_baja__isnull=True,
-                id_permiso__est_activo=True
+                id_permiso__is_active=True
             )
 
             permisos.update(p.id_permiso.codigo for p in permisos_rol)

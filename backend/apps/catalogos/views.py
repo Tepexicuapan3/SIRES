@@ -26,6 +26,7 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
     model = None
     list_serializer = None
     write_serializer = None
+    name_field = "name"
     error_codes = MappingProxyType ({})
     sort_map = MappingProxyType ({
         "name": "name",
@@ -96,7 +97,7 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
             )
 
         if search:
-            qs = qs.filter(Q(name__icontains=search))
+            qs = qs.filter(Q(**{f"{self.name_field}__icontains": search}))
 
         if is_active is not None:
             normalized_is_active = is_active.lower()
@@ -142,8 +143,8 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
                 http_status=status.HTTP_400_BAD_REQUEST,
                 details=serializer.errors,
             )
-        name = serializer.validated_data.get("name")
-        if name and self.model.objects.filter(name=name).exists():
+        name = serializer.validated_data.get(self.name_field)
+        if name and self.model.objects.filter(**{self.name_field: name}).exists():
             return self._error(
                 request,
                 code=self.error_codes.get("exists", "ITEM_EXISTS"),
@@ -151,8 +152,18 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
                 http_status=status.HTTP_409_CONFLICT,
                 details={"name": ["Duplicado"]},
             )
-        item = serializer.save(created_at=timezone.now(), created_by_id=request.user.id)
-        return Response({"id": item.id, "name": item.name}, status=status.HTTP_201_CREATED)
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+        item = serializer.save(created_at=timezone.now(), created_by_id=actor_id)
+
+        item_id = getattr(item, "id", None)
+        if item_id is None:
+            item_id = getattr(item, "id_rol", None) or getattr(item, "id_permiso", None)
+
+        item_name = getattr(item, "name", None)
+        if item_name is None:
+            item_name = getattr(item, "rol", None) or getattr(item, "descripcion", None)
+
+        return Response({"id": item_id, "name": item_name}, status=status.HTTP_201_CREATED)
 
 
 
@@ -161,10 +172,13 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
     detail_serializer = None
     write_serializer = None
     wrapper_key = None
+    name_field = "name"
+    pk_field = None
     error_codes = MappingProxyType({})
     
     def get_object(self, pk):
-        return self.model.objects.filter(id=pk).first()
+        pk_name = self.pk_field or self.model._meta.pk.name
+        return self.model.objects.filter(**{pk_name: pk}).first()
     
     def get(self, request, pk):
         item = self.get_object(pk)
@@ -196,8 +210,10 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 http_status=status.HTTP_400_BAD_REQUEST,
                 details=serializer.errors,
             )
-        name = serializer.validated_data.get("name")
-        if name and self.model.objects.filter(name=name).exclude(id=item.id).exists():
+        name = serializer.validated_data.get(self.name_field)
+        pk_name = self.pk_field or self.model._meta.pk.name
+        item_pk = getattr(item, pk_name)
+        if name and self.model.objects.filter(**{self.name_field: name}).exclude(**{pk_name: item_pk}).exists():
             return self._error(
                 request,
                 code=self.error_codes.get("exists", "ITEM_EXISTS"),
@@ -205,7 +221,8 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 http_status=status.HTTP_409_CONFLICT,
                 details={"name": ["Duplicado"]},
             )
-        item = serializer.save(updated_at=timezone.now(), updated_by_id=request.user.id)
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+        item = serializer.save(updated_at=timezone.now(), updated_by_id=actor_id)
         detail = self.detail_serializer(item)
         return Response({self.wrapper_key: detail.data}, status=status.HTTP_200_OK)
     
@@ -220,7 +237,7 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
             )
         item.is_active = False
         item.deleted_at = timezone.now()
-        item.deleted_by_id = request.user.id
+        item.deleted_by_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
         item.save(update_fields=["is_active", "deleted_at", "deleted_by_id"])
         return Response({"success": True}, status=status.HTTP_200_OK)
 
@@ -520,6 +537,8 @@ class PermisosListCreateView(CatalogBaseListCreateView):
     model = Permisos
     list_serializer = PermisosListSerializer
     write_serializer = PermisosWriteSerializer
+    name_field = "descripcion"
+    sort_map = MappingProxyType({"name": "descripcion", "isActive": "is_active"})
     error_codes = {"exists": "PERMISSIONS_EXISTS"}
     
 class PermisosDetailView(CatalogBaseDetailView):
@@ -527,6 +546,8 @@ class PermisosDetailView(CatalogBaseDetailView):
     model = Permisos
     detail_serializer = PermisosDetailSerializer
     write_serializer = PermisosWriteSerializer
+    name_field = "descripcion"
+    pk_field = "id_permiso"
     wrapper_key = "permission"
     error_codes = {"not_found": "PERMISSIONS_NOT_FOUND", "exists": "PERMISSIONS_EXISTS"}
 
@@ -537,6 +558,8 @@ class RolesListCreateView(CatalogBaseListCreateView):
     model = Roles
     list_serializer = RolesListSerializer
     write_serializer = RolesWriteSerializer
+    name_field = "rol"
+    sort_map = MappingProxyType({"name": "rol", "isActive": "is_active"})
     error_codes = {"exists": "ROLE_EXISTS"}
     
 class RolesDetailView(CatalogBaseDetailView):
@@ -544,6 +567,8 @@ class RolesDetailView(CatalogBaseDetailView):
     model = Roles
     detail_serializer = RolesDetailSerializer
     write_serializer = RolesWriteSerializer
+    name_field = "rol"
+    pk_field = "id_rol"
     wrapper_key = "role"
     error_codes = {"not_found": "ROLE_NOT_FOUND", "exists": "ROLE_EXISTS"}
 

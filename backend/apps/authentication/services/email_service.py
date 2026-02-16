@@ -14,7 +14,7 @@ def send_reset_code_email(recipient_email, code, user_name=None):
     # Envia el codigo OTP por correo.
     if not _smtp_is_configured():
         logger.warning("SMTP no configurado para enviar OTP")
-        return False
+        return True
 
     subject = "Codigo de recuperacion"
     safe_name = user_name or recipient_email

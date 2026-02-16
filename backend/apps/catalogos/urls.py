@@ -20,8 +20,6 @@ routes = [
     ("consultation-origins", OrigenConsListCreateView, OrigenConsDetailView, "str"),
     ("kinship", ParentescoListCreateView, ParentescoDetailView, "str"),
     ("passes", PasesListCreateView, PasesDetailView, "int"),
-    ("permissions", PermisosListCreateView, PermisosDetailView, "int"),
-    ("roles", RolesListCreateView, RolesDetailView, "int"),
     ("area-types", TiposAreasListCreateView, TiposAreasDetailView, "int"),
     ("auth-types", TpAutorizacionListCreateView, TpAutorizacionDetailView, "int"),
     ("appointment-types", TipoDeCitasListCreateView, TipoDeCitasDetailView, "int"),
