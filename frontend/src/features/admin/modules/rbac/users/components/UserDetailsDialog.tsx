@@ -38,8 +38,10 @@ import {
   buildUserRolesDiff,
 } from "@features/admin/modules/rbac/users/utils/users.access-draft";
 import {
+  buildUserProfilePayload,
   addOverrideToDraft,
   addRoleToDraft,
+  hasUserProfileChanges,
   mapUserDetailToFormValues,
   removeOverrideFromDraft,
   removeRoleFromDraft,
@@ -74,7 +76,9 @@ interface UserDetailsDialogProps {
   userSummary: UserListItem | null;
   roleOptions: RoleListItem[];
   clinicOptions: CentroAtencionListItem[];
+  isClinicsCatalogLoading?: boolean;
   canEdit: boolean;
+  currentUserId?: number | null;
 }
 
 const DEFAULT_FORM_VALUES: UserDetailsFormValues = {
@@ -99,7 +103,9 @@ export function UserDetailsDialog({
   userSummary,
   roleOptions,
   clinicOptions,
+  isClinicsCatalogLoading = false,
   canEdit,
+  currentUserId = null,
 }: UserDetailsDialogProps) {
   const { isClosing, markClosing, handleOpenChange } =
     useDetailsDialogCloseGuard(onOpenChange);
@@ -145,7 +151,34 @@ export function UserDetailsDialog({
     resolver: zodResolver(userDetailsSchema),
     defaultValues: DEFAULT_FORM_VALUES,
   });
-  const isFormDirty = form.formState.isDirty;
+  const formStateIsDirty = form.formState.isDirty;
+  const [
+    draftFirstName,
+    draftPaternalName,
+    draftMaternalName,
+    draftEmail,
+    draftClinicId,
+  ] = form.watch([
+    "firstName",
+    "paternalName",
+    "maternalName",
+    "email",
+    "clinicId",
+  ]);
+
+  const watchedFormValues: UserDetailsFormValues = {
+    firstName: draftFirstName ?? "",
+    paternalName: draftPaternalName ?? "",
+    maternalName: draftMaternalName ?? "",
+    email: draftEmail ?? "",
+    clinicId: draftClinicId ?? null,
+  };
+  const baselineFormValues = userDetail
+    ? mapUserDetailToFormValues(userDetail)
+    : DEFAULT_FORM_VALUES;
+  const isFormDirty = userDetail
+    ? hasUserProfileChanges(baselineFormValues, watchedFormValues)
+    : false;
 
   const hasDraftForCurrentUser =
     userDetail !== undefined && draftUserId === userDetail.id;
@@ -154,6 +187,8 @@ export function UserDetailsDialog({
   const workingAccountIsActive = hasDraftForCurrentUser
     ? (draftAccountIsActive ?? userDetail?.isActive ?? false)
     : (userDetail?.isActive ?? false);
+  const viewedUserId = userDetail?.id ?? userSummary?.id ?? null;
+  const isSelfUser = viewedUserId !== null && currentUserId === viewedUserId;
 
   const rolesDirty = userDetail
     ? !areUserRolesEquivalent(roles, workingRoles)
@@ -168,9 +203,9 @@ export function UserDetailsDialog({
     isFormDirty || rolesDirty || overridesDirty || accountStatusDirty;
 
   useEffect(() => {
-    if (!userDetail || !open || isFormDirty) return;
+    if (!userDetail || !open || formStateIsDirty) return;
     form.reset(mapUserDetailToFormValues(userDetail));
-  }, [form, isFormDirty, open, userDetail]);
+  }, [form, formStateIsDirty, open, userDetail]);
 
   useEffect(() => {
     if (!open || !userDetailResponse) return;
@@ -211,6 +246,13 @@ export function UserDetailsDialog({
 
   const handleAccountStatusChangeDraft = (nextActive: boolean) => {
     if (!isEditable || !userDetail) return;
+    if (isSelfUser && !nextActive) {
+      toast.error("No puedes desactivar tu propia cuenta", {
+        description:
+          "Usa otra cuenta administradora para cambiar el estado de este usuario.",
+      });
+      return;
+    }
 
     setDraftUserId(userDetail.id);
     setDraftAccountIsActive(nextActive);
@@ -317,18 +359,22 @@ export function UserDetailsDialog({
   const handleSave = async (values: UserDetailsFormValues) => {
     if (!userDetail || !isEditable || isSaving) return;
 
-    const payload: Partial<UserDetailsFormValues> = {};
-    const { dirtyFields } = form.formState;
-
-    if (dirtyFields.firstName) payload.firstName = values.firstName;
-    if (dirtyFields.paternalName) payload.paternalName = values.paternalName;
-    if (dirtyFields.maternalName) payload.maternalName = values.maternalName;
-    if (dirtyFields.email) payload.email = values.email;
-    if (dirtyFields.clinicId) payload.clinicId = values.clinicId;
+    const payload = buildUserProfilePayload(
+      mapUserDetailToFormValues(userDetail),
+      values,
+    );
 
     const rolesDiff = buildUserRolesDiff(roles, workingRoles);
     const overridesDiff = buildUserOverridesDiff(overrides, workingOverrides);
     const hasStatusChanges = workingAccountIsActive !== userDetail.isActive;
+
+    if (isSelfUser && hasStatusChanges && !workingAccountIsActive) {
+      toast.error("No puedes desactivar tu propia cuenta", {
+        description:
+          "Usa otra cuenta administradora para cambiar el estado de este usuario.",
+      });
+      return;
+    }
 
     const savePlan = {
       profilePayload: payload,
@@ -521,11 +567,13 @@ export function UserDetailsDialog({
                 form={form}
                 formId={FORM_ID}
                 clinicOptions={clinicOptions}
+                isClinicsCatalogLoading={isClinicsCatalogLoading}
                 userDetail={userDetail}
                 accountIsActive={workingAccountIsActive}
                 onSubmit={handleSave}
                 onAccountStatusChange={handleAccountStatusChangeDraft}
                 isEditable={isEditable}
+                canChangeAccountStatus={isEditable && !isSelfUser}
               />
               {!isEditable ? (
                 <div className="mt-4 rounded-xl border border-line-struct bg-subtle/40 px-4 py-3 text-xs text-txt-muted">

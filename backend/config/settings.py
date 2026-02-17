@@ -25,7 +25,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_n@vgo%v8a9+b#2ywbwea_k0++f6e44=$2)kjd$d&*gi*jbl4)'
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default='django-insecure-_n@vgo%v8a9+b#2ywbwea_k0++f6e44=$2)kjd$d&*gi*jbl4)',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 #DEBUG = True
@@ -164,6 +167,8 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+
+    "EXCEPTION_HANDLER": "apps.administracion.exceptions.custom_exception_handler",
 }
 
 # JWT Settings

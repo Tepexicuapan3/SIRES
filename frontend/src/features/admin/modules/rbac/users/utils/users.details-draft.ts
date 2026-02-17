@@ -39,8 +39,65 @@ export const mapUserDetailToFormValues = (
   paternalName: detail?.paternalName ?? "",
   maternalName: detail?.maternalName ?? "",
   email: detail?.email ?? "",
-  clinicId: detail?.clinic?.id ?? null,
+  clinicId:
+    typeof detail?.clinic?.id === "number" && detail.clinic.id > 0
+      ? detail.clinic.id
+      : null,
 });
+
+const normalizeDraftText = (value: string | null | undefined) =>
+  (value ?? "").trim();
+
+const normalizeDraftClinicId = (value: number | null | undefined) =>
+  typeof value === "number" && value > 0 && !Number.isNaN(value) ? value : null;
+
+export const buildUserProfilePayload = (
+  baseline: UserDetailsFormValues,
+  draft: UserDetailsFormValues,
+): Partial<UserDetailsFormValues> => {
+  const payload: Partial<UserDetailsFormValues> = {};
+
+  if (
+    normalizeDraftText(draft.firstName) !==
+    normalizeDraftText(baseline.firstName)
+  ) {
+    payload.firstName = draft.firstName;
+  }
+
+  if (
+    normalizeDraftText(draft.paternalName) !==
+    normalizeDraftText(baseline.paternalName)
+  ) {
+    payload.paternalName = draft.paternalName;
+  }
+
+  if (
+    normalizeDraftText(draft.maternalName) !==
+    normalizeDraftText(baseline.maternalName)
+  ) {
+    payload.maternalName = draft.maternalName;
+  }
+
+  if (normalizeDraftText(draft.email) !== normalizeDraftText(baseline.email)) {
+    payload.email = draft.email;
+  }
+
+  if (
+    normalizeDraftClinicId(draft.clinicId) !==
+    normalizeDraftClinicId(baseline.clinicId)
+  ) {
+    payload.clinicId = draft.clinicId;
+  }
+
+  return payload;
+};
+
+export const hasUserProfileChanges = (
+  baseline: UserDetailsFormValues,
+  draft: UserDetailsFormValues,
+) => {
+  return Object.keys(buildUserProfilePayload(baseline, draft)).length > 0;
+};
 
 export const addRoleToDraft = (
   baseRoles: UserRole[],

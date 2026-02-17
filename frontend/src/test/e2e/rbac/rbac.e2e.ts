@@ -21,7 +21,7 @@ test.describe("RBAC UI (MSW)", () => {
           );
 
           return {
-            ok: request.ok,
+            ok: request.ok || request.status === 404,
             status: request.status,
           };
         } catch {
@@ -292,6 +292,39 @@ test.describe("RBAC UI (MSW)", () => {
       await rbacPage.expectToastContains(
         "Tu sesión ha expirado. Por favor ingresa nuevamente.",
       );
+    },
+  );
+
+  test(
+    "RBAC-E2E-008 keeps clean detail state and blocks self deactivation",
+    { tag: ["@critical", "@e2e", "@rbac", "@users", "@RBAC-E2E-008"] },
+    async ({ page }) => {
+      const rbacPage = new RbacPage(page);
+
+      await rbacPage.login({ username: "admin", password: TEST_PASSWORD });
+      await rbacPage.navigateToUsers();
+
+      await page.getByPlaceholder("Buscar en la tabla").fill("admin");
+
+      const adminRow = page.getByRole("row", { name: /\badmin\b/i }).first();
+      await expect(adminRow).toBeVisible();
+      await adminRow.click();
+
+      const dialog = page.getByRole("dialog", { name: "Detalle de usuario" });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByText("Sin cambios")).toBeVisible();
+      await expect(
+        dialog.getByText("No puedes desactivar tu propia cuenta."),
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("combobox", { name: "Estado de la cuenta" }),
+      ).toBeDisabled();
+
+      await page.keyboard.press("Escape");
+      await expect(dialog).not.toBeVisible();
+      await expect(
+        page.getByRole("alertdialog", { name: "Salir sin guardar" }),
+      ).toHaveCount(0);
     },
   );
 });

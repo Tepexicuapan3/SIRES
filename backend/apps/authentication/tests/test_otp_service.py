@@ -45,6 +45,10 @@ class OtpServiceTests(TestCase):
 
         clear_code(email)
 
+    def test_increment_attempts_returns_none_when_code_missing(self):
+        data = increment_attempts("missing@example.com")
+        self.assertIsNone(data)
+
     def test_rate_limit_request(self):
         email = "rate-limit@example.com"
 

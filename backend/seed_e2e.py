@@ -9,10 +9,32 @@ DEFAULT_PASSWORD = "Sires_123456"
 
 PERMISSIONS = [
     ("admin:gestion:usuarios:read", "Admin - Ver usuarios y perfiles"),
+    ("admin:gestion:usuarios:create", "Admin - Crear usuarios"),
+    ("admin:gestion:usuarios:update", "Admin - Editar usuarios"),
+    ("admin:gestion:usuarios:delete", "Admin - Eliminar usuarios"),
     ("admin:gestion:expedientes:read", "Admin - Ver expedientes"),
     ("admin:gestion:roles:read", "Admin - Ver roles"),
+    ("admin:gestion:roles:create", "Admin - Crear roles"),
+    ("admin:gestion:roles:update", "Admin - Editar roles"),
+    ("admin:gestion:roles:delete", "Admin - Eliminar roles"),
+    ("admin:gestion:permisos:read", "Admin - Ver catalogo de permisos"),
     ("admin:catalogos:centros_atencion:read", "Admin - Ver centros de atencion"),
+    (
+        "admin:catalogos:centros_atencion:create",
+        "Admin - Crear centros de atencion",
+    ),
+    (
+        "admin:catalogos:centros_atencion:update",
+        "Admin - Editar centros de atencion",
+    ),
+    (
+        "admin:catalogos:centros_atencion:delete",
+        "Admin - Eliminar centros de atencion",
+    ),
     ("admin:catalogos:areas:read", "Admin - Ver areas"),
+    ("admin:catalogos:areas:create", "Admin - Crear areas"),
+    ("admin:catalogos:areas:update", "Admin - Editar areas"),
+    ("admin:catalogos:areas:delete", "Admin - Eliminar areas"),
     ("admin:reportes:read", "Admin - Ver reportes"),
     ("admin:estadisticas:read", "Admin - Ver estadisticas"),
     ("admin:autorizacion:recetas:read", "Admin - Autorizacion recetas"),
@@ -47,7 +69,12 @@ ROLE_DEFS = [
         "code": "ADMIN_USUARIOS",
         "desc": "Admin Usuarios",
         "landing": "/admin/usuarios",
-        "perms": ["admin:gestion:usuarios:read"],
+        "perms": [
+            "admin:gestion:usuarios:read",
+            "admin:gestion:usuarios:create",
+            "admin:gestion:usuarios:update",
+            "admin:gestion:usuarios:delete",
+        ],
     },
     {
         "code": "ADMIN_EXPEDIENTES",
@@ -59,7 +86,13 @@ ROLE_DEFS = [
         "code": "ADMIN_ROLES",
         "desc": "Admin Roles",
         "landing": "/admin/roles",
-        "perms": ["admin:gestion:roles:read"],
+        "perms": [
+            "admin:gestion:roles:read",
+            "admin:gestion:roles:create",
+            "admin:gestion:roles:update",
+            "admin:gestion:roles:delete",
+            "admin:gestion:permisos:read",
+        ],
     },
     {
         "code": "ADMIN_CATALOGOS",
@@ -67,7 +100,13 @@ ROLE_DEFS = [
         "landing": "/admin/catalogos",
         "perms": [
             "admin:catalogos:centros_atencion:read",
+            "admin:catalogos:centros_atencion:create",
+            "admin:catalogos:centros_atencion:update",
+            "admin:catalogos:centros_atencion:delete",
             "admin:catalogos:areas:read",
+            "admin:catalogos:areas:create",
+            "admin:catalogos:areas:update",
+            "admin:catalogos:areas:delete",
         ],
     },
     {
@@ -360,11 +399,11 @@ def _get_or_create_user(username, email, full_name, center, admin_user=None, **f
 @transaction.atomic
 def run():
     center, _ = CatCentroAtencion.objects.get_or_create(
-        folio="CA-001",
+        code="CA-001",
         defaults={
-            "nombre": "Centro de Atencion Local",
-            "direccion": "Av. Demo 123, CDMX",
-            "horario": {
+            "name": "Centro de Atencion Local",
+            "address": "Av. Demo 123, CDMX",
+            "schedule": {
                 "lunes": "08:00-16:00",
                 "martes": "08:00-16:00",
                 "miercoles": "08:00-16:00",
@@ -388,9 +427,9 @@ def run():
             codigo=code,
             defaults={
                 "descripcion": desc,
-                "est_activo": True,
                 "es_sistema": False,
-                "usr_alta": admin_user,
+                "is_active": True,
+                "created_by_id": admin_user.id_usuario,
             },
         )
         perms_map[code] = perm
@@ -404,8 +443,8 @@ def run():
                 "landing_route": role_def["landing"],
                 "is_admin": role_def.get("is_admin", False),
                 "es_sistema": False,
-                "est_activo": True,
-                "usr_alta": admin_user,
+                "is_active": True,
+                "created_by_id": admin_user.id_usuario,
             },
         )
 

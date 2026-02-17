@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                         db_column="id_centro_atencion",
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        to="catalogos.catcentroatencion",
+                        to="catalogos.CatCentroAtencion",
                     ),
                 ),
             ],
