@@ -35,7 +35,14 @@ SECRET_KEY = config(
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 #ALLOWED_HOSTS = []
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in config(
+        'ALLOWED_HOSTS',
+        default='localhost,127.0.0.1,0.0.0.0,backend,sires-backend,192.168.68.106',
+    ).split(',')
+    if host.strip()
+]
 
 
 
@@ -180,12 +187,30 @@ SIMPLE_JWT = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://localhost:5173'
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in config(
+        'CORS_ALLOWED_ORIGINS',
+        default='http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,http://192.168.68.106:5173',
+    ).split(',')
+    if origin.strip()
+]
+
+# Desarrollo en red local (LAN): permite origenes http://192.168.x.x:<puerto>
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$",
+]
 
 CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in config(
+        'CSRF_TRUSTED_ORIGINS',
+        default='http://localhost:5173,http://127.0.0.1:5173,http://192.168.68.106:5173',
+    ).split(',')
+    if origin.strip()
+]
 
 # Headers custom usados por el frontend (trazabilidad + CSRF custom)
 CORS_ALLOW_HEADERS = list(default_headers) + [

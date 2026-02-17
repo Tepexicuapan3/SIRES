@@ -101,6 +101,11 @@ export function setupErrorInterceptor(client: AxiosInstance): void {
 async function attemptTokenRefresh(
   originalRequest: InternalAxiosRequestConfig,
 ): Promise<boolean> {
+  const csrfToken = Cookies.get("csrf_token");
+  if (!csrfToken) {
+    return false;
+  }
+
   try {
     const response = await fetch(`${env.apiUrl}/auth/refresh`, {
       method: "POST",
@@ -110,9 +115,7 @@ async function attemptTokenRefresh(
         "X-Request-ID":
           (originalRequest.headers?.["X-Request-ID"] as string) ||
           createRequestId(),
-        ...(Cookies.get("csrf_token")
-          ? { "X-CSRF-TOKEN": Cookies.get("csrf_token") as string }
-          : {}),
+        "X-CSRF-TOKEN": csrfToken,
       },
     });
 

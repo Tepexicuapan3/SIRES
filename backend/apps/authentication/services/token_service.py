@@ -14,7 +14,9 @@ RESET_COOKIE = "reset_token"
 
 ACCESS_MAX_AGE = 60 * 15
 REFRESH_MAX_AGE = 60 * 60 * 24 * 7
-CSRF_MAX_AGE = 60 * 15
+# Debe vivir al menos lo mismo que el refresh token para permitir
+# renovaciones de sesion despues de inactividad.
+CSRF_MAX_AGE = REFRESH_MAX_AGE
 RESET_MAX_AGE = 60 * 10
 
 

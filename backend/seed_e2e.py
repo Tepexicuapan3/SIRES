@@ -402,6 +402,7 @@ def run():
         code="CA-001",
         defaults={
             "name": "Centro de Atencion Local",
+            "is_external": False,
             "address": "Av. Demo 123, CDMX",
             "schedule": {
                 "lunes": "08:00-16:00",
