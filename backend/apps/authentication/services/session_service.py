@@ -24,10 +24,11 @@ def authenticate_request(request):
         message = "Tu sesión ha expirado" if error_code == "TOKEN_EXPIRED" else "Token inválido"
         raise AuthServiceError(error_code, message, 401) from exc
 
-    user_id = str(payload.get(api_settings.USER_ID_CLAIM))
-    if not user_id:
+    user_id_claim = payload.get(api_settings.USER_ID_CLAIM)
+    if user_id_claim in (None, ""):
         # Si el claim esta ausente, el token es invalido.
         raise AuthServiceError("TOKEN_INVALID", "Token inválido", 401)
+    user_id = str(user_id_claim)
 
     user = UserRepository.get_by_id(user_id)
     if not user:

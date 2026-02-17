@@ -1,5 +1,7 @@
 from django.db import transaction
-from catalogos.models import CatRol
+
+from apps.catalogos.models import CatRol
+
 from ...services.audit_service import AuditService
 from ...constants.rbac_actions import RBACActions
 
@@ -12,8 +14,10 @@ class CreateRoleUseCase:
 
         role = CatRol.objects.create(
             rol=data["name"],
-            desc_rol=data.get("description"),
-            usr_alta=request.user,
+            desc_rol=data.get("description") or "",
+            landing_route=data.get("landingRoute"),
+            is_active=True,
+            created_by_id=getattr(request.user, "id_usuario", None),
         )
 
         AuditService.log_event(
