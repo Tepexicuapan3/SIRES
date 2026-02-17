@@ -88,6 +88,26 @@ class RbacRolesPermissionsApiTests(APITestCase):
         self.assertEqual(response.data["code"], "VALIDATION_ERROR")
         self.assertIn("details", response.data)
 
+    def test_roles_list_search_filters_and_sorting(self):
+        response = self.client.get(
+            "/api/v1/roles?search=MEDICO&isActive=true&isSystem=false&sortBy=name&sortOrder=desc"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(response.data["total"], 1)
+
+    def test_roles_list_invalid_is_system_returns_validation_error(self):
+        response = self.client.get("/api/v1/roles?isSystem=talvez")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
+    def test_roles_list_invalid_sort_order_returns_validation_error(self):
+        response = self.client.get("/api/v1/roles?sortOrder=up")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
     def test_roles_list_invalid_is_active_returns_validation_error(self):
         response = self.client.get("/api/v1/roles?isActive=maybe")
 
@@ -143,6 +163,17 @@ class RbacRolesPermissionsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(response.data["code"], "ROLE_EXISTS")
 
+    def test_create_role_validation_error_when_missing_fields(self):
+        response = self.client.post(
+            "/api/v1/roles",
+            {"name": "INCOMPLETO"},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
     def test_update_role_success(self):
         response = self.client.put(
             f"/api/v1/roles/{self.target_role.id_rol}",
@@ -160,6 +191,39 @@ class RbacRolesPermissionsApiTests(APITestCase):
         self.assertIn("role", response.data)
         self.assertEqual(response.data["role"]["name"], "MEDICO_EDITADO")
         self.assertFalse(response.data["role"]["isActive"])
+
+    def test_update_role_not_found_returns_404(self):
+        response = self.client.put(
+            "/api/v1/roles/999999",
+            {
+                "description": "No existe",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "ROLE_NOT_FOUND")
+
+    def test_update_role_duplicate_name_returns_conflict(self):
+        CatRol.objects.create(
+            rol="ROL_DUPLICADO",
+            desc_rol="Dup",
+            landing_route="/dup",
+            is_active=True,
+        )
+
+        response = self.client.put(
+            f"/api/v1/roles/{self.target_role.id_rol}",
+            {
+                "name": "ROL_DUPLICADO",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["code"], "ROLE_EXISTS")
 
     def test_update_system_role_is_blocked(self):
         response = self.client.put(
@@ -348,6 +412,20 @@ class RbacRolesPermissionsApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["code"], "PERMISSION_NOT_FOUND")
+
+    def test_assign_role_permissions_role_not_found(self):
+        response = self.client.post(
+            "/api/v1/permissions/assign",
+            {
+                "roleId": 999999,
+                "permissionIds": [self.perm_read.id_permiso],
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "ROLE_NOT_FOUND")
 
     def test_revoke_read_permission_with_dependency_returns_error(self):
         RelRolPermiso.objects.create(id_rol=self.target_role, id_permiso=self.perm_read)

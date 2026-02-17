@@ -1,10 +1,11 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth.hashers import make_password
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
 from django.utils import timezone
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import TokenBackendError, TokenError
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -95,6 +96,35 @@ class AuthCoreServicesTests(TestCase):
             decode_access_token(refresh)
         with self.assertRaises(TokenError):
             decode_reset_token(access)
+
+    @patch("apps.authentication.services.token_service.RefreshToken")
+    def test_validate_refresh_token_invalid_token_type_branch(self, refresh_cls_mock):
+        class FakeRefresh(dict):
+            def get(self, key, default=None):
+                return super().get(key, default)
+
+        refresh_cls_mock.return_value = FakeRefresh({api_settings.TOKEN_TYPE_CLAIM: "access"})
+
+        with self.assertRaises(TokenError):
+            validate_refresh_token("fake")
+
+    @patch("apps.authentication.services.token_service.AccessToken")
+    def test_decode_access_token_invalid_token_type_branch(self, access_cls_mock):
+        class FakeAccess(dict):
+            def get(self, key, default=None):
+                return super().get(key, default)
+
+        access_cls_mock.return_value = FakeAccess({api_settings.TOKEN_TYPE_CLAIM: "refresh"})
+
+        with self.assertRaises(TokenError):
+            decode_access_token("fake")
+
+    @patch("rest_framework_simplejwt.backends.TokenBackend.decode")
+    def test_decode_reset_token_backend_error_branch(self, decode_mock):
+        decode_mock.side_effect = TokenBackendError("broken")
+
+        with self.assertRaises(TokenError):
+            decode_reset_token("bad-reset-token")
 
     def test_cookie_helpers_set_and_clear_cookies(self):
         response = HttpResponse()

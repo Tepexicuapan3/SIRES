@@ -1,4 +1,5 @@
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.http import HttpResponse
@@ -6,6 +7,7 @@ from django.test import RequestFactory, SimpleTestCase, TestCase
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.administracion.constants.rbac_actions import RBACActions
@@ -19,6 +21,7 @@ from apps.administracion.services.rbac_resolver import RBACResolver
 from apps.administracion.use_cases.roles.create_role import CreateRoleUseCase
 from apps.administracion.use_cases.users.assign_roles import AssignRolesUseCase
 from apps.administracion.views.role_views import RoleCreateView
+from apps.administracion.views import rbac_views
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import CatPermiso, CatRol
 
@@ -308,3 +311,94 @@ class AuditServiceTests(TestCase):
         self.assertEqual(event.recurso_tipo, "role")
         self.assertEqual(event.recurso_id, 1)
         self.assertEqual(event.ip_origen, "10.0.0.5")
+
+
+class RbacViewHelpersTests(TestCase):
+    def test_parse_bool_helper(self):
+        self.assertTrue(rbac_views._parse_bool("true"))
+        self.assertFalse(rbac_views._parse_bool("false"))
+        self.assertEqual(rbac_views._parse_bool("x"), "invalid")
+        self.assertIsNone(rbac_views._parse_bool(None))
+
+    def test_parse_pagination_range_error(self):
+        raw_request = APIRequestFactory().get("/api/v1/roles?page=0&pageSize=101")
+        request = APIView().initialize_request(raw_request)
+
+        page, page_size, error = rbac_views._parse_pagination(request)
+
+        self.assertIsNone(page)
+        self.assertIsNone(page_size)
+        self.assertIsNotNone(error)
+        self.assertEqual(error.status_code, 400)
+        self.assertEqual(error.data["code"], "VALIDATION_ERROR")
+
+    def test_user_name_and_user_ref_helpers(self):
+        user = SyUsuario.objects.create(
+            usuario="helper_user",
+            correo="helper.user@example.com",
+            clave_hash="hash",
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        self.assertEqual(rbac_views._user_name(None), "")
+        self.assertEqual(rbac_views._user_name(user), "helper_user")
+
+        with patch("apps.administracion.views.rbac_views.UserRepository.get_by_id", return_value=None):
+            self.assertEqual(rbac_views._user_ref_by_id(10, fallback_system=True), {"id": 0, "name": "Sistema"})
+            self.assertIsNone(rbac_views._user_ref_by_id(10, fallback_system=False))
+
+    def test_split_permission_code_invalid(self):
+        resource, action = rbac_views._split_permission_code("invalid")
+        self.assertIsNone(resource)
+        self.assertIsNone(action)
+
+    def test_serialize_user_list_item_uses_first_role_when_no_primary(self):
+        user = SyUsuario.objects.create(
+            usuario="helper_user_roles",
+            correo="helper.user.roles@example.com",
+            clave_hash="hash",
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=user,
+            nombre="Helper",
+            paterno="Roles",
+            materno="",
+            nombre_completo="Helper Roles",
+        )
+        role = CatRol.objects.create(
+            rol="HELPER_ROLE_NO_PRIMARY",
+            desc_rol="Role helper",
+            landing_route="/helper",
+            is_active=True,
+        )
+        RelUsuarioRol.objects.create(id_usuario=user, id_rol=role, is_primary=False)
+
+        payload = rbac_views._serialize_user_list_item(user)
+
+        self.assertEqual(payload["primaryRole"], "HELPER_ROLE_NO_PRIMARY")
+
+    @patch("apps.administracion.views.rbac_views.authenticate_request")
+    def test_authorize_handles_auth_service_error(self, auth_mock):
+        auth_mock.side_effect = rbac_views.AuthServiceError("TOKEN_INVALID", "Token invalido", 401)
+        request = APIRequestFactory().get("/api/v1/roles")
+
+        user, error = rbac_views._authorize(request, "admin:gestion:roles:read")
+
+        self.assertIsNone(user)
+        self.assertIsNotNone(error)
+        self.assertEqual(error.status_code, 401)
+        self.assertEqual(error.data["code"], "TOKEN_INVALID")
+
+    @patch("apps.administracion.views.rbac_views.AuditoriaEvento.objects.create")
+    def test_audit_swallows_internal_errors(self, create_mock):
+        create_mock.side_effect = RuntimeError("db down")
+        request = APIRequestFactory().get("/api/v1/roles")
+        request.user = SimpleNamespace(is_authenticated=False)
+
+        result = rbac_views._audit(request, "RBAC_TEST", "role")
+
+        self.assertIsNone(result)

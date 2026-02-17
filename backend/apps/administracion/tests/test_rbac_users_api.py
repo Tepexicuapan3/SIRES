@@ -289,6 +289,17 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.data["user"]["firstName"], "TargetEdit")
         self.assertIsNone(response.data["user"]["clinic"])
 
+    def test_patch_user_sets_valid_clinic(self):
+        response = self.client.patch(
+            f"/api/v1/users/{self.target_user.id_usuario}",
+            {"clinicId": self.clinic.id},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user"]["clinic"]["id"], self.clinic.id)
+
     def test_patch_user_not_found(self):
         response = self.client.patch(
             "/api/v1/users/999999",
@@ -418,6 +429,28 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["code"], "VALIDATION_ERROR")
 
+    def test_assign_roles_user_not_found(self):
+        response = self.client.post(
+            "/api/v1/users/999999/roles",
+            {"roleIds": [self.role_recepcion.id_rol]},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "USER_NOT_FOUND")
+
+    def test_assign_roles_with_missing_role_ids_returns_not_found(self):
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/roles",
+            {"roleIds": [999999]},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "ROLE_NOT_FOUND")
+
     def test_assign_roles_reactivates_soft_deleted_relation(self):
         relation = RelUsuarioRol.objects.create(
             id_usuario=self.target_user,
@@ -503,6 +536,17 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["code"], "ROLE_NOT_FOUND")
 
+    def test_set_primary_role_user_not_found(self):
+        response = self.client.put(
+            "/api/v1/users/999999/roles/primary",
+            {"roleId": self.role_recepcion.id_rol},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "USER_NOT_FOUND")
+
     def test_revoke_role_not_found(self):
         response = self.client.delete(
             f"/api/v1/users/{self.target_user.id_usuario}/roles/999999",
@@ -511,6 +555,15 @@ class RbacUsersApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["code"], "ROLE_NOT_FOUND")
+
+    def test_revoke_role_user_not_found(self):
+        response = self.client.delete(
+            f"/api/v1/users/999999/roles/{self.role_medico.id_rol}",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "USER_NOT_FOUND")
 
     def test_override_upsert_and_remove(self):
         expires_at = (timezone.now() + timedelta(days=2)).isoformat()
@@ -557,6 +610,28 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["overrides"]), 1)
         self.assertEqual(response.data["overrides"][0]["effect"], "DENY")
+
+    def test_override_upsert_sets_assigned_by_when_missing(self):
+        override = RelUsuarioOverride.objects.create(
+            id_usuario=self.target_user,
+            id_permiso=self.override_permission,
+            efecto="ALLOW",
+            usr_asignacion=None,
+        )
+
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        override.refresh_from_db()
+        self.assertIsNotNone(override.usr_asignacion_id)
 
     def test_override_validation_errors(self):
         invalid_effect_response = self.client.post(

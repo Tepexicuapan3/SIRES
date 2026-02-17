@@ -186,6 +186,144 @@ class CatalogosContractTests(APITestCase):
         self.assertEqual(response.data["requestId"], "req-catalog-123")
         self.assertIn("details", response.data)
 
+    def test_care_centers_invalid_pagination_format_returns_invalid_format(self):
+        response = self.client.get("/api/v1/care-centers?page=uno&pageSize=diez")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "INVALID_FORMAT")
+
+    def test_care_centers_pagination_out_of_range_returns_validation_error(self):
+        response = self.client.get("/api/v1/care-centers?page=0&pageSize=101")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
+    def test_care_centers_invalid_sort_order_returns_validation_error(self):
+        response = self.client.get("/api/v1/care-centers?sortOrder=up")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
+    def test_care_centers_invalid_is_active_returns_validation_error(self):
+        response = self.client.get("/api/v1/care-centers?isActive=quizas")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
+    def test_care_centers_search_is_active_and_desc_sort(self):
+        CatCentroAtencion.objects.create(
+            name="Centro Inactivo",
+            code="CC-099",
+            is_external=False,
+            address="Calle Inactiva",
+            schedule={"sun": "10:00-12:00"},
+            is_active=False,
+            created_by_id=self.user.id_usuario,
+        )
+
+        response = self.client.get(
+            "/api/v1/care-centers?search=Centro&isActive=true&sortBy=name&sortOrder=desc"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(response.data["total"], 1)
+        self.assertTrue(all(item["isActive"] for item in response.data["items"]))
+
+    def test_create_care_center_validation_error(self):
+        response = self.client.post(
+            "/api/v1/care-centers",
+            {
+                "isExternal": True,
+                "address": "Sin nombre",
+                "schedule": {"fri": "09:00-14:00"},
+                "isActive": True,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
+    def test_care_center_detail_not_found(self):
+        response = self.client.get("/api/v1/care-centers/999999")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "CARE_CENTER_NOT_FOUND")
+
+    def test_update_care_center_not_found(self):
+        response = self.client.put(
+            "/api/v1/care-centers/999999",
+            {
+                "name": "No existe",
+                "code": "CC-404",
+                "isExternal": False,
+                "address": "N/A",
+                "schedule": {"mon": "07:00-15:00"},
+                "isActive": True,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "CARE_CENTER_NOT_FOUND")
+
+    def test_update_care_center_validation_error(self):
+        response = self.client.put(
+            f"/api/v1/care-centers/{self.center.id}",
+            {
+                "name": "Centro Contract",
+                "code": "CC-001",
+                "isExternal": "no-bool",
+                "address": "Av. Actualizada 555",
+                "schedule": {"mon": "07:00-15:00"},
+                "isActive": True,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
+    def test_update_care_center_duplicate_name_returns_conflict(self):
+        duplicated = CatCentroAtencion.objects.create(
+            name="Centro Duplicado",
+            code="CC-777",
+            is_external=False,
+            address="Calle Duplicada",
+            schedule={"sat": "08:00-13:00"},
+            is_active=True,
+            created_by_id=self.user.id_usuario,
+        )
+
+        response = self.client.put(
+            f"/api/v1/care-centers/{self.center.id}",
+            {
+                "name": duplicated.name,
+                "code": "CC-001",
+                "isExternal": False,
+                "address": "Av. Actualizada 555",
+                "schedule": {"mon": "07:00-15:00"},
+                "isActive": True,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["code"], "CARE_CENTER_EXISTS")
+
+    def test_delete_care_center_not_found(self):
+        response = self.client.delete(
+            "/api/v1/care-centers/999999",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "CARE_CENTER_NOT_FOUND")
+
     def test_areas_list_contract(self):
         response = self.client.get("/api/v1/areas")
 
