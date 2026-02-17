@@ -386,6 +386,18 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(activate_response.status_code, status.HTTP_200_OK)
         self.assertTrue(activate_response.data["isActive"])
 
+    def test_deactivate_own_user_returns_conflict(self):
+        response = self.client.patch(
+            f"/api/v1/users/{self.admin.id_usuario}/deactivate",
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["code"], "SELF_DEACTIVATION_NOT_ALLOWED")
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.est_activo)
+
     def test_activate_user_not_found(self):
         response = self.client.patch(
             "/api/v1/users/999999/activate",

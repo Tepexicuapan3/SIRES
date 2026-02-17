@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Download, Plus, RotateCcw, ShieldUser } from "lucide-react";
 import { usePermissions } from "@features/auth/queries/usePermissions";
+import { useAuthSession } from "@features/auth/queries/useAuthSession";
 import { useDebounce } from "@/hooks/useDebounce";
 import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
@@ -47,6 +48,7 @@ type UserStatusFilter =
 
 export function UsersPage() {
   const { hasPermission } = usePermissions();
+  const { data: authUser } = useAuthSession();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
@@ -89,12 +91,16 @@ export function UsersPage() {
 
   const { data: rolesData } = useRolesList({
     page: 1,
-    pageSize: 200,
+    pageSize: 100,
     isActive: true,
   });
-  const { data: clinicsData } = useCentrosAtencionList({
+  const {
+    data: clinicsData,
+    isLoading: isLoadingClinicsCatalog,
+    isFetching: isFetchingClinicsCatalog,
+  } = useCentrosAtencionList({
     page: 1,
-    pageSize: 200,
+    pageSize: 100,
     isActive: true,
   });
   const roleOptions = rolesData?.items ?? [];
@@ -317,7 +323,11 @@ export function UsersPage() {
         userSummary={selectedUser}
         roleOptions={roleOptions}
         clinicOptions={clinicOptions}
+        isClinicsCatalogLoading={
+          isLoadingClinicsCatalog || isFetchingClinicsCatalog
+        }
         canEdit={canUpdateUser}
+        currentUserId={authUser?.id ?? null}
         onClose={handleCloseDetails}
       />
       <UserCreateDialog

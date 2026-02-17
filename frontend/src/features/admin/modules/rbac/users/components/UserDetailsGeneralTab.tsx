@@ -23,11 +23,13 @@ interface UserDetailsGeneralTabProps {
   form: UseFormReturn<UserDetailsFormValues>;
   formId: string;
   clinicOptions: CentroAtencionListItem[];
+  isClinicsCatalogLoading?: boolean;
   userDetail: UserDetail;
   accountIsActive: boolean;
   onSubmit: (values: UserDetailsFormValues) => void;
   onAccountStatusChange: (nextActive: boolean) => void;
   isEditable?: boolean;
+  canChangeAccountStatus?: boolean;
 }
 
 const ACCOUNT_STATUS = {
@@ -37,19 +39,44 @@ const ACCOUNT_STATUS = {
 
 type AccountStatusValue = (typeof ACCOUNT_STATUS)[keyof typeof ACCOUNT_STATUS];
 
+interface ClinicSelectOption {
+  id: number;
+  name: string;
+}
+
 export function UserDetailsGeneralTab({
   form,
   formId,
   clinicOptions,
+  isClinicsCatalogLoading = false,
   userDetail,
   accountIsActive,
   onSubmit,
   onAccountStatusChange,
   isEditable = true,
+  canChangeAccountStatus = true,
 }: UserDetailsGeneralTabProps) {
   const accountStatusValue: AccountStatusValue = accountIsActive
     ? ACCOUNT_STATUS.ACTIVE
     : ACCOUNT_STATUS.INACTIVE;
+
+  const clinicSelectOptions: ClinicSelectOption[] = clinicOptions.map(
+    (clinic) => ({
+      id: clinic.id,
+      name: clinic.name,
+    }),
+  );
+  const currentClinic = userDetail.clinic;
+
+  if (
+    currentClinic &&
+    !clinicSelectOptions.some((clinic) => clinic.id === currentClinic.id)
+  ) {
+    clinicSelectOptions.unshift({
+      id: currentClinic.id,
+      name: currentClinic.name,
+    });
+  }
 
   return (
     <Form {...form}>
@@ -142,27 +169,62 @@ export function UserDetailsGeneralTab({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Centro de atencion</FormLabel>
-                <Select
-                  value={field.value ? field.value.toString() : "none"}
-                  onValueChange={(value) =>
-                    field.onChange(value === "none" ? null : Number(value))
-                  }
-                  disabled={!isEditable}
-                >
+                {isClinicsCatalogLoading ? (
                   <FormControl>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Selecciona un centro" />
-                    </SelectTrigger>
+                    <Input
+                      value={userDetail.clinic?.name ?? "Sin centro"}
+                      disabled
+                    />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">Sin centro</SelectItem>
-                    {clinicOptions.map((clinic) => (
-                      <SelectItem key={clinic.id} value={clinic.id.toString()}>
-                        {clinic.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                ) : (
+                  <Select
+                    value={
+                      field.value !== null && field.value !== undefined
+                        ? field.value.toString()
+                        : "none"
+                    }
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        field.onChange(null);
+                        return;
+                      }
+
+                      if (!value) {
+                        return;
+                      }
+
+                      const parsedValue = Number(value);
+                      if (Number.isNaN(parsedValue)) {
+                        return;
+                      }
+
+                      field.onChange(parsedValue);
+                    }}
+                    disabled={!isEditable}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Selecciona un centro" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Sin centro</SelectItem>
+                      {clinicSelectOptions.map((clinic) => (
+                        <SelectItem
+                          key={clinic.id}
+                          value={clinic.id.toString()}
+                        >
+                          {clinic.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {isClinicsCatalogLoading ? (
+                  <p className="text-xs text-txt-muted">
+                    Cargando catalogo de centros...
+                  </p>
+                ) : null}
                 <FormMessage />
               </FormItem>
             )}
@@ -179,7 +241,7 @@ export function UserDetailsGeneralTab({
               onValueChange={(value) =>
                 onAccountStatusChange(value === ACCOUNT_STATUS.ACTIVE)
               }
-              disabled={!isEditable}
+              disabled={!canChangeAccountStatus}
             >
               <FormControl>
                 <SelectTrigger
@@ -196,6 +258,11 @@ export function UserDetailsGeneralTab({
                 </SelectItem>
               </SelectContent>
             </Select>
+            {!canChangeAccountStatus && isEditable ? (
+              <p className="text-xs text-txt-muted">
+                No puedes desactivar tu propia cuenta.
+              </p>
+            ) : null}
           </div>
         </div>
       </form>

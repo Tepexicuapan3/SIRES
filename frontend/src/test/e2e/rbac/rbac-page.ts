@@ -58,7 +58,7 @@ export class RbacPage {
   async navigateToUsers() {
     await this.expandAdminPanel();
     await this.page
-      .getByRole("link", { name: /^Usuarios y Perfiles de Acceso/ })
+      .getByRole("link", { name: /^Usuarios(?: y Perfiles de Acceso)?/ })
       .click();
     await expect(
       this.page.getByRole("heading", { name: "Usuarios" }),

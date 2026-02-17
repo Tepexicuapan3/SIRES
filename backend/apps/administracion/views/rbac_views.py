@@ -1192,6 +1192,23 @@ class UserStatusView(APIView):
                 request_id=_request_id(request),
             )
 
+        if not self.activate and actor.id_usuario == user.id_usuario:
+            _audit(
+                request,
+                action,
+                "user",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="SELF_DEACTIVATION_NOT_ALLOWED",
+                target_user=user,
+            )
+            return error_response(
+                "SELF_DEACTIVATION_NOT_ALLOWED",
+                "No puedes desactivar tu propia cuenta",
+                status.HTTP_409_CONFLICT,
+                request_id=_request_id(request),
+            )
+
         user.est_activo = self.activate
         user.fch_modf = timezone.now()
         user.usr_modf = actor
