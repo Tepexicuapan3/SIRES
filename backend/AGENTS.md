@@ -55,6 +55,29 @@ Ojo: en `apps.authentication.services.token_service` las cookies se setean con `
 - Se registra auditoria via `apps.authentication.services.audit_service.log_event()`.
 - Los eventos se guardan en `apps.administracion.models.AuditoriaEvento`.
 
+## RBAC dependencias de permisos (v1)
+
+- La proyeccion de permisos efectivos y capacidades vive en:
+  - `backend/apps/authentication/services/permission_dependencies.py`
+- La sesion/auth user debe incluir estos campos (source of truth para frontend):
+  - `permissions`
+  - `effectivePermissions`
+  - `capabilities`
+  - `permissionDependenciesVersion` (actual: `"v1"`)
+- Entrada/salida clave:
+  - `build_permission_context(granted_permissions)` retorna el contexto completo.
+  - `project_effective_permissions(...)` filtra permisos no operables por dependencias.
+  - `resolve_capabilities(...)` evalua capacidades de negocio (allOf/anyOf).
+- Dependencias soportadas:
+  - implicitas: acciones de escritura (`create|update|delete|manage|assign|revoke`) requieren su `:read`.
+  - explicitas: reglas de negocio entre modulos (ej. usuarios update depende de catalogos de roles/permisos).
+- Cuando agregues permisos nuevos de admin:
+  1) actualiza `EXPLICIT_PERMISSION_DEPENDENCIES` si aplica;
+  2) agrega/ajusta `CAPABILITY_REQUIREMENTS`;
+  3) actualiza tests en `test_permission_dependencies_service.py` y `test_auth_permissions.py`.
+- Compatibilidad:
+  - si cambias semantica del contexto, incrementa `permissionDependenciesVersion`.
+
 ## Como agregar un endpoint nuevo
 
 1) Serializer (input/output)

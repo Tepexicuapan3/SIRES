@@ -60,6 +60,20 @@ Use these skills for detailed patterns:
 - If a new permission is introduced, update dependency rules and add/update unit tests in `frontend/src/test/unit/auth/permission-dependencies.test.ts`.
 - Use `dependencyAware` mode in guards/gates when the UX must enforce full capability (not only raw permission presence).
 
+### Capability-first Authorization (required for admin)
+- Prefer `hasCapability("...")` for action gating in pages/dialogs and for route guards.
+- Use `hasPermission("...")` only for basic visibility where dependency closure is not required.
+- Backend projection is the primary source (`capabilities`, `effectivePermissions`, `permissionDependenciesVersion`).
+- `usePermissionDependencies()` must keep fallback behavior when backend projection is missing:
+  - evaluate local dependency rules;
+  - never crash on partial mocks (`capabilities` can be undefined in tests).
+- Query policy for protected catalogs:
+  - pass `enabled: false` when the required read capability is not granted.
+- UX policy when catalog permission is missing:
+  - show neutral contextual notice;
+  - keep existing assigned data visible if available;
+  - disable only dependent controls.
+
 ---
 
 ## Decision Trees

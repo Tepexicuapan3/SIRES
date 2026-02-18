@@ -63,6 +63,23 @@ SIRES is a clinical system. The frontend is React 19 + Vite and the backend has 
 - Keep clean architecture: presentation (DRF views/serializers), use_cases (orchestration), infrastructure (DB, mail, cache), domain (entities and rules).
 - JWT in HttpOnly cookies and CSRF via `X-CSRF-TOKEN` header.
 
+## RBAC permission dependencies (v1)
+
+- SIRES now uses a dependency-aware RBAC model for admin features.
+- Backend is the source of truth for dependency projection:
+  - `backend/apps/authentication/services/permission_dependencies.py`
+  - `backend/apps/authentication/repositories/user_repository.py`
+- Frontend consumes the projected auth context and applies capability-first checks.
+- Auth payload fields used by UI:
+  - `permissions`
+  - `effectivePermissions`
+  - `capabilities`
+  - `permissionDependenciesVersion` (`"v1"`)
+- Rule of thumb for new modules:
+  - prefer capability checks for page actions and route guards;
+  - keep raw permission checks only for very simple visibility rules;
+  - avoid ad-hoc cross-permission checks in components.
+
 ## Development commands
 
 ### Frontend (Bun)
