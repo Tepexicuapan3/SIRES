@@ -1,0 +1,239 @@
+from django.contrib.auth.hashers import make_password
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from apps.administracion.models import RelUsuarioRol
+from apps.authentication.models import DetUsuario, SyUsuario
+from apps.catalogos.models import CatRol
+from apps.recepcion.models import Visit
+
+
+class VitalsContractsApiTests(APITestCase):
+    def setUp(self):
+        self.request_id = "22222222-2222-2222-2222-222222222222"
+        self.somato_password = "Somato_123456"
+        self.recepcion_password = "Recep_123456"
+
+        self._create_user_with_role(
+            username="somato_user",
+            email="somato@example.com",
+            password=self.somato_password,
+            role_code="SOMATOMETRIA",
+        )
+        self._create_user_with_role(
+            username="recepcion_user",
+            email="recepcion2@example.com",
+            password=self.recepcion_password,
+            role_code="RECEPCION",
+        )
+
+        self.visit_in_somato = Visit.objects.create(
+            patient_id=9001,
+            has_appointment=True,
+            status="en_somatometria",
+        )
+        self.visit_in_wait = Visit.objects.create(
+            patient_id=9002,
+            has_appointment=False,
+            status="en_espera",
+        )
+
+    def _create_user_with_role(self, username, email, password, role_code):
+        user = SyUsuario.objects.create(
+            usuario=username,
+            correo=email,
+            clave_hash=make_password(password),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=user,
+            nombre=username,
+            paterno="Test",
+            materno="User",
+            nombre_completo=f"{username} Test User",
+        )
+        role, _ = CatRol.objects.get_or_create(
+            rol=role_code,
+            defaults={
+                "desc_rol": f"Rol {role_code}",
+                "landing_route": "/clinico/somatometria",
+            },
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=user,
+            id_rol=role,
+            is_primary=True,
+        )
+
+    def _login_as(self, username, password):
+        self.client.cookies.clear()
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": username, "password": password},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.client.cookies = response.cookies
+
+    def _valid_payload(self):
+        return {
+            "weightKg": 70,
+            "heightCm": 175,
+            "temperatureC": 36.6,
+            "oxygenSaturationPct": 98,
+        }
+
+    def test_capture_vitals_happy_path_contract(self):
+        self._login_as("somato_user", self.somato_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["visitId"], self.visit_in_somato.id_visit)
+        self.assertEqual(response.data["status"], "lista_para_doctor")
+        self.assertIn("vitals", response.data)
+        self.assertAlmostEqual(response.data["vitals"]["bmi"], 22.86, places=2)
+
+        self.visit_in_somato.refresh_from_db()
+        self.assertEqual(self.visit_in_somato.status, "lista_para_doctor")
+
+    def test_capture_vitals_missing_required_field_returns_validation_error(self):
+        self._login_as("somato_user", self.somato_password)
+
+        payload = self._valid_payload()
+        payload.pop("weightKg")
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            payload,
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+        self.assertEqual(response.data["status"], 422)
+        self.assertEqual(response.data["requestId"], self.request_id)
+        self.assertIn("details", response.data)
+        self.assertIn("weightKg", response.data["details"])
+
+    def test_capture_vitals_out_of_range_returns_validation_error(self):
+        self._login_as("somato_user", self.somato_password)
+
+        payload = self._valid_payload()
+        payload["temperatureC"] = 50
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            payload,
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+        self.assertEqual(response.data["status"], 422)
+        self.assertEqual(response.data["requestId"], self.request_id)
+        self.assertIn("details", response.data)
+        self.assertIn("temperatureC", response.data["details"])
+
+    def test_capture_vitals_incomplete_minimum_data_returns_vitals_incomplete(self):
+        self._login_as("somato_user", self.somato_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            {
+                "weightKg": 70,
+                "heightCm": 175,
+                "oxygenSaturationPct": 98,
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VITALS_INCOMPLETE")
+        self.assertEqual(response.data["status"], 422)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+        self.visit_in_somato.refresh_from_db()
+        self.assertEqual(self.visit_in_somato.status, "en_somatometria")
+
+    def test_capture_vitals_invalid_state_returns_visit_state_invalid(self):
+        self._login_as("somato_user", self.somato_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_wait.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["code"], "VISIT_STATE_INVALID")
+        self.assertEqual(response.data["status"], 409)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_capture_vitals_role_not_allowed(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "ROLE_NOT_ALLOWED")
+        self.assertEqual(response.data["status"], 403)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_capture_vitals_visit_not_found(self):
+        self._login_as("somato_user", self.somato_password)
+
+        response = self.client.post(
+            "/api/v1/visits/999999/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "VISIT_NOT_FOUND")
+        self.assertEqual(response.data["status"], 404)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_capture_vitals_accepts_optional_fields(self):
+        self._login_as("somato_user", self.somato_password)
+
+        payload = self._valid_payload()
+        payload.update(
+            {
+                "heartRateBpm": 80,
+                "respiratoryRateBpm": 16,
+                "bloodPressureSystolic": 118,
+                "bloodPressureDiastolic": 76,
+                "notes": "Paciente cooperador durante la toma.",
+            }
+        )
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            payload,
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "lista_para_doctor")
+        self.assertEqual(response.data["vitals"]["heartRateBpm"], 80)
+        self.assertEqual(response.data["vitals"]["respiratoryRateBpm"], 16)
+        self.assertEqual(response.data["vitals"]["bloodPressureSystolic"], 118)
+        self.assertEqual(response.data["vitals"]["bloodPressureDiastolic"], 76)

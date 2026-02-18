@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class RecepcionConfig(AppConfig):
+class SomatometriaConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.recepcion"
+    name = "apps.somatometria"
