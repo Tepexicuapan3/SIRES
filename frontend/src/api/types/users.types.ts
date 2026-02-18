@@ -146,14 +146,12 @@ export interface UpdateUserRequest {
 // =============================================================================
 
 /**
- * Response al crear un usuario (incluye contraseña temporal).
+ * Response al crear un usuario.
  * POST /api/v1/users
  */
 export interface CreateUserResponse {
   id: number;
   username: string;
-  /** Contraseña temporal generada (mostrar solo una vez) */
-  temporaryPassword: string;
 }
 
 /**

@@ -1,3 +1,5 @@
+import secrets
+import string
 import uuid
 from datetime import datetime, time, timezone as dt_timezone
 
@@ -19,10 +21,16 @@ from apps.administracion.models import (
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.csrf_service import validate_csrf
+from apps.authentication.services.email_service import send_user_credentials_email
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
 from apps.catalogos.models import CatCentroAtencion, CatPermiso, CatRol
+
+
+TEMP_PASSWORD_LENGTH = 12
+TEMP_PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{}"
+TEMP_PASSWORD_ALPHABET = string.ascii_letters + string.digits + TEMP_PASSWORD_SYMBOLS
 
 
 def _request_id(request):
@@ -55,6 +63,21 @@ def _parse_expires_at_end_of_day(raw_value):
 
     localized = timezone.localtime(base, tz)
     return localized.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+
+def _generate_temporary_password(length=TEMP_PASSWORD_LENGTH):
+    effective_length = max(length, 12)
+    while True:
+        candidate = "".join(secrets.choice(TEMP_PASSWORD_ALPHABET) for _ in range(effective_length))
+        if not any(char.islower() for char in candidate):
+            continue
+        if not any(char.isupper() for char in candidate):
+            continue
+        if not any(char.isdigit() for char in candidate):
+            continue
+        if not any(char in TEMP_PASSWORD_SYMBOLS for char in candidate):
+            continue
+        return candidate
 
 
 def _parse_bool(raw_value):
@@ -1013,7 +1036,7 @@ class UsersListCreateView(APIView):
                     request_id=_request_id(request),
                 )
 
-        temporary_password = "Sires_123456"
+        temporary_password = _generate_temporary_password()
         user = SyUsuario.objects.create(
             usuario=username,
             correo=email,
@@ -1048,10 +1071,32 @@ class UsersListCreateView(APIView):
             usr_asignacion=actor,
         )
 
+        if not send_user_credentials_email(
+            recipient_email=user.correo,
+            username=user.usuario,
+            temporary_password=temporary_password,
+            user_name=full_name or user.usuario,
+        ):
+            transaction.set_rollback(True)
+            _audit(
+                request,
+                "RBAC_USER_CREATE",
+                "user",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="EMAIL_DELIVERY_FAILED",
+                target_user=user,
+            )
+            return error_response(
+                "EMAIL_DELIVERY_FAILED",
+                "No se pudo enviar el correo de credenciales. El usuario no fue creado.",
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                request_id=_request_id(request),
+            )
+
         payload = {
             "id": user.id_usuario,
             "username": user.usuario,
-            "temporaryPassword": temporary_password,
         }
         _audit(
             request,

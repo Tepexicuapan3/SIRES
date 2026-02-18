@@ -126,12 +126,11 @@ describe("UserCreateDialog UI", () => {
     ).toBeVisible();
   });
 
-  it("submits and displays generated credentials", async () => {
+  it("submits and closes dialog on success", async () => {
     const user = userEvent.setup();
     mutateAsync.mockResolvedValue({
       id: 45,
       username: "jperez",
-      temporaryPassword: "TempPassword123!",
     });
 
     render(

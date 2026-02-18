@@ -507,7 +507,6 @@ export const usersHandlers = [
       {
         id: newUser.id,
         username: newUser.username,
-        temporaryPassword: "TempPassword123!",
       },
       { status: 201 },
     );

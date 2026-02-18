@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
@@ -165,7 +166,10 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["code"], "INVALID_FORMAT")
 
-    def test_create_user_success_contract(self):
+    @patch("apps.administracion.views.rbac_views.send_user_credentials_email")
+    def test_create_user_success_contract(self, send_email_mock):
+        send_email_mock.return_value = True
+
         response = self.client.post(
             "/api/v1/users",
             {
@@ -184,11 +188,41 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("id", response.data)
         self.assertEqual(response.data["username"], "new_user")
-        self.assertIn("temporaryPassword", response.data)
+        self.assertNotIn("temporaryPassword", response.data)
+        send_email_mock.assert_called_once()
+        credentials_password = send_email_mock.call_args.kwargs["temporary_password"]
+        self.assertEqual(len(credentials_password), 12)
+        self.assertRegex(credentials_password, r"[a-z]")
+        self.assertRegex(credentials_password, r"[A-Z]")
+        self.assertRegex(credentials_password, r"[0-9]")
+        self.assertRegex(credentials_password, r"[!@#$%^&*()\-_=+\[\]{}]")
 
         created_user = SyUsuario.objects.get(id_usuario=response.data["id"])
         self.assertTrue(created_user.cambiar_clave)
         self.assertFalse(created_user.terminos_acept)
+
+    @patch("apps.administracion.views.rbac_views.send_user_credentials_email")
+    def test_create_user_email_failure_rolls_back_creation(self, send_email_mock):
+        send_email_mock.return_value = False
+
+        response = self.client.post(
+            "/api/v1/users",
+            {
+                "username": "new_user_email_fail",
+                "firstName": "Nuevo",
+                "paternalName": "Error",
+                "maternalName": "Correo",
+                "email": "new.user.email.fail@example.com",
+                "clinicId": self.clinic.id,
+                "primaryRoleId": self.role_recepcion.id_rol,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["code"], "EMAIL_DELIVERY_FAILED")
+        self.assertFalse(SyUsuario.objects.filter(usuario="new_user_email_fail").exists())
 
     def test_create_user_duplicate_returns_conflict(self):
         response = self.client.post(

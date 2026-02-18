@@ -28,7 +28,7 @@ describe("Admin RBAC Users API (with MSW)", () => {
     });
 
     expect(created.id).toBeGreaterThan(0);
-    expect(created.temporaryPassword).toBeTruthy();
+    expect(created.username).toBe("rbac_api_user");
 
     const updated = await usersAPI.update(created.id, {
       email: "rbac.api.user.updated@metro.cdmx.gob.mx",

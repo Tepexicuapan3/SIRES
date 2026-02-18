@@ -91,13 +91,6 @@ export function UserCreateDialog({
         },
       });
 
-      if (import.meta.env.DEV) {
-        console.info("[DEV][RBAC] Credenciales temporales de nuevo usuario", {
-          username: result.username,
-          temporaryPassword: result.temporaryPassword,
-        });
-      }
-
       toast.success("Usuario creado", {
         description: `El usuario ${result.username} se creo correctamente.`,
       });
