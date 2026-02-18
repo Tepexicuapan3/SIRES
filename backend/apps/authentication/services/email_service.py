@@ -11,22 +11,28 @@ logger = logging.getLogger(__name__)
 
 
 def send_reset_code_email(recipient_email, code, user_name=None):
-    # Envia el codigo OTP por correo.
+    # Envía el código OTP por correo.
     if not _smtp_is_configured():
         logger.warning("SMTP no configurado para enviar OTP")
         return True
 
-    subject = "Codigo de recuperacion"
+    subject = "Código de recuperación"
     safe_name = user_name or recipient_email
     expiration_minutes = max(1, int(OTP_TTL_SECONDS / 60))
-    message = (
-        f"Hola {safe_name}, recibimos una solicitud para restablecer la contrasena de tu cuenta.\n\n"
-        "Tu codigo de verificacion es: "
-        f"{code}\n"
-        f"Valido por {expiration_minutes} minutos.\n\n"
-        "Si no solicitaste este codigo, puedes ignorar este correo de manera segura."
+    support_email = getattr(
+        settings,
+        "SIRES_SUPPORT_EMAIL",
+        settings.DEFAULT_FROM_EMAIL or "soporte@sires.local",
     )
-    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "Acme Corp")
+    message = (
+        f"Hola {safe_name}, recibimos una solicitud para restablecer la contraseña de tu cuenta.\n\n"
+        "Tu código de verificación es: "
+        f"{code}\n"
+        f"Válido por {expiration_minutes} minutos.\n\n"
+        "Si no solicitaste este código, puedes ignorar este correo con tranquilidad.\n"
+        f"Soporte: {support_email}"
+    )
+    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "SIRES STC Metro")
     logo_url = getattr(
         settings,
         "EMAIL_LOGO_URL",
@@ -47,6 +53,7 @@ def send_reset_code_email(recipient_email, code, user_name=None):
             "expiration_minutes": expiration_minutes,
             "logo_url": logo_url,
             "metro_logo_url": metro_logo_url,
+            "support_email": support_email,
         },
     )
     try:
@@ -79,7 +86,7 @@ def send_user_credentials_email(recipient_email, username, temporary_password, u
         "SIRES_SUPPORT_EMAIL",
         settings.DEFAULT_FROM_EMAIL or "soporte@sires.local",
     )
-    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "Acme Corp")
+    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "SIRES STC Metro")
     logo_url = getattr(
         settings,
         "EMAIL_LOGO_URL",
@@ -94,15 +101,15 @@ def send_user_credentials_email(recipient_email, username, temporary_password, u
     message = (
         f"Hola {safe_name}, tu cuenta de SIRES fue creada.\n\n"
         f"Usuario: {username}\n"
-        f"Contrasena temporal: {temporary_password}\n\n"
+        f"Contraseña temporal: {temporary_password}\n\n"
         "Pasos para acceder:\n"
         f"1. Ingresa a {login_url}\n"
-        "2. Inicia sesion con las credenciales temporales.\n"
-        "3. Cambia tu contrasena en el primer acceso.\n\n"
+        "2. Inicia sesión con las credenciales temporales.\n"
+        "3. Cambia tu contraseña en el primer acceso.\n\n"
         "Recomendaciones de seguridad:\n"
         "- No compartas estas credenciales.\n"
-        "- Usa una contrasena unica al cambiarla.\n"
-        "- Si no reconoces este alta, reportalo de inmediato.\n"
+        "- Usa una contraseña única al cambiarla.\n"
+        "- Si no reconoces esta alta, repórtala de inmediato.\n"
         f"- Soporte: {support_email}\n"
     )
     html_message = render_to_string(
