@@ -16,13 +16,44 @@ def ensure_recepcion_role(roles):
         )
 
 
-def create_visit(patient_id, has_appointment):
-    visit = VisitRepository.create(patient_id, has_appointment)
+def create_visit(
+    patient_id,
+    arrival_type,
+    appointment_id=None,
+    doctor_id=None,
+    notes=None,
+):
+    if VisitRepository.exists_open_visit_for_patient(patient_id):
+        raise VisitDomainError(
+            "VISIT_DUPLICATE_SUBMIT",
+            "Ya existe una visita abierta para este paciente.",
+            409,
+        )
+
+    visit = VisitRepository.create(
+        patient_id=patient_id,
+        arrival_type=arrival_type,
+        appointment_id=appointment_id,
+        doctor_id=doctor_id,
+        notes=notes,
+    )
     return VisitRepository.to_contract(visit)
 
 
-def list_visits(page, page_size):
-    visits, total, total_pages = VisitRepository.list_paginated(page, page_size)
+def list_visits(
+    page,
+    page_size,
+    status_filter=None,
+    date_filter=None,
+    doctor_id=None,
+):
+    visits, total, total_pages = VisitRepository.list_paginated(
+        page=page,
+        page_size=page_size,
+        status_filter=status_filter,
+        date_filter=date_filter,
+        doctor_id=doctor_id,
+    )
     return {
         "items": [VisitRepository.to_contract(visit) for visit in visits],
         "page": page,
