@@ -201,6 +201,8 @@ CORS_ALLOWED_ORIGINS = [
 # Desarrollo en red local (LAN): permite origenes http://192.168.x.x:<puerto>
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$",
+    r"^http://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$",
+    r"^http://172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$",
 ]
 
 CORS_ALLOW_CREDENTIALS = True

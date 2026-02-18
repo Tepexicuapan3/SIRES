@@ -1,9 +1,15 @@
+x-proxy-build-args: &proxy-build-args
+  HTTP_PROXY: ${HTTP_PROXY-}
+  HTTPS_PROXY: ${HTTPS_PROXY-}
+  NO_PROXY: ${NO_PROXY-localhost,127.0.0.1,backend,redis,10.15.15.76,host.docker.internal}
+
 services:
   # === FRONTEND (React + Bun) ===
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args: *proxy-build-args
     container_name: sires-frontend
     ports:
       - "${FRONTEND_PORT-5173}:5173"
@@ -13,12 +19,13 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_URL=/api/v1
-      - VITE_DEV_PROXY_TARGET=http://backend:${BACKEND_PORT-5000}
+      - VITE_DEV_PROXY_TARGET=${VITE_DEV_PROXY_TARGET-http://backend:5000}
       - SIRES_HOST=${SIRES_HOST-localhost}
-    command: sh -lc "bun install && bun run dev -- --host 0.0.0.0 --port 5173"
+    command: sh -lc "bun install && unset http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY && bun run dev -- --host 0.0.0.0 --port 5173"
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     networks:
       - sires-network
 
@@ -27,13 +34,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args: *proxy-build-args
     container_name: sires-backend
     ports:
       - "${BACKEND_PORT-5000}:5000"
     volumes:
       - ./backend:/app
     # Evita que el autoreloader deje el container "up" pero sin responder
-    command: sh -lc "python -c \"import os,time,MySQLdb; host=os.getenv('DB_HOST','10.15.15.76'); port=int(os.getenv('DB_PORT','3306')); user=os.getenv('DB_USER','mysql'); password=os.getenv('DB_PASSWORD','mysql'); db=os.getenv('DB_NAME','sires'); code='''for _ in range(60):\\n    try:\\n        conn=MySQLdb.connect(host=host,user=user,passwd=password,db=db,port=port); conn.close(); break\\n    except Exception:\\n        time.sleep(2)\\nelse:\\n    raise SystemExit('DB not ready')\\n'''; exec(code)\" && python manage.py migrate && python manage.py shell -c \"import seed_e2e; seed_e2e.run()\" && python manage.py runserver 0.0.0.0:5000 --noreload"
+    command: sh -lc "unset http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY && python -c \"import os,time,MySQLdb; host=os.getenv('DB_HOST','10.15.15.76'); port=int(os.getenv('DB_PORT','3306')); user=os.getenv('DB_USER','mysql'); password=os.getenv('DB_PASSWORD','mysql'); db=os.getenv('DB_NAME','sires'); code='''for _ in range(60):\\n    try:\\n        conn=MySQLdb.connect(host=host,user=user,passwd=password,db=db,port=port); conn.close(); break\\n    except Exception:\\n        time.sleep(2)\\nelse:\\n    raise SystemExit('DB not ready')\\n'''; exec(code)\" && python manage.py migrate && python manage.py shell -c \"import seed_e2e; seed_e2e.run()\" && python manage.py runserver 0.0.0.0:5000 --noreload"
     restart: unless-stopped
     environment:
       TZ: "America/Mexico_City"
