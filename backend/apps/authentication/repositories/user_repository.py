@@ -4,6 +4,9 @@ from django.utils import timezone
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import SyUsuario
+from apps.authentication.services.permission_dependencies import (
+    build_permission_context,
+)
 from apps.catalogos.models import CatPermiso, CatRol
 
 
@@ -92,6 +95,7 @@ class UserRepository:
         profile = getattr(user, "detalle", None)
         roles, primary_role, landing_route, is_admin = _get_roles(user)
         permissions = _get_permissions(user, roles, is_admin)
+        permission_context = build_permission_context(permissions)
 
         full_name = ""
         if profile and profile.nombre_completo:
@@ -118,6 +122,11 @@ class UserRepository:
             "landingRoute": landing_route,
             "roles": roles,
             "permissions": permissions,
+            "effectivePermissions": permission_context["effectivePermissions"],
+            "capabilities": permission_context["capabilities"],
+            "permissionDependenciesVersion": permission_context[
+                "permissionDependenciesVersion"
+            ],
             "mustChangePassword": user.cambiar_clave,
             "requiresOnboarding": user.cambiar_clave or not user.terminos_acept,
         }

@@ -41,6 +41,9 @@ class AuthPermissionsTests(TestCase):
         auth_user = UserRepository.build_auth_user(self.user)
 
         self.assertEqual(auth_user["permissions"], ["*"])
+        self.assertEqual(auth_user["effectivePermissions"], ["*"])
+        self.assertEqual(auth_user["permissionDependenciesVersion"], "v1")
+        self.assertTrue(auth_user["capabilities"]["admin.users.editFull"]["granted"])
         self.assertEqual(auth_user["roles"], ["ADMIN"])
         self.assertEqual(auth_user["primaryRole"], "ADMIN")
 
@@ -75,6 +78,8 @@ class AuthPermissionsTests(TestCase):
         self.assertNotIn("*", auth_user["permissions"])
         self.assertNotIn(denied_permission.codigo, auth_user["permissions"])
         self.assertIn(allowed_permission.codigo, auth_user["permissions"])
+        self.assertNotIn(denied_permission.codigo, auth_user["effectivePermissions"])
+        self.assertFalse(auth_user["capabilities"]["admin.users.update"]["granted"])
 
     def test_permissions_overrides(self):
         role = CatRol.objects.create(
