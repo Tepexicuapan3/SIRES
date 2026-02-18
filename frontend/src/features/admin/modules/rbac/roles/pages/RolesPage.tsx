@@ -27,7 +27,7 @@ import { RoleCreateDialog } from "@features/admin/modules/rbac/roles/components/
 import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import type { RoleListItem } from "@api/types";
-import { usePermissions } from "@features/auth/queries/usePermissions";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useDebounce } from "@/hooks/useDebounce";
 
 const ROLE_STATUS_FILTER = {
@@ -48,7 +48,7 @@ const ROLE_TYPE_FILTER = {
 type RoleTypeFilter = (typeof ROLE_TYPE_FILTER)[keyof typeof ROLE_TYPE_FILTER];
 
 export function RolesPage() {
-  const { hasPermission } = usePermissions();
+  const { hasCapability } = usePermissionDependencies();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
@@ -96,12 +96,33 @@ export function RolesPage() {
   });
   const rows = data?.items ?? [];
 
-  const canUpdateRole = hasPermission("admin:gestion:roles:update");
-  const canDeleteRole = hasPermission("admin:gestion:roles:delete");
-  const canReadRole = hasPermission("admin:gestion:roles:read");
+  const canCreateRole = hasCapability("admin.roles.create", {
+    allOf: ["admin:gestion:roles:create"],
+  });
+  const canUpdateRole = hasCapability("admin.roles.update", {
+    allOf: ["admin:gestion:roles:update"],
+  });
+  const canDeleteRole = hasCapability("admin.roles.delete", {
+    allOf: ["admin:gestion:roles:delete"],
+  });
+  const canReadRole = hasCapability("admin.roles.read", {
+    allOf: ["admin:gestion:roles:read"],
+  });
+  const canReadPermissionsCatalog = hasCapability(
+    "admin.roles.permissionsCatalog.read",
+    {
+      allOf: ["admin:gestion:permisos:read"],
+    },
+  );
   const canOpenDetails = canReadRole || canUpdateRole;
   const showActions = canOpenDetails || canDeleteRole;
-  const canEditDialog = canUpdateRole;
+  const canEditDialog = hasCapability("admin.roles.editFull", {
+    allOf: [
+      "admin:gestion:roles:read",
+      "admin:gestion:roles:update",
+      "admin:gestion:permisos:read",
+    ],
+  });
 
   const handleDeleteRole = async () => {
     if (!roleToDelete) return;
@@ -255,12 +276,15 @@ export function RolesPage() {
               onVisibilityChange={setColumnVisibility}
             />
             <TableOptionsMenu options={tableOptions} />
-            <TablePrimaryAction
-              permission="admin:gestion:roles:create"
-              label="Nuevo"
-              icon={<Plus className="size-4" />}
-              onClick={() => setCreateOpen(true)}
-            />
+            {canCreateRole ? (
+              <TablePrimaryAction
+                permission="admin:gestion:roles:create"
+                dependencyAware
+                label="Nuevo"
+                icon={<Plus className="size-4" />}
+                onClick={() => setCreateOpen(true)}
+              />
+            ) : null}
           </>
         }
       />
@@ -298,6 +322,7 @@ export function RolesPage() {
         onOpenChange={setDetailsOpen}
         roleSummary={selectedRole}
         canEdit={canEditDialog}
+        canReadPermissionsCatalog={canReadPermissionsCatalog}
         onClose={handleCloseDetails}
       />
       <RoleCreateDialog open={createOpen} onOpenChange={setCreateOpen} />

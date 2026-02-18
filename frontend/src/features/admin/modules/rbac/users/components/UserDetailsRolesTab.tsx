@@ -20,6 +20,7 @@ interface UserDetailsRolesTabProps {
   roleOptions: RoleListItem[];
   isEditable?: boolean;
   readOnlyMessage?: string;
+  catalogAccessMessage?: string | null;
   isSaving?: boolean;
   onAddRole: (roleId: number) => void;
   onSetPrimaryRole: (roleId: number) => void;
@@ -31,6 +32,7 @@ export function UserDetailsRolesTab({
   roleOptions,
   isEditable = true,
   readOnlyMessage = "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
+  catalogAccessMessage = null,
   isSaving = false,
   onAddRole,
   onSetPrimaryRole,
@@ -46,6 +48,7 @@ export function UserDetailsRolesTab({
   const secondaryRoles = roles.filter((role) => !role.isPrimary);
   const rolesCount = roles.length;
   const isBusy = isSaving;
+  const showCatalogAccessNotice = Boolean(catalogAccessMessage) && isEditable;
 
   const primaryAssignedAtLabel = formatDateTime(
     primaryRole?.assignedAt ?? null,
@@ -65,6 +68,9 @@ export function UserDetailsRolesTab({
   return (
     <div className="space-y-6 pb-4">
       {!isEditable ? <AdminReadOnlyNotice message={readOnlyMessage} /> : null}
+      {showCatalogAccessNotice ? (
+        <AdminReadOnlyNotice message={catalogAccessMessage} />
+      ) : null}
 
       <div className="rounded-2xl border border-line-struct bg-paper p-4">
         <div className="space-y-3">
@@ -147,7 +153,12 @@ export function UserDetailsRolesTab({
               <Select
                 value={roleToAdd}
                 onValueChange={handleAddRole}
-                disabled={!isEditable || isBusy || availableRoles.length === 0}
+                disabled={
+                  !isEditable ||
+                  isBusy ||
+                  availableRoles.length === 0 ||
+                  showCatalogAccessNotice
+                }
               >
                 <SelectTrigger className="h-10 w-full sm:w-32">
                   <div className="flex items-center gap-2 text-sm">

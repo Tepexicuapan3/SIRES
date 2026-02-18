@@ -11,6 +11,7 @@ interface RoleDetailsPermissionsTabProps {
   isLoadingPermissions: boolean;
   isEditable?: boolean;
   readOnlyMessage?: string;
+  catalogAccessMessage?: string | null;
   isSaving?: boolean;
   catalogErrorMessage?: string | null;
   onRetryCatalog?: () => void;
@@ -24,6 +25,7 @@ export function RoleDetailsPermissionsTab({
   isLoadingPermissions,
   isEditable = true,
   readOnlyMessage = "Solo lectura: no puedes actualizar este rol porque no tienes permisos.",
+  catalogAccessMessage = null,
   isSaving = false,
   catalogErrorMessage = null,
   onRetryCatalog,
@@ -34,11 +36,16 @@ export function RoleDetailsPermissionsTab({
   const availablePermissions = permissionCatalog.filter(
     (permission) => !assignedIds.has(permission.id),
   );
-  const showCatalogErrorBanner = Boolean(catalogErrorMessage) && isEditable;
+  const showCatalogAccessNotice = Boolean(catalogAccessMessage) && isEditable;
+  const showCatalogErrorBanner =
+    Boolean(catalogErrorMessage) && isEditable && !showCatalogAccessNotice;
 
   return (
     <div className="space-y-6">
       {!isEditable ? <AdminReadOnlyNotice message={readOnlyMessage} /> : null}
+      {showCatalogAccessNotice ? (
+        <AdminReadOnlyNotice message={catalogAccessMessage} />
+      ) : null}
 
       {showCatalogErrorBanner ? (
         <div className="rounded-xl border border-status-critical/30 bg-status-critical/5 px-4 py-3 text-xs text-status-critical">
@@ -70,7 +77,10 @@ export function RoleDetailsPermissionsTab({
         viewportHeightClassName="h-[360px]"
         isActionPending={isSaving}
         isActionDisabled={() =>
-          !isEditable || isSaving || showCatalogErrorBanner
+          !isEditable ||
+          isSaving ||
+          showCatalogErrorBanner ||
+          showCatalogAccessNotice
         }
         onAction={(permission) => {
           onAddPermission(permission.id);

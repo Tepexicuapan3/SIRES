@@ -335,6 +335,49 @@ describe("RoleDetailsDialog UI", () => {
     ).toBeVisible();
   });
 
+  it("shows contextual notice when permissions catalog access is missing", async () => {
+    const roleDetail = createMockRoleDetail({
+      id: 77,
+      name: "Auditoria",
+      isSystem: false,
+    });
+
+    vi.mocked(useRoleDetail).mockReturnValue({
+      data: {
+        role: roleDetail,
+        permissions: [createMockRolePermission({ id: 1, code: "perm:a" })],
+      },
+      isLoading: false,
+      isError: false,
+      refetch,
+    } as ReturnType<typeof useRoleDetail>);
+
+    const user = userEvent.setup();
+    render(
+      <RoleDetailsDialog
+        open
+        onOpenChange={onOpenChange}
+        onClose={onClose}
+        roleSummary={roleSummary}
+        canEdit
+        canReadPermissionsCatalog={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: /Permisos/i }));
+
+    expect(
+      screen.getByText(/No tienes acceso al catalogo de permisos/i),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/No se pudo cargar el catalogo de permisos/i),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Reintentar catalogo" }),
+    ).toBeNull();
+    expect(vi.mocked(usePermissionsCatalog)).toHaveBeenLastCalledWith(false);
+  });
+
   it("shows explicit error when permissions catalog fails", async () => {
     const retryCatalog = vi.fn();
     const roleDetail = createMockRoleDetail({

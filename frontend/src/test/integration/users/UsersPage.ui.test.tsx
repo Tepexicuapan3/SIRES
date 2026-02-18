@@ -34,11 +34,20 @@ vi.mock(
     UserDetailsDialog: ({
       open,
       canEdit,
+      canReadRolesCatalog,
+      canReadPermissionsCatalog,
     }: {
       open: boolean;
       canEdit?: boolean;
+      canReadRolesCatalog?: boolean;
+      canReadPermissionsCatalog?: boolean;
     }) => {
-      userDetailsDialogPropsSpy({ open, canEdit });
+      userDetailsDialogPropsSpy({
+        open,
+        canEdit,
+        canReadRolesCatalog,
+        canReadPermissionsCatalog,
+      });
       return open ? <div>Detalles abiertos</div> : null;
     },
   }),
@@ -339,5 +348,39 @@ describe("UsersPage UI", () => {
     expect(userDetailsDialogPropsSpy).toHaveBeenCalledWith(
       expect.objectContaining({ open: true, canEdit: false }),
     );
+  });
+
+  it("passes catalog access flags and enforces update dependencies", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(usePermissions).mockReturnValue({
+      permissions: [
+        "admin:gestion:usuarios:read",
+        "admin:gestion:usuarios:update",
+      ],
+      hasPermission: (permission) =>
+        permission === "admin:gestion:usuarios:read" ||
+        permission === "admin:gestion:usuarios:update",
+      hasAnyPermission: () => true,
+      hasAllPermissions: () => false,
+      isAdmin: () => false,
+    });
+
+    render(<UsersPage />);
+
+    await user.click(screen.getByText("Juan Perez"));
+
+    expect(userDetailsDialogPropsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        open: true,
+        canEdit: false,
+        canReadRolesCatalog: false,
+        canReadPermissionsCatalog: false,
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filtros" }));
+    const filtersMenu = screen.getByRole("menu");
+    expect(within(filtersMenu).queryByText("Rol")).toBeNull();
   });
 });

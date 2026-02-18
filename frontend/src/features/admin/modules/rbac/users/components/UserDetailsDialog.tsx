@@ -79,6 +79,8 @@ interface UserDetailsDialogProps {
   clinicOptions: CentroAtencionListItem[];
   isClinicsCatalogLoading?: boolean;
   canEdit: boolean;
+  canReadRolesCatalog?: boolean;
+  canReadPermissionsCatalog?: boolean;
   currentUserId?: number | null;
 }
 
@@ -106,6 +108,8 @@ export function UserDetailsDialog({
   clinicOptions,
   isClinicsCatalogLoading = false,
   canEdit,
+  canReadRolesCatalog = true,
+  canReadPermissionsCatalog = true,
   currentUserId = null,
 }: UserDetailsDialogProps) {
   const { isClosing, markClosing, handleOpenChange } =
@@ -124,7 +128,7 @@ export function UserDetailsDialog({
     isError: isPermissionsCatalogError,
     error: permissionsCatalogError,
     refetch: refetchPermissionsCatalog,
-  } = usePermissionsCatalog(open);
+  } = usePermissionsCatalog(open && canReadPermissionsCatalog);
 
   const userDetail = userDetailResponse?.user;
   const roles = userDetailResponse?.roles ?? [];
@@ -236,6 +240,12 @@ export function UserDetailsDialog({
   const isEditable = canEdit;
   const readOnlyUserMessage =
     "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.";
+  const roleCatalogAccessMessage = canReadRolesCatalog
+    ? null
+    : "No tienes acceso al catalogo de roles. Puedes gestionar solo los roles ya asignados.";
+  const permissionsCatalogAccessMessage = canReadPermissionsCatalog
+    ? null
+    : "No tienes acceso al catalogo de permisos. Puedes gestionar solo los overrides existentes.";
 
   const isAccessMutating =
     assignRoles.isPending ||
@@ -605,6 +615,7 @@ export function UserDetailsDialog({
               roleOptions={roleOptions}
               isEditable={isEditable}
               readOnlyMessage={readOnlyUserMessage}
+              catalogAccessMessage={roleCatalogAccessMessage}
               isSaving={isSaving}
               onAddRole={handleAddRoleDraft}
               onSetPrimaryRole={handleSetPrimaryRoleDraft}
@@ -632,17 +643,22 @@ export function UserDetailsDialog({
               isEditable={isEditable}
               readOnlyMessage={readOnlyUserMessage}
               isSaving={isSaving}
+              catalogAccessMessage={permissionsCatalogAccessMessage}
               catalogErrorMessage={
-                isPermissionsCatalogError
+                canReadPermissionsCatalog && isPermissionsCatalogError
                   ? getUserErrorMessage(
                       permissionsCatalogError,
                       "No se pudo cargar el catalogo de permisos. Verifica que tengas admin:gestion:permisos:read.",
                     )
                   : null
               }
-              onRetryCatalog={() => {
-                void refetchPermissionsCatalog();
-              }}
+              onRetryCatalog={
+                canReadPermissionsCatalog
+                  ? () => {
+                      void refetchPermissionsCatalog();
+                    }
+                  : undefined
+              }
               onAddOverride={handleAddOverrideDraft}
               onToggleOverride={handleToggleOverrideDraft}
               onOverrideDateChange={handleOverrideDateDraft}

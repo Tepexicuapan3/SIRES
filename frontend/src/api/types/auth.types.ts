@@ -26,8 +26,17 @@ export interface AuthUser {
   landingRoute: string | null;
   roles: string[];
   permissions: string[];
+  effectivePermissions?: string[];
+  capabilities?: Record<string, AuthCapabilityState>;
+  permissionDependenciesVersion?: string;
   mustChangePassword: boolean;
   requiresOnboarding?: boolean;
+}
+
+export interface AuthCapabilityState {
+  granted: boolean;
+  missingAllOf: string[];
+  missingAnyOf: string[];
 }
 
 // =============================================================================

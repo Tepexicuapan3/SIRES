@@ -43,6 +43,7 @@ interface RoleDetailsDialogProps {
   onClose?: () => void;
   roleSummary: RoleListItem | null;
   canEdit: boolean;
+  canReadPermissionsCatalog?: boolean;
 }
 
 const DEFAULT_FORM_VALUES: RoleDetailsFormValues = {
@@ -59,6 +60,7 @@ export function RoleDetailsDialog({
   onClose,
   roleSummary,
   canEdit,
+  canReadPermissionsCatalog = true,
 }: RoleDetailsDialogProps) {
   const { isClosing, markClosing, handleOpenChange } =
     useDetailsDialogCloseGuard(onOpenChange);
@@ -76,7 +78,7 @@ export function RoleDetailsDialog({
     isError: isPermissionsCatalogError,
     error: permissionsCatalogError,
     refetch: refetchPermissionsCatalog,
-  } = usePermissionsCatalog(open);
+  } = usePermissionsCatalog(open && canReadPermissionsCatalog);
 
   const roleDetail = roleDetailResponse?.role;
   const assignedPermissions = roleDetailResponse?.permissions ?? [];
@@ -151,6 +153,9 @@ export function RoleDetailsDialog({
   const readOnlyRoleMessage = isSystem
     ? "Solo lectura: no puedes actualizar este rol porque es de sistema o no tienes permisos."
     : "Solo lectura: no puedes actualizar este rol porque no tienes permisos.";
+  const permissionsCatalogAccessMessage = canReadPermissionsCatalog
+    ? null
+    : "No tienes acceso al catalogo de permisos. Puedes gestionar solo los permisos ya asignados.";
 
   const isSaving =
     isSavingAll || updateRole.isPending || assignPermissions.isPending;
@@ -385,18 +390,23 @@ export function RoleDetailsDialog({
               isLoadingPermissions={isLoadingPermissions}
               isEditable={isEditable}
               readOnlyMessage={readOnlyRoleMessage}
+              catalogAccessMessage={permissionsCatalogAccessMessage}
               isSaving={isSaving}
               catalogErrorMessage={
-                isPermissionsCatalogError
+                canReadPermissionsCatalog && isPermissionsCatalogError
                   ? getRoleErrorMessage(
                       permissionsCatalogError,
                       "No se pudo cargar el catalogo de permisos. Verifica que tengas admin:gestion:permisos:read.",
                     )
                   : null
               }
-              onRetryCatalog={() => {
-                void refetchPermissionsCatalog();
-              }}
+              onRetryCatalog={
+                canReadPermissionsCatalog
+                  ? () => {
+                      void refetchPermissionsCatalog();
+                    }
+                  : undefined
+              }
               onAddPermission={handleAddPermissionDraft}
               onRemovePermission={handleRemovePermissionDraft}
             />

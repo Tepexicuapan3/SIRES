@@ -28,7 +28,8 @@ import {
 import { AreaCreateDialog } from "@features/admin/modules/catalogos/areas/components/AreaCreateDialog";
 import { AreaDetailsDialog } from "@features/admin/modules/catalogos/areas/components/AreaDetailsDialog";
 import { getAreaErrorMessage } from "@features/admin/modules/catalogos/areas/utils/areas.feedback";
-import { usePermissions } from "@features/auth/queries/usePermissions";
+import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import type { AreaListItem } from "@api/types";
 
 const AREA_STATUS_FILTER = {
@@ -41,7 +42,7 @@ type AreaStatusFilter =
   (typeof AREA_STATUS_FILTER)[keyof typeof AREA_STATUS_FILTER];
 
 export function AreasPage() {
-  const { hasPermission } = usePermissions();
+  const { hasCapability } = usePermissionDependencies();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
@@ -71,14 +72,34 @@ export function AreasPage() {
   const updateArea = useUpdateArea();
   const deleteArea = useDeleteArea();
 
-  const { data, isLoading, error, refetch } = useAreasList({
-    page,
-    pageSize,
-    isActive:
-      statusFilter === AREA_STATUS_FILTER.ALL
-        ? undefined
-        : statusFilter === AREA_STATUS_FILTER.ACTIVE,
+  const canReadArea = hasCapability("admin.catalogs.areas.read", {
+    allOf: ["admin:catalogos:areas:read"],
   });
+  const canCreateArea = hasCapability("admin.catalogs.areas.create", {
+    allOf: ["admin:catalogos:areas:create"],
+  });
+  const canUpdateArea = hasCapability("admin.catalogs.areas.update", {
+    allOf: ["admin:catalogos:areas:update"],
+  });
+  const canDeleteArea = hasCapability("admin.catalogs.areas.delete", {
+    allOf: ["admin:catalogos:areas:delete"],
+  });
+  const readOnlyCatalogMessage =
+    "No tienes acceso para consultar este catalogo.";
+
+  const { data, isLoading, error, refetch } = useAreasList(
+    {
+      page,
+      pageSize,
+      isActive:
+        statusFilter === AREA_STATUS_FILTER.ALL
+          ? undefined
+          : statusFilter === AREA_STATUS_FILTER.ACTIVE,
+    },
+    {
+      enabled: canReadArea,
+    },
+  );
 
   const allRows = data?.items ?? [];
   const normalizedSearch = debouncedSearch.trim().toLowerCase();
@@ -95,10 +116,6 @@ export function AreasPage() {
           return matchesName || matchesCode;
         });
 
-  const canReadArea = hasPermission("admin:catalogos:areas:read");
-  const canCreateArea = hasPermission("admin:catalogos:areas:create");
-  const canUpdateArea = hasPermission("admin:catalogos:areas:update");
-  const canDeleteArea = hasPermission("admin:catalogos:areas:delete");
   const showActions = canReadArea || canUpdateArea || canDeleteArea;
   const isStatusPending = updateArea.isPending;
 
@@ -167,13 +184,15 @@ export function AreasPage() {
   ).length;
 
   const isSearchPending = search.trim() !== debouncedSearch.trim();
-  const hasFilters = Boolean(debouncedSearch.trim()) || appliedFiltersCount > 0;
-  const tableErrorDescription = error
-    ? getAreaErrorMessage(
-        error,
-        "No se pudo obtener el listado de areas. Intenta nuevamente.",
-      )
-    : undefined;
+  const hasFilters =
+    canReadArea && (Boolean(debouncedSearch.trim()) || appliedFiltersCount > 0);
+  const tableErrorDescription =
+    canReadArea && error
+      ? getAreaErrorMessage(
+          error,
+          "No se pudo obtener el listado de areas. Intenta nuevamente.",
+        )
+      : undefined;
 
   const handleClearFilters = () => {
     setSearch("");
@@ -230,6 +249,10 @@ export function AreasPage() {
       description="Catalogo base de areas operativas del sistema."
       icon={<BookOpen className="size-12" />}
     >
+      {!canReadArea ? (
+        <AdminReadOnlyNotice message={readOnlyCatalogMessage} />
+      ) : null}
+
       <TableHeaderBar
         search={
           <TableSearch
@@ -239,24 +262,30 @@ export function AreasPage() {
               setPage(1);
             }}
             placeholder="Buscar en la tabla"
+            disabled={!canReadArea}
           />
         }
         actions={
           <>
-            <TableFilterMenu
-              sections={filterSections}
-              appliedCount={appliedFiltersCount}
-              onClear={handleClearFilters}
-            />
-            <TableColumnVisibility
-              columns={visibilityOptions}
-              visibility={columnVisibility}
-              onVisibilityChange={setColumnVisibility}
-            />
-            <TableOptionsMenu options={tableOptions} />
+            {canReadArea ? (
+              <TableFilterMenu
+                sections={filterSections}
+                appliedCount={appliedFiltersCount}
+                onClear={handleClearFilters}
+              />
+            ) : null}
+            {canReadArea ? (
+              <TableColumnVisibility
+                columns={visibilityOptions}
+                visibility={columnVisibility}
+                onVisibilityChange={setColumnVisibility}
+              />
+            ) : null}
+            {canReadArea ? <TableOptionsMenu options={tableOptions} /> : null}
             {canCreateArea ? (
               <TablePrimaryAction
                 permission="admin:catalogos:areas:create"
+                dependencyAware
                 label="Nuevo"
                 icon={<Plus className="size-4" />}
                 onClick={() => setCreateOpen(true)}
@@ -270,7 +299,7 @@ export function AreasPage() {
         columns={visibleColumns}
         rows={rows}
         isLoading={isLoading || isSearchPending}
-        isError={Boolean(error)}
+        isError={canReadArea && Boolean(error)}
         errorTitle="No se pudo cargar areas"
         errorDescription={tableErrorDescription}
         hasFilters={hasFilters}

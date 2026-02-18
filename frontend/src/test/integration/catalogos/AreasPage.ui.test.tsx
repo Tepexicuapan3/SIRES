@@ -164,8 +164,30 @@ describe("AreasPage UI", () => {
     await waitFor(() => {
       expect(vi.mocked(useAreasList)).toHaveBeenLastCalledWith(
         expect.objectContaining({ isActive: true }),
+        expect.objectContaining({ enabled: true }),
       );
     });
+  });
+
+  it("shows minimal notice when catalog read access is missing", () => {
+    vi.mocked(usePermissions).mockReturnValue({
+      permissions: ["admin:catalogos:areas:update"],
+      hasPermission: (permission) =>
+        permission === "admin:catalogos:areas:update",
+      hasAnyPermission: () => true,
+      hasAllPermissions: () => false,
+      isAdmin: () => false,
+    });
+
+    render(<AreasPage />);
+
+    expect(
+      screen.getByText("No tienes acceso para consultar este catalogo."),
+    ).toBeVisible();
+    expect(vi.mocked(useAreasList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
   });
 
   it("executes status action from row menu", async () => {

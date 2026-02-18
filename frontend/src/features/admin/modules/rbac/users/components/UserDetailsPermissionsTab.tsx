@@ -42,6 +42,7 @@ interface UserDetailsPermissionsTabProps {
   isEditable?: boolean;
   readOnlyMessage?: string;
   isSaving?: boolean;
+  catalogAccessMessage?: string | null;
   catalogErrorMessage?: string | null;
   onRetryCatalog?: () => void;
   onAddOverride: (permissionCode: string) => void;
@@ -57,6 +58,7 @@ export function UserDetailsPermissionsTab({
   isEditable = true,
   readOnlyMessage = "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
   isSaving = false,
+  catalogAccessMessage = null,
   catalogErrorMessage = null,
   onRetryCatalog,
   onAddOverride,
@@ -72,7 +74,9 @@ export function UserDetailsPermissionsTab({
   );
   const resultsRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const isBusy = isSaving;
-  const showCatalogErrorBanner = Boolean(catalogErrorMessage) && isEditable;
+  const showCatalogAccessNotice = Boolean(catalogAccessMessage) && isEditable;
+  const showCatalogErrorBanner =
+    Boolean(catalogErrorMessage) && isEditable && !showCatalogAccessNotice;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -186,6 +190,9 @@ export function UserDetailsPermissionsTab({
   return (
     <div className="space-y-6">
       {!isEditable ? <AdminReadOnlyNotice message={readOnlyMessage} /> : null}
+      {showCatalogAccessNotice ? (
+        <AdminReadOnlyNotice message={catalogAccessMessage} />
+      ) : null}
 
       {showCatalogErrorBanner ? (
         <div className="rounded-xl border border-status-critical/30 bg-status-critical/5 px-4 py-3 text-xs text-status-critical">
@@ -272,7 +279,8 @@ export function UserDetailsPermissionsTab({
               !isEditable ||
               isBusy ||
               isLoadingPermissions ||
-              showCatalogErrorBanner
+              showCatalogErrorBanner ||
+              showCatalogAccessNotice
             }
           >
             {hasMinSearchLength ? (
@@ -359,7 +367,8 @@ export function UserDetailsPermissionsTab({
 
         {isLoadingPermissions ? (
           <p className="mt-2 text-xs text-txt-muted">Cargando permisos...</p>
-        ) : sortedAvailablePermissions.length === 0 ? (
+        ) : !showCatalogAccessNotice &&
+          sortedAvailablePermissions.length === 0 ? (
           <p className="mt-2 text-xs text-txt-muted">
             No hay permisos disponibles para agregar override.
           </p>

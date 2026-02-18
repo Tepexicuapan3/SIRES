@@ -8,6 +8,7 @@ export interface TablePrimaryActionProps {
   label: string;
   icon?: ReactNode;
   onClick?: () => void;
+  dependencyAware?: boolean;
   className?: string;
 }
 
@@ -16,10 +17,11 @@ export function TablePrimaryAction({
   label,
   icon,
   onClick,
+  dependencyAware = false,
   className,
 }: TablePrimaryActionProps) {
   return (
-    <PermissionGate permission={permission}>
+    <PermissionGate permission={permission} dependencyAware={dependencyAware}>
       <Button
         variant="default"
         size="sm"

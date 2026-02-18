@@ -129,4 +129,28 @@ describe("UserDetailsRolesTab", () => {
       screen.getByRole("button", { name: "Remover rol Clinico" }),
     ).toBeDisabled();
   });
+
+  it("shows catalog access context when role catalog is unavailable", () => {
+    const { container } = render(
+      <UserDetailsRolesTab
+        roles={roles}
+        roleOptions={roleOptions}
+        catalogAccessMessage="No tienes acceso al catalogo de roles."
+        onAddRole={onAddRole}
+        onSetPrimaryRole={onSetPrimaryRole}
+        onRemoveRole={onRemoveRole}
+      />,
+    );
+
+    expect(
+      screen.getByText("No tienes acceso al catalogo de roles."),
+    ).toBeVisible();
+
+    const selectTriggers = container.querySelectorAll(
+      "[data-slot='select-trigger']",
+    );
+
+    expect(selectTriggers.length).toBeGreaterThan(1);
+    expect(selectTriggers[1]).toHaveAttribute("data-disabled");
+  });
 });

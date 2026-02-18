@@ -11,6 +11,8 @@ import { useRolesList } from "@features/admin/modules/rbac/roles/queries/useRole
 import { useDeleteRole } from "@features/admin/modules/rbac/roles/mutations/useDeleteRole";
 import { ApiError } from "@/api/utils/errors";
 
+const roleDetailsDialogPropsSpy = vi.fn();
+
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string) => value,
 }));
@@ -25,8 +27,16 @@ vi.mock("sonner", () => ({
 vi.mock(
   "@features/admin/modules/rbac/roles/components/RoleDetailsDialog",
   () => ({
-    RoleDetailsDialog: ({ open }: { open: boolean }) =>
-      open ? <div>Detalles rol abierto</div> : null,
+    RoleDetailsDialog: ({
+      open,
+      canReadPermissionsCatalog,
+    }: {
+      open: boolean;
+      canReadPermissionsCatalog?: boolean;
+    }) => {
+      roleDetailsDialogPropsSpy({ open, canReadPermissionsCatalog });
+      return open ? <div>Detalles rol abierto</div> : null;
+    },
   }),
 );
 
@@ -103,6 +113,7 @@ describe("RolesPage UI", () => {
     deleteMutate.mockResolvedValue({ success: true });
     vi.mocked(toast.success).mockClear();
     vi.mocked(toast.error).mockClear();
+    roleDetailsDialogPropsSpy.mockClear();
   });
 
   it("renders roles table with data", () => {
@@ -235,5 +246,30 @@ describe("RolesPage UI", () => {
     fireEvent.click(actions);
     const deleteItem = screen.getByRole("menuitem", { name: "Eliminar" });
     expect(deleteItem).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("passes permissions catalog access flag to details dialog", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(usePermissions).mockReturnValue({
+      permissions: ["admin:gestion:roles:read", "admin:gestion:roles:update"],
+      hasPermission: (permission) =>
+        permission === "admin:gestion:roles:read" ||
+        permission === "admin:gestion:roles:update",
+      hasAnyPermission: () => true,
+      hasAllPermissions: () => false,
+      isAdmin: () => false,
+    });
+
+    render(<RolesPage />);
+
+    await user.click(screen.getByText("Auditoria"));
+
+    expect(roleDetailsDialogPropsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        open: true,
+        canReadPermissionsCatalog: false,
+      }),
+    );
   });
 });

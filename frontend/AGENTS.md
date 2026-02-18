@@ -48,6 +48,18 @@ Use these skills for detailed patterns:
 - JWT must stay in HttpOnly cookies (never localStorage/sessionStorage).
 - Mutating requests must include `X-CSRF-TOKEN`.
 
+### Permission UX States
+- If a secondary catalog is unavailable due missing permissions, show a neutral contextual notice (not a critical/red error banner).
+- Keep notice copy minimal and user-facing; do not expose raw permission codes in UI text.
+- Disable only the controls that depend on that catalog; keep read-only data visible when possible.
+- Avoid unnecessary requests to unauthorized endpoints by using query `enabled: false` when permission checks fail.
+
+### Permission Dependency Model
+- Permission dependencies are declared in `frontend/src/features/auth/domain/permission-dependencies.ts`.
+- For mutating permissions, use dependency-aware checks via `usePermissionDependencies()`.
+- If a new permission is introduced, update dependency rules and add/update unit tests in `frontend/src/test/unit/auth/permission-dependencies.test.ts`.
+- Use `dependencyAware` mode in guards/gates when the UX must enforce full capability (not only raw permission presence).
+
 ---
 
 ## Decision Trees

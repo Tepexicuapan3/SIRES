@@ -78,6 +78,33 @@ describe("RoleDetailsPermissionsTab", () => {
     ).toBeDisabled();
   });
 
+  it("shows catalog access context and hides error banner", () => {
+    render(
+      <RoleDetailsPermissionsTab
+        permissions={[]}
+        permissionCatalog={catalog}
+        isLoadingPermissions={false}
+        catalogAccessMessage="No tienes acceso al catalogo de permisos."
+        catalogErrorMessage="No se pudo cargar el catalogo"
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
+      />,
+    );
+
+    expect(
+      screen.getByText("No tienes acceso al catalogo de permisos."),
+    ).toBeVisible();
+    expect(screen.queryByText("No se pudo cargar el catalogo")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Reintentar catalogo" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: "Agregar permiso admin:gestion:roles:update",
+      }),
+    ).toBeDisabled();
+  });
+
   it("calls remove callback when removing a permission", async () => {
     render(
       <RoleDetailsPermissionsTab

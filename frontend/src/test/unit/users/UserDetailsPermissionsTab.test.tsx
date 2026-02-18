@@ -195,6 +195,26 @@ describe("UserDetailsPermissionsTab", () => {
     ).toBeDisabled();
   });
 
+  it("shows catalog access context and hides error banner", () => {
+    renderComponent({
+      catalogAccessMessage: "No tienes acceso al catalogo de permisos.",
+      catalogErrorMessage: "No se pudo cargar el catalogo",
+    });
+
+    expect(
+      screen.getByText("No tienes acceso al catalogo de permisos."),
+    ).toBeVisible();
+    expect(screen.queryByText("No se pudo cargar el catalogo")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Reintentar catalogo" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("textbox", {
+        name: /buscar permiso para override/i,
+      }),
+    ).toBeDisabled();
+  });
+
   it("renders overrides as read-only when editing is disabled", () => {
     renderComponent({ overrides: [createOverride()], isEditable: false });
 

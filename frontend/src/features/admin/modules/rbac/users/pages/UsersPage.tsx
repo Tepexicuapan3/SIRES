@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Download, Plus, RotateCcw, ShieldUser } from "lucide-react";
-import { usePermissions } from "@features/auth/queries/usePermissions";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useDebounce } from "@/hooks/useDebounce";
 import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
@@ -47,7 +47,7 @@ type UserStatusFilter =
   (typeof USER_STATUS_FILTER)[keyof typeof USER_STATUS_FILTER];
 
 export function UsersPage() {
-  const { hasPermission } = usePermissions();
+  const { hasCapability } = usePermissionDependencies();
   const { data: authUser } = useAuthSession();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -77,6 +77,15 @@ export function UsersPage() {
   const debouncedSearch = useDebounce(search, 400);
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
+  const canReadRolesCatalog = hasCapability("admin.users.rolesCatalog.read", {
+    allOf: ["admin:gestion:roles:read"],
+  });
+  const canReadPermissionsCatalog = hasCapability(
+    "admin.users.permissionsCatalog.read",
+    {
+      allOf: ["admin:gestion:permisos:read"],
+    },
+  );
 
   const { data, isLoading, error, refetch } = useUsersList({
     page,
@@ -89,11 +98,16 @@ export function UsersPage() {
   });
   const rows = data?.items ?? [];
 
-  const { data: rolesData } = useRolesList({
-    page: 1,
-    pageSize: 100,
-    isActive: true,
-  });
+  const { data: rolesData } = useRolesList(
+    {
+      page: 1,
+      pageSize: 100,
+      isActive: true,
+    },
+    {
+      enabled: canReadRolesCatalog,
+    },
+  );
   const {
     data: clinicsData,
     isLoading: isLoadingClinicsCatalog,
@@ -106,8 +120,26 @@ export function UsersPage() {
   const roleOptions = rolesData?.items ?? [];
   const clinicOptions = clinicsData?.items ?? [];
 
-  const canUpdateUser = hasPermission("admin:gestion:usuarios:update");
-  const canReadUser = hasPermission("admin:gestion:usuarios:read");
+  const canCreateUser = hasCapability("admin.users.create", {
+    allOf: ["admin:gestion:usuarios:create"],
+  });
+  const canUpdateUser = hasCapability("admin.users.update", {
+    allOf: ["admin:gestion:usuarios:update"],
+  });
+  const canReadUser = hasCapability("admin.users.read", {
+    allOf: ["admin:gestion:usuarios:read"],
+  });
+
+  const canManageUsersFully = hasCapability("admin.users.editFull", {
+    allOf: [
+      "admin:gestion:usuarios:read",
+      "admin:gestion:usuarios:update",
+      "admin:gestion:roles:read",
+      "admin:gestion:permisos:read",
+    ],
+  });
+
+  const canUpdateUserAccess = canManageUsersFully || canUpdateUser;
   const showActions = canReadUser || canUpdateUser;
   const isStatusPending = activateUser.isPending || deactivateUser.isPending;
 
@@ -215,21 +247,25 @@ export function UsersPage() {
         },
       ],
     },
-    {
-      id: "role",
-      label: "Rol",
-      options: [
-        ...roleOptions.map((role) => ({
-          id: role.id.toString(),
-          label: role.name,
-          selected: roleFilter === role.id.toString(),
-          onSelect: () => {
-            setRoleFilter(role.id.toString());
-            setPage(1);
+    ...(canReadRolesCatalog
+      ? [
+          {
+            id: "role",
+            label: "Rol",
+            options: [
+              ...roleOptions.map((role) => ({
+                id: role.id.toString(),
+                label: role.name,
+                selected: roleFilter === role.id.toString(),
+                onSelect: () => {
+                  setRoleFilter(role.id.toString());
+                  setPage(1);
+                },
+              })),
+            ],
           },
-        })),
-      ],
-    },
+        ]
+      : []),
     {
       id: "clinic",
       label: "Centro",
@@ -279,12 +315,15 @@ export function UsersPage() {
               onVisibilityChange={setColumnVisibility}
             />
             <TableOptionsMenu options={tableOptions} />
-            <TablePrimaryAction
-              permission="admin:gestion:usuarios:create"
-              label="Nuevo"
-              icon={<Plus className="size-4" />}
-              onClick={() => setCreateOpen(true)}
-            />
+            {canCreateUser ? (
+              <TablePrimaryAction
+                permission="admin:gestion:usuarios:create"
+                dependencyAware
+                label="Nuevo"
+                icon={<Plus className="size-4" />}
+                onClick={() => setCreateOpen(true)}
+              />
+            ) : null}
           </>
         }
       />
@@ -326,7 +365,9 @@ export function UsersPage() {
         isClinicsCatalogLoading={
           isLoadingClinicsCatalog || isFetchingClinicsCatalog
         }
-        canEdit={canUpdateUser}
+        canEdit={canUpdateUserAccess}
+        canReadRolesCatalog={canReadRolesCatalog}
+        canReadPermissionsCatalog={canReadPermissionsCatalog}
         currentUserId={authUser?.id ?? null}
         onClose={handleCloseDetails}
       />
