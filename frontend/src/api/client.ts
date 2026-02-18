@@ -30,12 +30,25 @@ import { env } from "@/config/env";
 import { setupRequestInterceptor } from "@api/interceptors/request.interceptor";
 import { setupErrorInterceptor } from "@api/interceptors/error.interceptor";
 
+const normalizeApiBaseUrl = (url: string): string => {
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  if (import.meta.env.MODE === "test") {
+    const normalizedPath = url.startsWith("/") ? url : `/${url}`;
+    return `http://localhost${normalizedPath}`;
+  }
+
+  return url;
+};
+
 // ==========================================
 // CONFIGURACIÓN BASE
 // ==========================================
 
 const apiClient: AxiosInstance = axios.create({
-  baseURL: env.apiUrl,
+  baseURL: normalizeApiBaseUrl(env.apiUrl),
   timeout: env.apiTimeout,
   headers: {
     "Content-Type": "application/json",

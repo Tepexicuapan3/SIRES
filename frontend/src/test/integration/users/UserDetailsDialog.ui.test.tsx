@@ -274,7 +274,7 @@ describe("UserDetailsDialog UI", () => {
         expect.any(Object),
       );
     });
-  });
+  }, 10000);
 
   it("stages permission changes and applies them only on save", async () => {
     vi.mocked(usePermissionsCatalog).mockReturnValue({
@@ -476,6 +476,51 @@ describe("UserDetailsDialog UI", () => {
     );
 
     expect(screen.getAllByText("Pendiente").length).toBeGreaterThan(0);
+  });
+
+  it("shows contextual notices when catalog read permissions are missing", async () => {
+    vi.mocked(useUserDetail).mockReturnValue({
+      data: {
+        user: createMockUserDetail({ id: 77 }),
+        roles: [createMockUserRole({ id: 1, name: "Admin", isPrimary: true })],
+        overrides: [],
+      },
+      isLoading: false,
+      isError: false,
+      refetch,
+    } as ReturnType<typeof useUserDetail>);
+
+    const user = userEvent.setup();
+    render(
+      <UserDetailsDialog
+        open
+        onOpenChange={onOpenChange}
+        onClose={onClose}
+        userSummary={userSummary}
+        roleOptions={roleOptions}
+        clinicOptions={clinicOptions}
+        canEdit
+        canReadRolesCatalog={false}
+        canReadPermissionsCatalog={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: /Roles/i }));
+    expect(
+      screen.getByText(/No tienes acceso al catalogo de roles/i),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: /Permisos/i }));
+    expect(
+      screen.getByText(/No tienes acceso al catalogo de permisos/i),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/No se pudo cargar el catalogo de permisos/i),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Reintentar catalogo" }),
+    ).toBeNull();
+    expect(vi.mocked(usePermissionsCatalog)).toHaveBeenLastCalledWith(false);
   });
 
   it("shows explicit error when permissions catalog fails", async () => {

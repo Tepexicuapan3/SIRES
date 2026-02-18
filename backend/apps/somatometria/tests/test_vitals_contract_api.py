@@ -28,13 +28,16 @@ class VitalsContractsApiTests(APITestCase):
         )
 
         self.visit_in_somato = Visit.objects.create(
+            folio="SMT-9001",
             patient_id=9001,
-            has_appointment=True,
+            arrival_type=Visit.ArrivalType.APPOINTMENT,
+            appointment_id="APP-SMT-9001",
             status="en_somatometria",
         )
         self.visit_in_wait = Visit.objects.create(
+            folio="SMT-9002",
             patient_id=9002,
-            has_appointment=False,
+            arrival_type=Visit.ArrivalType.WALK_IN,
             status="en_espera",
         )
 
