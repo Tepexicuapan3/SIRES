@@ -1,11 +1,11 @@
 import uuid
-from datetime import timezone as dt_timezone
+from datetime import datetime, time, timezone as dt_timezone
 
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date, parse_datetime
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -33,6 +33,28 @@ def _to_utc_iso(value):
     if not value:
         return None
     return value.astimezone(dt_timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _parse_expires_at_end_of_day(raw_value):
+    if not raw_value:
+        return None
+
+    parsed_datetime = parse_datetime(raw_value)
+    tz = timezone.get_current_timezone()
+
+    if parsed_datetime:
+        base = parsed_datetime
+    else:
+        parsed_date = parse_date(raw_value)
+        if not parsed_date:
+            return "invalid"
+        base = datetime.combine(parsed_date, time.min)
+
+    if timezone.is_naive(base):
+        base = timezone.make_aware(base, tz)
+
+    localized = timezone.localtime(base, tz)
+    return localized.replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
 def _parse_bool(raw_value):
@@ -1522,8 +1544,8 @@ class UserOverridesView(APIView):
 
         expires_at = None
         if expires_at_raw:
-            expires_at = parse_datetime(expires_at_raw)
-            if not expires_at:
+            expires_at = _parse_expires_at_end_of_day(expires_at_raw)
+            if expires_at == "invalid":
                 _audit(request, "RBAC_USER_OVERRIDE_UPSERT", "user_override", resource_id=user.id_usuario, result="FAIL", error_code="INVALID_FORMAT", target_user=user)
                 return error_response(
                     "INVALID_FORMAT",

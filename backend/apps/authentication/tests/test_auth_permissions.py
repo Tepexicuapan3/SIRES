@@ -44,6 +44,38 @@ class AuthPermissionsTests(TestCase):
         self.assertEqual(auth_user["roles"], ["ADMIN"])
         self.assertEqual(auth_user["primaryRole"], "ADMIN")
 
+    def test_permissions_admin_applies_active_deny_override(self):
+        role = CatRol.objects.create(
+            rol="ADMIN_DENY",
+            desc_rol="Administrador con deny",
+            landing_route="/admin",
+            is_admin=True,
+        )
+        RelUsuarioRol.objects.create(id_usuario=self.user, id_rol=role, is_primary=True)
+
+        denied_permission = CatPermiso.objects.create(
+            codigo="admin:gestion:usuarios:update",
+            descripcion="Actualizar usuarios",
+            is_active=True,
+        )
+        allowed_permission = CatPermiso.objects.create(
+            codigo="admin:gestion:usuarios:read",
+            descripcion="Leer usuarios",
+            is_active=True,
+        )
+
+        RelUsuarioOverride.objects.create(
+            id_usuario=self.user,
+            id_permiso=denied_permission,
+            efecto="DENY",
+        )
+
+        auth_user = UserRepository.build_auth_user(self.user)
+
+        self.assertNotIn("*", auth_user["permissions"])
+        self.assertNotIn(denied_permission.codigo, auth_user["permissions"])
+        self.assertIn(allowed_permission.codigo, auth_user["permissions"])
+
     def test_permissions_overrides(self):
         role = CatRol.objects.create(
             rol="MEDICO",

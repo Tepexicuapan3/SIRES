@@ -140,6 +140,22 @@ class RbacResolverTests(TestCase):
 
         self.assertEqual(permissions, ["*"])
 
+    def test_admin_with_active_deny_override_returns_explicit_permissions(self):
+        self.role.is_admin = True
+        self.role.save(update_fields=["is_admin"])
+
+        RelUsuarioOverride.objects.create(
+            id_usuario=self.user,
+            id_permiso=self.perm_write,
+            efecto="DENY",
+        )
+
+        permissions = RBACResolver.get_effective_permissions(self.user)
+
+        self.assertNotIn("*", permissions)
+        self.assertIn("expedientes:read", permissions)
+        self.assertNotIn("expedientes:update", permissions)
+
     def test_applies_allow_deny_and_ignores_expired_overrides(self):
         extra_perm = CatPermiso.objects.create(
             codigo="farmacia:read",
@@ -352,6 +368,20 @@ class RbacViewHelpersTests(TestCase):
         resource, action = rbac_views._split_permission_code("invalid")
         self.assertIsNone(resource)
         self.assertIsNone(action)
+
+    def test_parse_expires_at_end_of_day_from_date_string(self):
+        parsed = rbac_views._parse_expires_at_end_of_day("2030-01-02")
+
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.hour, 23)
+        self.assertEqual(parsed.minute, 59)
+        self.assertEqual(parsed.second, 59)
+        self.assertEqual(parsed.microsecond, 999999)
+
+    def test_parse_expires_at_end_of_day_invalid_date(self):
+        parsed = rbac_views._parse_expires_at_end_of_day("fecha-invalida")
+
+        self.assertEqual(parsed, "invalid")
 
     def test_serialize_user_list_item_uses_first_role_when_no_primary(self):
         user = SyUsuario.objects.create(

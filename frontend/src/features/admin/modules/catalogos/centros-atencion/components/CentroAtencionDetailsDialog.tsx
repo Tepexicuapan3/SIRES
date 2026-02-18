@@ -25,6 +25,7 @@ import {
 } from "@features/admin/modules/catalogos/centros-atencion/utils/centros-atencion.transform";
 import { CatalogDetailsFooter } from "@features/admin/modules/catalogos/shared/components/CatalogDetailsFooter";
 import { CatalogStatusBadge } from "@features/admin/modules/catalogos/shared/components/CatalogStatusBadge";
+import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { AdminDetailsDialogShell } from "@features/admin/shared/components/details/AdminDetailsDialogShell";
 import { useDetailsDialogCloseGuard } from "@features/admin/shared/hooks/useDetailsDialogCloseGuard";
 import type { AdminDetailsDialogSection } from "@features/admin/shared/types/details-dialog.types";
@@ -102,6 +103,8 @@ export function CentroAtencionDetailsDialog({
   const shouldShowLoading = open && isLoading && !isClosing;
   const shouldShowError =
     open && !isClosing && (isError || (!isLoading && !centerDetail));
+  const readOnlyCenterMessage =
+    "Solo lectura: no puedes actualizar este centro porque no tienes permisos.";
 
   const handleSave = async (values: CentroAtencionDetailsFormValues) => {
     if (!centerDetail || !canEdit) return;
@@ -245,9 +248,7 @@ export function CentroAtencionDetailsDialog({
                 isEditable={canEdit}
               />
               {!canEdit ? (
-                <div className="rounded-xl border border-line-struct bg-subtle/40 px-4 py-3 text-xs text-txt-muted">
-                  Solo lectura: no tienes permisos para modificar este centro.
-                </div>
+                <AdminReadOnlyNotice message={readOnlyCenterMessage} />
               ) : null}
             </>
           ),

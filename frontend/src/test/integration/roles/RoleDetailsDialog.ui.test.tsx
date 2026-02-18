@@ -330,7 +330,7 @@ describe("RoleDetailsDialog UI", () => {
 
     expect(
       screen.getByText(
-        "Este rol es de sistema o no tienes permisos para modificarlo.",
+        "Solo lectura: no puedes actualizar este rol porque es de sistema o no tienes permisos.",
       ),
     ).toBeVisible();
   });

@@ -135,13 +135,15 @@ test.describe("RBAC UI (MSW)", () => {
       const dialog = page.getByRole("dialog", { name: "Detalle de rol" });
       await expect(
         dialog.getByText(
-          "Este rol es de sistema o no tienes permisos para modificarlo.",
+          "Solo lectura: no puedes actualizar este rol porque es de sistema o no tienes permisos.",
         ),
       ).toBeVisible();
 
       await dialog.getByRole("tab", { name: /Permisos/i }).click();
       await expect(
-        dialog.getByText("No tienes permiso para realizar esta accion."),
+        dialog.getByText(
+          "Solo lectura: no puedes actualizar este rol porque es de sistema o no tienes permisos.",
+        ),
       ).toBeVisible();
       await expect(
         dialog.getByText("No hay permisos disponibles para agregar."),
@@ -168,7 +170,7 @@ test.describe("RBAC UI (MSW)", () => {
       const dialog = page.getByRole("dialog", { name: "Detalle de usuario" });
       await expect(
         dialog.getByText(
-          "Solo lectura: no tienes permisos para modificar este usuario.",
+          "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
         ),
       ).toBeVisible();
       await expect(dialog.getByLabel("Correo")).toBeDisabled();
@@ -183,7 +185,9 @@ test.describe("RBAC UI (MSW)", () => {
 
       await dialog.getByRole("tab", { name: /^Permisos/ }).click();
       await expect(
-        dialog.getByText("No tienes permiso para realizar esta accion."),
+        dialog.getByText(
+          "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
+        ),
       ).toBeVisible();
       await expect(
         dialog.getByText("No hay permisos disponibles para agregar override."),

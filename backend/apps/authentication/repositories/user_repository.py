@@ -156,39 +156,39 @@ def _get_roles(user):
 
 
 def _get_permissions(user, roles, is_admin):
-    if is_admin:
-        return ["*"]
-
-    role_ids = list(
-        CatRol.objects.filter(rol__in=roles, is_active=True).values_list("id_rol", flat=True)
-    )
-    permissions = set()
-
-    if role_ids:
-        role_perm_ids = (
-            RelRolPermiso.objects.filter(id_rol_id__in=role_ids, fch_baja__isnull=True)
-            .values_list("id_permiso_id", flat=True)
-        )
-        for code in CatPermiso.objects.filter(
-            id_permiso__in=role_perm_ids, is_active=True
-        ).values_list("codigo", flat=True):
-            permissions.add(code)
-
     now = timezone.now()
     overrides = RelUsuarioOverride.objects.filter(
         id_usuario=user,
         fch_baja__isnull=True,
-    ).filter(models.Q(fch_expira__isnull=True) | models.Q(fch_expira__gt=now))
+        id_permiso__is_active=True,
+    ).filter(models.Q(fch_expira__isnull=True) | models.Q(fch_expira__gt=now)).select_related("id_permiso")
+
+    if is_admin:
+        has_active_deny = any(override.efecto == "DENY" for override in overrides)
+        if not has_active_deny:
+            return ["*"]
+        permissions = set(CatPermiso.objects.filter(is_active=True).values_list("codigo", flat=True))
+    else:
+        role_ids = list(
+            CatRol.objects.filter(rol__in=roles, is_active=True).values_list("id_rol", flat=True)
+        )
+        permissions = set()
+
+        if role_ids:
+            role_perm_ids = (
+                RelRolPermiso.objects.filter(id_rol_id__in=role_ids, fch_baja__isnull=True)
+                .values_list("id_permiso_id", flat=True)
+            )
+            for code in CatPermiso.objects.filter(
+                id_permiso__in=role_perm_ids, is_active=True
+            ).values_list("codigo", flat=True):
+                permissions.add(code)
 
     for override in overrides:
-        perm = CatPermiso.objects.filter(
-            id_permiso=override.id_permiso_id, is_active=True
-        ).first()
-        if not perm:
-            continue
-        if override.efecto == "DENY" and perm.codigo in permissions:
-            permissions.discard(perm.codigo)
+        code = override.id_permiso.codigo
+        if override.efecto == "DENY" and code in permissions:
+            permissions.discard(code)
         elif override.efecto == "ALLOW":
-            permissions.add(perm.codigo)
+            permissions.add(code)
 
     return sorted(list(permissions))

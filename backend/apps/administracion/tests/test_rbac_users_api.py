@@ -601,6 +601,29 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(remove_response.status_code, status.HTTP_200_OK)
         self.assertEqual(remove_response.data["overrides"], [])
 
+    def test_override_upsert_date_only_expires_at_is_end_of_day(self):
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+                "expiresAt": "2030-01-03",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        override = RelUsuarioOverride.objects.get(
+            id_usuario=self.target_user,
+            id_permiso=self.override_permission,
+            fch_baja__isnull=True,
+        )
+        expires_local = timezone.localtime(override.fch_expira)
+        self.assertEqual(expires_local.hour, 23)
+        self.assertEqual(expires_local.minute, 59)
+        self.assertEqual(expires_local.second, 59)
+
     def test_override_upsert_updates_existing_override(self):
         RelUsuarioOverride.objects.create(
             id_usuario=self.target_user,

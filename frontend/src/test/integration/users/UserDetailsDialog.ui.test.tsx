@@ -439,7 +439,7 @@ describe("UserDetailsDialog UI", () => {
 
     expect(
       screen.getByText(
-        "Solo lectura: no tienes permisos para modificar este usuario.",
+        "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
       ),
     ).toBeVisible();
     expect(screen.getByLabelText("Correo")).toBeDisabled();

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CalendarDays, Plus, ShieldCheck, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,7 @@ interface UserDetailsRolesTabProps {
   roles: UserRole[];
   roleOptions: RoleListItem[];
   isEditable?: boolean;
+  readOnlyMessage?: string;
   isSaving?: boolean;
   onAddRole: (roleId: number) => void;
   onSetPrimaryRole: (roleId: number) => void;
@@ -28,6 +30,7 @@ export function UserDetailsRolesTab({
   roles,
   roleOptions,
   isEditable = true,
+  readOnlyMessage = "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
   isSaving = false,
   onAddRole,
   onSetPrimaryRole,
@@ -61,6 +64,8 @@ export function UserDetailsRolesTab({
 
   return (
     <div className="space-y-6 pb-4">
+      {!isEditable ? <AdminReadOnlyNotice message={readOnlyMessage} /> : null}
+
       <div className="rounded-2xl border border-line-struct bg-paper p-4">
         <div className="space-y-3">
           <div>

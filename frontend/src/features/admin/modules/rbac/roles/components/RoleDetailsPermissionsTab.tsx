@@ -2,6 +2,7 @@ import { CalendarDays, Plus, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@features/admin/modules/rbac/roles/utils/roles.format";
 import { PermissionsHierarchyExplorer } from "@features/admin/modules/rbac/shared/components/PermissionHierarchyExplorer";
+import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import type { Permission, RolePermission } from "@api/types";
 
 interface RoleDetailsPermissionsTabProps {
@@ -9,6 +10,7 @@ interface RoleDetailsPermissionsTabProps {
   permissionCatalog: Permission[];
   isLoadingPermissions: boolean;
   isEditable?: boolean;
+  readOnlyMessage?: string;
   isSaving?: boolean;
   catalogErrorMessage?: string | null;
   onRetryCatalog?: () => void;
@@ -21,6 +23,7 @@ export function RoleDetailsPermissionsTab({
   permissionCatalog,
   isLoadingPermissions,
   isEditable = true,
+  readOnlyMessage = "Solo lectura: no puedes actualizar este rol porque no tienes permisos.",
   isSaving = false,
   catalogErrorMessage = null,
   onRetryCatalog,
@@ -31,10 +34,13 @@ export function RoleDetailsPermissionsTab({
   const availablePermissions = permissionCatalog.filter(
     (permission) => !assignedIds.has(permission.id),
   );
+  const showCatalogErrorBanner = Boolean(catalogErrorMessage) && isEditable;
 
   return (
     <div className="space-y-6">
-      {catalogErrorMessage ? (
+      {!isEditable ? <AdminReadOnlyNotice message={readOnlyMessage} /> : null}
+
+      {showCatalogErrorBanner ? (
         <div className="rounded-xl border border-status-critical/30 bg-status-critical/5 px-4 py-3 text-xs text-status-critical">
           <p>{catalogErrorMessage}</p>
           {onRetryCatalog ? (
@@ -64,7 +70,7 @@ export function RoleDetailsPermissionsTab({
         viewportHeightClassName="h-[360px]"
         isActionPending={isSaving}
         isActionDisabled={() =>
-          !isEditable || isSaving || Boolean(catalogErrorMessage)
+          !isEditable || isSaving || showCatalogErrorBanner
         }
         onAction={(permission) => {
           onAddPermission(permission.id);

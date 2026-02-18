@@ -2,7 +2,6 @@ import { FileText, Route, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -98,7 +97,6 @@ export function RoleCreateDialog({
             <RoleDialogHeader
               title="Nuevo rol"
               subtitle="Configura alcance operativo y punto de entrada del rol"
-              status={<Badge variant="outline">Plantilla</Badge>}
             />
           </DialogHeader>
           <ScrollArea

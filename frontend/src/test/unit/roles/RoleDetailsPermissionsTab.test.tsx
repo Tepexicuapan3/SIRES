@@ -143,6 +143,11 @@ describe("RoleDetailsPermissionsTab", () => {
     );
 
     expect(
+      screen.getByText(
+        "Solo lectura: no puedes actualizar este rol porque no tienes permisos.",
+      ),
+    ).toBeVisible();
+    expect(
       screen.getByRole("button", {
         name: "Agregar permiso admin:gestion:roles:read",
       }),
@@ -152,5 +157,26 @@ describe("RoleDetailsPermissionsTab", () => {
         name: "Remover permiso admin:gestion:roles:update",
       }),
     ).toBeDisabled();
+  });
+
+  it("hides catalog error banner when tab is read-only", () => {
+    render(
+      <RoleDetailsPermissionsTab
+        permissions={[createRolePermission()]}
+        permissionCatalog={catalog}
+        isLoadingPermissions={false}
+        isEditable={false}
+        catalogErrorMessage="No se pudo cargar el catalogo"
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
+      />,
+    );
+
+    expect(screen.queryByText("No se pudo cargar el catalogo")).toBeNull();
+    expect(
+      screen.getByText(
+        "Solo lectura: no puedes actualizar este rol porque no tienes permisos.",
+      ),
+    ).toBeVisible();
   });
 });

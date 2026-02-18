@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { PermissionSearchField } from "@features/admin/modules/rbac/shared/components/PermissionSearchField";
 import {
   comparePermissionCodesByHierarchy,
@@ -39,6 +40,7 @@ interface UserDetailsPermissionsTabProps {
   permissions: Permission[];
   isLoadingPermissions: boolean;
   isEditable?: boolean;
+  readOnlyMessage?: string;
   isSaving?: boolean;
   catalogErrorMessage?: string | null;
   onRetryCatalog?: () => void;
@@ -53,6 +55,7 @@ export function UserDetailsPermissionsTab({
   permissions,
   isLoadingPermissions,
   isEditable = true,
+  readOnlyMessage = "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
   isSaving = false,
   catalogErrorMessage = null,
   onRetryCatalog,
@@ -69,6 +72,7 @@ export function UserDetailsPermissionsTab({
   );
   const resultsRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const isBusy = isSaving;
+  const showCatalogErrorBanner = Boolean(catalogErrorMessage) && isEditable;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -181,7 +185,9 @@ export function UserDetailsPermissionsTab({
 
   return (
     <div className="space-y-6">
-      {catalogErrorMessage ? (
+      {!isEditable ? <AdminReadOnlyNotice message={readOnlyMessage} /> : null}
+
+      {showCatalogErrorBanner ? (
         <div className="rounded-xl border border-status-critical/30 bg-status-critical/5 px-4 py-3 text-xs text-status-critical">
           <p>{catalogErrorMessage}</p>
           {onRetryCatalog ? (
@@ -266,7 +272,7 @@ export function UserDetailsPermissionsTab({
               !isEditable ||
               isBusy ||
               isLoadingPermissions ||
-              Boolean(catalogErrorMessage)
+              showCatalogErrorBanner
             }
           >
             {hasMinSearchLength ? (

@@ -199,6 +199,11 @@ describe("UserDetailsPermissionsTab", () => {
     renderComponent({ overrides: [createOverride()], isEditable: false });
 
     expect(
+      screen.getByText(
+        "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
+      ),
+    ).toBeVisible();
+    expect(
       screen.getByRole("textbox", {
         name: /buscar permiso para override/i,
       }),
@@ -213,5 +218,20 @@ describe("UserDetailsPermissionsTab", () => {
         name: "Eliminar override admin:gestion:usuarios:read",
       }),
     ).toBeDisabled();
+  });
+
+  it("hides catalog error banner when tab is read-only", () => {
+    renderComponent({
+      overrides: [createOverride()],
+      isEditable: false,
+      catalogErrorMessage: "No se pudo cargar el catalogo",
+    });
+
+    expect(screen.queryByText("No se pudo cargar el catalogo")).toBeNull();
+    expect(
+      screen.getByText(
+        "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.",
+      ),
+    ).toBeVisible();
   });
 });

@@ -58,6 +58,7 @@ import {
   formatDateTime,
   resolveUserUiStatus,
 } from "@features/admin/modules/rbac/users/utils/users.format";
+import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { AdminDetailsDialogShell } from "@features/admin/shared/components/details/AdminDetailsDialogShell";
 import { useDetailsDialogCloseGuard } from "@features/admin/shared/hooks/useDetailsDialogCloseGuard";
 import type { AdminDetailsDialogSection } from "@features/admin/shared/types/details-dialog.types";
@@ -233,6 +234,8 @@ export function UserDetailsDialog({
     open && !isClosing && (isError || (!isLoading && !userDetail));
 
   const isEditable = canEdit;
+  const readOnlyUserMessage =
+    "Solo lectura: no puedes actualizar este usuario porque no tienes permisos.";
 
   const isAccessMutating =
     assignRoles.isPending ||
@@ -576,9 +579,10 @@ export function UserDetailsDialog({
                 canChangeAccountStatus={isEditable && !isSelfUser}
               />
               {!isEditable ? (
-                <div className="mt-4 rounded-xl border border-line-struct bg-subtle/40 px-4 py-3 text-xs text-txt-muted">
-                  Solo lectura: no tienes permisos para modificar este usuario.
-                </div>
+                <AdminReadOnlyNotice
+                  className="mt-4"
+                  message={readOnlyUserMessage}
+                />
               ) : null}
             </>
           ),
@@ -600,6 +604,7 @@ export function UserDetailsDialog({
               roles={workingRoles}
               roleOptions={roleOptions}
               isEditable={isEditable}
+              readOnlyMessage={readOnlyUserMessage}
               isSaving={isSaving}
               onAddRole={handleAddRoleDraft}
               onSetPrimaryRole={handleSetPrimaryRoleDraft}
@@ -625,6 +630,7 @@ export function UserDetailsDialog({
               permissions={permissionsData?.items ?? []}
               isLoadingPermissions={isLoadingPermissions}
               isEditable={isEditable}
+              readOnlyMessage={readOnlyUserMessage}
               isSaving={isSaving}
               catalogErrorMessage={
                 isPermissionsCatalogError

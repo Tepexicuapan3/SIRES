@@ -31,6 +31,7 @@ import {
 } from "@features/admin/modules/rbac/roles/utils/roles.details-save";
 import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/roles.feedback";
 import { formatDateTime } from "@features/admin/modules/rbac/roles/utils/roles.format";
+import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { AdminDetailsDialogShell } from "@features/admin/shared/components/details/AdminDetailsDialogShell";
 import { useDetailsDialogCloseGuard } from "@features/admin/shared/hooks/useDetailsDialogCloseGuard";
 import type { AdminDetailsDialogSection } from "@features/admin/shared/types/details-dialog.types";
@@ -147,6 +148,9 @@ export function RoleDetailsDialog({
     open && !isClosing && (isError || (!isLoading && !roleDetail));
   const isSystem = roleDetail?.isSystem ?? roleSummary?.isSystem;
   const isEditable = canEdit && !isSystem;
+  const readOnlyRoleMessage = isSystem
+    ? "Solo lectura: no puedes actualizar este rol porque es de sistema o no tienes permisos."
+    : "Solo lectura: no puedes actualizar este rol porque no tienes permisos.";
 
   const isSaving =
     isSavingAll || updateRole.isPending || assignPermissions.isPending;
@@ -344,9 +348,10 @@ export function RoleDetailsDialog({
           content: (
             <>
               {!isEditable ? (
-                <div className="mb-4 rounded-xl border border-line-struct bg-subtle/40 px-4 py-3 text-xs text-txt-muted">
-                  Este rol es de sistema o no tienes permisos para modificarlo.
-                </div>
+                <AdminReadOnlyNotice
+                  className="mb-4"
+                  message={readOnlyRoleMessage}
+                />
               ) : null}
               <RoleDetailsGeneralTab
                 form={form}
@@ -379,6 +384,7 @@ export function RoleDetailsDialog({
               permissionCatalog={permissionCatalog}
               isLoadingPermissions={isLoadingPermissions}
               isEditable={isEditable}
+              readOnlyMessage={readOnlyRoleMessage}
               isSaving={isSaving}
               catalogErrorMessage={
                 isPermissionsCatalogError
