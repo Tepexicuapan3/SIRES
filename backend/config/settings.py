@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.recepcion',
     'apps.somatometria',
+    'apps.consulta_medica',
     'apps.catalogos',
     'apps.administracion',
 ]
