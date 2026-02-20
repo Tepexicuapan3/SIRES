@@ -39,6 +39,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Implementar OTP/Recovery** | [OTP con Redis](./architecture/otp-redis.md) | 20 min |
 | **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
 | **Ejecutar KAN-4 con IA (sin supuestos)** | [KAN-4 Playbook](./guides/kan4-implementacion-overview.md) | 25 min |
+| **Implementar tiempo real con WebSocket** | [WebSocket Reusable](./guides/websocket-arquitectura-reusable.md) | 20 min |
 | **Auth queries/mutations** | [Auth Queries](./guides/auth-queries-mutations.md) | 15 min |
 | **Implementar CRUD RBAC completo** | [RBAC CRUD Implementation](./guides/rbac-crud-implementation.md) | Plan detallado |
 | **Usar sistema RBAC CRUD** | [RBAC CRUD User Guide](./guides/rbac-crud-user-guide.md) | Guía completa |
@@ -56,6 +57,10 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 - [KAN-4 Fase 3 Consulta y Tiempo Real](./guides/kan4-fase-3-consulta-y-tiempo-real.md)
 - [KAN-4 Fase 4 QA y Release](./guides/kan4-fase-4-qa-y-release.md)
 - [KAN-4 Matriz de Tickets y Dependencias](./guides/kan4-matriz-tickets-y-dependencias.md)
+
+### ⚡ Realtime WebSocket
+
+- [WebSocket Arquitectura Reusable](./guides/websocket-arquitectura-reusable.md)
 
 ---
 
@@ -85,9 +90,10 @@ docs/
 │   ├── kan4-fase-0-baseline-planeacion.md           # Baseline cerrado de planeacion
 │   ├── kan4-fase-1-tdd-fundaciones.md               # Fase TDD + base dominio
 │   ├── kan4-fase-2-implementacion-recepcion-somatometria.md # Vertical recepcion/somato
-│   ├── kan4-fase-3-consulta-y-tiempo-real.md        # Vertical doctor + SSE
+│   ├── kan4-fase-3-consulta-y-tiempo-real.md        # Vertical doctor + WebSocket
 │   ├── kan4-fase-4-qa-y-release.md                  # Gate final de calidad
-│   └── kan4-matriz-tickets-y-dependencias.md        # Mapa operativo de tickets
+│   ├── kan4-matriz-tickets-y-dependencias.md        # Mapa operativo de tickets
+│   └── websocket-arquitectura-reusable.md           # Base WebSocket reusable
 │
 ├── adr/                            # Architecture Decision Records
 │   ├── 001-jwt-cookies-httponly.md # JWT en cookies HttpOnly (no localStorage)

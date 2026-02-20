@@ -28,7 +28,7 @@ Regla:
 
 ## Especificacion por ticket
 
-### KAN-23 (owner: Victor, due: 2026-02-16, estado actual: En curso)
+### KAN-23 (owner: Luis, due: 2026-02-16, estado actual: Finalizado)
 
 Salida obligatoria:
 
@@ -36,7 +36,7 @@ Salida obligatoria:
 - Cobertura de `cancelada` y `no_show`.
 - Guard clauses: sin vitales no pasa a doctor; sin diagnostico+nota no cierra.
 
-### KAN-24 (owner: Abel, due: 2026-02-16, estado actual: En curso)
+### KAN-24 (owner: Luis, due: 2026-02-16, estado actual: Finalizado)
 
 Salida obligatoria:
 
@@ -44,7 +44,7 @@ Salida obligatoria:
 - Pruebas de permisos por rol recepcion.
 - Errores normalizados (`code`, `message`, `status`, `requestId`).
 
-### KAN-25 (owner: Victor, due: 2026-02-16, estado actual: En curso)
+### KAN-25 (owner: Luis, due: 2026-02-16, estado actual: Finalizado)
 
 Salida obligatoria:
 
@@ -52,7 +52,7 @@ Salida obligatoria:
 - Bloqueo de cambio a `lista_para_doctor` con datos incompletos.
 - Reporte de casos limite en CI.
 
-### KAN-16 (owner: Victor, due: 2026-02-17, estado actual: Por hacer)
+### KAN-16 (owner: Victor, due: 2026-02-19, estado actual: En curso)
 
 Salida obligatoria:
 
@@ -67,7 +67,7 @@ Salida obligatoria:
 
 La fase termina solo si:
 
-- [ ] `KAN-23`, `KAN-24`, `KAN-25` estan en verde con evidencia.
+- [x] `KAN-23`, `KAN-24`, `KAN-25` estan en verde con evidencia.
 - [ ] `KAN-16` esta implementado y validado con pruebas de dominio.
 - [ ] Existe trazabilidad de errores/estados alineada a `KAN-8`.
 

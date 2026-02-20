@@ -51,7 +51,7 @@
 - Backend Django/DRF por dominios (`recepcion`, `somatometria`, `consultas`).
 - Regla de capas obligatoria: `view -> serializer -> use_case -> repository`.
 - Maquina de estados centralizada en use_case (no logica de negocio en serializer/UI).
-- Tiempo real con SSE y fallback polling.
+- Tiempo real con WebSocket-first (sin SSE), con reconexion controlada y resincronizacion por API cuando aplique.
 - Frontend consume solo `api/resources` + TanStack Query.
 
 ---
@@ -141,10 +141,10 @@ Mensajes de negocio obligatorios:
 
 ## 7) Capacidad, ruta critica y riesgo (KAN-11, KAN-12, KAN-13)
 
-- Deadline operativo del epic: `2026-02-20`.
+- Deadline operativo del epic: `2026-02-25`.
 - Ruta critica: contratos y estados -> implementacion vertical -> E2E + quality gates.
 - David incorporado formalmente para ejecucion (`KAN-13`).
-- Abel concentrado en FE/QA (`KAN-26`, `KAN-27`, `KAN-28`, `KAN-19`).
+- FE/QA concentrado en `KAN-26`, `KAN-27`, `KAN-28`, `KAN-19` (validar owner vigente en Jira antes de ejecutar).
 
 ---
 

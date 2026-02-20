@@ -14,7 +14,7 @@ Entregar el flujo operativo desde llegada de paciente hasta liberacion a doctor,
 
 ## Secuencia recomendada
 
-1. `KAN-26` (TDD FE flujo UI) y `KAN-28` (TDD SSE/fallback) cuando `KAN-24` y `KAN-25` ya esten estables.
+1. `KAN-26` (TDD FE flujo UI) y `KAN-28` (TDD WebSocket y reconexion) cuando `KAN-24` y `KAN-25` ya esten estables.
 2. `KAN-14` backend recepcion/cola.
 3. `KAN-18` backend somatometria.
 4. `KAN-15` frontend recepcion.
@@ -24,13 +24,13 @@ Notas de gate:
 
 - `KAN-15` depende de `KAN-14` + `KAN-26`.
 - `KAN-21` depende de `KAN-18` + `KAN-26`.
-- `KAN-22` (fase 3) depende de `KAN-18` + `KAN-21` + `KAN-28`.
+- `KAN-22` (fase 3) depende de `KAN-18` + `KAN-21` + `KAN-28` + `KAN-34` + `KAN-35`.
 
 ---
 
 ## Especificacion por ticket
 
-### KAN-14 - APIs de recepcion/cola (owner: Victor, due: 2026-02-17)
+### KAN-14 - APIs de recepcion/cola (owner: Victor, due: 2026-02-17, estado: Finalizado)
 
 Debe cubrir:
 
@@ -43,7 +43,7 @@ Obligatorio:
 - RBAC por rol recepcion.
 - `X-Request-ID` y errores normalizados.
 
-### KAN-18 - APIs de somatometria (owner: Victor, due: 2026-02-17)
+### KAN-18 - APIs de somatometria (owner: Victor, due: 2026-02-20, estado: Por hacer)
 
 Debe cubrir:
 
@@ -56,7 +56,7 @@ Obligatorio:
 - Error `VITALS_INCOMPLETE` probado.
 - Evento `VitalsCompleted`.
 
-### KAN-26 - TDD UI de flujo (owner: Abel, due: 2026-02-17)
+### KAN-26 - TDD UI de flujo (owner: Luis, due: 2026-02-17, estado: Finalizado)
 
 Debe cubrir:
 
@@ -64,14 +64,14 @@ Debe cubrir:
 - Bloqueos de acciones invalidas.
 - Validaciones de formularios criticos.
 
-### KAN-15 - UI recepcion (owner: Luis, due: 2026-02-17)
+### KAN-15 - UI recepcion (owner: Luis, due: 2026-02-20, estado: Por hacer)
 
 Debe cubrir:
 
 - `RecepcionQueuePage` + formulario llegada + acciones `cancelada/no_show`.
 - Consumo exclusivo desde `api/resources`.
 
-### KAN-21 - UI somatometria (owner: Luis, due: 2026-02-19)
+### KAN-21 - UI somatometria (owner: Luis, due: 2026-02-19, estado: En curso)
 
 Debe cubrir:
 
@@ -79,13 +79,13 @@ Debe cubrir:
 - Validaciones en tiempo real + visualizacion IMC.
 - Manejo UX de `VITALS_INCOMPLETE`.
 
-### KAN-28 - TDD SSE/fallback (owner: Abel, due: 2026-02-17)
+### KAN-28 - TDD WebSocket (owner: Luis, due: 2026-02-19, estado: En curso)
 
 Debe cubrir:
 
-- handshake SSE,
-- reconexion,
-- fallback sin perdida/duplicidad de eventos.
+- handshake WebSocket autenticado,
+- reconexion con backoff,
+- resincronizacion sin perdida/duplicidad de eventos.
 
 ---
 
@@ -94,7 +94,7 @@ Debe cubrir:
 - [ ] Recepcion funciona end-to-end (BE+FE) con permisos y errores correctos.
 - [ ] Somatometria funciona end-to-end (BE+FE) con validacion clinica.
 - [ ] UI usa solo recursos API y no HTTP directo en componentes.
-- [ ] TDD FE y TDD SSE dejan base lista para fase 3.
+- [ ] TDD FE y TDD WebSocket dejan base lista para fase 3.
 
 ---
 
