@@ -26,7 +26,7 @@ Dependencias:
 
 ## Especificacion por ticket
 
-### KAN-27 (owner: Abel, due: 2026-02-18)
+### KAN-27 (owner: Luis, due: 2026-02-23)
 
 Debe cubrir:
 
@@ -35,7 +35,7 @@ Debe cubrir:
 - Pipeline bloquea merge si falla suite critica.
 - Artefactos de evidencia por corrida (reportes/logs/capturas).
 
-### KAN-19 (owner: Abel, due: 2026-02-20)
+### KAN-19 (owner: Luis, due: 2026-02-23)
 
 Debe cubrir:
 
@@ -62,6 +62,7 @@ No cerrar `KAN-4` hasta cumplir todo:
 - [ ] `KAN-5`..`KAN-13` finalizados.
 - [ ] `KAN-14`..`KAN-22` finalizados.
 - [ ] `KAN-23`..`KAN-28` finalizados.
+- [ ] `KAN-34` y `KAN-35` finalizados.
 - [ ] Evidencia QA final consolidada (`KAN-19`).
 
 ---
@@ -73,7 +74,7 @@ Release checklist KAN-4:
 
 1) Contracts API y errores alineados a KAN-8.
 2) Maquina de estados valida en todos los caminos criticos.
-3) SSE/fallback estable sin drift de estado.
+3) WebSocket estable sin drift de estado.
 4) Smoke E2E y suite completa en verde.
 5) Evidencia de QA adjunta por ticket.
 6) Sin bloqueos abiertos en Jira para KAN-4.
