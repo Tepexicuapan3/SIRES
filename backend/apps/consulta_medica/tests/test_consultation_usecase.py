@@ -38,6 +38,17 @@ class ConsultationUseCaseTests(TestCase):
         self.assertEqual(raised.exception.code, "ROLE_NOT_ALLOWED")
         self.assertEqual(raised.exception.status_code, 403)
 
+    def test_start_consultation_allows_clinico_permission_dependency(self):
+        visit = self._visit("lista_para_doctor")
+
+        payload = start_consultation(
+            visit.id_visit,
+            ["CLINICO"],
+            ["clinico:consultas:read"],
+        )
+
+        self.assertEqual(payload["status"], "en_consulta")
+
     def test_start_consultation_invalid_transition(self):
         visit = self._visit("en_espera")
 
@@ -68,6 +79,20 @@ class ConsultationUseCaseTests(TestCase):
 
         consultation = VisitConsultation.objects.get(id_visit=visit)
         self.assertEqual(consultation.final_note, "Paciente estable y con tratamiento inicial.")
+
+    def test_close_consultation_allows_clinico_permission_dependency(self):
+        visit = self._visit("en_consulta")
+
+        payload = close_consultation(
+            visit_id=visit.id_visit,
+            roles=["CLINICO"],
+            primary_diagnosis="Cefalea tensional",
+            final_note="Paciente con manejo sintomatico.",
+            doctor_id=101,
+            permissions=["clinico:consultas:read"],
+        )
+
+        self.assertEqual(payload["visit"]["status"], "cerrada")
 
     def test_close_consultation_requires_required_fields_by_guard_clause(self):
         visit = self._visit("en_consulta")

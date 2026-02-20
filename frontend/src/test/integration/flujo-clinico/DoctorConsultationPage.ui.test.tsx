@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
 import DoctorConsultationPage from "@features/flujo-clinico/pages/DoctorConsultationPage";
+import { useStartConsultation } from "@features/flujo-clinico/mutations/useStartConsultation";
 import { useDoctorQueue } from "@features/flujo-clinico/queries/useDoctorQueue";
 import { useCloseVisit } from "@features/flujo-clinico/mutations/useCloseVisit";
 import type { VisitQueueItem } from "@api/types";
@@ -12,6 +13,10 @@ vi.mock("@features/flujo-clinico/queries/useDoctorQueue", () => ({
 
 vi.mock("@features/flujo-clinico/mutations/useCloseVisit", () => ({
   useCloseVisit: vi.fn(),
+}));
+
+vi.mock("@features/flujo-clinico/mutations/useStartConsultation", () => ({
+  useStartConsultation: vi.fn(),
 }));
 
 const createVisit = (
@@ -29,9 +34,13 @@ const createVisit = (
 });
 
 describe("DoctorConsultationPage UI", () => {
+  const startMutateAsync = vi.fn();
   const closeMutateAsync = vi.fn();
 
   beforeEach(() => {
+    startMutateAsync.mockReset();
+    closeMutateAsync.mockReset();
+
     vi.mocked(useDoctorQueue).mockReturnValue({
       data: {
         items: [createVisit()],
@@ -45,16 +54,48 @@ describe("DoctorConsultationPage UI", () => {
       error: null,
     } as unknown as ReturnType<typeof useDoctorQueue>);
 
+    vi.mocked(useStartConsultation).mockReturnValue({
+      mutateAsync: startMutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useStartConsultation>);
+
     vi.mocked(useCloseVisit).mockReturnValue({
       mutateAsync: closeMutateAsync,
       isPending: false,
     } as unknown as ReturnType<typeof useCloseVisit>);
 
+    startMutateAsync.mockResolvedValue({
+      id: 1,
+      folio: "VST-2001",
+      patientId: 2001,
+      arrivalType: "appointment",
+      appointmentId: "APP-2001",
+      doctorId: 77,
+      notes: "Paciente listo para valoracion",
+      status: "en_consulta",
+    });
+
     closeMutateAsync.mockResolvedValue({
-      visitId: 1,
-      status: "cerrada",
-      primaryDiagnosis: "Infeccion respiratoria",
-      finalNote: "Paciente estable al egreso.",
+      visit: {
+        id: 1,
+        folio: "VST-2001",
+        patientId: 2001,
+        arrivalType: "appointment",
+        appointmentId: "APP-2001",
+        doctorId: 77,
+        notes: "Paciente listo para valoracion",
+        status: "cerrada",
+      },
+      consultation: {
+        id: 900,
+        visitId: 1,
+        doctorId: 77,
+        primaryDiagnosis: "Infeccion respiratoria",
+        finalNote: "Paciente estable al egreso.",
+        isActive: true,
+        createdAt: "2026-02-20T12:00:00Z",
+        updatedAt: "2026-02-20T12:10:00Z",
+      },
     });
   });
 
@@ -109,6 +150,9 @@ describe("DoctorConsultationPage UI", () => {
     expect(closeButton).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "Iniciar consulta" }));
+    await waitFor(() => {
+      expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
+    });
     expect(closeButton).toBeDisabled();
 
     await user.type(
@@ -128,6 +172,9 @@ describe("DoctorConsultationPage UI", () => {
     render(<DoctorConsultationPage />);
 
     await user.click(screen.getByRole("button", { name: "Iniciar consulta" }));
+    await waitFor(() => {
+      expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
+    });
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(
       screen.getByLabelText("Nota final"),

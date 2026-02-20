@@ -30,6 +30,11 @@ const resolveDefaultVisitStreamUrl = (): string => {
     return configuredUrl;
   }
 
+  if (typeof window !== "undefined") {
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${protocol}://${window.location.hostname}:5000/ws/v1/visits/stream`;
+  }
+
   return DEFAULT_VISIT_STREAM_URL;
 };
 

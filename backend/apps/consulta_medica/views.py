@@ -1,3 +1,5 @@
+import logging
+
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
@@ -10,10 +12,13 @@ from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
+from apps.realtime.events import publish_visit_closed, publish_visit_status_changed
 from apps.recepcion.services.errors import VisitDomainError
 
 from .serializers import CloseConsultationSerializer, StartConsultationSerializer
 from .uses_case.consultation_usecase import close_consultation, start_consultation
+
+logger = logging.getLogger(__name__)
 
 
 def _auth_or_error(request):
@@ -52,7 +57,44 @@ def _domain_error_response(request, exc):
 
 def _actor_context(user):
     auth_user = UserRepository.build_auth_user(user)
-    return user.id_usuario, auth_user.get("roles", [])
+    return (
+        user.id_usuario,
+        auth_user.get("roles", []),
+        auth_user.get("permissions", []),
+    )
+
+
+def _emit_visit_status_changed_event(request, *, visit_id, status):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_status_changed(
+            visit_id=visit_id,
+            status=status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de inicio de consulta",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
+
+
+def _emit_visit_closed_event(request, *, visit_id):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_closed(
+            visit_id=visit_id,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de cierre de consulta",
+            extra={"visit_id": visit_id, "request_id": request_id},
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -79,10 +121,10 @@ class VisitConsultationStartView(APIView):
                 request_id=get_request_id(request),
             )
 
-        actor_id, roles = _actor_context(user)
+        actor_id, roles, permissions = _actor_context(user)
 
         try:
-            payload = start_consultation(visit_id, roles)
+            payload = start_consultation(visit_id, roles, permissions)
         except VisitDomainError as exc:
             return _domain_error_response(request, exc)
 
@@ -97,6 +139,12 @@ class VisitConsultationStartView(APIView):
                 "visitId": payload.get("id"),
                 "actorId": actor_id,
             },
+        )
+
+        _emit_visit_status_changed_event(
+            request,
+            visit_id=payload.get("id"),
+            status=payload.get("status"),
         )
 
         return Response(payload, status=status.HTTP_200_OK)
@@ -126,18 +174,24 @@ class VisitConsultationCloseView(APIView):
                 request_id=get_request_id(request),
             )
 
-        actor_id, roles = _actor_context(user)
+        actor_id, roles, permissions = _actor_context(user)
 
         try:
+            validated_data = dict(serializer.validated_data)
+            primary_diagnosis = validated_data.get("primaryDiagnosis", "")
+            final_note = validated_data.get("finalNote", "")
             payload = close_consultation(
                 visit_id,
                 roles,
-                serializer.validated_data["primaryDiagnosis"],
-                serializer.validated_data["finalNote"],
+                primary_diagnosis,
+                final_note,
                 actor_id,
+                permissions,
             )
         except VisitDomainError as exc:
             return _domain_error_response(request, exc)
+
+        visit_payload = payload.get("visit", {})
 
         log_event(
             request,
@@ -147,9 +201,14 @@ class VisitConsultationCloseView(APIView):
             meta={
                 "module": "consulta_medica",
                 "endpoint": request.path,
-                "visitId": payload["visit"].get("id"),
+                "visitId": visit_payload.get("id"),
                 "actorId": actor_id,
             },
+        )
+
+        _emit_visit_closed_event(
+            request,
+            visit_id=visit_payload.get("id"),
         )
 
         return Response(payload, status=status.HTTP_200_OK)

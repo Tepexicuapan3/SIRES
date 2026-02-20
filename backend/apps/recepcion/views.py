@@ -1,3 +1,5 @@
+import logging
+
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
@@ -10,6 +12,7 @@ from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
+from apps.realtime.events import publish_visit_status_changed
 from apps.recepcion.serializers import (
     CreateVisitSerializer,
     ListVisitsQuerySerializer,
@@ -23,6 +26,8 @@ from apps.recepcion.uses_case.visit_queue_usecase import (
     ensure_visit_queue_access,
     list_visits,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _auth_or_error(request):
@@ -61,6 +66,23 @@ def _csrf_or_error(request):
         status.HTTP_403_FORBIDDEN,
         request_id=get_request_id(request),
     )
+
+
+def _emit_visit_status_changed_event(request, *, visit_id, status):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_status_changed(
+            visit_id=visit_id,
+            status=status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de visita",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -108,6 +130,11 @@ class VisitsView(APIView):
             "SUCCESS",
             actor_user=user,
             meta={"module": "recepcion", "endpoint": request.path, "visitId": visit.get("id")},
+        )
+        _emit_visit_status_changed_event(
+            request,
+            visit_id=visit.get("id"),
+            status=visit.get("status"),
         )
         return Response(visit, status=status.HTTP_201_CREATED)
 
@@ -204,6 +231,12 @@ class VisitStatusView(APIView):
                 actor_user=user,
                 meta={"module": "recepcion", "endpoint": request.path, "visitId": visit.get("id")},
             )
+
+        _emit_visit_status_changed_event(
+            request,
+            visit_id=visit.get("id"),
+            status=visit.get("status"),
+        )
 
         return Response(visit, status=status.HTTP_200_OK)
 

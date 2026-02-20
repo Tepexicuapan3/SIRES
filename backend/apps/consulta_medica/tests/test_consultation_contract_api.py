@@ -2,9 +2,9 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelUsuarioRol
+from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Roles
+from apps.catalogos.models import Permisos, Roles
 from apps.consulta_medica.models import VisitConsultation
 from apps.recepcion.models import Visit
 
@@ -29,6 +29,14 @@ class ConsultationContractsApiTests(APITestCase):
             role_code="RECEPCION",
             landing_route="/recepcion",
         )
+        self._create_user_with_role(
+            username="clinico_user",
+            email="clinico@example.com",
+            password="Clinico_123456",
+            role_code="CLINICO",
+            landing_route="/clinico/consultas/doctor",
+            permissions=["clinico:consultas:read"],
+        )
 
         self.visit_ready = Visit.objects.create(
             folio="CNS-7001",
@@ -45,7 +53,15 @@ class ConsultationContractsApiTests(APITestCase):
             status="en_consulta",
         )
 
-    def _create_user_with_role(self, username, email, password, role_code, landing_route):
+    def _create_user_with_role(
+        self,
+        username,
+        email,
+        password,
+        role_code,
+        landing_route,
+        permissions=None,
+    ):
         user = SyUsuario.objects.create(
             usuario=username,
             correo=email,
@@ -73,6 +89,20 @@ class ConsultationContractsApiTests(APITestCase):
             id_rol=role,
             is_primary=True,
         )
+
+        for permission_code in permissions or []:
+            permission, _ = Permisos.objects.get_or_create(
+                codigo=permission_code,
+                defaults={
+                    "descripcion": permission_code,
+                    "is_active": True,
+                },
+            )
+            RelRolPermiso.objects.get_or_create(
+                id_rol=role,
+                id_permiso=permission,
+            )
+
         return user
 
     def _login_as(self, username, password):
@@ -122,6 +152,20 @@ class ConsultationContractsApiTests(APITestCase):
         self.assertEqual(response.data["status"], 403)
         self.assertEqual(response.data["requestId"], self.request_id)
 
+    def test_start_consultation_allows_clinico_with_consultas_permission(self):
+        self._login_as("clinico_user", "Clinico_123456")
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_ready.id_visit}/consultation/start",
+            {},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "en_consulta")
+
     def test_close_consultation_happy_path_contract(self):
         self._login_as("doctor_user", self.doctor_password)
 
@@ -144,6 +188,23 @@ class ConsultationContractsApiTests(APITestCase):
 
         consultation = VisitConsultation.objects.get(id_visit=self.visit_in_consultation)
         self.assertEqual(consultation.doctor_id, self.doctor_user.id_usuario)
+
+    def test_close_consultation_allows_clinico_with_consultas_permission(self):
+        self._login_as("clinico_user", "Clinico_123456")
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_consultation.id_visit}/consultation/close",
+            {
+                "primaryDiagnosis": "Infeccion de vias respiratorias",
+                "finalNote": "Alta con recomendaciones generales.",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["visit"]["status"], "cerrada")
 
     def test_close_consultation_invalid_payload_returns_validation_error(self):
         self._login_as("doctor_user", self.doctor_password)

@@ -178,6 +178,8 @@ export type {
   SaveDiagnosisResponse,
   SavePrescriptionRequest,
   SavePrescriptionResponse,
+  StartConsultationResponse,
+  VisitConsultationSummary,
   CloseVisitRequest,
   CloseVisitResponse,
 } from "@api/types/visits.types";

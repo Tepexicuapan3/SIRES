@@ -111,14 +111,25 @@ export interface SavePrescriptionResponse {
   items: string[];
 }
 
+export type StartConsultationResponse = VisitQueueItem;
+
 export interface CloseVisitRequest {
   primaryDiagnosis: string;
   finalNote: string;
 }
 
-export interface CloseVisitResponse {
+export interface VisitConsultationSummary {
+  id: number;
   visitId: number;
-  status: VisitStatus;
+  doctorId: number;
   primaryDiagnosis: string;
   finalNote: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CloseVisitResponse {
+  visit: VisitQueueItem;
+  consultation: VisitConsultationSummary;
 }

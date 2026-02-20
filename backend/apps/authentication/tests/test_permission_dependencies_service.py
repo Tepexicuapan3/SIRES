@@ -64,6 +64,17 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
         self.assertTrue(context["capabilities"]["flow.somatometria.capture"]["granted"])
         self.assertTrue(context["capabilities"]["flow.visits.queue.read"]["granted"])
 
+    def test_flow_doctor_capabilities_resolve_from_consultas_permission(self):
+        context = build_permission_context(["clinico:consultas:read"])
+
+        self.assertTrue(context["capabilities"]["flow.doctor.queue.read"]["granted"])
+        self.assertTrue(
+            context["capabilities"]["flow.doctor.consultation.start"]["granted"]
+        )
+        self.assertTrue(
+            context["capabilities"]["flow.doctor.consultation.close"]["granted"]
+        )
+
     def test_flow_visits_queue_capability_requires_dependency_complete(self):
         context = build_permission_context(["recepcion:fichas:medicina_general:create"])
 

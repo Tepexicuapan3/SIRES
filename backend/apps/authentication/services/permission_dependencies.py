@@ -106,6 +106,15 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "flow.somatometria.capture": {
         "allOf": ["clinico:somatometria:read"]
     },
+    "flow.doctor.queue.read": {
+        "allOf": ["clinico:consultas:read"]
+    },
+    "flow.doctor.consultation.start": {
+        "allOf": ["clinico:consultas:read"]
+    },
+    "flow.doctor.consultation.close": {
+        "allOf": ["clinico:consultas:read"]
+    },
 }
 
 

@@ -10,6 +10,7 @@ import type {
   SaveDiagnosisResponse,
   SavePrescriptionRequest,
   SavePrescriptionResponse,
+  StartConsultationResponse,
   UpdateVisitStatusRequest,
   UpdateVisitStatusResponse,
   VisitsListParams,
@@ -73,12 +74,22 @@ export const visitsAPI = {
     return response.data;
   },
 
+  startConsultation: async (
+    visitId: number,
+  ): Promise<StartConsultationResponse> => {
+    const response = await apiClient.post<StartConsultationResponse>(
+      `/visits/${visitId}/consultation/start`,
+      {},
+    );
+    return response.data;
+  },
+
   closeVisit: async (
     visitId: number,
     data: CloseVisitRequest,
   ): Promise<CloseVisitResponse> => {
     const response = await apiClient.post<CloseVisitResponse>(
-      `/visits/${visitId}/close`,
+      `/visits/${visitId}/consultation/close`,
       data,
     );
     return response.data;

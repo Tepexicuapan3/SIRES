@@ -20,7 +20,6 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_URL=/api/v1
       - VITE_DEV_PROXY_TARGET=${VITE_DEV_PROXY_TARGET-http://backend:5000}
-      - VITE_VISITS_STREAM_URL=ws://${SIRES_HOST-localhost}:${BACKEND_PORT-5000}/ws/v1/visits/stream
       - SIRES_HOST=${SIRES_HOST-localhost}
     command: sh -lc "bun install && unset http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY && bun run dev -- --host 0.0.0.0 --port 5173"
     restart: unless-stopped

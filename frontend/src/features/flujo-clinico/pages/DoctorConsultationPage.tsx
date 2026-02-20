@@ -18,6 +18,7 @@ import {
   type CloseVisitFormValues,
 } from "@features/flujo-clinico/domain/visit-flow.schemas";
 import { useCloseVisit } from "@features/flujo-clinico/mutations/useCloseVisit";
+import { useStartConsultation } from "@features/flujo-clinico/mutations/useStartConsultation";
 import { useDoctorQueue } from "@features/flujo-clinico/queries/useDoctorQueue";
 
 const DEFAULT_FORM_VALUES: CloseVisitFormInput = {
@@ -31,6 +32,7 @@ const formatStatusLabel = (status: string): string => {
 
 export const DoctorConsultationPage = () => {
   const queueQuery = useDoctorQueue();
+  const startConsultation = useStartConsultation();
   const closeVisit = useCloseVisit();
   const [selectedVisitIdState, setSelectedVisitIdState] = useState<
     number | null
@@ -76,15 +78,20 @@ export const DoctorConsultationPage = () => {
     ? canCloseConsultation(selectedVisitStatus)
     : false;
 
-  const handleStartConsultation = () => {
+  const handleStartConsultation = async () => {
     if (!selectedVisit || !canStartSelectedVisit) {
       return;
     }
 
     setFeedbackMessage(null);
+
+    const result = await startConsultation.mutateAsync({
+      visitId: selectedVisit.id,
+    });
+
     setLocalStatusesByVisitId((current) => ({
       ...current,
-      [selectedVisit.id]: VISIT_STATUS.EN_CONSULTA,
+      [selectedVisit.id]: result.status,
     }));
     setFeedbackMessage("Consulta iniciada.");
   };
@@ -173,8 +180,10 @@ export const DoctorConsultationPage = () => {
             <Button
               type="button"
               variant="outline"
-              disabled={!canStartSelectedVisit}
-              onClick={handleStartConsultation}
+              disabled={!canStartSelectedVisit || startConsultation.isPending}
+              onClick={() => {
+                void handleStartConsultation();
+              }}
             >
               Iniciar consulta
             </Button>

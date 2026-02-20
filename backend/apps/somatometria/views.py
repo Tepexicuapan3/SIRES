@@ -1,3 +1,5 @@
+import logging
+
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
@@ -8,12 +10,15 @@ from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
+from apps.realtime.events import publish_visit_status_changed
 from apps.recepcion.services.errors import VisitDomainError
 from apps.somatometria.serializers import CaptureVitalsSerializer
 from apps.somatometria.uses_case.capture_vitals_usecase import (
     capture_vitals,
     ensure_somatometria_role,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _auth_or_error(request):
@@ -47,6 +52,23 @@ def _domain_error_response(request, exc):
     )
 
 
+def _emit_visit_status_changed_event(request, *, visit_id, status):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_status_changed(
+            visit_id=visit_id,
+            status=status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de somatometria",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class VisitVitalsView(APIView):
     authentication_classes = []
@@ -76,5 +98,11 @@ class VisitVitalsView(APIView):
             result = capture_vitals(visit_id, serializer.validated_data)
         except VisitDomainError as exc:
             return _domain_error_response(request, exc)
+
+        _emit_visit_status_changed_event(
+            request,
+            visit_id=result.get("visitId"),
+            status=result.get("status"),
+        )
 
         return Response(result, status=status.HTTP_200_OK)
