@@ -1,0 +1,352 @@
+import {
+  parseRealtimeEnvelope,
+  type RealtimeEventEnvelope,
+} from "@/realtime/protocol";
+
+export const REALTIME_CONNECTION_STATUS = {
+  IDLE: "idle",
+  CONNECTING: "connecting",
+  CONNECTED: "connected",
+  DISCONNECTED: "disconnected",
+  ERROR: "error",
+} as const;
+
+export type RealtimeConnectionStatus =
+  (typeof REALTIME_CONNECTION_STATUS)[keyof typeof REALTIME_CONNECTION_STATUS];
+
+export interface RealtimeSequenceGap {
+  expectedSequence: number;
+  receivedSequence: number;
+}
+
+export interface RealtimeSocketClosedInfo {
+  code: number;
+  reason: string;
+}
+
+export interface RealtimeWebSocketLike {
+  onopen: ((event: Event) => void) | null;
+  onmessage: ((event: MessageEvent<string>) => void) | null;
+  onclose: ((event: CloseEvent) => void) | null;
+  onerror: ((event: Event) => void) | null;
+  close: () => void;
+  send?: (payload: string) => void;
+}
+
+export interface RealtimeClientState {
+  connectionStatus: RealtimeConnectionStatus;
+  lastSequence: number | null;
+}
+
+export type RealtimeEventHandler = (event: RealtimeEventEnvelope) => void;
+export type RealtimeStateChangeHandler = (state: RealtimeClientState) => void;
+
+export interface RealtimeClientOptions {
+  url: string;
+  createSocket?: (url: string) => RealtimeWebSocketLike;
+  backoffBaseMs?: number;
+  backoffMaxMs?: number;
+  jitterRatio?: number;
+  random?: () => number;
+  heartbeatIntervalMs?: number;
+  heartbeatMessage?: string;
+  onGap?: (gap: RealtimeSequenceGap) => void;
+  onSocketError?: () => void;
+  onSocketClosed?: (info: RealtimeSocketClosedInfo) => void;
+}
+
+const DEFAULT_BACKOFF_BASE_MS = 1000;
+const DEFAULT_BACKOFF_MAX_MS = 30000;
+const DEFAULT_JITTER_RATIO = 0.1;
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 0;
+const DEFAULT_HEARTBEAT_MESSAGE = "ping";
+
+const createDefaultSocket = (url: string): RealtimeWebSocketLike => {
+  if (typeof WebSocket === "undefined") {
+    throw new Error("WebSocket is not available in this environment");
+  }
+
+  return new WebSocket(url);
+};
+
+export class RealtimeClient {
+  private readonly url: string;
+  private readonly createSocket: (url: string) => RealtimeWebSocketLike;
+  private readonly backoffBaseMs: number;
+  private readonly backoffMaxMs: number;
+  private readonly jitterRatio: number;
+  private readonly random: () => number;
+  private readonly heartbeatIntervalMs: number;
+  private readonly heartbeatMessage: string;
+  private readonly onGap?: (gap: RealtimeSequenceGap) => void;
+  private readonly onSocketError?: () => void;
+  private readonly onSocketClosed?: (info: RealtimeSocketClosedInfo) => void;
+
+  private socket: RealtimeWebSocketLike | null = null;
+  private reconnectAttempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private isStopped = false;
+  private readonly seenEventIds = new Set<string>();
+  private readonly eventHandlers = new Map<string, Set<RealtimeEventHandler>>();
+  private readonly stateHandlers = new Set<RealtimeStateChangeHandler>();
+
+  private state: RealtimeClientState = {
+    connectionStatus: REALTIME_CONNECTION_STATUS.IDLE,
+    lastSequence: null,
+  };
+
+  constructor(options: RealtimeClientOptions) {
+    this.url = options.url;
+    this.createSocket = options.createSocket ?? createDefaultSocket;
+    this.backoffBaseMs = options.backoffBaseMs ?? DEFAULT_BACKOFF_BASE_MS;
+    this.backoffMaxMs = options.backoffMaxMs ?? DEFAULT_BACKOFF_MAX_MS;
+    this.jitterRatio = options.jitterRatio ?? DEFAULT_JITTER_RATIO;
+    this.random = options.random ?? Math.random;
+    this.heartbeatIntervalMs =
+      options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+    this.heartbeatMessage =
+      options.heartbeatMessage ?? DEFAULT_HEARTBEAT_MESSAGE;
+    this.onGap = options.onGap;
+    this.onSocketError = options.onSocketError;
+    this.onSocketClosed = options.onSocketClosed;
+  }
+
+  connect(): void {
+    this.isStopped = false;
+    this.clearReconnectTimer();
+    this.openSocket(false);
+  }
+
+  disconnect(): void {
+    this.isStopped = true;
+    this.clearReconnectTimer();
+    this.clearHeartbeatTimer();
+
+    if (!this.socket) {
+      this.setConnectionStatus(REALTIME_CONNECTION_STATUS.DISCONNECTED);
+      return;
+    }
+
+    const socket = this.socket;
+    this.socket = null;
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    socket.close();
+    this.setConnectionStatus(REALTIME_CONNECTION_STATUS.DISCONNECTED);
+  }
+
+  subscribe(eventType: string, handler: RealtimeEventHandler): () => void {
+    const handlers = this.eventHandlers.get(eventType) ?? new Set();
+    handlers.add(handler);
+    this.eventHandlers.set(eventType, handlers);
+
+    return () => {
+      this.unsubscribe(eventType, handler);
+    };
+  }
+
+  unsubscribe(eventType: string, handler: RealtimeEventHandler): void {
+    const handlers = this.eventHandlers.get(eventType);
+    if (!handlers) {
+      return;
+    }
+
+    handlers.delete(handler);
+    if (handlers.size === 0) {
+      this.eventHandlers.delete(eventType);
+    }
+  }
+
+  onStateChange(handler: RealtimeStateChangeHandler): () => void {
+    this.stateHandlers.add(handler);
+
+    return () => {
+      this.stateHandlers.delete(handler);
+    };
+  }
+
+  getState(): RealtimeClientState {
+    return { ...this.state };
+  }
+
+  private openSocket(isReconnect: boolean): void {
+    if (!isReconnect) {
+      this.setConnectionStatus(REALTIME_CONNECTION_STATUS.CONNECTING);
+    }
+
+    const socket = this.createSocket(this.url);
+    this.socket = socket;
+    socket.onopen = () => {
+      this.reconnectAttempts = 0;
+      this.setConnectionStatus(REALTIME_CONNECTION_STATUS.CONNECTED);
+      this.startHeartbeat();
+    };
+    socket.onmessage = (event) => {
+      this.handleRawMessage(event.data);
+    };
+    socket.onerror = () => {
+      this.setConnectionStatus(REALTIME_CONNECTION_STATUS.ERROR);
+      this.onSocketError?.();
+    };
+    socket.onclose = (event) => {
+      this.clearHeartbeatTimer();
+      this.setConnectionStatus(REALTIME_CONNECTION_STATUS.DISCONNECTED);
+      this.onSocketClosed?.({ code: event.code, reason: event.reason });
+
+      if (!this.isStopped) {
+        this.scheduleReconnect();
+      }
+    };
+  }
+
+  private handleRawMessage(rawData: string): void {
+    const event = parseRealtimeEnvelope(rawData);
+    if (!event) {
+      return;
+    }
+
+    if (this.seenEventIds.has(event.eventId)) {
+      return;
+    }
+
+    if (!this.shouldAcceptBySequence(event.sequence)) {
+      return;
+    }
+
+    this.seenEventIds.add(event.eventId);
+    this.setState({ lastSequence: event.sequence });
+    this.dispatchEvent(event);
+  }
+
+  private shouldAcceptBySequence(sequence: number): boolean {
+    const { lastSequence } = this.state;
+    if (lastSequence === null) {
+      return true;
+    }
+
+    if (sequence <= lastSequence) {
+      return false;
+    }
+
+    if (sequence > lastSequence + 1) {
+      this.onGap?.({
+        expectedSequence: lastSequence + 1,
+        receivedSequence: sequence,
+      });
+    }
+
+    return true;
+  }
+
+  private dispatchEvent(event: RealtimeEventEnvelope): void {
+    const handlers = [
+      ...(this.eventHandlers.get(event.eventType) ?? []),
+      ...(this.eventHandlers.get("*") ?? []),
+    ];
+
+    for (const handler of handlers) {
+      handler(event);
+    }
+  }
+
+  private scheduleReconnect(): void {
+    this.clearReconnectTimer();
+
+    const factor = 2 ** this.reconnectAttempts;
+    const unclampedBackoff = this.backoffBaseMs * factor;
+    const backoff = Math.min(unclampedBackoff, this.backoffMaxMs);
+    const jitter = backoff * this.jitterRatio * this.random();
+    const reconnectDelayMs = Math.round(backoff + jitter);
+
+    this.reconnectAttempts += 1;
+    this.reconnectTimer = setTimeout(() => {
+      this.openSocket(true);
+    }, reconnectDelayMs);
+  }
+
+  private startHeartbeat(): void {
+    this.clearHeartbeatTimer();
+
+    if (this.heartbeatIntervalMs <= 0) {
+      return;
+    }
+
+    const socket = this.socket;
+    if (!socket?.send) {
+      return;
+    }
+
+    this.heartbeatTimer = setInterval(() => {
+      if (this.isStopped || !this.socket?.send) {
+        return;
+      }
+
+      this.socket.send(this.heartbeatMessage);
+    }, this.heartbeatIntervalMs);
+  }
+
+  private clearReconnectTimer(): void {
+    if (!this.reconnectTimer) {
+      return;
+    }
+
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+  }
+
+  private clearHeartbeatTimer(): void {
+    if (!this.heartbeatTimer) {
+      return;
+    }
+
+    clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = null;
+  }
+
+  private setConnectionStatus(status: RealtimeConnectionStatus): void {
+    this.setState({ connectionStatus: status });
+  }
+
+  private setState(next: Partial<RealtimeClientState>): void {
+    this.state = {
+      ...this.state,
+      ...next,
+    };
+
+    const snapshot = this.getState();
+    for (const handler of this.stateHandlers) {
+      handler(snapshot);
+    }
+  }
+}
+
+const realtimeClientSingletons = new Map<string, RealtimeClient>();
+
+export const createRealtimeClient = (
+  options: RealtimeClientOptions,
+): RealtimeClient => {
+  return new RealtimeClient(options);
+};
+
+export const getOrCreateRealtimeClient = (
+  options: RealtimeClientOptions,
+): RealtimeClient => {
+  const existing = realtimeClientSingletons.get(options.url);
+  if (existing) {
+    return existing;
+  }
+
+  const client = createRealtimeClient(options);
+  realtimeClientSingletons.set(options.url, client);
+  return client;
+};
+
+export const resetRealtimeClientSingletonsForTests = (): void => {
+  for (const client of realtimeClientSingletons.values()) {
+    client.disconnect();
+  }
+  realtimeClientSingletons.clear();
+};

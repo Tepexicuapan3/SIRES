@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { visitsAPI } from "@api/resources/visits.api";
 import type { VisitsListParams } from "@api/types";
 import {
   SOCKET_CONNECTION_STATUS,
-  VisitRealtimeClient,
   type SocketConnectionStatus,
   type WebSocketLike,
 } from "@features/flujo-clinico/queries/visit-realtime.client";
+import { useVisitRealtimeBridge } from "@features/flujo-clinico/queries/useVisitRealtimeBridge";
 
 interface UseVisitRealtimeSyncOptions {
   enabled?: boolean;
@@ -40,62 +38,21 @@ export const useVisitRealtimeSync = (
     random,
   } = options;
 
-  const [connectionStatus, setConnectionStatus] =
-    useState<SocketConnectionStatus>(SOCKET_CONNECTION_STATUS.IDLE);
-  const [lastSequence, setLastSequence] = useState<number | null>(null);
-  const clientRef = useRef<VisitRealtimeClient | null>(null);
-  const socketFactoryRef = useRef(socketFactory);
-  const resyncParamsRef = useRef(resyncParams);
-  const randomRef = useRef(random);
-
-  useEffect(() => {
-    socketFactoryRef.current = socketFactory;
-  }, [socketFactory]);
-
-  useEffect(() => {
-    resyncParamsRef.current = resyncParams;
-  }, [resyncParams]);
-
-  useEffect(() => {
-    randomRef.current = random;
-  }, [random]);
-
-  useEffect(() => {
-    if (!enabled) {
-      clientRef.current?.disconnect();
-      clientRef.current = null;
-      return;
-    }
-
-    const client = new VisitRealtimeClient({
-      url,
-      createSocket: socketFactoryRef.current,
-      onConnectionStatusChange: setConnectionStatus,
-      onEvent: (event) => {
-        setLastSequence(event.sequence);
-      },
-      onResyncRequested: () => {
-        void visitsAPI.getAll(resyncParamsRef.current);
-      },
-      backoffBaseMs,
-      backoffMaxMs,
-      jitterRatio,
-      random: randomRef.current,
-    });
-
-    clientRef.current = client;
-    client.connect();
-
-    return () => {
-      client.disconnect();
-      clientRef.current = null;
-    };
-  }, [enabled, url, backoffBaseMs, backoffMaxMs, jitterRatio]);
+  const bridge = useVisitRealtimeBridge({
+    enabled,
+    url,
+    resyncParams,
+    socketFactory,
+    backoffBaseMs,
+    backoffMaxMs,
+    jitterRatio,
+    random,
+  });
 
   return {
     connectionStatus: enabled
-      ? connectionStatus
+      ? bridge.connectionStatus
       : SOCKET_CONNECTION_STATUS.IDLE,
-    lastSequence,
+    lastSequence: bridge.lastSequence,
   };
 };
