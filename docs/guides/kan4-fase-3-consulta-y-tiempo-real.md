@@ -3,7 +3,7 @@
 > **TL;DR:** Esta fase habilita consulta medica y sincronizacion en tiempo real con enfoque WebSocket-first. Es la fase con mayor riesgo de acoplamiento, por eso el orden de gates es estricto.
 
 **Tickets de fase:** `KAN-22`, `KAN-17`, `KAN-20`  
-**Habilitadores transversales:** `KAN-34`, `KAN-35`
+**Habilitadores transversales:** `KAN-34`, `KAN-35`, `KAN-36`, `KAN-37`
 
 ---
 
@@ -16,14 +16,16 @@ Completar la experiencia de consulta medica (backend + frontend) con WebSocket e
 ## Orden obligatorio de ejecucion
 
 1. `KAN-22` - Infra y capa de eventos WebSocket (base de sincronizacion).
-2. `KAN-17` - APIs de diagnostico, receta y cierre.
-3. `KAN-20` - UI doctor y cierre de consulta.
+2. `KAN-36` - Delta API para completar emision de eventos de recepcion al stream realtime.
+3. `KAN-17` - APIs de diagnostico, receta y cierre.
+4. `KAN-37` - Delta UI para resiliencia realtime (dedupe/ordering/resync).
+5. `KAN-20` - UI doctor y cierre de consulta.
 
 Dependencias criticas:
 
-- `KAN-22` depende de `KAN-18`, `KAN-21`, `KAN-28`, `KAN-34`, `KAN-35`.
+- `KAN-22` depende de `KAN-18`, `KAN-21`, `KAN-28`, `KAN-34`, `KAN-35`, `KAN-36`.
 - `KAN-17` depende de `KAN-16`, `KAN-24`, `KAN-25`, `KAN-22`.
-- `KAN-20` depende de `KAN-17`, `KAN-22`, `KAN-26`.
+- `KAN-20` depende de `KAN-17`, `KAN-22`, `KAN-26`, `KAN-37`.
 
 ---
 
@@ -83,6 +85,18 @@ Obligatorio:
 
 - `KAN-22` no se considera listo sin outputs de ambos tickets.
 
+### KAN-36 / KAN-37 - Deltas post-pivot para cerrar gaps de tickets finalizados
+
+Debe cubrir:
+
+- `KAN-36`: reforzar backend de eventos en transiciones de recepcion para continuidad del stream WebSocket.
+- `KAN-37`: reforzar FE en reconexion, dedupe por `eventId`, ordering por `sequence` y resync por gap.
+
+Obligatorio:
+
+- No reabrir `KAN-14` ni `KAN-26` si los deltas cubren totalmente el gap.
+- `KAN-20` no se considera listo sin salida verificable de `KAN-37`.
+
 ---
 
 ## Contrato de eventos (minimo v1)
@@ -115,7 +129,9 @@ Reglas:
 ## Criterios de salida de fase
 
 - [ ] `KAN-22` estable con pruebas de handshake, reconexion y ordering.
+- [ ] `KAN-36` valida emision de eventos de recepcion con envelope estable.
 - [ ] `KAN-17` cierra consulta solo con reglas correctas y emite eventos.
+- [ ] `KAN-37` valida dedupe/resync de cliente FE ante fallas de canal.
 - [ ] `KAN-20` refleja bloqueos y errores de dominio sin ambiguedad.
 - [ ] Flujo `lista_para_doctor -> en_consulta -> cerrada` consistente en BE y FE.
 
@@ -142,9 +158,11 @@ Reglas:
 ```text
 Ejecuta Fase 3 de KAN-4:
 
-Orden estricto: KAN-22 -> KAN-17 -> KAN-20.
+Orden estricto: KAN-22 -> KAN-36 -> KAN-17 -> KAN-37 -> KAN-20.
 No cierres KAN-22 sin evidencia de handshake/reconexion/ordering.
+No cierres KAN-36 sin evidencia de emision de eventos en transiciones de recepcion.
 No cierres KAN-17 sin validar guard clause de cierre y emision de eventos.
+No cierres KAN-37 sin validar dedupe/ordering/resync en hooks cliente.
 No cierres KAN-20 sin pruebas de UI/hook en verde.
 
 Entrega:

@@ -1,37 +1,31 @@
 # Admin Feature
 
-> TL;DR: Modulo administrativo modular y escalable, organizado por submodulos con queries/mutations al estilo `features/auth`.
+Modulo administrativo de SIRES, organizado por submodulos con estructura repetible.
 
-## Objetivo
+## Alcance
 
-Separar Admin en modulos independientes (RBAC, catalogos, reportes, etc.) con estructura repetible para crecer sin ruido.
+- Ruta: `frontend/src/features/admin/**`
+- Reglas de agente: `frontend/src/features/admin/AGENTS.md`
+- Base comun de features: `frontend/src/features/AGENTS.md`
 
-## Convenciones
+## Principios
 
-- Contratos vienen en camelCase desde backend (sin adapters).
-- Queries y mutations viven separados, con keys dedicadas por modulo.
-- UI solo consume hooks; HTTP vive en `frontend/src/api/resources`.
-- Reutilizable va en `shared/`, lo especifico va en `modules/<modulo>/`.
+- Backend entrega contratos en camelCase (sin adapters en UI).
+- UI consume hooks/queries/mutations; no hace HTTP directo.
+- Queries y mutations separados por modulo y con keys dedicadas.
+- Reutilizable en `shared/`; especifico en `modules/<modulo>/`.
 
-## Estructura base
+## Estructura
 
 ```txt
 admin/
 ├── shared/
-│   ├── components/   # tablas, filtros, paginado, estados
-│   ├── hooks/        # helpers genericos (filtros, search, pagination)
+│   ├── components/
+│   ├── hooks/
 │   └── utils/
 └── modules/
     ├── rbac/
-    │   ├── users/
-    │   ├── roles/
-    │   ├── permissions/
-    │   ├── overrides/
-    │   └── shared/
     ├── catalogos/
-    │   ├── shared/
-    │   ├── centros-atencion/
-    │   └── areas/
     ├── expedientes/
     ├── reportes/
     ├── analiticas/
@@ -40,63 +34,42 @@ admin/
     └── licencias/
 ```
 
-## Flujo de datos
+## Catalogos Actuales
 
-UI (components/pages) → queries/mutations → `api/resources` → backend.
+- `modules/catalogos/centros-atencion`
+- `modules/catalogos/areas`
 
-## Patron para paginas de listado
+## Patrones Recomendados
 
-- `shared/components/AdminPageIntro.tsx` unifica encabezados de modulo (titulo, descripcion e icono).
-- `shared/components/ConfirmDestructiveDialog.tsx` evita duplicacion en confirmaciones de borrado.
-- Cada modulo define sus columnas en componentes dedicados (`UsersTableColumns`, `RolesTableColumns`, `AreasTableColumns`) para mantener las pages delgadas y con una sola responsabilidad.
-- Logica densa (busqueda/ranking de permisos) debe vivir en `utils/` (`users.permissions-search.ts`) y no dentro de componentes de UI.
-- Guardado incremental y transformaciones de borrador en dialogs se extraen a `utils/` (`users.details-save.ts`, `roles.details-save.ts`, `users.details-draft.ts`, `roles.details-draft.ts`).
-- Dialogos complejos se componen por bloques chicos (`UserCreateSidePanel`, `RoleDialogHeader`, `UserDialogHeader`) para aislar layout de negocio.
+### Listados CRUD
 
-## Patron RBAC para permisos
+- Mantener pages delgadas (render + wiring).
+- Mover logica pesada a `utils/`.
+- Mover definicion de columnas a componentes dedicados.
+- Reusar componentes de shell/dialog/shared para evitar duplicacion.
 
-- `modules/rbac/shared/components/PermissionHierarchyExplorer.tsx` centraliza el arbol jerarquico (grupo/modulo/submodulo/accion), seleccion, acciones y virtualizacion para catalogos grandes.
-- `modules/rbac/shared/components/PermissionSearchField.tsx` unifica UX de busqueda con teclado (flechas/enter/escape), boton limpiar y a11y (`aria-controls`, `aria-activedescendant`).
-- Badges con codigo de permiso usan `TruncatedTooltip` y deben pasar `className="block min-w-0 max-w-full truncate"` para que el tooltip aparezca solo si hay truncado real.
-- Formularios de alta (`RoleCreateDialog`, `UserCreateDialog`) cierran al guardar y confirman por toast; no se mantiene una tarjeta de credenciales en pantalla.
+### Detalles CRUD
 
-## Patron base para catalogos CRUD
+- Usar shell reutilizable para loading/error/confirmacion.
+- Para casos simples, usar una sola seccion.
+- Para casos complejos (RBAC), separar en secciones/tabs por responsabilidad.
 
-- Reutilizar componentes de `modules/catalogos/shared/components/`:
-  - `CatalogModuleLayout`
-  - `CatalogDialogHeader`
-  - `CatalogStatusBadge`
-  - `CatalogDetailsFooter`
-  - `CatalogCreateResultCard`
-- Reutilizar utilitarios de `modules/catalogos/shared/utils/`:
-  - `catalog-feedback.ts` para errores de API normalizados
-  - `catalog-format.ts` para fechas/hora de auditoria
-- Casos de referencia implementados:
-  - `catalogos/areas`
-  - `catalogos/centros-atencion`
+## Permisos y UX
 
-## Patron reutilizable para detalles CRUD
+- Si falta permiso secundario, mostrar aviso contextual neutro (sin banner critico).
+- No exponer codigos tecnicos de permiso en UI.
+- Deshabilitar solo controles dependientes y mantener data visible cuando sea posible.
+- Evitar requests innecesarios con `enabled: false` en queries sin permiso.
+- Para escrituras, usar `usePermissionDependencies()` y modo `dependencyAware` cuando aplique.
 
-### Base compartida
+## Flujo de Datos
 
-- `shared/components/details/AdminDetailsDialogShell.tsx` centraliza layout, confirmacion por cambios sin guardar, loading/error y footer configurable.
-- `shared/components/details/AdminDetailsHeader.tsx` y `AdminDetailsFooter.tsx` evitan duplicar estructura visual en cada modulo.
-- `shared/types/details-dialog.types.ts` define el contrato de secciones para tabs dinamicas.
+`UI -> queries/mutations -> frontend/src/api/resources -> backend`
 
-### Caso con tabs (RBAC)
+## Checklist de Nuevo Modulo Admin
 
-- Construir `sections` con mas de un bloque (`general`, `roles`, `permissions`, etc.).
-- Cada bloque mantiene su propia UI y hooks de mutation/query.
-
-### Caso sin tabs (catalogos solo formulario)
-
-- Definir `sections` con **una sola** seccion (`general`).
-- El shell detecta `sections.length === 1` y renderiza contenido directo, sin `TabsList`.
-- Reusar el mismo footer para guardar/cancelar y confirmacion de salida.
-
-### Checklist para agregar un nuevo catalogo
-
-1. Crear queries/mutations y keys del catalogo (`modules/catalogos/<catalogo>/queries|mutations`).
-2. Implementar `DetailsDialog` del catalogo usando `AdminDetailsDialogShell` con una sola seccion.
-3. Conectar accion `Ver detalles` desde la tabla (`TableToolbar` o `onRowClick`).
-4. Cubrir test de UI: abrir detalle, editar, guardar, confirmar salida con cambios.
+- [ ] Crear `queries/` y `mutations/` con keys propias.
+- [ ] Definir `components/`, `domain/`, `utils/` segun necesidad.
+- [ ] Integrar permisos y estados de acceso degradado.
+- [ ] Asegurar manejo de loading/empty/error.
+- [ ] Agregar o actualizar tests de UI/comportamiento.

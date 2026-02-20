@@ -7,15 +7,27 @@
 
 ## Skills Reference
 
-- `react-19` - Component patterns
+- `vercel-react-best-practices` - Performance-aware component patterns
+- `interface-design` - UI layout and visual hierarchy design
+- `web-design-guidelines` - UI/UX and accessibility compliance reviews
 - `typescript` - Route typing
+- `error-handling-patterns` - route error boundaries and fallback behavior
+- `systematic-debugging` - Root-cause-first debugging for routing and guard issues
+- `brainstorming` - planning navigation/guard strategy before coding
+- `find-skills` - Discover/install skills when requested
 
 ## Auto-invoke Skills
 
 | Action | Skill |
 | --- | --- |
-| Create/modify React components | `react-19` |
+| Create/modify React components (performance-aware) | `vercel-react-best-practices` |
+| Create new page layout and route-level UI structure | `interface-design` |
+| Review UI/UX/accessibility compliance | `web-design-guidelines` |
 | Write TypeScript types | `typescript` |
+| Design/review route error boundaries and fallback flows | `error-handling-patterns` |
+| Debug route/guard regressions | `systematic-debugging` |
+| User asks for planning/discovery before coding | `brainstorming` |
+| User asks to discover/install skills | `find-skills` |
 
 ---
 
