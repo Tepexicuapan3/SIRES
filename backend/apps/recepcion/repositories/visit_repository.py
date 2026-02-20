@@ -37,7 +37,7 @@ class VisitRepository:
 
     @staticmethod
     def list_paginated(page, page_size, status_filter=None, date_filter=None, doctor_id=None):
-        queryset = Visit.objects.order_by("id_visit")
+        queryset = Visit.objects.order_by("-id_visit")
 
         if status_filter:
             queryset = queryset.filter(status=status_filter)

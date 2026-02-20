@@ -51,6 +51,7 @@ export interface CreateVisitRequest {
 export type CreateVisitResponse = VisitQueueItem;
 
 export const RECEPCION_STATUS_ACTION = {
+  EN_SOMATOMETRIA: "en_somatometria",
   CANCELADA: "cancelada",
   NO_SHOW: "no_show",
 } as const;

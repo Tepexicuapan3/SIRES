@@ -46,4 +46,6 @@ class ListVisitsQuerySerializer(serializers.Serializer):
 
 
 class UpdateVisitStatusSerializer(serializers.Serializer):
-    targetStatus = serializers.ChoiceField(choices=("cancelada", "no_show"))
+    targetStatus = serializers.ChoiceField(
+        choices=("en_somatometria", "cancelada", "no_show")
+    )

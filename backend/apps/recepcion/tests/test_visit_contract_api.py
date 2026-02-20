@@ -293,6 +293,22 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.data["id"], visit["id"])
         self.assertEqual(response.data["status"], "no_show")
 
+    def test_patch_visit_status_en_somatometria_happy_path(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit = self._create_visit(patient_id=3006)
+
+        response = self.client.patch(
+            f"/api/v1/visits/{visit['id']}/status",
+            {"targetStatus": "en_somatometria"},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], visit["id"])
+        self.assertEqual(response.data["status"], "en_somatometria")
+
     def test_patch_visit_status_invalid_payload_returns_validation_error(self):
         self._login_as("recepcion_user", self.recepcion_password)
         visit = self._create_visit(patient_id=3003)
