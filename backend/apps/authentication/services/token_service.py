@@ -88,7 +88,7 @@ def set_auth_cookies(response, access_token, refresh_token, csrf_token):
         httponly=True,
         secure=secure,
         samesite="Lax",
-        path="/api",
+        path="/",
     )
     response.set_cookie(
         REFRESH_COOKIE,
@@ -132,7 +132,7 @@ def clear_auth_cookies(response):
         httponly=True,
         secure=secure,
         samesite="Strict",
-        path="/api",
+        path="/",
     )
     response.set_cookie(
         REFRESH_COOKIE,

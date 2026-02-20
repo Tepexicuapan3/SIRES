@@ -1,9 +1,22 @@
+from apps.authentication.services.permission_dependencies import (
+    evaluate_permission_requirement,
+)
 from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.services.errors import VisitDomainError
 from apps.recepcion.uses_case.visit_state_machine_usecase import (
     ROLE_RECEPCION,
     transition_visit_state,
 )
+
+VISIT_QUEUE_PERMISSION_REQUIREMENT = {
+    "anyOf": [
+        "recepcion:fichas:medicina_general:create",
+        "recepcion:fichas:especialidad:create",
+        "recepcion:fichas:urgencias:create",
+        "clinico:consultas:read",
+        "clinico:somatometria:read",
+    ]
+}
 
 
 def ensure_recepcion_role(roles):
@@ -14,6 +27,25 @@ def ensure_recepcion_role(roles):
             "No tenes permiso para ejecutar esta accion.",
             403,
         )
+
+
+def ensure_visit_queue_access(roles, permissions):
+    normalized_roles = {(role or "").strip().upper() for role in roles}
+    if ROLE_RECEPCION in normalized_roles:
+        return
+
+    state = evaluate_permission_requirement(
+        VISIT_QUEUE_PERMISSION_REQUIREMENT,
+        permissions,
+    )
+    if state["granted"]:
+        return
+
+    raise VisitDomainError(
+        "ROLE_NOT_ALLOWED",
+        "No tenes permiso para ejecutar esta accion.",
+        403,
+    )
 
 
 def create_visit(

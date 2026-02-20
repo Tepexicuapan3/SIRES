@@ -3,9 +3,9 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelUsuarioRol
+from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Roles
+from apps.catalogos.models import Permisos, Roles
 
 
 class VisitContractsApiTests(APITestCase):
@@ -26,8 +26,15 @@ class VisitContractsApiTests(APITestCase):
             password=self.medico_password,
             role_code="MEDICO",
         )
+        self._create_user_with_role(
+            username="clinico_user",
+            email="clinico@example.com",
+            password="Clinico_123456",
+            role_code="CLINICO",
+            permissions=["clinico:somatometria:read"],
+        )
 
-    def _create_user_with_role(self, username, email, password, role_code):
+    def _create_user_with_role(self, username, email, password, role_code, permissions=None):
         user = SyUsuario.objects.create(
             usuario=username,
             correo=email,
@@ -53,6 +60,19 @@ class VisitContractsApiTests(APITestCase):
             id_rol=role,
             is_primary=True,
         )
+
+        for permission_code in permissions or []:
+            permission, _ = Permisos.objects.get_or_create(
+                codigo=permission_code,
+                defaults={
+                    "descripcion": permission_code,
+                    "is_active": True,
+                },
+            )
+            RelRolPermiso.objects.get_or_create(
+                id_rol=role,
+                id_permiso=permission,
+            )
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
@@ -185,6 +205,19 @@ class VisitContractsApiTests(APITestCase):
         self.assertIn("doctorId", first_item)
         self.assertIn("notes", first_item)
         self.assertIn("status", first_item)
+
+    def test_list_visits_allows_clinico_with_somatometria_permission(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        self._create_visit(patient_id=2301)
+
+        self._login_as("clinico_user", "Clinico_123456")
+        response = self.client.get(
+            "/api/v1/visits?page=1&pageSize=20&status=en_espera",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("items", response.data)
 
     def test_list_visits_filters_by_status_and_doctor(self):
         self._login_as("recepcion_user", self.recepcion_password)

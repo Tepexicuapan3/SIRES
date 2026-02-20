@@ -24,12 +24,21 @@ interface UseVisitRealtimeSyncResult {
 
 const DEFAULT_VISIT_STREAM_URL = "/ws/v1/visits/stream";
 
+const resolveDefaultVisitStreamUrl = (): string => {
+  const configuredUrl = import.meta.env.VITE_VISITS_STREAM_URL;
+  if (typeof configuredUrl === "string" && configuredUrl.trim().length > 0) {
+    return configuredUrl;
+  }
+
+  return DEFAULT_VISIT_STREAM_URL;
+};
+
 export const useVisitRealtimeSync = (
   options: UseVisitRealtimeSyncOptions = {},
 ): UseVisitRealtimeSyncResult => {
   const {
     enabled = true,
-    url = DEFAULT_VISIT_STREAM_URL,
+    url = resolveDefaultVisitStreamUrl(),
     resyncParams,
     socketFactory,
     backoffBaseMs,

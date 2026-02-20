@@ -17,6 +17,23 @@ const parseOptionalText = (value: unknown): unknown => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const parseLocalizedDecimal = (value: unknown): unknown => {
+  if (typeof value === "string") {
+    const normalized = value.trim().replace(",", ".");
+    if (normalized.length === 0) {
+      return value;
+    }
+
+    return Number(normalized);
+  }
+
+  return value;
+};
+
+const hasSingleDecimalPrecision = (value: number): boolean => {
+  return Math.abs(value * 10 - Math.round(value * 10)) < Number.EPSILON;
+};
+
 export const createVisitFormSchema = z
   .object({
     patientId: z.coerce
@@ -61,10 +78,16 @@ export type CreateVisitFormInput = z.input<typeof createVisitFormSchema>;
 export const captureVitalsFormSchema = z.object({
   weightKg: z.coerce.number().min(1, { error: "Ingresa el peso en kg." }),
   heightCm: z.coerce.number().min(30, { error: "Ingresa la talla en cm." }),
-  temperatureC: z.coerce
-    .number()
-    .min(30, { error: "Ingresa la temperatura en C." })
-    .max(45, { error: "La temperatura no es valida." }),
+  temperatureC: z.preprocess(
+    parseLocalizedDecimal,
+    z
+      .number({ error: "Ingresa la temperatura en C." })
+      .min(30, { error: "Ingresa la temperatura en C." })
+      .max(45, { error: "La temperatura no es valida." })
+      .refine(hasSingleDecimalPrecision, {
+        error: "La temperatura debe tener maximo 1 decimal.",
+      }),
+  ),
   oxygenSaturationPct: z.coerce
     .number()
     .int()

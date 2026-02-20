@@ -2,9 +2,9 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelUsuarioRol
+from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Roles
+from apps.catalogos.models import Permisos, Roles
 from apps.recepcion.models import Visit
 
 
@@ -26,6 +26,13 @@ class VitalsContractsApiTests(APITestCase):
             password=self.recepcion_password,
             role_code="RECEPCION",
         )
+        self._create_user_with_role(
+            username="clinico_user",
+            email="clinico2@example.com",
+            password="Clinico_123456",
+            role_code="CLINICO",
+            permissions=["clinico:somatometria:read"],
+        )
 
         self.visit_in_somato = Visit.objects.create(
             folio="SMT-9001",
@@ -41,7 +48,7 @@ class VitalsContractsApiTests(APITestCase):
             status="en_espera",
         )
 
-    def _create_user_with_role(self, username, email, password, role_code):
+    def _create_user_with_role(self, username, email, password, role_code, permissions=None):
         user = SyUsuario.objects.create(
             usuario=username,
             correo=email,
@@ -69,6 +76,19 @@ class VitalsContractsApiTests(APITestCase):
             id_rol=role,
             is_primary=True,
         )
+
+        for permission_code in permissions or []:
+            permission, _ = Permisos.objects.get_or_create(
+                codigo=permission_code,
+                defaults={
+                    "descripcion": permission_code,
+                    "is_active": True,
+                },
+            )
+            RelRolPermiso.objects.get_or_create(
+                id_rol=role,
+                id_permiso=permission,
+            )
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
@@ -107,6 +127,19 @@ class VitalsContractsApiTests(APITestCase):
 
         self.visit_in_somato.refresh_from_db()
         self.assertEqual(self.visit_in_somato.status, "lista_para_doctor")
+
+    def test_capture_vitals_allows_clinico_with_somatometria_permission(self):
+        self._login_as("clinico_user", "Clinico_123456")
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "lista_para_doctor")
 
     def test_capture_vitals_missing_required_field_returns_validation_error(self):
         self._login_as("somato_user", self.somato_password)

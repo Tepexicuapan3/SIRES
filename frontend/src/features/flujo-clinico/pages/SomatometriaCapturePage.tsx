@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ApiError } from "@api/utils/errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +18,65 @@ import {
   type CaptureVitalsFormInput,
   type CaptureVitalsFormValues,
 } from "@features/flujo-clinico/domain/visit-flow.schemas";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useCaptureVitals } from "@features/flujo-clinico/mutations/useCaptureVitals";
 import { useSomatometriaQueue } from "@features/flujo-clinico/queries/useSomatometriaQueue";
+
+const CAPTURE_VITALS_DOMAIN_ERROR_MESSAGE: Record<
+  "VITALS_INCOMPLETE" | "ROLE_NOT_ALLOWED" | "VISIT_STATE_INVALID",
+  string
+> = {
+  VITALS_INCOMPLETE:
+    "No se puede liberar la visita: completa los vitales minimos requeridos.",
+  ROLE_NOT_ALLOWED: "No tenes permiso para capturar vitales en esta visita.",
+  VISIT_STATE_INVALID:
+    "La visita ya no esta en un estado valido para somatometria. Actualiza la bandeja.",
+};
+
+type CaptureVitalsDomainErrorCode =
+  keyof typeof CAPTURE_VITALS_DOMAIN_ERROR_MESSAGE;
+
+const FALLBACK_CAPTURE_VITALS_ERROR_MESSAGE =
+  "No se pudieron guardar los vitales. Intenta nuevamente.";
+
+const toPositiveNumber = (value: unknown): number | null => {
+  const normalized =
+    typeof value === "number" ? value : Number(value ?? Number.NaN);
+
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    return null;
+  }
+
+  return normalized;
+};
+
+const calculateBmi = (weightKg: number, heightCm: number): number => {
+  const heightMeters = heightCm / 100;
+  const bmi = weightKg / (heightMeters * heightMeters);
+  return Number(bmi.toFixed(2));
+};
+
+const resolveCaptureVitalsErrorMessage = (error: unknown): string => {
+  if (!(error instanceof ApiError)) {
+    return FALLBACK_CAPTURE_VITALS_ERROR_MESSAGE;
+  }
+
+  const domainCode = error.code as CaptureVitalsDomainErrorCode;
+  if (domainCode in CAPTURE_VITALS_DOMAIN_ERROR_MESSAGE) {
+    return CAPTURE_VITALS_DOMAIN_ERROR_MESSAGE[domainCode];
+  }
+
+  return error.message || FALLBACK_CAPTURE_VITALS_ERROR_MESSAGE;
+};
+
+const formatBmi = (value: number): string => {
+  return value.toFixed(2);
+};
+
+interface FeedbackState {
+  kind: "success" | "error";
+  message: string;
+}
 
 const DEFAULT_FORM_VALUES: CaptureVitalsFormInput = {
   weightKg: undefined,
@@ -32,17 +90,37 @@ const DEFAULT_FORM_VALUES: CaptureVitalsFormInput = {
   notes: "",
 };
 
+const SOMATOMETRIA_QUEUE_PERMISSION_REQUIREMENT = {
+  allOf: ["clinico:somatometria:read"],
+} as const;
+
+const SOMATOMETRIA_CAPTURE_PERMISSION_REQUIREMENT = {
+  allOf: ["clinico:somatometria:read"],
+} as const;
+
 const formatStatusLabel = (status: string): string => {
   return status.replace(/_/g, " ");
 };
 
 export const SomatometriaCapturePage = () => {
-  const queueQuery = useSomatometriaQueue();
+  const { hasCapability } = usePermissionDependencies();
+  const canReadSomatometriaQueue = hasCapability(
+    "flow.somatometria.queue.read",
+    SOMATOMETRIA_QUEUE_PERMISSION_REQUIREMENT,
+  );
+  const canCaptureSomatometriaVitals = hasCapability(
+    "flow.somatometria.capture",
+    SOMATOMETRIA_CAPTURE_PERMISSION_REQUIREMENT,
+  );
+  const queueQuery = useSomatometriaQueue({
+    enabled: canReadSomatometriaQueue,
+  });
   const captureVitals = useCaptureVitals();
   const [selectedVisitIdState, setSelectedVisitIdState] = useState<
     number | null
   >(null);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [capturedBmi, setCapturedBmi] = useState<number | null>(null);
 
   const form = useForm<
     CaptureVitalsFormInput,
@@ -50,6 +128,7 @@ export const SomatometriaCapturePage = () => {
     CaptureVitalsFormValues
   >({
     resolver: zodResolver(captureVitalsFormSchema),
+    mode: "onChange",
     defaultValues: DEFAULT_FORM_VALUES,
   });
 
@@ -64,31 +143,58 @@ export const SomatometriaCapturePage = () => {
   const selectedVisit =
     visits.find((visit) => visit.id === selectedVisitId) ?? null;
   const canCaptureSelectedVisit = selectedVisit
-    ? canCaptureVitals(selectedVisit.status)
+    ? canCaptureSomatometriaVitals && canCaptureVitals(selectedVisit.status)
     : false;
 
+  const watchedWeightKg = form.watch("weightKg");
+  const watchedHeightCm = form.watch("heightCm");
+  const previewWeight = toPositiveNumber(watchedWeightKg);
+  const previewHeight = toPositiveNumber(watchedHeightCm);
+  const bmiPreview =
+    previewWeight !== null && previewHeight !== null
+      ? calculateBmi(previewWeight, previewHeight)
+      : null;
+
   const handleCaptureVitals = async (values: CaptureVitalsFormValues) => {
-    if (!selectedVisit || !canCaptureSelectedVisit) {
+    if (
+      !selectedVisit ||
+      !canCaptureSomatometriaVitals ||
+      !canCaptureSelectedVisit
+    ) {
       return;
     }
 
-    setFeedbackMessage(null);
-    await captureVitals.mutateAsync({
-      visitId: selectedVisit.id,
-      data: {
-        weightKg: values.weightKg,
-        heightCm: values.heightCm,
-        temperatureC: values.temperatureC,
-        oxygenSaturationPct: values.oxygenSaturationPct,
-        heartRateBpm: values.heartRateBpm,
-        respiratoryRateBpm: values.respiratoryRateBpm,
-        bloodPressureSystolic: values.bloodPressureSystolic,
-        bloodPressureDiastolic: values.bloodPressureDiastolic,
-        notes: values.notes,
-      },
-    });
-    setFeedbackMessage("Signos vitales guardados correctamente.");
-    form.reset(DEFAULT_FORM_VALUES);
+    setFeedback(null);
+
+    try {
+      const result = await captureVitals.mutateAsync({
+        visitId: selectedVisit.id,
+        data: {
+          weightKg: values.weightKg,
+          heightCm: values.heightCm,
+          temperatureC: values.temperatureC,
+          oxygenSaturationPct: values.oxygenSaturationPct,
+          heartRateBpm: values.heartRateBpm,
+          respiratoryRateBpm: values.respiratoryRateBpm,
+          bloodPressureSystolic: values.bloodPressureSystolic,
+          bloodPressureDiastolic: values.bloodPressureDiastolic,
+          notes: values.notes,
+        },
+      });
+
+      setCapturedBmi(result.vitals.bmi);
+      setFeedback({
+        kind: "success",
+        message: "Signos vitales guardados correctamente.",
+      });
+      form.reset(DEFAULT_FORM_VALUES);
+    } catch (error) {
+      setCapturedBmi(null);
+      setFeedback({
+        kind: "error",
+        message: resolveCaptureVitalsErrorMessage(error),
+      });
+    }
   };
 
   const currentStatus = selectedVisit?.status ?? VISIT_STATUS.EN_SOMATOMETRIA;
@@ -108,13 +214,19 @@ export const SomatometriaCapturePage = () => {
         />
       </header>
 
-      {queueQuery.isLoading ? (
+      {!canReadSomatometriaQueue ? (
+        <p className="text-sm text-txt-muted" role="status">
+          No tenes permisos completos para cargar la bandeja de somatometria.
+        </p>
+      ) : null}
+
+      {canReadSomatometriaQueue && queueQuery.isLoading ? (
         <p className="text-sm text-txt-muted">
           Cargando bandeja de somatometria...
         </p>
       ) : null}
 
-      {queueQuery.isError ? (
+      {canReadSomatometriaQueue && queueQuery.isError ? (
         <Alert variant="warning">
           <AlertTitle>Error al cargar</AlertTitle>
           <AlertDescription>
@@ -123,13 +235,19 @@ export const SomatometriaCapturePage = () => {
         </Alert>
       ) : null}
 
-      {!queueQuery.isLoading && !queueQuery.isError && visits.length === 0 ? (
+      {canReadSomatometriaQueue &&
+      !queueQuery.isLoading &&
+      !queueQuery.isError &&
+      visits.length === 0 ? (
         <p className="text-sm text-txt-muted">
           No hay pacientes en somatometria.
         </p>
       ) : null}
 
-      {!queueQuery.isLoading && !queueQuery.isError && visits.length > 0 ? (
+      {canReadSomatometriaQueue &&
+      !queueQuery.isLoading &&
+      !queueQuery.isError &&
+      visits.length > 0 ? (
         <section className="space-y-4 rounded-xl border border-line-struct bg-paper p-4">
           <div className="space-y-2">
             <Label htmlFor="visit-selector">Visita</Label>
@@ -139,6 +257,8 @@ export const SomatometriaCapturePage = () => {
               value={selectedVisitId?.toString() ?? ""}
               onChange={(event) => {
                 setSelectedVisitIdState(Number(event.target.value));
+                setFeedback(null);
+                setCapturedBmi(null);
               }}
             >
               {visits.map((visit) => (
@@ -248,18 +368,42 @@ export const SomatometriaCapturePage = () => {
                 Guardar vitales
               </Button>
             </div>
+
+            {bmiPreview !== null ? (
+              <p className="text-sm text-txt-muted md:col-span-2" role="status">
+                IMC estimado: {formatBmi(bmiPreview)}
+              </p>
+            ) : null}
+
+            {capturedBmi !== null ? (
+              <p
+                className="text-sm text-status-info md:col-span-2"
+                role="status"
+              >
+                IMC capturado: {formatBmi(capturedBmi)}
+              </p>
+            ) : null}
           </form>
 
-          {!canCaptureSelectedVisit ? (
+          {!canCaptureSomatometriaVitals ? (
+            <p className="text-sm text-txt-muted" role="status">
+              No tenes permisos completos para guardar vitales.
+            </p>
+          ) : null}
+
+          {canCaptureSomatometriaVitals && !canCaptureSelectedVisit ? (
             <p className="text-sm text-status-alert" role="status">
               Selecciona una visita en somatometria para capturar vitales.
             </p>
           ) : null}
 
-          {feedbackMessage ? (
-            <p className="text-sm text-status-info" role="status">
-              {feedbackMessage}
-            </p>
+          {feedback ? (
+            <Alert variant={feedback.kind === "error" ? "warning" : "success"}>
+              <AlertTitle>
+                {feedback.kind === "error" ? "No se pudo guardar" : "Guardado"}
+              </AlertTitle>
+              <AlertDescription>{feedback.message}</AlertDescription>
+            </Alert>
           ) : null}
         </section>
       ) : null}

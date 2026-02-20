@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
+import { ApiError } from "@api/utils/errors";
 import SomatometriaCapturePage from "@features/flujo-clinico/pages/SomatometriaCapturePage";
 import { useSomatometriaQueue } from "@features/flujo-clinico/queries/useSomatometriaQueue";
 import { useCaptureVitals } from "@features/flujo-clinico/mutations/useCaptureVitals";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import type { VisitQueueItem } from "@api/types";
 
 vi.mock("@features/flujo-clinico/queries/useSomatometriaQueue", () => ({
@@ -12,6 +14,10 @@ vi.mock("@features/flujo-clinico/queries/useSomatometriaQueue", () => ({
 
 vi.mock("@features/flujo-clinico/mutations/useCaptureVitals", () => ({
   useCaptureVitals: vi.fn(),
+}));
+
+vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
+  usePermissionDependencies: vi.fn(),
 }));
 
 const createVisit = (
@@ -32,6 +38,10 @@ describe("SomatometriaCapturePage UI", () => {
   const captureMutateAsync = vi.fn();
 
   beforeEach(() => {
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: () => true,
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
+
     vi.mocked(useSomatometriaQueue).mockReturnValue({
       data: {
         items: [createVisit()],
@@ -61,6 +71,44 @@ describe("SomatometriaCapturePage UI", () => {
         bmi: 22.86,
       },
     });
+  });
+
+  it("deshabilita la consulta cuando falta capability para leer bandeja", () => {
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: () => false,
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
+
+    vi.mocked(useSomatometriaQueue).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useSomatometriaQueue>);
+
+    render(<SomatometriaCapturePage />);
+
+    expect(useSomatometriaQueue).toHaveBeenCalledWith({ enabled: false });
+    expect(
+      screen.getByText(
+        "No tenes permisos completos para cargar la bandeja de somatometria.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("muestra aviso neutral cuando falta permiso para guardar vitales", () => {
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: (capability) =>
+        capability === "flow.somatometria.queue.read",
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
+
+    render(<SomatometriaCapturePage />);
+
+    expect(
+      screen.getByText("No tenes permisos completos para guardar vitales."),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Guardar vitales" }),
+    ).toBeDisabled();
   });
 
   it("renderiza estado loading", () => {
@@ -146,7 +194,61 @@ describe("SomatometriaCapturePage UI", () => {
         },
       });
     });
+
+    expect(
+      screen.getByText("Signos vitales guardados correctamente."),
+    ).toBeVisible();
+    expect(screen.getByText("IMC capturado: 22.86")).toBeVisible();
   });
+
+  it("muestra IMC estimado en tiempo real con peso y talla", async () => {
+    const user = userEvent.setup();
+    render(<SomatometriaCapturePage />);
+
+    await user.type(screen.getByLabelText("Peso (kg)"), "70");
+    await user.type(screen.getByLabelText("Talla (cm)"), "175");
+
+    expect(screen.getByText("IMC estimado: 22.86")).toBeVisible();
+  });
+
+  const domainErrors = [
+    {
+      code: "VITALS_INCOMPLETE",
+      message:
+        "No se puede liberar la visita: completa los vitales minimos requeridos.",
+    },
+    {
+      code: "ROLE_NOT_ALLOWED",
+      message: "No tenes permiso para capturar vitales en esta visita.",
+    },
+    {
+      code: "VISIT_STATE_INVALID",
+      message:
+        "La visita ya no esta en un estado valido para somatometria. Actualiza la bandeja.",
+    },
+  ] as const;
+
+  it.each(domainErrors)(
+    "muestra mensaje UX para error de dominio $code",
+    async ({ code, message }) => {
+      captureMutateAsync.mockRejectedValueOnce(
+        new ApiError(code, code, 409, undefined, "req-test"),
+      );
+
+      const user = userEvent.setup();
+      render(<SomatometriaCapturePage />);
+
+      await user.type(screen.getByLabelText("Peso (kg)"), "70");
+      await user.type(screen.getByLabelText("Talla (cm)"), "175");
+      await user.type(screen.getByLabelText("Temperatura (C)"), "36.6");
+      await user.type(screen.getByLabelText("Saturacion O2 (%)"), "98");
+      await user.click(screen.getByRole("button", { name: "Guardar vitales" }));
+
+      await waitFor(() => {
+        expect(screen.getByText(message)).toBeVisible();
+      });
+    },
+  );
 
   it("bloquea captura cuando visita no esta en estado en_somatometria", () => {
     vi.mocked(useSomatometriaQueue).mockReturnValue({

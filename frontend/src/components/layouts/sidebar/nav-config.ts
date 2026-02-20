@@ -162,6 +162,11 @@ export const NAV_CONFIG: NavSection[] = [
             url: "/clinico/consultas/historial",
             permissions: ["clinico:consultas:historial:read"],
           },
+          {
+            title: "Bandeja Doctor (Flujo)",
+            url: "/clinico/consultas/doctor",
+            permissions: ["clinico:consultas:read"],
+          },
         ],
       },
       {
@@ -202,19 +207,16 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Medicina general",
             url: "/recepcion/fichas/medicina-general",
             permissions: ["recepcion:fichas:medicina_general:create"],
-            badge: PLACEHOLDER_BADGE,
           },
           {
             title: "Especialidad",
             url: "/recepcion/fichas/especialidad",
             permissions: ["recepcion:fichas:especialidad:create"],
-            badge: PLACEHOLDER_BADGE,
           },
           {
             title: "Urgencias",
             url: "/recepcion/fichas/urgencias",
             permissions: ["recepcion:fichas:urgencias:create"],
-            badge: PLACEHOLDER_BADGE,
           },
         ],
       },

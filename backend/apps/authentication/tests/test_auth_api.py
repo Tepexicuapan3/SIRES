@@ -78,6 +78,7 @@ class AuthApiTests(APITestCase):
         self.assertIn(REFRESH_COOKIE, response.cookies)
         self.assertIn(CSRF_COOKIE, response.cookies)
         self.assertEqual(response.cookies[ACCESS_COOKIE]["samesite"], "Lax")
+        self.assertEqual(response.cookies[ACCESS_COOKIE]["path"], "/")
         self.assertEqual(response.cookies[REFRESH_COOKIE]["samesite"], "Strict")
         self.assertIn("user", response.data)
         self.assertTrue(response.data["requiresOnboarding"])

@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Areas, CatCentroAtencion, Permisos, Roles, TiposAreas
+from apps.recepcion.models import Visit
 
 DEFAULT_PASSWORD = "Sires_123456"
 
@@ -623,6 +624,91 @@ USER_OVERRIDE_DEFS = [
 ]
 
 
+DEMO_VISITS = [
+    {
+        "folio": "RCP-DEMO-0001",
+        "patient_id": 81001,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0001",
+        "doctor_id": 120,
+        "notes": "Paciente de ejemplo en recepcion.",
+        "status": "en_espera",
+    },
+    {
+        "folio": "RCP-DEMO-0002",
+        "patient_id": 81002,
+        "arrival_type": Visit.ArrivalType.WALK_IN,
+        "appointment_id": None,
+        "doctor_id": None,
+        "notes": "Ingreso espontaneo para validar cola.",
+        "status": "en_espera",
+    },
+    {
+        "folio": "SMT-DEMO-0001",
+        "patient_id": 82001,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0101",
+        "doctor_id": 121,
+        "notes": "Paciente listo para captura de vitales.",
+        "status": "en_somatometria",
+    },
+    {
+        "folio": "SMT-DEMO-0002",
+        "patient_id": 82002,
+        "arrival_type": Visit.ArrivalType.WALK_IN,
+        "appointment_id": None,
+        "doctor_id": 121,
+        "notes": "Caso demo para validar captura repetida de signos vitales.",
+        "status": "en_somatometria",
+    },
+    {
+        "folio": "SMT-DEMO-0003",
+        "patient_id": 82003,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0103",
+        "doctor_id": 123,
+        "notes": "Caso demo con doctor alterno para validar cola mixta.",
+        "status": "en_somatometria",
+    },
+    {
+        "folio": "SMT-DEMO-0004",
+        "patient_id": 82004,
+        "arrival_type": Visit.ArrivalType.WALK_IN,
+        "appointment_id": None,
+        "doctor_id": None,
+        "notes": "Paciente sin doctor asignado para validar flujo operativo.",
+        "status": "en_somatometria",
+    },
+    {
+        "folio": "DOC-DEMO-0001",
+        "patient_id": 83001,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0201",
+        "doctor_id": 122,
+        "notes": "Paciente listo para doctor.",
+        "status": "lista_para_doctor",
+    },
+    {
+        "folio": "DOC-DEMO-0002",
+        "patient_id": 83002,
+        "arrival_type": Visit.ArrivalType.WALK_IN,
+        "appointment_id": None,
+        "doctor_id": 122,
+        "notes": "Consulta en curso para validar cierre.",
+        "status": "en_consulta",
+    },
+    {
+        "folio": "DOC-DEMO-0003",
+        "patient_id": 83003,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0203",
+        "doctor_id": 123,
+        "notes": "Paciente demo adicional listo para iniciar consulta.",
+        "status": "lista_para_doctor",
+    },
+]
+
+
 def _assert_required_tables():
     existing_tables = set(connection.introspection.table_names())
     missing_tables = sorted(REQUIRED_TABLES - existing_tables)
@@ -968,6 +1054,30 @@ def _seed_user_overrides(users_by_username, permissions_map, admin_user):
     print(f"[SEED] Overrides asegurados: {total}")
 
 
+def _seed_demo_visits():
+    if not _table_exists("rcp_visits"):
+        print("[SEED] rcp_visits no existe; se omite carga de visitas demo")
+        return
+
+    total = 0
+    for visit_def in DEMO_VISITS:
+        Visit.objects.update_or_create(
+            folio=visit_def["folio"],
+            defaults={
+                "patient_id": visit_def["patient_id"],
+                "arrival_type": visit_def["arrival_type"],
+                "appointment_id": visit_def["appointment_id"],
+                "doctor_id": visit_def["doctor_id"],
+                "notes": visit_def["notes"],
+                "status": visit_def["status"],
+                "fch_baja": None,
+            },
+        )
+        total += 1
+
+    print(f"[SEED] Visitas demo aseguradas: {total}")
+
+
 @transaction.atomic
 def run():
     _assert_required_tables()
@@ -1077,6 +1187,7 @@ def run():
     print(f"[SEED] Usuarios asegurados: {len(users_by_username)}")
 
     _seed_user_overrides(users_by_username, permissions_map, admin_user)
+    _seed_demo_visits()
 
 
 if __name__ == "__main__":

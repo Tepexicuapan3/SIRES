@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
+import RecepcionQueuePage from "@features/flujo-clinico/pages/RecepcionQueuePage";
 
 // Placeholder: modulos no implementados
 
@@ -20,11 +21,7 @@ const fichasRoutes: RouteObject[] = [
     path: "medicina-general",
     element: (
       <ProtectedRoute requiredPermission="recepcion:fichas:medicina_general:create">
-        <PlaceholderPage
-          title="Fichas de medicina general"
-          description="Registro y seguimiento de fichas de medicina general"
-          moduleName="Recepcion"
-        />
+        <RecepcionQueuePage />
       </ProtectedRoute>
     ),
   },
@@ -32,11 +29,7 @@ const fichasRoutes: RouteObject[] = [
     path: "especialidad",
     element: (
       <ProtectedRoute requiredPermission="recepcion:fichas:especialidad:create">
-        <PlaceholderPage
-          title="Fichas de especialidad"
-          description="Registro y seguimiento de fichas por especialidad"
-          moduleName="Recepcion"
-        />
+        <RecepcionQueuePage />
       </ProtectedRoute>
     ),
   },
@@ -44,11 +37,7 @@ const fichasRoutes: RouteObject[] = [
     path: "urgencias",
     element: (
       <ProtectedRoute requiredPermission="recepcion:fichas:urgencias:create">
-        <PlaceholderPage
-          title="Fichas de urgencias"
-          description="Registro y seguimiento de fichas de urgencias"
-          moduleName="Recepcion"
-        />
+        <RecepcionQueuePage />
       </ProtectedRoute>
     ),
   },

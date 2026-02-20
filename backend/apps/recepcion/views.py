@@ -20,6 +20,7 @@ from apps.recepcion.uses_case.visit_queue_usecase import (
     change_visit_status,
     create_visit,
     ensure_recepcion_role,
+    ensure_visit_queue_access,
     list_visits,
 )
 
@@ -40,6 +41,14 @@ def _auth_or_error(request):
 def _require_recepcion_role(user):
     auth_user = UserRepository.build_auth_user(user)
     ensure_recepcion_role(auth_user.get("roles", []))
+
+
+def _require_visit_queue_access(user):
+    auth_user = UserRepository.build_auth_user(user)
+    ensure_visit_queue_access(
+        auth_user.get("roles", []),
+        auth_user.get("permissions", []),
+    )
 
 
 def _csrf_or_error(request):
@@ -108,7 +117,7 @@ class VisitsView(APIView):
             return error
 
         try:
-            _require_recepcion_role(user)
+            _require_visit_queue_access(user)
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)
 
@@ -207,4 +216,3 @@ def _visit_error_response(request, exc):
         details=exc.details,
         request_id=get_request_id(request),
     )
-

@@ -31,7 +31,10 @@ def _auth_or_error(request):
 
 def _require_somatometria_role(user):
     auth_user = UserRepository.build_auth_user(user)
-    ensure_somatometria_role(auth_user.get("roles", []))
+    ensure_somatometria_role(
+        auth_user.get("roles", []),
+        auth_user.get("permissions", []),
+    )
 
 
 def _domain_error_response(request, exc):
