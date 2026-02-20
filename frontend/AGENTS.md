@@ -1,31 +1,50 @@
 # AGENTS.md - SIRES Frontend Ruleset
 
-## How to Use This Guide
+## Scope
 
 - Applies only to changes inside `frontend/`.
 - If it conflicts with the root `AGENTS.md`, this guide wins.
 
+## Load Narrow Context
+
+- `frontend/src/api/AGENTS.md` - API client/contracts.
+- `frontend/src/components/AGENTS.md` - shared UI/component rules.
+- `frontend/src/features/AGENTS.md` - feature-module patterns.
+- `frontend/src/features/admin/AGENTS.md` - admin module specifics.
+- `frontend/src/routes/AGENTS.md` - route/guard rules.
+- `frontend/src/test/AGENTS.md` - test strategy and execution.
+
 ## Skills Reference
 
-Use these skills for detailed patterns:
-
-- `react-19` - React component patterns
+- `vercel-react-best-practices` - React performance and refactoring patterns
+- `interface-design` - UI layout and visual hierarchy design before implementation
+- `web-design-guidelines` - UI/UX and accessibility compliance reviews
 - `typescript` - Strict TS types
 - `tailwind-4` - Tailwind and `cn()`
 - `zod-4` - Zod v4 validation
 - `zustand-5` - UI state management
+- `error-handling-patterns` - Error contracts and fallback behavior
+- `systematic-debugging` - Root-cause-first debugging workflow
+- `brainstorming` - Planning and scope definition before implementation
 - `playwright` - E2E testing
+- `find-skills` - Discover/install skills when requested
 
 ## Auto-invoke Skills
 
 | Action | Skill |
 | --- | --- |
-| Create/modify React components | `react-19` |
+| Create/modify React components (performance-aware) | `vercel-react-best-practices` |
+| Create new UI screens/layout direction before implementation | `interface-design` |
+| Review UI/UX/accessibility compliance | `web-design-guidelines` |
 | Write TypeScript types | `typescript` |
 | Tailwind styling | `tailwind-4` |
 | Zod / RHF validation | `zod-4` |
 | Create/edit global stores | `zustand-5` |
+| Design/review UI and API error states | `error-handling-patterns` |
+| Debug bugs, test failures, and regressions | `systematic-debugging` |
+| User asks for planning/discovery before coding | `brainstorming` |
 | E2E tests | `playwright` |
+| User asks to discover/install skills | `find-skills` |
 
 ---
 
@@ -38,7 +57,7 @@ Use these skills for detailed patterns:
 
 ### React
 - Always use named imports from React.
-- Do not use `useMemo` or `useCallback` (React Compiler handles it).
+- React Compiler is enabled: avoid `useMemo`/`useCallback` by default; only use manual memoization with measured evidence.
 
 ### Styling
 - Use semantic tokens from Metro CDMX (no hardcoded colors).
@@ -47,32 +66,6 @@ Use these skills for detailed patterns:
 ### Security
 - JWT must stay in HttpOnly cookies (never localStorage/sessionStorage).
 - Mutating requests must include `X-CSRF-TOKEN`.
-
-### Permission UX States
-- If a secondary catalog is unavailable due missing permissions, show a neutral contextual notice (not a critical/red error banner).
-- Keep notice copy minimal and user-facing; do not expose raw permission codes in UI text.
-- Disable only the controls that depend on that catalog; keep read-only data visible when possible.
-- Avoid unnecessary requests to unauthorized endpoints by using query `enabled: false` when permission checks fail.
-
-### Permission Dependency Model
-- Permission dependencies are declared in `frontend/src/features/auth/domain/permission-dependencies.ts`.
-- For mutating permissions, use dependency-aware checks via `usePermissionDependencies()`.
-- If a new permission is introduced, update dependency rules and add/update unit tests in `frontend/src/test/unit/auth/permission-dependencies.test.ts`.
-- Use `dependencyAware` mode in guards/gates when the UX must enforce full capability (not only raw permission presence).
-
-### Capability-first Authorization (required for admin)
-- Prefer `hasCapability("...")` for action gating in pages/dialogs and for route guards.
-- Use `hasPermission("...")` only for basic visibility where dependency closure is not required.
-- Backend projection is the primary source (`capabilities`, `effectivePermissions`, `permissionDependenciesVersion`).
-- `usePermissionDependencies()` must keep fallback behavior when backend projection is missing:
-  - evaluate local dependency rules;
-  - never crash on partial mocks (`capabilities` can be undefined in tests).
-- Query policy for protected catalogs:
-  - pass `enabled: false` when the required read capability is not granted.
-- UX policy when catalog permission is missing:
-  - show neutral contextual notice;
-  - keep existing assigned data visible if available;
-  - disable only dependent controls.
 
 ---
 
@@ -101,33 +94,10 @@ Types shared? -> frontend/src/api/types/
 
 ---
 
-## Project Structure (Frontend)
-
-```
-frontend/src/
-├── api/
-│   ├── client.ts
-│   ├── resources/
-│   ├── types/
-│   └── interceptors/
-├── components/
-│   ├── ui/
-│   └── shared/
-├── features/
-├── providers/
-├── routes/
-├── store/
-├── styles/
-└── test/
-```
-
----
-
 ## Commands
 
 ```bash
 bun dev
-bun build
 bun lint
 bun test
 ```

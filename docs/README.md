@@ -57,6 +57,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 - [KAN-4 Fase 3 Consulta y Tiempo Real](./guides/kan4-fase-3-consulta-y-tiempo-real.md)
 - [KAN-4 Fase 4 QA y Release](./guides/kan4-fase-4-qa-y-release.md)
 - [KAN-4 Matriz de Tickets y Dependencias](./guides/kan4-matriz-tickets-y-dependencias.md)
+- [KAN-4 Remediacion Pivot WebSocket](./guides/kan4-remediacion-pivot-websocket.md)
 
 ### ⚡ Realtime WebSocket
 
@@ -93,6 +94,7 @@ docs/
 │   ├── kan4-fase-3-consulta-y-tiempo-real.md        # Vertical doctor + WebSocket
 │   ├── kan4-fase-4-qa-y-release.md                  # Gate final de calidad
 │   ├── kan4-matriz-tickets-y-dependencias.md        # Mapa operativo de tickets
+│   ├── kan4-remediacion-pivot-websocket.md          # Backlog de ajustes post-pivot
 │   └── websocket-arquitectura-reusable.md           # Base WebSocket reusable
 │
 ├── adr/                            # Architecture Decision Records

@@ -24,7 +24,8 @@ Notas de gate:
 
 - `KAN-15` depende de `KAN-14` + `KAN-26`.
 - `KAN-21` depende de `KAN-18` + `KAN-26`.
-- `KAN-22` (fase 3) depende de `KAN-18` + `KAN-21` + `KAN-28` + `KAN-34` + `KAN-35`.
+- `KAN-22` (fase 3) depende de `KAN-18` + `KAN-21` + `KAN-28` + `KAN-34` + `KAN-35` + `KAN-36`.
+- `KAN-20` (fase 3) depende de `KAN-37` como delta UI post-pivot.
 
 ---
 
@@ -42,6 +43,10 @@ Obligatorio:
 
 - RBAC por rol recepcion.
 - `X-Request-ID` y errores normalizados.
+
+Trazabilidad post-pivot:
+
+- El hardening realtime de eventos para stream WebSocket se completa en `KAN-36` (delta), sin reabrir `KAN-14`.
 
 ### KAN-18 - APIs de somatometria (owner: Victor, due: 2026-02-20, estado: Por hacer)
 
@@ -63,6 +68,10 @@ Debe cubrir:
 - Estados loading/empty/error/success.
 - Bloqueos de acciones invalidas.
 - Validaciones de formularios criticos.
+
+Trazabilidad post-pivot:
+
+- La resiliencia realtime adicional (dedupe/ordering/resync) se completa en `KAN-37` (delta), sin reabrir `KAN-26`.
 
 ### KAN-15 - UI recepcion (owner: Luis, due: 2026-02-20, estado: Por hacer)
 

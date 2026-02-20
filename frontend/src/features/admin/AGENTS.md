@@ -1,9 +1,36 @@
 # AGENTS.md - Admin Feature Ruleset
 
-## Alcance
+## Scope
 
 - Aplica a `frontend/src/features/admin/**`.
-- Sigue el estilo de `frontend/src/features/auth/` para queries y mutations.
+- Si hay conflicto con `frontend/src/features/AGENTS.md`, este archivo manda.
+- Mantener paridad estructural con `frontend/src/features/auth/` para queries/mutations.
+
+## Skills Reference
+
+- `vercel-react-best-practices` - rendimiento y refactor de componentes admin.
+- `interface-design` - diseno de layouts/flujos admin antes de implementar.
+- `web-design-guidelines` - auditoria UX/accesibilidad.
+- `typescript` - tipado estricto de contratos y UI.
+- `zod-4` - validaciones de formularios/contratos.
+- `error-handling-patterns` - estados de error y fallback consistentes.
+- `systematic-debugging` - depuracion por causa raiz.
+- `brainstorming` - planificacion antes de features grandes.
+- `find-skills` - descubrir/instalar skills cuando se pida.
+
+## Auto-invoke Skills
+
+| Accion | Skill |
+| --- | --- |
+| Crear/refactor componentes admin | `vercel-react-best-practices` |
+| Definir layout/flujo admin antes de codear | `interface-design` |
+| Revisar UX/accesibilidad admin | `web-design-guidelines` |
+| Definir tipos/contratos | `typescript` |
+| Implementar validaciones | `zod-4` |
+| Definir manejo de errores/fallback | `error-handling-patterns` |
+| Debuggear regresiones admin | `systematic-debugging` |
+| Usuario pide planificar antes de implementar | `brainstorming` |
+| Usuario pide descubrir/instalar skills | `find-skills` |
 
 ## Reglas
 

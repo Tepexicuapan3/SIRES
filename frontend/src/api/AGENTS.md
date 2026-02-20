@@ -10,7 +10,12 @@
 
 - `typescript` - Types and interfaces
 - `zod-4` - Zod validation
+- `api-design-principles` - API contract review (resources, methods, status codes, versioning)
+- `error-handling-patterns` - Standardized error shape, retries, and fallback behavior
+- `systematic-debugging` - Root-cause-first debugging for integration and contract issues
+- `brainstorming` - planning integration strategy before implementation
 - `tailwind-4` - Only if UI tokens are referenced in errors
+- `find-skills` - Discover/install skills when requested
 
 ## Auto-invoke Skills
 
@@ -18,6 +23,11 @@
 | --- | --- |
 | Write TypeScript types | `typescript` |
 | Zod validation | `zod-4` |
+| Review API contracts consumed by frontend | `api-design-principles` |
+| Design/review API error normalization and fallback behavior | `error-handling-patterns` |
+| Debug API integration issues and regressions | `systematic-debugging` |
+| User asks for planning/discovery before coding | `brainstorming` |
+| User asks to discover/install skills | `find-skills` |
 
 ---
 

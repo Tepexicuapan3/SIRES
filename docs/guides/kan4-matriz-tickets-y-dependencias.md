@@ -1,8 +1,8 @@
 # KAN-4 - Matriz de Tickets y Dependencias
 
-> **TL;DR:** Mapa operativo unico para ejecutar `KAN-14`..`KAN-35` sin saltar gates. Si hay diferencia con Jira, gana Jira.
+> **TL;DR:** Mapa operativo unico para ejecutar `KAN-14`..`KAN-37` sin saltar gates. Si hay diferencia con Jira, gana Jira.
 
-**Snapshot de estado:** 2026-02-18
+**Snapshot de estado:** 2026-02-19
 
 ---
 
@@ -35,14 +35,16 @@
 | KAN-21 | IMPL-FE UI somatometria | Luis | En curso | 2026-02-19 | KAN-18, KAN-26 | KAN-22, KAN-19 |
 | KAN-28 | TDD-BE/FE WebSocket contracts | Luis | En curso | 2026-02-19 | KAN-25, KAN-26 | KAN-22, KAN-19, KAN-34, KAN-35 |
 | KAN-35 | ARCH-BE WebSocket reusable | Victor | Por hacer | 2026-02-19 | KAN-28 | KAN-22 |
-| KAN-34 | ARCH-FE cliente WebSocket reusable | Luis | Por hacer | 2026-02-19 | KAN-26, KAN-28 | KAN-22, KAN-20 |
-| KAN-22 | IMPL-BE/FE WebSocket realtime | Victor | En curso | 2026-02-19 | KAN-18, KAN-21, KAN-28, KAN-34, KAN-35 | KAN-17, KAN-20, KAN-19 |
+| KAN-34 | ARCH-FE cliente WebSocket reusable | Luis | Por hacer | 2026-02-19 | KAN-26, KAN-28 | KAN-22, KAN-20, KAN-37 |
+| KAN-36 | DELTA-API eventos recepcion realtime | Victor | Por hacer | 2026-02-20 | KAN-14, KAN-28 | KAN-22, KAN-19 |
+| KAN-22 | IMPL-BE/FE WebSocket realtime | Victor | En curso | 2026-02-19 | KAN-18, KAN-21, KAN-28, KAN-34, KAN-35, KAN-36 | KAN-17, KAN-20, KAN-19 |
 | KAN-15 | IMPL-FE recepcion/cola | Luis | Por hacer | 2026-02-20 | KAN-14, KAN-26 | KAN-19 |
 | KAN-17 | IMPL-BE consulta/receta/cierre | David | Por hacer | 2026-02-20 | KAN-16, KAN-24, KAN-25, KAN-22 | KAN-20, KAN-19 |
 | KAN-18 | IMPL-BE somatometria | Victor | Por hacer | 2026-02-20 | KAN-16, KAN-23, KAN-25, KAN-14 | KAN-21, KAN-22, KAN-19 |
-| KAN-20 | IMPL-FE UI doctor | Luis | Por hacer | 2026-02-20 | KAN-17, KAN-22, KAN-26 | KAN-19 |
+| KAN-37 | DELTA-UI resiliencia realtime | Luis | Por hacer | 2026-02-20 | KAN-26, KAN-28, KAN-34 | KAN-20, KAN-19 |
+| KAN-20 | IMPL-FE UI doctor | Luis | Por hacer | 2026-02-20 | KAN-17, KAN-22, KAN-26, KAN-37 | KAN-19 |
 | KAN-27 | TDD-QA smoke + gate | Luis | Por hacer | 2026-02-23 | KAN-26, KAN-28 | KAN-19 |
-| KAN-19 | IMPL-QA suite E2E + gates | Luis | Por hacer | 2026-02-23 | KAN-14,15,17,18,20,21,22,26,27,28 | Cierre tecnico KAN-4 |
+| KAN-19 | IMPL-QA suite E2E + gates | Luis | Por hacer | 2026-02-23 | KAN-14,15,17,18,20,21,22,26,27,28,34,35,36,37 | Cierre tecnico KAN-4 |
 
 ---
 
@@ -84,10 +86,11 @@
 
 1. Cerrar `KAN-16`, `KAN-21`, `KAN-28`.
 2. Ejecutar `KAN-35` + `KAN-34` para habilitar base reusable.
-3. Completar `KAN-22` con gates completos.
-4. Ejecutar `KAN-17` + `KAN-20`.
-5. Cerrar `KAN-15`, `KAN-18`, `KAN-27`.
-6. Ejecutar `KAN-19` y cerrar epic.
+3. Ejecutar deltas `KAN-36` + `KAN-37` para evitar falso Done en `KAN-14` y `KAN-26`.
+4. Completar `KAN-22` con gates completos.
+5. Ejecutar `KAN-17` + `KAN-20`.
+6. Cerrar `KAN-15`, `KAN-18`, `KAN-27`.
+7. Ejecutar `KAN-19` y cerrar epic.
 
 ---
 
@@ -112,3 +115,4 @@ Motivo: gate no cumplido
 - `docs/guides/kan4-fase-3-consulta-y-tiempo-real.md`
 - `docs/guides/kan4-fase-4-qa-y-release.md`
 - `docs/guides/websocket-arquitectura-reusable.md`
+- `docs/guides/kan4-remediacion-pivot-websocket.md`

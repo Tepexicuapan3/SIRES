@@ -20,7 +20,7 @@ Validar de punta a punta el flujo critico y bloquear merges/release si aparece r
 Dependencias:
 
 - `KAN-27` depende de `KAN-26` y `KAN-28`.
-- `KAN-19` depende de `KAN-14`, `KAN-15`, `KAN-17`, `KAN-18`, `KAN-20`, `KAN-21`, `KAN-22`, `KAN-26`, `KAN-27`, `KAN-28`.
+- `KAN-19` depende de `KAN-14`, `KAN-15`, `KAN-17`, `KAN-18`, `KAN-20`, `KAN-21`, `KAN-22`, `KAN-26`, `KAN-27`, `KAN-28`, `KAN-34`, `KAN-35`, `KAN-36`, `KAN-37`.
 
 ---
 
@@ -63,6 +63,7 @@ No cerrar `KAN-4` hasta cumplir todo:
 - [ ] `KAN-14`..`KAN-22` finalizados.
 - [ ] `KAN-23`..`KAN-28` finalizados.
 - [ ] `KAN-34` y `KAN-35` finalizados.
+- [ ] `KAN-36` y `KAN-37` finalizados (deltas de cierre post-pivot).
 - [ ] Evidencia QA final consolidada (`KAN-19`).
 
 ---
@@ -78,6 +79,7 @@ Release checklist KAN-4:
 4) Smoke E2E y suite completa en verde.
 5) Evidencia de QA adjunta por ticket.
 6) Sin bloqueos abiertos en Jira para KAN-4.
+7) Deltas post-pivot (`KAN-36`, `KAN-37`) en Done con trazabilidad.
 ```
 
 ---

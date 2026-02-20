@@ -3,7 +3,7 @@
 > **TL;DR:** Esta documentacion define reglas, fases, gates y evidencias para ejecutar la feature `KAN-4` (Flujo Consulta Medica v1) sin supuestos. Si algo no esta definido aqui o en Jira, se marca bloqueo y no se inventa.
 
 **Fecha creacion:** 2026-02-16  
-**Ultima actualizacion:** 2026-02-18  
+**Ultima actualizacion:** 2026-02-19  
 **Autor:** OpenCode
 
 ---
@@ -59,16 +59,17 @@ Matriz consolidada de tickets: `docs/guides/kan4-matriz-tickets-y-dependencias.m
 
 ## Secuencia Operativa Actual (WebSocket-first)
 
-Estado de referencia al 2026-02-18:
+Estado de referencia al 2026-02-19:
 
 - **Completado:** `KAN-14`, `KAN-23`, `KAN-24`, `KAN-25`, `KAN-26`.
 - **En curso:** `KAN-16`, `KAN-21`, `KAN-22`, `KAN-28`.
-- **Pendiente inmediato (bloqueantes WebSocket):** `KAN-34`, `KAN-35`.
+- **Pendiente inmediato (bloqueantes WebSocket):** `KAN-34`, `KAN-35`, `KAN-36`, `KAN-37`.
 - **Pendiente funcional:** `KAN-15`, `KAN-17`, `KAN-18`, `KAN-20`, `KAN-27`, `KAN-19`.
 
 Regla de priorizacion:
 
-- Si `KAN-22` no cumple gates (`KAN-18`, `KAN-21`, `KAN-28`, `KAN-34`, `KAN-35`), no se considera listo para destrabar `KAN-17` ni `KAN-20`.
+- Si `KAN-22` no cumple gates (`KAN-18`, `KAN-21`, `KAN-28`, `KAN-34`, `KAN-35`, `KAN-36`), no se considera listo para destrabar `KAN-17` ni `KAN-20`.
+- Si `KAN-37` no esta finalizado, `KAN-20` no se considera listo para cierre.
 
 ---
 
@@ -111,3 +112,4 @@ Salida obligatoria:
 - Implementacion: `KAN-14`..`KAN-22`
 - TDD y gates: `KAN-23`..`KAN-28`
 - Arquitectura realtime reusable: `KAN-34`, `KAN-35`
+- Deltas post-pivot WebSocket: `KAN-36`, `KAN-37`

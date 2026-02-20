@@ -1,18 +1,48 @@
 # API Docs - SIRES
 
-Esta carpeta centraliza la documentacion del contrato de API esperado por el frontend.
+Documentacion de contratos de API consumidos por el frontend.
 
-Fuente de verdad
-- `docs/api/standards.md` define los estandares globales.
-- Si hay conflicto con el backend actual, se sigue lo definido en este documento.
+## Fuente de Verdad
 
-Estructura
-- `standards.md` estandares globales.
-- `modules/auth.md` contratos de autenticacion.
-- `modules/rbac.md` contratos de roles, permisos y overrides.
-- `modules/catalogos.md` contratos de catalogos.
+- Estandares globales: `docs/api/standards.md`
+- Modulos por dominio: `docs/api/modules/*.md`
+- Implementacion real: `backend/apps/**`
 
-Reglas de mantenimiento
-- Actualiza primero `docs/api/standards.md` y despues los modulos.
-- Los modulos deben reflejar `frontend/src/api/resources/` y `frontend/src/api/types/`.
-- No dupliques estandares en `frontend/src/api/` salvo enlaces.
+Si hay desalineacion entre docs y codigo, se corrige la documentacion para reflejar el comportamiento actual y luego se define el plan de ajuste.
+
+## Estructura
+
+```txt
+docs/api/
+├── README.md
+├── standards.md
+└── modules/
+    ├── auth.md
+    ├── rbac.md
+    ├── catalogos.md
+    └── doc_front.md
+```
+
+## Reglas de Contrato
+
+- Prefijo de rutas: `api/v1/`
+- Metodos HTTP semanticos (`GET`, `POST`, `PATCH`, `DELETE`)
+- Requests mutantes con CSRF (`X-CSRF-TOKEN`)
+- Responses de error consistentes:
+  - `code`, `message`, `status`, opcional `details`, opcional `requestId`
+- Campos expuestos al frontend en `camelCase`
+
+## Flujo de Mantenimiento
+
+1. Ajustar `docs/api/standards.md` si cambia una regla transversal.
+2. Ajustar el modulo afectado en `docs/api/modules/`.
+3. Verificar coherencia con:
+   - `frontend/src/api/resources/`
+   - `frontend/src/api/types/`
+   - `backend/apps/**`
+4. Agregar ejemplo request/response cuando se introduce un contrato nuevo.
+
+## Enlaces Relacionados
+
+- Reglas de docs API para agentes: `docs/api/AGENTS.md`
+- Guia general de documentacion: `docs/README.md`

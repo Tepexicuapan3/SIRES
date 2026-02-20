@@ -1,133 +1,58 @@
-# AGENTS.md - Backend (Django/DRF) Operating Guide
+# AGENTS.md - Backend (Django/DRF) Ruleset
 
-Este backend es un proyecto Django con DRF. La idea es mantener una arquitectura por capas: las views orquestan HTTP, los serializers validan/transforman, los use cases contienen la logica de negocio, y los repositories encapsulan acceso a datos.
+## Scope
 
-## Stack actual
+- Applies to all files under `backend/`.
+- If a deeper `AGENTS.md` exists, that file wins for its subtree.
 
-- Django + Django REST Framework.
-- Auth: JWT (SimpleJWT) pero transportado por cookies HttpOnly.
-- DB: configurado para MySQL en `backend/config/settings.py`.
-- CORS: `corsheaders`.
+## Load Narrow Context
 
-Nota: `backend/requirements.txt` esta en UTF-16.
+- `backend/apps/AGENTS.md` - endpoint/use-case/repository implementation details.
+- `backend/tests/AGENTS.md` - backend testing workflow.
 
-## Estructura del proyecto
+## Backend Skills
 
-- `backend/config/`: settings y ruteo global.
-- `backend/apps/<modulo>/`: apps Django (por dominio).
-- `backend/apps/<modulo>/views.py`: capa HTTP (DRF APIView).
-- `backend/apps/<modulo>/serializers.py`: validacion/shape de request/response.
-- `backend/apps/<modulo>/uses_case/`: logica de negocio (funciones usecase).
-- `backend/apps/<modulo>/repositories/`: acceso a datos (ORM + queries).
-- `backend/apps/<modulo>/services/`: servicios puros (tokens, csrf, otp, email, etc).
-- `backend/infrastructure/`: integraciones (cache/email/seguridad). Puede haber placeholders.
+- `django-drf` - DRF implementation patterns.
+- `api-design-principles` - API contract and versioning decisions.
+- `error-handling-patterns` - error taxonomy, retries, fallback.
+- `systematic-debugging` - root-cause-first debugging process.
+- `brainstorming` - planning/discovery before implementation.
+- `pytest` - backend test patterns.
+- `find-skills` - discover/install skills when requested.
 
-## Convenciones de API
+## Auto-invoke Skills
 
-- Prefijo: hoy se publica `apps.authentication` bajo `api/v1/` en `backend/config/urls.py`.
-- Rutas sin trailing slash (ej: `/api/v1/auth/login`). Mantener consistente.
-- Contratos JSON: se usa camelCase en responses (ej: `requiresOnboarding`, `fullName`).
-- Errores estandar: usar `apps.authentication.services.response_service.error_response()`.
-  Payload tipico:
-  - `code`, `message`, `status`, `timestamp`, opcional `details`, opcional `requestId`.
-- Trazabilidad: si llega header `X-Request-ID`, incluirlo en errores (`requestId`).
+| Action | Skill |
+| --- | --- |
+| Design/review API contracts (resources, status codes, versioning, pagination) | `api-design-principles` |
+| Implement Django/DRF endpoints (views, serializers, permissions, filters) | `django-drf` |
+| Design/review error contracts and resilience behavior | `error-handling-patterns` |
+| Debug backend bugs, test failures, and integration issues | `systematic-debugging` |
+| User asks for planning/discovery before coding | `brainstorming` |
+| Write backend tests | `pytest` |
+| User asks to discover/install skills | `find-skills` |
 
-## Autenticacion (importante)
+## Critical Rules
 
-Este proyecto usa JWT en cookies:
+- New backend features must be Django/DRF.
+- Keep clean architecture boundaries: presentation, use_cases, repositories/infrastructure, domain.
+- JWT auth must remain cookie-based (`HttpOnly` cookies).
+- Mutating endpoints must enforce CSRF via `X-CSRF-TOKEN`.
+- Keep API responses in camelCase when exposed to frontend.
+- Keep API routes consistent under `api/v1/` and avoid trailing slash drift.
 
-- Cookies:
-  - `access_token` (HttpOnly, path `/api`)
-  - `refresh_token` (HttpOnly, path `/api/v1/auth/refresh`)
-  - `csrf_token` (NO HttpOnly, path `/`)
-  - `reset_token` (HttpOnly, path `/api/v1/auth/reset-password`)
-- CSRF custom:
-  - Frontend debe mandar `X-CSRF-TOKEN` y debe matchear con cookie `csrf_token`.
-  - Se valida con `apps.authentication.services.csrf_service.validate_csrf()`.
-- Autorizacion de sesion:
-  - Para endpoints protegidos, se valida cookie `access_token` con
-    `apps.authentication.services.session_service.authenticate_request()`.
+## Backend Structure
 
-Ojo: en `apps.authentication.services.token_service` las cookies se setean con `secure=True` y `samesite="Strict"`.
+- `backend/config/` - settings and root URLs.
+- `backend/apps/` - domain apps.
+- `backend/infrastructure/` - cross-cutting integrations.
+- `backend/tests/` - backend tests and fixtures.
 
-## Auditoria
+## Commands
 
-- Se registra auditoria via `apps.authentication.services.audit_service.log_event()`.
-- Los eventos se guardan en `apps.administracion.models.AuditoriaEvento`.
-
-## RBAC dependencias de permisos (v1)
-
-- La proyeccion de permisos efectivos y capacidades vive en:
-  - `backend/apps/authentication/services/permission_dependencies.py`
-- La sesion/auth user debe incluir estos campos (source of truth para frontend):
-  - `permissions`
-  - `effectivePermissions`
-  - `capabilities`
-  - `permissionDependenciesVersion` (actual: `"v1"`)
-- Entrada/salida clave:
-  - `build_permission_context(granted_permissions)` retorna el contexto completo.
-  - `project_effective_permissions(...)` filtra permisos no operables por dependencias.
-  - `resolve_capabilities(...)` evalua capacidades de negocio (allOf/anyOf).
-- Dependencias soportadas:
-  - implicitas: acciones de escritura (`create|update|delete|manage|assign|revoke`) requieren su `:read`.
-  - explicitas: reglas de negocio entre modulos (ej. usuarios update depende de catalogos de roles/permisos).
-- Cuando agregues permisos nuevos de admin:
-  1) actualiza `EXPLICIT_PERMISSION_DEPENDENCIES` si aplica;
-  2) agrega/ajusta `CAPABILITY_REQUIREMENTS`;
-  3) actualiza tests en `test_permission_dependencies_service.py` y `test_auth_permissions.py`.
-- Compatibilidad:
-  - si cambias semantica del contexto, incrementa `permissionDependenciesVersion`.
-
-## Como agregar un endpoint nuevo
-
-1) Serializer (input/output)
-- Agregar en `backend/apps/<app>/serializers.py`.
-
-2) Use case
-- Implementar en `backend/apps/<app>/uses_case/<algo>_usecase.py`.
-- Aca va la logica de negocio. Idealmente sin dependencias de DRF.
-
-3) Repository (si hace falta)
-- Implementar en `backend/apps/<app>/repositories/`.
-- Encapsular queries ORM, joins, transacciones.
-
-4) View
-- Implementar en `backend/apps/<app>/views.py` usando `APIView`.
-- Manejar:
-  - validacion serializer
-  - auth (`authenticate_request`) si aplica
-  - CSRF (`validate_csrf`) en endpoints con efecto (POST/PUT/PATCH/DELETE)
-  - manejo de errores con `AuthServiceError` (u otro error de dominio) + `error_response`
-  - auditoria si corresponde
-
-5) URLs
-- Definir rutas en `backend/apps/<app>/urls.py`.
-- Incluir el modulo desde `backend/config/urls.py` bajo `api/v1/`.
-
-## Modelos y DB
-
-- Muchos modelos usan nombres y columnas en espanol (ej: `fch_alta`, `usr_modf`) y `db_column=`.
-- Mantener consistencia con el esquema existente.
-
-## Cache / rate limiting
-
-- Login y OTP usan `django.core.cache`.
-- Para prod, configurar `CACHES` (idealmente Redis). En tests se usa `LocMemCache` via `override_settings`.
-
-## Tests
-
-- Hoy los tests estan con el runner de Django/DRF (`APITestCase`).
-- Ejecutar:
-  - `python manage.py test`
-
-## Comandos utiles
-
-- Correr server: `python manage.py runserver`
-- Migraciones: `python manage.py makemigrations` y `python manage.py migrate`
-- Tests: `python manage.py test`
-
-## Gotchas del repo
-
-- Hay carpetas de apps con nombres raros (ej: `backend/apps/consulta medica/`). Evitar espacios en nombres nuevos.
-- `REST_FRAMEWORK` esta configurado con `JWTAuthentication`, pero el flujo real de auth usa cookies + `authenticate_request()`.
-- `backend/config/settings.py` tiene `SECRET_KEY` hardcodeado: para prod mover a env (`python-decouple`).
+```bash
+python manage.py runserver
+python manage.py makemigrations
+python manage.py migrate
+python manage.py test
+```

@@ -1,91 +1,85 @@
 # AGENTS.md - SIRES Operating Guide
 
-## How to Use This Guide
+## Scope
 
-- Start here for cross-project norms. SIRES has several components.
-- Each component has an `AGENTS.md` file with specific guidelines (e.g., `backend/AGENTS.md`, `frontend/AGENTS.md`).
-- Component docs override this file when guidance conflicts.
+- Base guide for the whole repository.
+- More specific `AGENTS.md` files override this guide for their subtree.
 
-## Project summary
+## Project Snapshot
 
-SIRES is a clinical system. The frontend is React 19 + Vite and the backend has **completed the migration to Django 5 + DRF**. All new functionality must be designed for Django/DRF.
+SIRES is a clinical system with React 19 + Vite on frontend and Django 5 + DRF on backend.
+All new backend functionality must be built for Django/DRF.
 
-## Primary stack
+## Scoped Guides (Load Narrow Context First)
 
-| Component | Stack | Notes |
-| --- | --- | --- |
-| Frontend | React 19, TypeScript 5.9, Vite 7 | React Router 7, TanStack Query 5, Zustand 5, Zod 4, RHF, Radix/shadcn |
-| Backend | Django 5 + DRF | Clean architecture |
-| Data | MySQL, Redis | Redis for OTP/cache, MySQL as primary DB |
-| UI | Tailwind 4, shadcn/ui, Radix | Metro CDMX tokens in `frontend/src/styles/theme.css` |
-| Testing | Vitest, Testing Library, MSW, Playwright | Pytest for backend |
-| Infra | Docker Compose | `frontend` 5173, `backend` 5000 |
+- `backend/AGENTS.md` - backend-wide rules
+- `backend/apps/AGENTS.md` - endpoint/use-case/repository implementation
+- `backend/tests/AGENTS.md` - backend testing workflow
+- `frontend/AGENTS.md` - frontend-wide rules
+- `frontend/src/api/AGENTS.md` - API client/contracts in frontend
+- `frontend/src/components/AGENTS.md` - shared UI/component rules
+- `frontend/src/features/AGENTS.md` - feature-module rules
+- `frontend/src/features/admin/AGENTS.md` - admin feature specifics
+- `frontend/src/routes/AGENTS.md` - routing/guards
+- `frontend/src/test/AGENTS.md` - frontend testing workflow
+- `docs/AGENTS.md` - docs-wide rules
+- `docs/api/AGENTS.md` - API documentation contracts
 
-## Available skills (SIRES)
+## Active Skills (SIRES)
 
 | Skill | Recommended use | Path |
 | --- | --- | --- |
-| `react-19` | React components, hooks, compiler patterns | `.opencode/skill/react-19/SKILL.md` |
+| `vercel-react-best-practices` | React performance and refactoring patterns | `.opencode/skill/vercel-react-best-practices/SKILL.md` |
+| `interface-design` | Create intentional UI layouts and visual hierarchy | `.opencode/skill/interface-design/SKILL.md` |
+| `web-design-guidelines` | UI/UX and accessibility review against web guidelines | `.opencode/skill/web-design-guidelines/SKILL.md` |
 | `typescript` | Types, interfaces, strict generics | `.opencode/skill/typescript/SKILL.md` |
 | `tailwind-4` | Tailwind styling + `cn()` | `.opencode/skill/tailwind-4/SKILL.md` |
 | `zod-4` | Schemas and validation (Zod v4) | `.opencode/skill/zod-4/SKILL.md` |
 | `zustand-5` | Stores, slices, persistence | `.opencode/skill/zustand-5/SKILL.md` |
-| `django-drf` | ViewSets, serializers, filters | `.opencode/skill/django-drf/SKILL.md` |
+| `django-drf` | DRF endpoints, serializers, permissions, filters | `.opencode/skill/django-drf/SKILL.md` |
+| `api-design-principles` | REST API contract and versioning design | `.opencode/skill/api-design-principles/SKILL.md` |
+| `error-handling-patterns` | Error taxonomy, contracts, retries, fallback | `.opencode/skill/error-handling-patterns/SKILL.md` |
+| `systematic-debugging` | Root-cause-first workflow for bugs and regressions | `.opencode/skill/systematic-debugging/SKILL.md` |
+| `brainstorming` | Plan and scope features before implementation | `.opencode/skill/brainstorming/SKILL.md` |
 | `pytest` | Python tests, fixtures, mocking | `.opencode/skill/pytest/SKILL.md` |
 | `playwright` | E2E with Page Objects + MCP | `.opencode/skill/playwright/SKILL.md` |
 | `jira-epic` | Large epics definition | `.opencode/skill/jira-epic/SKILL.md` |
 | `jira-task` | Tasks/bugs definition | `.opencode/skill/jira-task/SKILL.md` |
-| `skill-creator` | Create new skills | `.opencode/skill/skill-creator/SKILL.md` |
+| `find-skills` | Discover/install skills when requested | `.opencode/skill/find-skills/SKILL.md` |
 
-## Skills present but inactive
-
-- `nextjs-15` and `ai-sdk-5` exist in the repo but are not used in SIRES today. Only invoke them if the project adopts Next.js or AI features.
-
-## Auto-invoke (when to load skills)
+## Auto-invoke Matrix
 
 | Action | Skill |
 | --- | --- |
-| Create/modify React components | `react-19` |
+| Create/modify React components (performance-aware) | `vercel-react-best-practices` |
+| Create new UI screens/layout direction before implementation | `interface-design` |
+| Review UI/UX/accessibility compliance | `web-design-guidelines` |
 | Write TypeScript types | `typescript` |
 | Tailwind styling | `tailwind-4` |
 | Zod / RHF validation | `zod-4` |
 | Create/edit global stores | `zustand-5` |
 | Design Django/DRF APIs | `django-drf` |
+| Design/review API contracts and standards | `api-design-principles` |
+| Design/review error contracts, retries, and fallback behavior | `error-handling-patterns` |
+| Debug bugs, test failures, and regressions | `systematic-debugging` |
+| User asks for planning/discovery before coding | `brainstorming` |
 | Backend Python tests | `pytest` |
 | E2E tests | `playwright` |
 | Create project epics | `jira-epic` |
 | Create tasks/bugs | `jira-task` |
-| Define a new skill | `skill-creator` |
+| User asks to discover/install skills | `find-skills` |
 
-## Backend rules (Django)
+## Backend Guardrails
 
-- All new features must be built in Django/DRF.
-- Keep clean architecture: presentation (DRF views/serializers), use_cases (orchestration), infrastructure (DB, mail, cache), domain (entities and rules).
-- JWT in HttpOnly cookies and CSRF via `X-CSRF-TOKEN` header.
+- Keep clean architecture: presentation (views/serializers), use_cases, infrastructure, domain.
+- JWT must stay in HttpOnly cookies.
+- CSRF must be enforced via `X-CSRF-TOKEN` for mutating requests.
 
-## RBAC permission dependencies (v1)
-
-- SIRES now uses a dependency-aware RBAC model for admin features.
-- Backend is the source of truth for dependency projection:
-  - `backend/apps/authentication/services/permission_dependencies.py`
-  - `backend/apps/authentication/repositories/user_repository.py`
-- Frontend consumes the projected auth context and applies capability-first checks.
-- Auth payload fields used by UI:
-  - `permissions`
-  - `effectivePermissions`
-  - `capabilities`
-  - `permissionDependenciesVersion` (`"v1"`)
-- Rule of thumb for new modules:
-  - prefer capability checks for page actions and route guards;
-  - keep raw permission checks only for very simple visibility rules;
-  - avoid ad-hoc cross-permission checks in components.
-
-## Development commands
+## Development Commands
 
 ### Frontend (Bun)
 ```bash
 bun dev
-bun build
 bun lint
 bun test
 ```
@@ -95,6 +89,7 @@ bun test
 python manage.py runserver
 python manage.py makemigrations
 python manage.py migrate
+python manage.py test
 ```
 
 ### Docker (recommended)

@@ -1,9 +1,29 @@
 # AGENTS.md - SIRES Documentation Ruleset
 
-## How to Use This Guide
+## Scope
 
 - Applies only to changes inside `docs/`.
 - If it conflicts with the root `AGENTS.md`, this guide wins.
+
+## Load Narrow Context
+
+- `docs/api/AGENTS.md` - API docs contract conventions.
+
+## Skills Reference
+
+- `api-design-principles` - document REST contracts and versioning.
+- `error-handling-patterns` - document error contracts and fallback behavior.
+- `brainstorming` - plan doc structure for complex topics.
+- `find-skills` - discover/install skills when requested.
+
+## Auto-invoke Skills
+
+| Action | Skill |
+| --- | --- |
+| Document/review API contracts and standards | `api-design-principles` |
+| Document/review error contracts and resilience behavior | `error-handling-patterns` |
+| User asks for planning/discovery before writing docs | `brainstorming` |
+| User asks to discover/install skills | `find-skills` |
 
 ## Critical Rules - Non-negotiable
 
