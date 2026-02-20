@@ -153,7 +153,14 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
                 details={"name": ["Duplicado"]},
             )
         actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
-        item = serializer.save(created_at=timezone.now(), created_by_id=actor_id)
+        model_fields = {field.name for field in self.model._meta.get_fields()}
+        save_kwargs = {}
+        if "created_at" in model_fields:
+            save_kwargs["created_at"] = timezone.now()
+        if "created_by_id" in model_fields:
+            save_kwargs["created_by_id"] = actor_id
+
+        item = serializer.save(**save_kwargs)
 
         item_id = getattr(item, "id", None)
         if item_id is None:
@@ -222,7 +229,14 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 details={"name": ["Duplicado"]},
             )
         actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
-        item = serializer.save(updated_at=timezone.now(), updated_by_id=actor_id)
+        model_fields = {field.name for field in self.model._meta.get_fields()}
+        save_kwargs = {}
+        if "updated_at" in model_fields:
+            save_kwargs["updated_at"] = timezone.now()
+        if "updated_by_id" in model_fields:
+            save_kwargs["updated_by_id"] = actor_id
+
+        item = serializer.save(**save_kwargs)
         detail = self.detail_serializer(item)
         return Response({self.wrapper_key: detail.data}, status=status.HTTP_200_OK)
     
@@ -235,10 +249,20 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 message="No encontrado",
                 http_status=status.HTTP_404_NOT_FOUND,
             )
-        item.is_active = False
-        item.deleted_at = timezone.now()
-        item.deleted_by_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
-        item.save(update_fields=["is_active", "deleted_at", "deleted_by_id"])
+        model_fields = {field.name for field in self.model._meta.get_fields()}
+        update_fields = []
+
+        if "is_active" in model_fields:
+            item.is_active = False
+            update_fields.append("is_active")
+        if "deleted_at" in model_fields:
+            item.deleted_at = timezone.now()
+            update_fields.append("deleted_at")
+        if "deleted_by_id" in model_fields:
+            item.deleted_by_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+            update_fields.append("deleted_by_id")
+
+        item.save(update_fields=update_fields)
         return Response({"success": True}, status=status.HTTP_200_OK)
 
 

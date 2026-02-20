@@ -1,6 +1,6 @@
 from django.utils import timezone
 from ..models import RelUsuarioRol, RelRolPermiso, RelUsuarioOverride
-from apps.catalogos.models import CatPermiso
+from apps.catalogos.models import Permisos
 
 
 class RBACResolver:
@@ -20,7 +20,7 @@ class RBACResolver:
 
         if is_admin:
             permisos.update(
-                CatPermiso.objects.filter(is_active=True).values_list("codigo", flat=True)
+                Permisos.objects.filter(is_active=True).values_list("codigo", flat=True)
             )
         else:
             for rel in roles:

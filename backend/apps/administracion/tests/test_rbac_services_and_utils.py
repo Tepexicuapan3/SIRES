@@ -23,7 +23,7 @@ from apps.administracion.use_cases.users.assign_roles import AssignRolesUseCase
 from apps.administracion.views.role_views import RoleCreateView
 from apps.administracion.views import rbac_views
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import Permisos, Roles
 
 
 class RequestIDMiddlewareTests(SimpleTestCase):
@@ -111,7 +111,7 @@ class RbacResolverTests(TestCase):
             nombre_completo="Resolver User",
         )
 
-        self.role = CatRol.objects.create(
+        self.role = Roles.objects.create(
             rol="RESOLVER_ROLE",
             desc_rol="Role resolver",
             landing_route="/resolver",
@@ -119,12 +119,12 @@ class RbacResolverTests(TestCase):
         )
         RelUsuarioRol.objects.create(id_usuario=self.user, id_rol=self.role, is_primary=True)
 
-        self.perm_read = CatPermiso.objects.create(
+        self.perm_read = Permisos.objects.create(
             codigo="expedientes:read",
             descripcion="Leer expedientes",
             is_active=True,
         )
-        self.perm_write = CatPermiso.objects.create(
+        self.perm_write = Permisos.objects.create(
             codigo="expedientes:update",
             descripcion="Actualizar expedientes",
             is_active=True,
@@ -157,7 +157,7 @@ class RbacResolverTests(TestCase):
         self.assertNotIn("expedientes:update", permissions)
 
     def test_applies_allow_deny_and_ignores_expired_overrides(self):
-        extra_perm = CatPermiso.objects.create(
+        extra_perm = Permisos.objects.create(
             codigo="farmacia:read",
             descripcion="Leer farmacia",
             is_active=True,
@@ -204,7 +204,7 @@ class AssignRolesUseCaseTests(TestCase):
             cambiar_clave=False,
             terminos_acept=True,
         )
-        self.role = CatRol.objects.create(
+        self.role = Roles.objects.create(
             rol="ASSIGN_ROLE",
             desc_rol="Role assign",
             landing_route="/assign",
@@ -263,7 +263,7 @@ class CreateRoleUseCaseAndSerializerTests(TestCase):
         )
 
     def test_role_detail_serializer_shape(self):
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="SERIALIZER_ROLE",
             desc_rol="Rol serializer",
             landing_route="/serializer",
@@ -399,7 +399,7 @@ class RbacViewHelpersTests(TestCase):
             materno="",
             nombre_completo="Helper Roles",
         )
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="HELPER_ROLE_NO_PRIMARY",
             desc_rol="Role helper",
             landing_route="/helper",

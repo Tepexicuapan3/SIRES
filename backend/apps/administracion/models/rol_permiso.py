@@ -5,12 +5,12 @@ class RelRolPermiso(models.Model):
     fch_asignacion = models.DateTimeField(auto_now_add=True)
     fch_baja = models.DateTimeField(null=True, blank=True)
     id_rol = models.ForeignKey(
-        "catalogos.CatRol",
+        "catalogos.Roles",
         db_column="id_rol",
         on_delete=models.CASCADE,
     )
     id_permiso = models.ForeignKey(
-        "catalogos.CatPermiso",
+        "catalogos.Permisos",
         db_column="id_permiso",
         on_delete=models.CASCADE,
     )

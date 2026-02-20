@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
-from apps.catalogos.models import Areas, CatCentroAtencion, CatPermiso, CatRol
+from apps.catalogos.models import Areas, CatCentroAtencion, Permisos, Roles
 
 
 class CatalogosContractTests(APITestCase):
@@ -45,7 +45,7 @@ class CatalogosContractTests(APITestCase):
             nombre_completo="Admin Catalog",
         )
 
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="ADMIN_CATALOG",
             desc_rol="Administrador de catalogos",
             landing_route="/admin/catalogos",
@@ -58,12 +58,12 @@ class CatalogosContractTests(APITestCase):
             is_primary=True,
         )
 
-        CatPermiso.objects.create(
+        Permisos.objects.create(
             codigo="admin:catalogos:centros_atencion:read",
             descripcion="Leer centros",
             is_active=True,
         )
-        CatPermiso.objects.create(
+        Permisos.objects.create(
             codigo="admin:catalogos:areas:read",
             descripcion="Leer areas",
             is_active=True,

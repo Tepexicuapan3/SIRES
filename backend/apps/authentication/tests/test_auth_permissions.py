@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.repositories.user_repository import UserRepository
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import Permisos, Roles
 
 
 class AuthPermissionsTests(TestCase):
@@ -30,7 +30,7 @@ class AuthPermissionsTests(TestCase):
         )
 
     def test_permissions_admin(self):
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="ADMIN",
             desc_rol="Administrador",
             landing_route="/admin",
@@ -48,7 +48,7 @@ class AuthPermissionsTests(TestCase):
         self.assertEqual(auth_user["primaryRole"], "ADMIN")
 
     def test_permissions_admin_applies_active_deny_override(self):
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="ADMIN_DENY",
             desc_rol="Administrador con deny",
             landing_route="/admin",
@@ -56,12 +56,12 @@ class AuthPermissionsTests(TestCase):
         )
         RelUsuarioRol.objects.create(id_usuario=self.user, id_rol=role, is_primary=True)
 
-        denied_permission = CatPermiso.objects.create(
+        denied_permission = Permisos.objects.create(
             codigo="admin:gestion:usuarios:update",
             descripcion="Actualizar usuarios",
             is_active=True,
         )
-        allowed_permission = CatPermiso.objects.create(
+        allowed_permission = Permisos.objects.create(
             codigo="admin:gestion:usuarios:read",
             descripcion="Leer usuarios",
             is_active=True,
@@ -82,22 +82,22 @@ class AuthPermissionsTests(TestCase):
         self.assertFalse(auth_user["capabilities"]["admin.users.update"]["granted"])
 
     def test_permissions_overrides(self):
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="MEDICO",
             desc_rol="Medico",
             landing_route="/expedientes",
         )
         RelUsuarioRol.objects.create(id_usuario=self.user, id_rol=role, is_primary=True)
 
-        perm_read = CatPermiso.objects.create(
+        perm_read = Permisos.objects.create(
             codigo="expedientes:read",
             descripcion="Leer",
         )
-        perm_write = CatPermiso.objects.create(
+        perm_write = Permisos.objects.create(
             codigo="expedientes:write",
             descripcion="Escribir",
         )
-        perm_extra = CatPermiso.objects.create(
+        perm_extra = Permisos.objects.create(
             codigo="pacientes:read",
             descripcion="Leer pacientes",
         )
@@ -122,14 +122,14 @@ class AuthPermissionsTests(TestCase):
         self.assertNotIn("expedientes:write", auth_user["permissions"])
 
     def test_permissions_override_expired(self):
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="MEDICO",
             desc_rol="Medico",
             landing_route="/expedientes",
         )
         RelUsuarioRol.objects.create(id_usuario=self.user, id_rol=role, is_primary=True)
 
-        perm_read = CatPermiso.objects.create(
+        perm_read = Permisos.objects.create(
             codigo="expedientes:read",
             descripcion="Leer",
         )

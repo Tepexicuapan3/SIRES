@@ -1,6 +1,6 @@
 from django.db import transaction
 
-from apps.catalogos.models import CatRol
+from apps.catalogos.models import Roles
 
 from ...services.audit_service import AuditService
 from ...constants.rbac_actions import RBACActions
@@ -12,7 +12,7 @@ class CreateRoleUseCase:
     @transaction.atomic
     def execute(request, data):
 
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol=data["name"],
             desc_rol=data.get("description") or "",
             landing_route=data.get("landingRoute"),

@@ -9,7 +9,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
-from apps.catalogos.models import CatCentroAtencion, CatPermiso, CatRol
+from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
 
 
 class RbacUsersApiTests(APITestCase):
@@ -30,7 +30,7 @@ class RbacUsersApiTests(APITestCase):
             nombre_completo="Admin Users",
         )
 
-        self.admin_role = CatRol.objects.create(
+        self.admin_role = Roles.objects.create(
             rol="ADMIN_TEST_USERS",
             desc_rol="Administrador de usuarios",
             landing_route="/admin/users",
@@ -43,13 +43,13 @@ class RbacUsersApiTests(APITestCase):
             is_primary=True,
         )
 
-        self.role_medico = CatRol.objects.create(
+        self.role_medico = Roles.objects.create(
             rol="MEDICO_USERS",
             desc_rol="Rol medico",
             landing_route="/medico",
             is_active=True,
         )
-        self.role_recepcion = CatRol.objects.create(
+        self.role_recepcion = Roles.objects.create(
             rol="RECEPCION_USERS",
             desc_rol="Rol recepcion",
             landing_route="/recepcion",
@@ -66,7 +66,7 @@ class RbacUsersApiTests(APITestCase):
             created_by_id=self.admin.id_usuario,
         )
 
-        self.override_permission = CatPermiso.objects.create(
+        self.override_permission = Permisos.objects.create(
             codigo="farmacia:read",
             descripcion="Leer farmacia",
             is_active=True,

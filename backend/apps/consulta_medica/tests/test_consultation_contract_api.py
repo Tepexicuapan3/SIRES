@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 
 from apps.administracion.models import RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import CatRol
+from apps.catalogos.models import Roles
 from apps.consulta_medica.models import VisitConsultation
 from apps.recepcion.models import Visit
 
@@ -61,7 +61,7 @@ class ConsultationContractsApiTests(APITestCase):
             materno="User",
             nombre_completo=f"{username} Test User",
         )
-        role, _ = CatRol.objects.get_or_create(
+        role, _ = Roles.objects.get_or_create(
             rol=role_code,
             defaults={
                 "desc_rol": f"Rol {role_code}",

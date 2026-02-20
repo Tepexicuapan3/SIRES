@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Areas, CatCentroAtencion, CatPermiso, CatRol, TiposAreas
+from apps.catalogos.models import Areas, CatCentroAtencion, Permisos, Roles, TiposAreas
 
 DEFAULT_PASSWORD = "Sires_123456"
 
@@ -982,7 +982,7 @@ def run():
 
     permissions_map = {}
     for code, description in PERMISSIONS:
-        permission, _ = CatPermiso.objects.update_or_create(
+        permission, _ = Permisos.objects.update_or_create(
             codigo=code,
             defaults={
                 "descripcion": description,
@@ -996,19 +996,24 @@ def run():
 
     print(f"[SEED] Permisos asegurados: {len(permissions_map)}")
 
+    role_field_names = {field.name for field in Roles._meta.get_fields()}
     role_map = {}
     for role_def in ROLE_DEFS:
-        role, _ = CatRol.objects.update_or_create(
+        role_defaults = {
+            "desc_rol": role_def["desc"],
+            "landing_route": role_def["landing"],
+            "is_admin": role_def.get("is_admin", False),
+            "es_sistema": role_def.get("is_system", False),
+            "is_active": role_def.get("is_active", True),
+        }
+        if "created_by_id" in role_field_names:
+            role_defaults["created_by_id"] = admin_user.id_usuario
+        if "updated_by_id" in role_field_names:
+            role_defaults["updated_by_id"] = admin_user.id_usuario
+
+        role, _ = Roles.objects.update_or_create(
             rol=role_def["code"],
-            defaults={
-                "desc_rol": role_def["desc"],
-                "landing_route": role_def["landing"],
-                "is_admin": role_def.get("is_admin", False),
-                "es_sistema": role_def.get("is_system", False),
-                "is_active": role_def.get("is_active", True),
-                "created_by_id": admin_user.id_usuario,
-                "updated_by_id": admin_user.id_usuario,
-            },
+            defaults=role_defaults,
         )
 
         role_map[role_def["code"]] = role

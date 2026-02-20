@@ -480,10 +480,10 @@ class PermisosDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_createdBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, obj.created_by_id)
+        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "created_by_id", None))
 
     def get_updatedBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, obj.updated_by_id)
+        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "updated_by_id", None))
 
 
 class PermisosWriteSerializer(serializers.ModelSerializer):
@@ -541,10 +541,10 @@ class RolesDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_createdBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, obj.created_by_id)
+        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "created_by_id", None))
 
     def get_updatedBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, obj.updated_by_id)
+        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "updated_by_id", None))
 
 
 class RolesWriteSerializer(serializers.ModelSerializer):

@@ -25,7 +25,7 @@ from apps.authentication.services.email_service import send_user_credentials_ema
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
-from apps.catalogos.models import CatCentroAtencion, CatPermiso, CatRol
+from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
 
 
 TEMP_PASSWORD_LENGTH = 12
@@ -318,7 +318,7 @@ def _split_permission_code(code):
 def _ensure_read_dependencies(permission_ids):
     permissions = {
         permission.id_permiso: permission
-        for permission in CatPermiso.objects.filter(id_permiso__in=permission_ids, is_active=True)
+        for permission in Permisos.objects.filter(id_permiso__in=permission_ids, is_active=True)
     }
     expanded = set(permission_ids)
 
@@ -420,7 +420,7 @@ class RolesListCreateView(APIView):
             _audit(request, "RBAC_ROLE_LIST", "role", result="FAIL", error_code="VALIDATION_ERROR")
             return pagination_error
 
-        queryset = CatRol.objects.all()
+        queryset = Roles.objects.all()
 
         search = request.query_params.get("search")
         if search:
@@ -527,7 +527,7 @@ class RolesListCreateView(APIView):
                 request_id=_request_id(request),
             )
 
-        if CatRol.objects.filter(rol=name).exists():
+        if Roles.objects.filter(rol=name).exists():
             _audit(request, "RBAC_ROLE_CREATE", "role", result="FAIL", error_code="ROLE_EXISTS")
             return error_response(
                 "ROLE_EXISTS",
@@ -536,7 +536,7 @@ class RolesListCreateView(APIView):
                 request_id=_request_id(request),
             )
 
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol=name,
             desc_rol=description,
             landing_route=landing_route,
@@ -560,7 +560,7 @@ class RoleDetailView(APIView):
     permission_classes = []
 
     def _get_role(self, role_id):
-        return CatRol.objects.filter(id_rol=role_id).first()
+        return Roles.objects.filter(id_rol=role_id).first()
 
     def get(self, request, role_id):
         _, auth_error = _authorize(request, "admin:gestion:roles:read")
@@ -618,7 +618,7 @@ class RoleDetailView(APIView):
         before = _serialize_role(role)
 
         name = request.data.get("name")
-        if name and CatRol.objects.filter(rol=name).exclude(id_rol=role.id_rol).exists():
+        if name and Roles.objects.filter(rol=name).exclude(id_rol=role.id_rol).exists():
             _audit(request, "RBAC_ROLE_UPDATE", "role", resource_id=role.id_rol, result="FAIL", error_code="ROLE_EXISTS")
             return error_response(
                 "ROLE_EXISTS",
@@ -720,7 +720,7 @@ class PermissionsCatalogView(APIView):
 
         permissions = [
             _serialize_permission(permission)
-            for permission in CatPermiso.objects.filter(is_active=True).order_by("codigo")
+            for permission in Permisos.objects.filter(is_active=True).order_by("codigo")
         ]
         payload = {"items": permissions, "total": len(permissions)}
         _audit(request, "RBAC_PERMISSION_LIST", "permission", result="SUCCESS")
@@ -760,7 +760,7 @@ class AssignRolePermissionsView(APIView):
                 request_id=_request_id(request),
             )
 
-        role = CatRol.objects.filter(id_rol=role_id).first()
+        role = Roles.objects.filter(id_rol=role_id).first()
         if not role:
             _audit(request, "RBAC_ROLE_PERMISSIONS_ASSIGN", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
             return error_response(
@@ -775,7 +775,7 @@ class AssignRolePermissionsView(APIView):
 
         permissions = {
             permission.id_permiso: permission
-            for permission in CatPermiso.objects.filter(id_permiso__in=requested_ids, is_active=True)
+            for permission in Permisos.objects.filter(id_permiso__in=requested_ids, is_active=True)
         }
         missing_ids = sorted(requested_ids - set(permissions.keys()))
         if missing_ids:
@@ -845,7 +845,7 @@ class RevokeRolePermissionView(APIView):
             _audit(request, "RBAC_ROLE_PERMISSION_REVOKE", "role", resource_id=role_id, result="FAIL", error_code=auth_error.data.get("code"))
             return auth_error
 
-        role = CatRol.objects.filter(id_rol=role_id).first()
+        role = Roles.objects.filter(id_rol=role_id).first()
         if not role:
             _audit(request, "RBAC_ROLE_PERMISSION_REVOKE", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
             return error_response(
@@ -1013,7 +1013,7 @@ class UsersListCreateView(APIView):
                 request_id=_request_id(request),
             )
 
-        role = CatRol.objects.filter(id_rol=request.data.get("primaryRoleId"), is_active=True).first()
+        role = Roles.objects.filter(id_rol=request.data.get("primaryRoleId"), is_active=True).first()
         if not role:
             _audit(request, "RBAC_USER_CREATE", "user", result="FAIL", error_code="ROLE_NOT_FOUND")
             return error_response(
@@ -1330,7 +1330,7 @@ class UserRolesView(APIView):
                 request_id=_request_id(request),
             )
 
-        roles = {role.id_rol: role for role in CatRol.objects.filter(id_rol__in=role_ids, is_active=True)}
+        roles = {role.id_rol: role for role in Roles.objects.filter(id_rol__in=role_ids, is_active=True)}
         missing = sorted(set(role_ids) - set(roles.keys()))
         if missing:
             _audit(request, "RBAC_USER_ROLES_ASSIGN", "user_role", resource_id=user.id_usuario, result="FAIL", error_code="ROLE_NOT_FOUND", target_user=user)
@@ -1577,7 +1577,7 @@ class UserOverridesView(APIView):
                 request_id=_request_id(request),
             )
 
-        permission = CatPermiso.objects.filter(codigo=permission_code, is_active=True).first()
+        permission = Permisos.objects.filter(codigo=permission_code, is_active=True).first()
         if not permission:
             _audit(request, "RBAC_USER_OVERRIDE_UPSERT", "user_override", resource_id=user.id_usuario, result="FAIL", error_code="PERMISSION_NOT_FOUND", target_user=user)
             return error_response(

@@ -7,7 +7,7 @@ from apps.authentication.models import SyUsuario
 from apps.authentication.services.permission_dependencies import (
     build_permission_context,
 )
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import Permisos, Roles
 
 
 class UserRepository:
@@ -155,7 +155,7 @@ def _get_roles(user):
 
     if not primary_role and roles:
         primary_role = roles[0]
-        role = CatRol.objects.filter(rol=primary_role, is_active=True).first()
+        role = Roles.objects.filter(rol=primary_role, is_active=True).first()
         landing_route = role.landing_route if role else None
 
     if not primary_role:
@@ -176,10 +176,10 @@ def _get_permissions(user, roles, is_admin):
         has_active_deny = any(override.efecto == "DENY" for override in overrides)
         if not has_active_deny:
             return ["*"]
-        permissions = set(CatPermiso.objects.filter(is_active=True).values_list("codigo", flat=True))
+        permissions = set(Permisos.objects.filter(is_active=True).values_list("codigo", flat=True))
     else:
         role_ids = list(
-            CatRol.objects.filter(rol__in=roles, is_active=True).values_list("id_rol", flat=True)
+            Roles.objects.filter(rol__in=roles, is_active=True).values_list("id_rol", flat=True)
         )
         permissions = set()
 
@@ -188,7 +188,7 @@ def _get_permissions(user, roles, is_admin):
                 RelRolPermiso.objects.filter(id_rol_id__in=role_ids, fch_baja__isnull=True)
                 .values_list("id_permiso_id", flat=True)
             )
-            for code in CatPermiso.objects.filter(
+            for code in Permisos.objects.filter(
                 id_permiso__in=role_perm_ids, is_active=True
             ).values_list("codigo", flat=True):
                 permissions.add(code)

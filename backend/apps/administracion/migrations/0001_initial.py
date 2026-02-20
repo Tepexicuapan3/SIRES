@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         db_column="id_rol",
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="catalogos.catrol",
+                        to="catalogos.Roles",
                     ),
                 ),
                 (
@@ -88,7 +88,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         db_column="id_rol",
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="catalogos.catrol",
+                        to="catalogos.Roles",
                     ),
                 ),
                 (
@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         db_column="id_permiso",
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="catalogos.catpermiso",
+                        to="catalogos.Permisos",
                     ),
                 ),
                 (
@@ -160,7 +160,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         db_column="id_permiso",
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="catalogos.catpermiso",
+                        to="catalogos.Permisos",
                     ),
                 ),
                 (

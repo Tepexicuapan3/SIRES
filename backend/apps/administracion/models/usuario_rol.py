@@ -11,7 +11,7 @@ class RelUsuarioRol(models.Model):
         on_delete=models.CASCADE,
     )
     id_rol = models.ForeignKey(
-        "catalogos.CatRol",
+        "catalogos.Roles",
         db_column="id_rol",
         on_delete=models.CASCADE,
     )

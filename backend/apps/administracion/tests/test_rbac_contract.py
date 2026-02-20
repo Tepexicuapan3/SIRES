@@ -5,7 +5,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import Permisos, Roles
 
 
 class RbacContractTests(APITestCase):
@@ -26,7 +26,7 @@ class RbacContractTests(APITestCase):
             nombre_completo="Admin RBAC",
         )
 
-        self.role = CatRol.objects.create(
+        self.role = Roles.objects.create(
             rol="ADMIN_RBAC",
             desc_rol="Administrador de pruebas",
             landing_route="/admin/roles",
@@ -39,7 +39,7 @@ class RbacContractTests(APITestCase):
             is_primary=True,
         )
 
-        self.permission = CatPermiso.objects.create(
+        self.permission = Permisos.objects.create(
             codigo="admin:gestion:permisos:read",
             descripcion="Leer permisos",
             is_active=True,

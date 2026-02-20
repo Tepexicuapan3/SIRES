@@ -5,24 +5,24 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
-from apps.catalogos.models import CatCentroAtencion, CatPermiso, CatRol
+from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
 
 
 class CatalogosAuthzTests(APITestCase):
     def setUp(self):
-        self.role = CatRol.objects.create(
+        self.role = Roles.objects.create(
             rol="CATALOG_READER",
             desc_rol="Rol de catalogos",
             landing_route="/catalogos",
             is_active=True,
         )
 
-        self.perm_read = CatPermiso.objects.create(
+        self.perm_read = Permisos.objects.create(
             codigo="admin:catalogos:centros_atencion:read",
             descripcion="Leer centros",
             is_active=True,
         )
-        self.perm_create = CatPermiso.objects.create(
+        self.perm_create = Permisos.objects.create(
             codigo="admin:catalogos:centros_atencion:create",
             descripcion="Crear centros",
             is_active=True,

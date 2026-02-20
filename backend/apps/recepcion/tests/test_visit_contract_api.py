@@ -5,7 +5,7 @@ from rest_framework.test import APITestCase
 
 from apps.administracion.models import RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import CatRol
+from apps.catalogos.models import Roles
 
 
 class VisitContractsApiTests(APITestCase):
@@ -43,7 +43,7 @@ class VisitContractsApiTests(APITestCase):
             materno="User",
             nombre_completo=f"{username} Test User",
         )
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol=role_code,
             desc_rol=f"Rol {role_code}",
             landing_route="/recepcion" if role_code == "RECEPCION" else "/consultas",
