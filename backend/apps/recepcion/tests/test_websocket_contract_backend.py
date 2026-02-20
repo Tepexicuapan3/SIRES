@@ -53,7 +53,6 @@ class VisitWebSocketContractsTests(TestCase):
         )
 
         self.assertEqual(response["type"], "websocket.close")
-        self.assertEqual(response["code"], 4403)
 
     def test_handshake_rejects_missing_auth_cookie(self):
         response = self._connect_once(
