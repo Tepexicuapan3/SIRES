@@ -44,7 +44,28 @@ bun run test:coverage
 
 # E2E
 bunx playwright test
+
+# Smoke E2E KAN-27
+bun run test:e2e:smoke
+
+# Quality gate KAN-4 smoke (critical UI + API + E2E)
+bun run quality:kan4:smoke
 ```
+
+## Integracion CI reproducible (agnostica)
+
+Si el repo aun no define pipeline versionado, integra este gate en tu runner CI:
+
+```bash
+cd frontend
+bun install
+bun run quality:kan4:smoke
+```
+
+Artefactos que deben conservarse por corrida:
+
+- `frontend/playwright-report/`
+- `frontend/test-results/`
 
 ## Mocks en Desarrollo (Offline)
 

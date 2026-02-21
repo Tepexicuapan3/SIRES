@@ -29,7 +29,20 @@ const getEnvNumber = (key: string, defaultValue: number): number => {
 };
 
 const getApiUrl = (): string => {
+  const configuredApiUrl = import.meta.env.VITE_API_URL;
+  if (
+    typeof configuredApiUrl === "string" &&
+    configuredApiUrl.trim().length > 0
+  ) {
+    return configuredApiUrl;
+  }
+
   if (import.meta.env.DEV) {
+    if (typeof window !== "undefined") {
+      const backendPort = import.meta.env.VITE_BACKEND_PORT || "5000";
+      return `${window.location.protocol}//${window.location.hostname}:${backendPort}/api/v1`;
+    }
+
     return "/api/v1";
   }
 

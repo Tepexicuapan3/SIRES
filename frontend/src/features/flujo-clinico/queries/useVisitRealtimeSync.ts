@@ -5,6 +5,7 @@ import {
   type WebSocketLike,
 } from "@features/flujo-clinico/queries/visit-realtime.client";
 import { useVisitRealtimeBridge } from "@features/flujo-clinico/queries/useVisitRealtimeBridge";
+import { env } from "@/config/env";
 
 interface UseVisitRealtimeSyncOptions {
   enabled?: boolean;
@@ -22,20 +23,78 @@ interface UseVisitRealtimeSyncResult {
   lastSequence: number | null;
 }
 
-const DEFAULT_VISIT_STREAM_URL = "/ws/v1/visits/stream";
+const DEFAULT_VISIT_STREAM_PATH = "/ws/v1/visits/stream";
+
+const resolveVisitStreamPath = (): string => {
+  const configuredPath = import.meta.env.VITE_VISITS_STREAM_PATH;
+  if (typeof configuredPath === "string" && configuredPath.trim().length > 0) {
+    return configuredPath;
+  }
+
+  return DEFAULT_VISIT_STREAM_PATH;
+};
+
+const buildWsUrlFromPath = (path: string): string => {
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${protocol}://${window.location.host}${normalizedPath}`;
+};
+
+const normalizeWebSocketUrl = (rawUrl: string): string => {
+  const trimmedUrl = rawUrl.trim();
+
+  if (/^wss?:\/\//i.test(trimmedUrl)) {
+    return trimmedUrl;
+  }
+
+  if (/^https?:\/\//i.test(trimmedUrl)) {
+    const parsedUrl = new URL(trimmedUrl);
+    parsedUrl.protocol = parsedUrl.protocol === "https:" ? "wss:" : "ws:";
+    return parsedUrl.toString();
+  }
+
+  if (/^\/\//.test(trimmedUrl)) {
+    const protocol =
+      typeof window !== "undefined" && window.location.protocol === "https:"
+        ? "wss"
+        : "ws";
+    return `${protocol}:${trimmedUrl}`;
+  }
+
+  if (typeof window !== "undefined") {
+    return buildWsUrlFromPath(trimmedUrl);
+  }
+
+  return trimmedUrl;
+};
+
+const resolveWsUrlFromApiUrl = (): string | null => {
+  const apiUrl = env.apiUrl;
+  if (!/^https?:\/\//i.test(apiUrl)) {
+    return null;
+  }
+
+  const parsedUrl = new URL(apiUrl);
+  const protocol = parsedUrl.protocol === "https:" ? "wss" : "ws";
+  return `${protocol}://${parsedUrl.host}${resolveVisitStreamPath()}`;
+};
 
 const resolveDefaultVisitStreamUrl = (): string => {
   const configuredUrl = import.meta.env.VITE_VISITS_STREAM_URL;
   if (typeof configuredUrl === "string" && configuredUrl.trim().length > 0) {
-    return configuredUrl;
+    return normalizeWebSocketUrl(configuredUrl);
+  }
+
+  const wsUrlFromApi = resolveWsUrlFromApiUrl();
+  if (wsUrlFromApi) {
+    return wsUrlFromApi;
   }
 
   if (typeof window !== "undefined") {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${protocol}://${window.location.hostname}:5000/ws/v1/visits/stream`;
+    return buildWsUrlFromPath(resolveVisitStreamPath());
   }
 
-  return DEFAULT_VISIT_STREAM_URL;
+  return resolveVisitStreamPath();
 };
 
 export const useVisitRealtimeSync = (
