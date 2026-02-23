@@ -1,6 +1,7 @@
 import { lazy } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import { GuestRoute } from "@/routes/GuestRoute";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { RootLayout } from "@/components/layouts/RootLayout";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
@@ -24,21 +25,9 @@ const OnboardingPage = lazy(() =>
  * - Centraliza la carga de modulos para evitar duplicacion en UI.
  * - Los modulos se cargan en lazy para reducir el bundle inicial.
  */
-const CoreRoutes = lazy(() =>
-  import("@/routes/modules/core.routes").then((m) => ({
-    default: m.CoreRoutes,
-  })),
-);
-const AdminRoutes = lazy(() =>
-  import("@/routes/modules/admin.routes").then((m) => ({
-    default: m.AdminRoutes,
-  })),
-);
-const ClinicoRoutes = lazy(() =>
-  import("@/routes/modules/clinico.routes").then((m) => ({
-    default: m.ClinicoRoutes,
-  })),
-);
+const CoreRoutes = lazy(() => import("@/routes/modules/core.routes"));
+const AdminRoutes = lazy(() => import("@/routes/modules/admin.routes"));
+const ClinicoRoutes = lazy(() => import("@/routes/modules/clinico.routes"));
 const RecepcionRoutes = lazy(() =>
   import("@/routes/modules/placeholders.routes").then((m) => ({
     default: m.RecepcionRoutes,
@@ -72,9 +61,11 @@ export const router = createBrowserRouter([
       {
         path: "/login",
         element: (
-          <SuspenseWrapper fullScreen>
-            <LoginPage />
-          </SuspenseWrapper>
+          <GuestRoute>
+            <SuspenseWrapper fullScreen>
+              <LoginPage />
+            </SuspenseWrapper>
+          </GuestRoute>
         ),
       },
       {

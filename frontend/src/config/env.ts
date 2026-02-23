@@ -28,9 +28,17 @@ const getEnvNumber = (key: string, defaultValue: number): number => {
   return parsed;
 };
 
+const getApiUrl = (): string => {
+  if (import.meta.env.DEV) {
+    return "/api/v1";
+  }
+
+  return getEnvVar("VITE_API_URL");
+};
+
 export const env = {
   // API
-  apiUrl: getEnvVar("VITE_API_URL"),
+  apiUrl: getApiUrl(),
 
   // App
   appName: getEnvVar("VITE_APP_NAME"),

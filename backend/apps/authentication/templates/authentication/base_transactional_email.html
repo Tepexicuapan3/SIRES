@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>{% block email_title %}Notificación SIRES{% endblock %}</title>
+    <style>
+      html,
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      * {
+        -ms-text-size-adjust: 100%;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      table,
+      td {
+        mso-table-lspace: 0 !important;
+        mso-table-rspace: 0 !important;
+      }
+
+      table {
+        border-collapse: collapse !important;
+        border-spacing: 0 !important;
+      }
+
+      .email-shell,
+      .surface-card,
+      .muted-card,
+      .code-box {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+      }
+
+      img {
+        -ms-interpolation-mode: bicubic;
+        border: 0;
+        outline: none;
+        text-decoration: none;
+      }
+
+      a {
+        text-decoration: none;
+      }
+
+      a[x-apple-data-detectors],
+      u + #email-body a,
+      #MessageViewBody a {
+        color: inherit !important;
+        text-decoration: none !important;
+        font-size: inherit !important;
+        font-family: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+      }
+
+      .page-bg {
+        background-color: #eef2f7;
+      }
+
+      .shell {
+        background-color: #ffffff;
+        border: 1px solid #d5dde7;
+        border-radius: 12px;
+      }
+
+      .top-accent {
+        background-color: #fe5000;
+      }
+
+      .divider {
+        background-color: #e2e8f0;
+      }
+
+      .eyebrow {
+        color: #d94300;
+      }
+
+      .title-text {
+        color: #111827;
+      }
+
+      .intro-text {
+        color: #475569;
+      }
+
+      .surface-card {
+        background-color: #ffffff;
+        border: 1px solid #d7dee8;
+        border-radius: 12px;
+      }
+
+      .muted-card {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+      }
+
+      .footer-surface {
+        border-top: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+      }
+
+      .footer-text {
+        color: #64748b;
+      }
+
+      .footer-muted {
+        color: #94a3b8;
+      }
+
+      .link-accent {
+        color: #d94300;
+      }
+
+      .icon-accent path,
+      .icon-accent rect {
+        stroke: #64748b;
+      }
+
+      .icon-accent circle {
+        fill: #64748b;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .page-bg {
+          background-color: #0f172a !important;
+        }
+
+        .shell {
+          background-color: #111827 !important;
+          border-color: #334155 !important;
+        }
+
+        .divider {
+          background-color: #334155 !important;
+        }
+
+        .eyebrow,
+        .link-accent {
+          color: #fdba74 !important;
+        }
+
+        .title-text {
+          color: #f8fafc !important;
+        }
+
+        .intro-text,
+        .footer-text {
+          color: #cbd5e1 !important;
+        }
+
+        .surface-card,
+        .muted-card {
+          background-color: #0f172a !important;
+          border-color: #334155 !important;
+        }
+
+        .footer-surface {
+          background-color: #0b1220 !important;
+          border-top-color: #334155 !important;
+        }
+
+        .footer-muted {
+          color: #94a3b8 !important;
+        }
+
+        .code-cell {
+          background-color: #111827 !important;
+          border-color: #475569 !important;
+          color: #f8fafc !important;
+        }
+
+        .icon-accent path,
+        .icon-accent rect {
+          stroke: #cbd5e1 !important;
+        }
+
+        .icon-accent circle {
+          fill: #cbd5e1 !important;
+        }
+      }
+
+      [data-ogsc] .page-bg {
+        background-color: #0f172a !important;
+      }
+
+      [data-ogsc] .shell {
+        background-color: #111827 !important;
+        border-color: #334155 !important;
+      }
+
+      [data-ogsc] .divider {
+        background-color: #334155 !important;
+      }
+
+      [data-ogsc] .eyebrow,
+      [data-ogsc] .link-accent {
+        color: #fdba74 !important;
+      }
+
+      [data-ogsc] .title-text {
+        color: #f8fafc !important;
+      }
+
+      [data-ogsc] .intro-text,
+      [data-ogsc] .footer-text {
+        color: #cbd5e1 !important;
+      }
+
+      [data-ogsc] .surface-card,
+      [data-ogsc] .muted-card {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+      }
+
+      [data-ogsc] .footer-surface {
+        background-color: #0b1220 !important;
+        border-top-color: #334155 !important;
+      }
+
+      [data-ogsc] .footer-muted {
+        color: #94a3b8 !important;
+      }
+
+      [data-ogsc] .code-cell {
+        background-color: #111827 !important;
+        border-color: #475569 !important;
+        color: #f8fafc !important;
+      }
+
+      [data-ogsc] .icon-accent path,
+      [data-ogsc] .icon-accent rect {
+        stroke: #cbd5e1 !important;
+      }
+
+      [data-ogsc] .icon-accent circle {
+        fill: #cbd5e1 !important;
+      }
+
+      @media screen and (max-width: 620px) {
+        .email-shell {
+          width: 100% !important;
+          border-radius: 12px !important;
+        }
+
+        .section-padding {
+          padding-left: 20px !important;
+          padding-right: 20px !important;
+        }
+
+        .hero-title {
+          font-size: 24px !important;
+          line-height: 1.3 !important;
+        }
+
+        .header-brand,
+        .header-metro {
+          display: block !important;
+          width: 100% !important;
+          text-align: left !important;
+        }
+
+        .header-metro {
+          padding-top: 12px !important;
+        }
+
+        .code-cell {
+          width: 36px !important;
+          height: 46px !important;
+          font-size: 18px !important;
+          line-height: 46px !important;
+        }
+
+        .step-list {
+          padding-left: 18px !important;
+        }
+
+        .button-link {
+          display: block !important;
+          text-align: center !important;
+        }
+      }
+    </style>
+    <!--[if mso]>
+      <style>
+        body,
+        table,
+        td,
+        p,
+        a,
+        h1 {
+          font-family: Arial, sans-serif !important;
+        }
+      </style>
+    <![endif]-->
+  </head>
+  <body
+    id="email-body"
+    style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Manrope','Segoe UI',Tahoma,Arial,sans-serif;color:#111827;mso-line-height-rule:exactly;"
+  >
+    <div
+      style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;line-height:1px;font-size:1px;mso-hide:all;"
+    >
+      {% block preheader %}Notificación automática de SIRES.{% endblock %}
+      &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+    </div>
+
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      class="page-bg"
+      style="background-color:#eef2f7;"
+    >
+      <tr>
+        <td align="center" style="padding:30px 14px;">
+          <!--[if mso]>
+            <table role="presentation" width="620" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td>
+          <![endif]-->
+          <table
+            role="presentation"
+            border="0"
+            width="620"
+            cellspacing="0"
+            cellpadding="0"
+            class="email-shell shell"
+            style="width:100%;max-width:620px;background-color:#ffffff;border:1px solid #d5dde7;border-radius:12px;overflow:hidden;"
+          >
+            <tr>
+              <td class="top-accent" style="height:4px;background-color:#fe5000;line-height:4px;font-size:0;">&nbsp;</td>
+            </tr>
+
+            <tr>
+              <td class="section-padding" style="padding:26px 32px 16px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td class="header-brand" valign="middle" style="padding:0;">
+                      <table role="presentation" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td style="padding:0;">
+                            <img
+                              src="{{ logo_url }}"
+                              alt="Logo SIRES"
+                              style="display:block;height:48px;width:auto;border:0;"
+                            />
+                          </td>
+                          <td style="padding-left:12px;">
+                            <p
+                              style="margin:0;font-size:11px;letter-spacing:0.09em;text-transform:uppercase;color:#64748b;"
+                            >
+                              Sistema SIRES
+                            </p>
+                            <p
+                              style="margin:3px 0 0;font-size:15px;font-weight:700;letter-spacing:0.01em;color:#111827;"
+                            >
+                              STC Metro CDMX
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td class="header-metro" align="right" valign="middle" style="padding-left:12px;">
+                      <img
+                        src="{{ metro_logo_url }}"
+                        alt="Logo STC Metro"
+                        style="display:block;height:34px;width:auto;border:0;opacity:0.95;"
+                      />
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="section-padding" style="padding:0 32px;">
+                <div class="divider" style="height:1px;background-color:#e2e8f0;line-height:1px;font-size:1px;">&nbsp;</div>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="section-padding" style="padding:18px 32px 8px;">
+                <p
+                  class="eyebrow"
+                  style="margin:0 0 10px;font-size:12px;letter-spacing:0.07em;text-transform:uppercase;font-weight:700;color:#d94300;"
+                >
+                  {% block eyebrow %}Notificación{% endblock %}
+                </p>
+                <h1
+                  class="hero-title title-text"
+                  style="margin:0 0 10px;font-size:28px;line-height:1.28;font-weight:700;color:#111827;"
+                >
+                  {% block heading %}{% endblock %}
+                </h1>
+                <p class="intro-text" style="margin:0;font-size:15px;line-height:1.65;color:#475569;">{% block intro %}{% endblock %}</p>
+              </td>
+            </tr>
+
+            {% block email_body %}{% endblock %}
+
+            <tr>
+              <td class="section-padding" style="padding:0 32px 24px;">{% block support_line %}{% endblock %}</td>
+            </tr>
+
+            <tr>
+              <td class="footer-surface" style="padding:16px 32px;border-top:1px solid #e2e8f0;background-color:#f8fafc;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td class="footer-text" align="center" style="font-size:12px;line-height:1.6;color:#64748b;">
+                      Este correo fue enviado a nombre de SIRES STC Metro
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="footer-muted" align="center" style="padding-top:6px;font-size:11px;line-height:1.6;color:#94a3b8;">
+                      &copy; {{ current_year }} {{ company_name }}. Todos los derechos reservados.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          <!--[if mso]>
+                </td>
+              </tr>
+            </table>
+          <![endif]-->
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

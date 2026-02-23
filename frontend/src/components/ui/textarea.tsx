@@ -1,8 +1,8 @@
-import * as React from "react";
+import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({ className, ...props }: ComponentProps<"textarea">) {
   return (
     <textarea
       data-slot="textarea"
@@ -15,8 +15,7 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
         "focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/20",
         // Error state
         "aria-invalid:border-status-critical aria-invalid:ring-status-critical/20",
-        // Dark mode (si se implementa)
-        "dark:bg-bg-subtle",
+        "bg-paper",
         className,
       )}
       {...props}

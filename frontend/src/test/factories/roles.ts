@@ -15,7 +15,17 @@ const createUserRef = (overrides: Partial<UserRef> = {}): UserRef => ({
 export const createMockRoleListItem = (
   overrides: Partial<RoleListItem> = {},
 ): RoleListItem => {
-  const roleName = faker.person.jobType().toUpperCase().replace(/\s+/g, "_");
+  const roleName =
+    overrides.name ??
+    faker.helpers.arrayElement([
+      "Admin",
+      "Clinico",
+      "Recepcion",
+      "Farmacia",
+      "Urgencias",
+      "Auditoria",
+      "Soporte",
+    ]);
 
   return {
     id: faker.number.int({ min: 1, max: 100 }),

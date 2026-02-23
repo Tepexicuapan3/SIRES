@@ -1,9 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect } from "vitest";
 // @vitest-environment node
 import { rolesAPI } from "@/api/resources/roles.api";
 import { permissionsAPI } from "@/api/resources/permissions.api";
+import { authAPI } from "@/api/resources/auth.api";
 
 describe("Admin RBAC Integration (with MSW)", () => {
+  beforeEach(async () => {
+    await authAPI.login({ username: "admin", password: "password123" });
+  });
+
   // 1. Catálogo de Permisos
   it("should fetch permissions catalog", async () => {
     const response = await permissionsAPI.getAll();

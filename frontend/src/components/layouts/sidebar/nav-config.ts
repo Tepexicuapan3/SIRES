@@ -43,16 +43,6 @@ export const PLACEHOLDER_BADGE = "Dev";
 
 export const NAV_CONFIG: NavSection[] = [
   {
-    title: "Core",
-    items: [
-      {
-        title: "Dashboard",
-        url: "/dashboard",
-        icon: LayoutDashboard,
-      },
-    ],
-  },
-  {
     title: "Administracion",
     items: [
       {
@@ -74,20 +64,28 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Roles",
             url: "/admin/roles",
             permissions: ["admin:gestion:roles:read"],
+            badge: "New",
           },
         ],
       },
       {
         title: "Catalogos",
-        url: "/admin/catalogos",
         icon: BookOpen,
-        permissions: [
-          "admin:catalogos:centros_atencion:read",
-          "admin:catalogos:areas:read",
+        items: [
+          {
+            title: "Areas",
+            url: "/admin/catalogos/areas",
+            permissions: ["admin:catalogos:areas:read"],
+          },
+          {
+            title: "Centros de atencion",
+            url: "/admin/catalogos/centros-atencion",
+            permissions: ["admin:catalogos:centros_atencion:read"],
+          },
         ],
       },
       {
-        title: "Reportes",
+        title: "Reportes y Analitica Operativa",
         url: "/admin/reportes",
         icon: FileText,
         permissions: ["admin:reportes:read"],
@@ -138,11 +136,13 @@ export const NAV_CONFIG: NavSection[] = [
     title: "Clinico",
     items: [
       {
-        title: "Consultas",
+        title:
+          "Consultas Clinicas, Seguimiento Integral y Control Continuo de Pacientes",
         icon: Stethoscope,
         items: [
           {
-            title: "Listado",
+            title:
+              "Listado Completo y Detallado de Consultas Programadas, Realizadas y Pendientes",
             url: "/clinico/consultas",
             permissions: ["clinico:consultas:read"],
           },
@@ -157,7 +157,8 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["clinico:consultas:create"],
           },
           {
-            title: "Historial",
+            title:
+              "Historial Clinico Extenso y Detallado de Consultas Previas y Evolucion del Paciente",
             url: "/clinico/consultas/historial",
             permissions: ["clinico:consultas:historial:read"],
           },
@@ -254,6 +255,16 @@ export const NAV_CONFIG: NavSection[] = [
         icon: Ambulance,
         permissions: ["urgencias:triage:read"],
         badge: PLACEHOLDER_BADGE,
+      },
+    ],
+  },
+  {
+    title: "Core",
+    items: [
+      {
+        title: "Dashboard",
+        url: "/dashboard",
+        icon: LayoutDashboard,
       },
     ],
   },

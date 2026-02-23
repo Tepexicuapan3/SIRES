@@ -23,10 +23,12 @@ export const useAuthSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const query = useQuery<AuthUser, ApiError>({
+  const query = useQuery<AuthUser | null, ApiError>({
     queryKey: authKeys.session(),
     queryFn: () => authAPI.getCurrentUser(),
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     retry: false,
   });
 
@@ -48,12 +50,12 @@ export const useAuthSession = () => {
   }, [location.pathname, navigate, query.data]);
 
   useEffect(() => {
-    if (!query.error) return;
+    if (!query.error || query.data) return;
     // Cualquier fallo de auth invalida la sesion local.
     if (query.error.status === 401 || query.error.status === 403) {
       clearAuthSession(queryClient);
     }
-  }, [query.error, queryClient]);
+  }, [query.error, query.data, queryClient]);
 
   return query;
 };

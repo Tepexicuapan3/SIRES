@@ -22,9 +22,10 @@ export const createMockAuthUser = (
     username: faker.internet.username({ firstName, lastName: paternalName }),
     fullName,
     email: faker.internet.email({ firstName, lastName: paternalName }),
-    primaryRole: "ADMIN",
+    avatarUrl: faker.datatype.boolean() ? faker.image.avatar() : null,
+    primaryRole: "Admin",
     landingRoute: "/dashboard",
-    roles: ["ADMIN", "MEDICO"],
+    roles: ["Admin", "Clinico"],
     permissions: ["*"],
     mustChangePassword,
     requiresOnboarding,
@@ -32,9 +33,21 @@ export const createMockAuthUser = (
   };
 };
 
+type MockUserListItem = UserListItem & { avatarUrl?: string | null };
+
+const USER_ROLE_POOL = [
+  "Admin",
+  "Clinico",
+  "Recepcion",
+  "Farmacia",
+  "Urgencias",
+  "Auditoria",
+  "Soporte",
+] as const;
+
 export const createMockUser = (
-  overrides: Partial<UserListItem> = {},
-): UserListItem => {
+  overrides: Partial<MockUserListItem> = {},
+): MockUserListItem => {
   const firstName = faker.person.firstName();
   const paternalName = faker.person.lastName();
   const maternalName = faker.person.lastName();
@@ -45,6 +58,14 @@ export const createMockUser = (
       : faker.datatype.boolean()
         ? createMockCentroAtencionRef()
         : null;
+  const avatarUrl =
+    overrides.avatarUrl !== undefined
+      ? overrides.avatarUrl
+      : faker.datatype.boolean()
+        ? faker.image.avatar()
+        : null;
+  const termsAccepted = overrides.termsAccepted ?? true;
+  const mustChangePassword = overrides.mustChangePassword ?? false;
 
   return {
     id: faker.number.int({ min: 1, max: 1000 }),
@@ -52,13 +73,11 @@ export const createMockUser = (
     fullname,
     email: faker.internet.email({ firstName, lastName: paternalName }),
     clinic,
-    primaryRole: faker.helpers.arrayElement([
-      "ADMIN",
-      "MEDICO",
-      "RECEPCION",
-      "FARMACIA",
-    ]),
+    primaryRole: faker.helpers.arrayElement(USER_ROLE_POOL),
     isActive: faker.datatype.boolean(),
+    termsAccepted,
+    mustChangePassword,
+    avatarUrl,
     ...overrides,
   };
 };
@@ -96,8 +115,8 @@ export const createMockUserRole = (
 ): UserRole => {
   return {
     id: faker.number.int({ min: 1, max: 20 }),
-    name: "MEDICO",
-    description: "Medico General",
+    name: "Clinico",
+    description: "Clinico General",
     isPrimary: false,
     assignedAt: faker.date.recent().toISOString(),
     assignedBy: {

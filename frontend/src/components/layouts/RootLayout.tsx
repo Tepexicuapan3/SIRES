@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { SessionObserver } from "@/features/auth/components/shared/SessionObserver";
 import { useAuthSession } from "@/features/auth/queries/useAuthSession";
+import { NavigationProgressBar } from "@/components/shared/NavigationProgressBar";
 
 /**
  * Layout raíz de la aplicación.
@@ -17,6 +18,7 @@ export const RootLayout = () => {
 
   return (
     <>
+      <NavigationProgressBar />
       <SessionObserver />
       <Outlet />
     </>

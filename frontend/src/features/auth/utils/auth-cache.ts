@@ -22,6 +22,12 @@ export const setAuthSession = (queryClient: QueryClient, user: AuthUser) => {
  * - Reduce riesgo de acceso visual con permisos caducados.
  */
 export const clearAuthSession = (queryClient: QueryClient) => {
-  // Elimina la session cacheada para forzar re-hidratacion.
-  queryClient.removeQueries({ queryKey: authKeys.session() });
+  // IMPORTANT:
+  // No usamos removeQueries() porque si hay un useQuery montado (RootLayout),
+  // eliminar la query provoca que se “recree” y refetchee -> bucles infinitos
+  // (ej: /auth/me 401 -> refresh 401 -> clear -> refetch -> ...).
+  // En su lugar, marcamos explicitamente “no autenticado”.
+
+  queryClient.cancelQueries({ queryKey: authKeys.session() });
+  queryClient.setQueryData(authKeys.session(), null);
 };

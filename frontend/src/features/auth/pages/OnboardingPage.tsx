@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { LogOut, Lock } from "lucide-react";
+import { LogOut, Lock, Loader2 } from "lucide-react";
 import { ApiError, ERROR_CODES } from "@/api/utils/errors";
 
 import { authAPI } from "@/api/resources/auth.api";
@@ -12,6 +12,7 @@ import {
   onboardingErrorMessages,
 } from "@features/auth/domain/auth.messages";
 import { setAuthSession } from "@features/auth/utils/auth-cache";
+import { Button } from "@/components/ui/button";
 
 import type { CompleteOnboardingResponse } from "@api/types";
 import { TermsStep } from "@/features/auth/components/onboarding/TermsStep";
@@ -96,15 +97,25 @@ export const OnboardingPage = () => {
       <div className="absolute inset-0 bg-radial-[at_center_center] from-transparent via-transparent to-app/80 pointer-events-none z-0" />
 
       <div className="absolute top-4 right-4 z-20">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => logout()}
           disabled={isLoggingOut || isPending}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-txt-muted hover:text-status-critical hover:bg-status-critical/10 rounded-lg transition-colors disabled:opacity-50 backdrop-blur-sm bg-paper/30 min-h-11"
+          className="group gap-2 text-txt-muted hover:text-status-critical hover:bg-status-critical/10 backdrop-blur-sm bg-paper/30"
           aria-label="Cerrar sesión"
         >
-          <LogOut size={16} aria-hidden="true" />
+          {isLoggingOut ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <LogOut
+              size={16}
+              className="group-hover:-translate-x-0.5 transition-transform"
+              aria-hidden="true"
+            />
+          )}
           {isLoggingOut ? "Cerrando..." : "Salir"}
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-col items-center w-full z-10">

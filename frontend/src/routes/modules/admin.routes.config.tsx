@@ -1,18 +1,12 @@
-import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import UsersPage from "@features/admin/modules/rbac/users/pages/UsersPage";
+import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
+import AreasPage from "@features/admin/modules/catalogos/areas/pages/AreasPage";
+import CentrosAtencionPage from "@features/admin/modules/catalogos/centros-atencion/pages/CentrosAtencionPage";
+import PlaceholderPage from "@/components/shared/PlaceholderPage";
 
 // Administracion
-const AdminPage = lazy(() => import("@features/admin/pages/AdminPage"));
-const UsersPage = lazy(() => import("@features/admin/pages/UsersPage"));
-const CreateUserPage = lazy(
-  () => import("@features/admin/pages/CreateUserPage"),
-);
-const RolesPage = lazy(() => import("@features/admin/pages/RolesPage"));
-const CatalogosPage = lazy(() => import("@features/admin/pages/CatalogosPage"));
-const PlaceholderPage = lazy(
-  () => import("@/components/shared/PlaceholderPage"),
-);
 
 /**
  * Rutas del grupo Administracion.
@@ -24,41 +18,13 @@ const PlaceholderPage = lazy(
 export const adminRoutes: RouteObject[] = [
   {
     index: true,
-    element: <Navigate to="panel" replace />, // entrypoint por defecto
-  },
-  {
-    path: "panel",
-    element: (
-      <ProtectedRoute requiredPermission="admin:panel:read">
-        <AdminPage />
-      </ProtectedRoute>
-    ),
+    element: <Navigate to="usuarios" replace />, // entrypoint por defecto
   },
   {
     path: "usuarios",
     element: (
       <ProtectedRoute requiredPermission="admin:gestion:usuarios:read">
         <UsersPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "usuarios/nuevo",
-    element: (
-      <ProtectedRoute requiredPermission="admin:gestion:usuarios:create">
-        <CreateUserPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "expedientes-derechohabientes",
-    element: (
-      <ProtectedRoute requiredPermission="admin:gestion:expedientes_derechohabientes:read">
-        <PlaceholderPage
-          title="Expedientes de derechohabientes"
-          description="Gestion de expedientes administrativos de derechohabientes"
-          moduleName="Administracion"
-        />
       </ProtectedRoute>
     ),
   },
@@ -72,9 +38,38 @@ export const adminRoutes: RouteObject[] = [
   },
   {
     path: "catalogos",
+    children: [
+      {
+        index: true,
+        element: <Navigate to="areas" replace />,
+      },
+      {
+        path: "areas",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:areas:read">
+            <AreasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "centros-atencion",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
+            <CentrosAtencionPage />
+          </ProtectedRoute>
+        ),
+      },
+    ],
+  },
+  {
+    path: "expedientes",
     element: (
-      <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
-        <CatalogosPage />
+      <ProtectedRoute requiredPermission="admin:gestion:expedientes:read">
+        <PlaceholderPage
+          title="Expedientes"
+          description="Configuracion y administracion de expedientes"
+          moduleName="Administracion"
+        />
       </ProtectedRoute>
     ),
   },
@@ -83,8 +78,8 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <ProtectedRoute requiredPermission="admin:reportes:read">
         <PlaceholderPage
-          title="Reportes"
-          description="Reportes operativos y ejecutivos del sistema"
+          title="Reportes y Analitica Operativa"
+          description="Indicadores operativos y reportes de gestion"
           moduleName="Administracion"
         />
       </ProtectedRoute>
@@ -96,44 +91,35 @@ export const adminRoutes: RouteObject[] = [
       <ProtectedRoute requiredPermission="admin:estadisticas:read">
         <PlaceholderPage
           title="Estadisticas"
-          description="Panel de estadisticas y analitica administrativa"
+          description="Metricas globales y analisis historico"
           moduleName="Administracion"
         />
       </ProtectedRoute>
     ),
   },
   {
-    path: "autorizacion",
-    children: [
-      {
-        index: true,
-        element: <Navigate to="recetas" replace />,
-      },
-      {
-        path: "recetas",
-        element: (
-          <ProtectedRoute requiredPermission="admin:autorizacion:recetas:read">
-            <PlaceholderPage
-              title="Autorizacion de recetas"
-              description="Control y autorizacion de recetas"
-              moduleName="Autorizacion"
-            />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "estudios",
-        element: (
-          <ProtectedRoute requiredPermission="admin:autorizacion:estudios:read">
-            <PlaceholderPage
-              title="Autorizacion de estudios"
-              description="Control y autorizacion de estudios"
-              moduleName="Autorizacion"
-            />
-          </ProtectedRoute>
-        ),
-      },
-    ],
+    path: "autorizacion/recetas",
+    element: (
+      <ProtectedRoute requiredPermission="admin:autorizacion:recetas:read">
+        <PlaceholderPage
+          title="Autorizacion de Recetas"
+          description="Flujo de aprobacion y seguimiento de recetas"
+          moduleName="Administracion"
+        />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "autorizacion/estudios",
+    element: (
+      <ProtectedRoute requiredPermission="admin:autorizacion:estudios:read">
+        <PlaceholderPage
+          title="Autorizacion de Estudios"
+          description="Validacion y autorizacion de estudios clinicos"
+          moduleName="Administracion"
+        />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "licencias",
@@ -141,7 +127,7 @@ export const adminRoutes: RouteObject[] = [
       <ProtectedRoute requiredPermission="admin:licencias:read">
         <PlaceholderPage
           title="Licencias"
-          description="Administracion de licencias y permisos"
+          description="Gestion de licencias y control de accesos"
           moduleName="Administracion"
         />
       </ProtectedRoute>
@@ -153,7 +139,7 @@ export const adminRoutes: RouteObject[] = [
       <ProtectedRoute requiredPermission="admin:conciliacion:read">
         <PlaceholderPage
           title="Conciliacion"
-          description="Conciliacion de registros y procesos internos"
+          description="Conciliacion operativa y financiera"
           moduleName="Administracion"
         />
       </ProtectedRoute>

@@ -21,12 +21,23 @@ export interface AuthUser {
   username: string;
   fullName: string;
   email: string;
+  avatarUrl?: string | null;
   primaryRole: string;
   landingRoute: string | null;
   roles: string[];
   permissions: string[];
+  effectivePermissions?: string[];
+  capabilities?: Record<string, AuthCapabilityState>;
+  permissionDependenciesVersion?: string;
+  authRevision?: string;
   mustChangePassword: boolean;
   requiresOnboarding?: boolean;
+}
+
+export interface AuthCapabilityState {
+  granted: boolean;
+  missingAllOf: string[];
+  missingAnyOf: string[];
 }
 
 // =============================================================================

@@ -14,15 +14,22 @@ export const MainHeader = () => {
   return (
     <header
       role="banner"
-      className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-line-hairline bg-app/95 backdrop-blur-sm px-4"
+      className="relative flex h-16 shrink-0 items-center gap-3 rounded-t-3xl border-b border-line-hairline bg-app/95 px-4 backdrop-blur-sm"
     >
-      <SidebarTrigger
-        className="-ml-1"
-        aria-label="Abrir/cerrar menú de navegación"
-      />
-      <Separator orientation="vertical" className="mr-2 h-4" />
-      <SidebarBreadcrumbs />
-      <ModuleSearch />
+      <div className="flex min-w-0 items-center gap-2">
+        <SidebarTrigger
+          className="-ml-1"
+          aria-label="Abrir/cerrar menú de navegación"
+        />
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <div className="min-w-0">
+          <SidebarBreadcrumbs />
+        </div>
+      </div>
+
+      <div className="ml-auto w-48 shrink-0 sm:w-56 md:w-72 lg:w-96">
+        <ModuleSearch />
+      </div>
     </header>
   );
 };

@@ -44,6 +44,7 @@ export const LoginPage = () => {
 
   const [viewState, setViewState] = useState<AuthViewState>("LOGIN");
   const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [shouldAutoFocusEmail, setShouldAutoFocusEmail] = useState(false);
 
   const recoveryIndex = recoverySteps.indexOf(viewState);
 
@@ -98,6 +99,7 @@ export const LoginPage = () => {
         toast.error("Sesión expirada", {
           description: `${message}. Solicita un nuevo código de verificación.`,
         });
+        setShouldAutoFocusEmail(true);
         setViewState("RECOVERY_REQUEST");
         return;
       }
@@ -169,12 +171,15 @@ export const LoginPage = () => {
 
         {viewState === "RECOVERY_REQUEST" && (
           <RequestCodeForm
+            autoFocus={shouldAutoFocusEmail}
             onSuccess={(email) => {
               setRecoveryEmail(email);
+              setShouldAutoFocusEmail(false);
               setViewState("RECOVERY_OTP");
             }}
             onCancel={() => {
               setRecoveryEmail("");
+              setShouldAutoFocusEmail(false);
               setViewState("LOGIN");
             }}
           />
@@ -187,18 +192,24 @@ export const LoginPage = () => {
               // El token de reset se setea en cookie por el backend
               setViewState("RECOVERY_NEW_PASS");
             }}
-            onBack={() => setViewState("RECOVERY_REQUEST")}
+            onBack={() => {
+              setShouldAutoFocusEmail(true);
+              setViewState("RECOVERY_REQUEST");
+            }}
           />
         )}
 
         {viewState === "RECOVERY_OTP" && !recoveryEmail && (
           <RequestCodeForm
+            autoFocus={shouldAutoFocusEmail}
             onSuccess={(email) => {
               setRecoveryEmail(email);
+              setShouldAutoFocusEmail(false);
               setViewState("RECOVERY_OTP");
             }}
             onCancel={() => {
               setRecoveryEmail("");
+              setShouldAutoFocusEmail(false);
               setViewState("LOGIN");
             }}
           />

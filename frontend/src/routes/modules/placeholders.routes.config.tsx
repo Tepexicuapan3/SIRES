@@ -1,11 +1,8 @@
-import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import PlaceholderPage from "@/components/shared/PlaceholderPage";
 
 // Placeholder: modulos no implementados
-const PlaceholderPage = lazy(
-  () => import("@/components/shared/PlaceholderPage"),
-);
 
 /**
  * Rutas placeholder para modulos no implementados.

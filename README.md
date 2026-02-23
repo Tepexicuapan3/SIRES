@@ -1,278 +1,151 @@
 # SIRES
 
-Sistema de Información de Registros Electrónicos de Salud - Metro CDMX
+Sistema de Informacion de Registros Electronicos de Salud (Metro CDMX).
 
----
+## Snapshot
 
-## 🚀 Quick Start
+- Frontend: React 19 + TypeScript + Vite + Bun.
+- Backend: Django 6 + Django REST Framework.
+- Data: MySQL 8 + Redis.
+- Seguridad: JWT en cookies HttpOnly + CSRF (`X-CSRF-TOKEN`).
+- Infra local: Docker Compose.
 
-### Levantar el proyecto (5 minutos)
+## Quick Start
+
+### 1) Requisitos
+
+- Docker y Docker Compose.
+- Bun (solo si vas a correr frontend fuera de Docker).
+- Python 3.11+ (solo si vas a correr backend fuera de Docker).
+
+### 2) Levantar entorno con Docker (recomendado)
 
 ```bash
-# 1. Clonar repo
 git clone https://github.com/Luis-Ant/SIRES.git
 cd SIRES
 
-# 2. Configurar variables de entorno
-cp backend/.env.development backend/.env
-cp frontend/.env.development frontend/.env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 
-# 3. Levantar servicios (Docker Compose)
-docker-compose up -d
-
-# 4. Verificar
-curl http://localhost:5000/health  # Backend → {"status": "ok"}
-# Abrir http://localhost:5173/login en navegador
+docker-compose up --build -d
 ```
 
-**Requisitos:**
-- Docker v20.10+
-- MySQL 8+ (local o remoto)
+### 3) Verificar
 
-**¿Problemas?** Ver [Troubleshooting](./docs/getting-started/setup.md#troubleshooting)
+- Frontend: `http://localhost:5173`
+- Backend (admin): `http://localhost:5000/admin/`
 
----
+## Servicios Locales
 
-## 📚 Documentación Completa
+| Servicio | Puerto por defecto | Notas |
+| --- | --- | --- |
+| Frontend | `5173` | Vite dev server |
+| Backend | `5000` | Django runserver |
+| MySQL | `3306` | Base principal |
+| Redis | `6379` | Cache y OTP |
 
-👉 **[docs/README.md](./docs/README.md)** - Índice completo con guías por rol y tema
-
-### Guías Rápidas
-
-| Necesito... | Doc | Tiempo |
-|-------------|-----|--------|
-| Levantar el proyecto | [Setup](./docs/getting-started/setup.md) | 5 min |
-| Entender la arquitectura | [Overview](./docs/architecture/overview.md) | 15 min |
-| Agregar una feature | [Adding Feature](./docs/guides/adding-feature.md) | 30 min |
-| Configurar permisos | [RBAC 2.0](./docs/architecture/rbac.md) | 20 min |
-| Crear componentes UI | [UI Components](./docs/guides/ui-components.md) | 15 min |
-
----
-
-## 🛠️ Stack Técnico
-
-### Backend
-- **Framework:** Flask (Python 3.11)
-- **Base de datos:** MySQL 8 + Redis
-- **Auth:** JWT en cookies HttpOnly + CSRF
-- **Patrón:** Clean Architecture (use_cases / repositories / routes)
-
-### Frontend
-- **Runtime:** Bun
-- **Framework:** React 19 + TypeScript
-- **Build:** Vite
-- **State:** TanStack Query + Zustand
-- **UI:** shadcn/ui + TailwindCSS 4
-- **Design:** Sistema Metro CDMX (naranja #fe5000)
-
----
-
-## 📦 Servicios
-
-Cuando ejecutás `docker-compose up -d`:
-
-| Servicio | Puerto | URL |
-|----------|--------|-----|
-| **Backend** (Flask) | 5000 | http://localhost:5000 |
-| **Frontend** (Vite) | 5173 | http://localhost:5173 |
-| **Redis** | 6379 | localhost:6379 |
-
-**MySQL** corre fuera de Docker (local o remoto). Ver configuración en `backend/.env`.
-
----
-
-## 🔐 Seguridad
-
-- ✅ **JWT en cookies HttpOnly** (XSS no puede leer tokens)
-- ✅ **CSRF protection** (double-submit cookie pattern)
-- ✅ **RBAC 2.0** (permisos granulares por recurso:acción)
-- ✅ **Passwords hasheadas** (werkzeug.security)
-- ✅ **Queries parametrizadas** (SQL injection prevention)
-
-**Detalles:** Ver [docs/architecture/authentication.md](./docs/architecture/authentication.md)
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-SIRES/
-├── backend/                    # API Flask
-│   ├── src/
-│   │   ├── presentation/api/   # Blueprints (routes)
-│   │   ├── use_cases/          # Lógica de negocio
-│   │   ├── infrastructure/     # DB, email, security
-│   │   └── domain/dto/         # Data Transfer Objects
-│   ├── .env.development        # Variables backend (dev)
-│   └── requirements.txt
-│
-├── frontend/                   # App React
-│   ├── src/
-│   │   ├── api/                # HTTP client + types
-│   │   ├── features/           # Módulos por dominio
-│   │   ├── components/         # UI compartidos
-│   │   ├── store/              # Zustand stores
-│   │   └── routes/             # React Router + guards
-│   ├── .env.development        # Variables frontend (dev)
-│   └── package.json
-│
-├── docs/                       # Documentación técnica
-│   ├── getting-started/
-│   ├── architecture/
-│   ├── guides/
-│   └── README.md               # Índice completo
-│
-├── docker-compose.yml          # Orquestación servicios
-├── AGENTS.md                   # Guía de agentes IA
-└── PROJECT_GUIDE.md            # Referencia técnica detallada
-```
-
----
-
-## 🎯 Comandos Útiles
+## Comandos de Desarrollo
 
 ### Docker
 
 ```bash
-# Levantar servicios
 docker-compose up -d
-
-# Ver logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
-
-# Reconstruir imágenes
 docker-compose up -d --build
-
-# Detener servicios
+docker-compose logs -f
 docker-compose down
 ```
 
-### Backend
+### Frontend (local)
 
 ```bash
-# Acceder al contenedor
-docker-compose exec backend sh
-
-# Ejecutar script
-python run.py
-
-# Instalar dependencia
-pip install <paquete>
-```
-
-### Frontend
-
-```bash
-# Desarrollo local (sin Docker)
 cd frontend
 bun install
 bun dev
-
-# Lint
 bun lint
-
-# Build producción
-bun build
-
-# Instalar componente shadcn
-npx shadcn@latest add button
+bun test
 ```
 
----
+### Backend (local)
 
-## 🧪 Testing
-
-⚠️ **No hay suite de tests automatizados** (deuda técnica).
-
-Por ahora:
-- **Mocks en frontend:** Ver [docs/guides/testing.md](./docs/guides/testing.md)
-- **Testing manual:** Usuarios de prueba + endpoints curl
-- **Smoke tests:** Health checks + login flow
-
-**Roadmap:** pytest (backend) + Vitest (frontend)
-
----
-
-## 🤝 Contribución
-
-### Workflow
-
-1. Crear branch: `git checkout -b feature/nueva-funcionalidad`
-2. Hacer cambios siguiendo [docs/guides/adding-feature.md](./docs/guides/adding-feature.md)
-3. Commits con [Conventional Commits](https://www.conventionalcommits.org/):
-   ```
-   feat(frontend): add expedientes list page
-   fix(backend): resolve CSRF token validation
-   docs: update RBAC architecture
-   ```
-4. Push: `git push origin feature/nueva-funcionalidad`
-5. Crear Pull Request
-
-### Convenciones
-
-**Permisos (formato):**
-```
-{resource}:{action}
-```
-Ejemplos: `expedientes:create`, `usuarios:delete`, `*` (admin)
-
-**Tokens Metro CDMX (NO hardcodear colores):**
-```css
-bg-brand, text-brand          /* Naranja Metro */
-status-critical               /* Rojo clínico */
-txt-body, txt-muted           /* Texto */
-bg-paper, bg-subtle           /* Superficies */
+```bash
+cd backend
+python manage.py migrate
+python manage.py runserver 0.0.0.0:5000
+python manage.py test
 ```
 
----
+## Testing
 
-## 📖 Recursos Adicionales
+- Frontend unit/integration: `cd frontend && bun test`
+- Frontend coverage: `cd frontend && bun run test:coverage`
+- Frontend E2E: `cd frontend && bunx playwright test`
+- Backend tests: `cd backend && python manage.py test`
 
-### Documentación Interna
+## Estructura del Proyecto
 
-- **[AGENTS.md](./AGENTS.md)** - Guía de agentes IA (build, plan, ui-designer)
-- **[docs/](./docs/)** - Guías organizadas por tema
-
-### Docs Externas
-
-- [Flask](https://flask.palletsprojects.com/)
-- [React 19](https://react.dev/)
-- [TanStack Query](https://tanstack.com/query/latest)
-- [shadcn/ui](https://ui.shadcn.com/)
-- [TailwindCSS](https://tailwindcss.com/)
-
----
-
-## 📝 Notas Importantes
-
-### Variables de Entorno
-
-El proyecto usa **tres niveles** de `.env`:
-
-1. **`.env`** (raíz) - Puertos de Docker Compose
-2. **`backend/.env`** - Config Flask (DB, JWT, CORS)
-3. **`frontend/.env`** - Config Vite (solo `VITE_*` son accesibles en browser)
-
-**⚠️ NUNCA** subir archivos `.env` al repo (ya están en `.gitignore`).
-
-### MySQL
-
-Backend se conecta a MySQL **fuera de Docker**:
-
-- **Desarrollo:** `MYSQL_HOST=host.docker.internal`
-- **Producción:** IP/hostname del servidor
-
-### CORS
-
-Si el frontend está en otro puerto:
-
-```env
-# backend/.env
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+```txt
+SIRES/
+├── backend/
+│   ├── apps/
+│   ├── config/
+│   ├── infrastructure/
+│   ├── tests/
+│   └── manage.py
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── features/
+│   │   ├── routes/
+│   │   └── test/
+│   └── package.json
+├── docs/
+│   ├── api/
+│   ├── architecture/
+│   ├── guides/
+│   └── README.md
+├── AGENTS.md
+└── docker-compose.yml
 ```
 
----
+## Documentacion
 
-**Última actualización:** Enero 2026  
-**Versión:** 1.0.0
+- Indice general: `docs/README.md`
+- Contratos API: `docs/api/README.md`
+- Guia de testing frontend: `frontend/src/test/README.md`
+- Guia de API frontend: `frontend/src/api/README.md`
+
+## Matriz Maestra de Skills (IA)
+
+- Matriz completa: `docs/guides/ai-skills-matrix.md`
+- Reglas operativas por alcance: `AGENTS.md`
+
+### Resumen rapido (skill -> trigger)
+
+| Skill | Trigger principal |
+| --- | --- |
+| `vercel-react-best-practices` | Crear/modificar componentes React |
+| `interface-design` | Definir layout/UI antes de implementar |
+| `web-design-guidelines` | Auditar UX/a11y |
+| `typescript` | Escribir tipos/contratos |
+| `tailwind-4` | Estilos con Tailwind |
+| `zod-4` | Validacion de schemas |
+| `zustand-5` | Estado global UI |
+| `django-drf` | Implementacion de endpoints DRF |
+| `api-design-principles` | Diseno/revision de contratos API |
+| `error-handling-patterns` | Contratos de error, retries, fallback |
+| `systematic-debugging` | Bugs/regresiones/tests fallando |
+| `brainstorming` | Planificacion antes de codear |
+| `pytest` | Tests backend |
+| `playwright` | E2E |
+| `jira-task` | Crear tareas/bugs |
+| `jira-epic` | Crear epicas |
+| `find-skills` | Descubrir/instalar skills |
+
+## AGENTS Hierarchy (Load Narrow First)
+
+1. `AGENTS.md` (global)
+2. `backend/AGENTS.md` o `frontend/AGENTS.md` (dominio)
+3. AGENTS especifico de subcarpeta (`backend/apps/AGENTS.md`, `frontend/src/api/AGENTS.md`, etc.)
+
+El archivo mas especifico siempre tiene prioridad sobre el superior.

@@ -86,7 +86,10 @@ describe("Auth UI - LoginPage", () => {
     const user = userEvent.setup();
     render(<LoginPage />);
 
-    await user.type(screen.getByLabelText(/^usuario$/i), "testuser");
+    await user.type(
+      screen.getByRole("textbox", { name: /no\. expediente o usuario/i }),
+      "testuser",
+    );
     await user.type(screen.getByLabelText(/^contraseña$/i), "password123");
     await user.click(
       screen.getByLabelText(/recordar mi usuario en este dispositivo/i),
@@ -105,7 +108,9 @@ describe("Auth UI - LoginPage", () => {
     window.localStorage.setItem("saved_username", "remembered");
     render(<LoginPage />);
 
-    const usernameInput = screen.getByLabelText(/^usuario$/i);
+    const usernameInput = screen.getByRole("textbox", {
+      name: /no\. expediente o usuario/i,
+    });
     expect(usernameInput).toHaveValue("remembered");
 
     const rememberCheckbox = screen.getByRole("checkbox", {
@@ -128,7 +133,10 @@ describe("Auth UI - LoginPage", () => {
 
     const passwordInput = screen.getByLabelText(/^contraseña$/i);
 
-    await user.type(screen.getByLabelText(/^usuario$/i), "testuser");
+    await user.type(
+      screen.getByRole("textbox", { name: /no\. expediente o usuario/i }),
+      "testuser",
+    );
     await user.type(passwordInput, "wrongpass1");
     await user.click(screen.getByRole("button", { name: /iniciar sesión/i }));
 
@@ -158,7 +166,10 @@ describe("Auth UI - LoginPage", () => {
     const user = userEvent.setup();
     render(<LoginPage />);
 
-    await user.type(screen.getByLabelText(/^usuario$/i), "testuser");
+    await user.type(
+      screen.getByRole("textbox", { name: /no\. expediente o usuario/i }),
+      "testuser",
+    );
     await user.type(screen.getByLabelText(/^contraseña$/i), "password123");
 
     const submitButton = screen.getByRole("button", {

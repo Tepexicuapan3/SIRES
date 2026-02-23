@@ -1,9 +1,6 @@
-import { lazy } from "react";
 import type { RouteObject } from "react-router-dom";
 
-const DashboardPage = lazy(
-  () => import("@features/dashboard/pages/DashboardPage"),
-);
+import DashboardPage from "@features/dashboard/pages/DashboardPage";
 
 /**
  * Rutas core del sistema.

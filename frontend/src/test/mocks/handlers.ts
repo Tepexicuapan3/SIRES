@@ -2,6 +2,7 @@ import { http, HttpResponse, passthrough } from "msw";
 import { authHandlers } from "./handlers/auth";
 import { usersHandlers } from "./handlers/users";
 import { centrosAtencionHandlers } from "./handlers/centros-atencion";
+import { areasHandlers } from "./handlers/areas";
 import { rolesHandlers } from "./handlers/roles";
 import { permissionsHandlers } from "./handlers/permissions";
 import { getApiUrl } from "./urls";
@@ -37,6 +38,7 @@ export const handlers = [
   ...authHandlers,
   ...usersHandlers,
   ...centrosAtencionHandlers,
+  ...areasHandlers,
   ...rolesHandlers,
   ...permissionsHandlers,
 ];

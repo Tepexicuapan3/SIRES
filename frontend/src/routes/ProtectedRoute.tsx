@@ -2,11 +2,16 @@ import { Navigate, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
 import { usePermissions } from "@features/auth/queries/usePermissions";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredPermission?: string; // RBAC: requiere un permiso específico
+  requiredCapability?: string;
+  requiredPermission?: string;
+  requiredAllPermissions?: string[];
+  requiredAnyPermissions?: string[];
+  dependencyAware?: boolean;
 }
 
 /**
@@ -19,10 +24,17 @@ interface ProtectedRouteProps {
  */
 export const ProtectedRoute = ({
   children,
+  requiredCapability,
   requiredPermission,
+  requiredAllPermissions,
+  requiredAnyPermissions,
+  dependencyAware = false,
 }: ProtectedRouteProps) => {
   const { data: sessionUser, isLoading } = useAuthSession();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, hasAllPermissions, hasAnyPermission } =
+    usePermissions();
+  const { hasCapability, hasEffectivePermission, hasEffectiveRequirement } =
+    usePermissionDependencies();
   const location = useLocation();
   // La sesion cacheada es la unica fuente de verdad.
   const isAuthenticated = Boolean(sessionUser);
@@ -50,8 +62,34 @@ export const ProtectedRoute = ({
     return <Navigate to="/dashboard" replace />;
   }
 
-  // RBAC: Verificación de Permisos
-  if (requiredPermission && !hasPermission(requiredPermission)) {
+  const hasAccess = (() => {
+    if (requiredCapability) {
+      return hasCapability(requiredCapability);
+    }
+
+    if (requiredPermission) {
+      return dependencyAware
+        ? hasEffectivePermission(requiredPermission)
+        : hasPermission(requiredPermission);
+    }
+
+    if (requiredAllPermissions?.length) {
+      return dependencyAware
+        ? hasEffectiveRequirement({ allOf: requiredAllPermissions })
+        : hasAllPermissions(requiredAllPermissions);
+    }
+
+    if (requiredAnyPermissions?.length) {
+      return dependencyAware
+        ? hasEffectiveRequirement({ anyOf: requiredAnyPermissions })
+        : hasAnyPermission(requiredAnyPermissions);
+    }
+
+    return true;
+  })();
+
+  // RBAC: Verificación de permisos
+  if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -59,10 +97,7 @@ export const ProtectedRoute = ({
             Acceso Denegado
           </h1>
           <p className="text-txt-muted">
-            No tienes el permiso necesario:{" "}
-            <code className="bg-bg-subtle px-2 py-1 rounded">
-              {requiredPermission}
-            </code>
+            No tienes permisos suficientes para acceder a esta seccion.
           </p>
         </div>
       </div>

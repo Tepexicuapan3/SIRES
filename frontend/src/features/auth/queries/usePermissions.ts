@@ -10,6 +10,10 @@ import { useAuthSession } from "@features/auth/queries/useAuthSession";
  */
 export const usePermissions = () => {
   const { data: user } = useAuthSession();
+  const permissions = user?.permissions ?? [];
+  const effectivePermissions = user?.effectivePermissions ?? permissions;
+  const capabilities = user?.capabilities ?? {};
+  const permissionDependenciesVersion = user?.permissionDependenciesVersion;
 
   /**
    * Deteccion de admin para bypass explicito.
@@ -17,7 +21,7 @@ export const usePermissions = () => {
    */
   const isAdmin = (): boolean => {
     if (!user) return false;
-    if (user.permissions.includes("*")) return true;
+    if (permissions.includes("*")) return true;
     return false;
   };
 
@@ -27,32 +31,53 @@ export const usePermissions = () => {
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
     if (isAdmin()) return true;
-    return user.permissions.includes(permission);
+    return permissions.includes(permission);
+  };
+
+  const hasEffectivePermission = (permission: string): boolean => {
+    if (!user) return false;
+    if (isAdmin()) return true;
+    return effectivePermissions.includes(permission);
   };
 
   /**
    * Check OR para multiples permisos.
    */
-  const hasAnyPermission = (permissions: string[]): boolean => {
+  const hasAnyPermission = (requestedPermissions: string[]): boolean => {
     if (!user) return false;
     if (isAdmin()) return true;
-    return permissions.some((perm) => user.permissions.includes(perm));
+    return requestedPermissions.some((permission) =>
+      permissions.includes(permission),
+    );
   };
 
   /**
    * Check AND para multiples permisos.
    */
-  const hasAllPermissions = (permissions: string[]): boolean => {
+  const hasAllPermissions = (requestedPermissions: string[]): boolean => {
     if (!user) return false;
     if (isAdmin()) return true;
-    return permissions.every((perm) => user.permissions.includes(perm));
+    return requestedPermissions.every((permission) =>
+      permissions.includes(permission),
+    );
+  };
+
+  const hasCapability = (capabilityKey: string): boolean => {
+    if (!user) return false;
+    if (isAdmin()) return true;
+    return Boolean(capabilities[capabilityKey]?.granted);
   };
 
   return {
-    permissions: user?.permissions ?? [],
+    permissions,
+    effectivePermissions,
+    capabilities,
+    permissionDependenciesVersion,
     hasPermission,
+    hasEffectivePermission,
     hasAnyPermission,
     hasAllPermissions,
+    hasCapability,
     isAdmin,
   };
 };

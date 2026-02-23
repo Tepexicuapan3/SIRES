@@ -7,7 +7,7 @@
  * - Header: Logo SIRES
  * - Content: NavMain (secciones filtradas por permisos)
  * - Footer: NavSecondary (Support/Feedback) + NavUser
- * - Variante: "inset" 
+ * - Variante: "inset"
  * - Collapsible: "offcanvas" (se cierra completamente)
  */
 
@@ -32,22 +32,27 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
     <Sidebar
       variant="inset"
       collapsible="offcanvas"
+      className="border-r-0 border-l-0"
       {...props}
       aria-label="Menú de navegación principal"
     >
       {/* ===== HEADER: Logo SIRES ===== */}
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 pt-3">
-          <div className="flex h-10 w-10 items-center justify-center">
+        <div className="flex min-w-0 items-center gap-3 pl-4 pr-2 pt-3">
+          <div className="flex h-12 w-12 items-center justify-center">
             <img
-              src="/icons/Logo_del_Metro_de_la_Ciudad_de_México.svg"
-              alt="Logo Metro CDMX"
-              className="h-9 w-9"
+              src="/SIRES.webp"
+              alt="Logo SIRES"
+              className="h-11 w-11 object-contain"
             />
           </div>
-          <div className="flex flex-col">
-            <span className="text-md font-display text-txt-body">SIRES</span>
-            <span className="text-xs text-txt-muted">STC Metro CDMX</span>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-md font-display text-txt-body">
+              SIRES
+            </span>
+            <span className="truncate text-xs text-txt-muted">
+              STC Metro CDMX
+            </span>
           </div>
         </div>
       </SidebarHeader>

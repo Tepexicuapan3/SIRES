@@ -7,17 +7,29 @@
 
 ## Skills Reference
 
-- `react-19` - Component patterns
+- `vercel-react-best-practices` - Performance-aware component patterns
+- `interface-design` - UI layout and visual hierarchy design
+- `web-design-guidelines` - UI/UX and accessibility compliance reviews
 - `tailwind-4` - Styling conventions
 - `typescript` - Component props typing
+- `error-handling-patterns` - component-level error/empty/fallback states
+- `systematic-debugging` - Root-cause-first debugging for UI regressions
+- `brainstorming` - planning component composition before coding
+- `find-skills` - Discover/install skills when requested
 
 ## Auto-invoke Skills
 
 | Action | Skill |
 | --- | --- |
-| Create/modify React components | `react-19` |
+| Create/modify React components (performance-aware) | `vercel-react-best-practices` |
+| Create new UI component composition/layout direction | `interface-design` |
+| Review UI/UX/accessibility compliance | `web-design-guidelines` |
 | Tailwind styling | `tailwind-4` |
 | Write TypeScript types | `typescript` |
+| Design/review error and fallback states in UI components | `error-handling-patterns` |
+| Debug UI bugs and regressions | `systematic-debugging` |
+| User asks for planning/discovery before coding | `brainstorming` |
+| User asks to discover/install skills | `find-skills` |
 
 ---
 

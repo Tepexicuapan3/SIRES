@@ -38,14 +38,30 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Configurar rate limiting** | [Rate Limiting](./architecture/rate-limiting.md) | 25 min |
 | **Implementar OTP/Recovery** | [OTP con Redis](./architecture/otp-redis.md) | 20 min |
 | **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
+| **Ejecutar KAN-4 con IA (sin supuestos)** | [KAN-4 Playbook](./guides/kan4-implementacion-overview.md) | 25 min |
+| **Implementar tiempo real con WebSocket** | [WebSocket Reusable](./guides/websocket-arquitectura-reusable.md) | 20 min |
 | **Auth queries/mutations** | [Auth Queries](./guides/auth-queries-mutations.md) | 15 min |
 | **Implementar CRUD RBAC completo** | [RBAC CRUD Implementation](./guides/rbac-crud-implementation.md) | Plan detallado |
 | **Usar sistema RBAC CRUD** | [RBAC CRUD User Guide](./guides/rbac-crud-user-guide.md) | Guía completa |
-| **Arquitectura Frontend RBAC** | [RBAC Frontend Architecture](./architecture/rbac-frontend.md) | 30 min |
 | **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
 | **Testear código** | [Testing](./guides/testing.md) | 20 min |
 | **Implementar RBAC frontend** | [RBAC Frontend](./guides/rbac-frontend.md) | 25 min |
 | **Contratos API** | [API Docs](./api/README.md) | Referencia |
+
+### 🧭 Playbook Feature KAN-4 (Flujo Consulta Medica v1)
+
+- [KAN-4 Implementacion Overview](./guides/kan4-implementacion-overview.md)
+- [KAN-4 Fase 0 Baseline de Planeacion](./guides/kan4-fase-0-baseline-planeacion.md)
+- [KAN-4 Fase 1 TDD y Fundaciones](./guides/kan4-fase-1-tdd-fundaciones.md)
+- [KAN-4 Fase 2 Recepcion y Somatometria](./guides/kan4-fase-2-implementacion-recepcion-somatometria.md)
+- [KAN-4 Fase 3 Consulta y Tiempo Real](./guides/kan4-fase-3-consulta-y-tiempo-real.md)
+- [KAN-4 Fase 4 QA y Release](./guides/kan4-fase-4-qa-y-release.md)
+- [KAN-4 Matriz de Tickets y Dependencias](./guides/kan4-matriz-tickets-y-dependencias.md)
+- [KAN-4 Remediacion Pivot WebSocket](./guides/kan4-remediacion-pivot-websocket.md)
+
+### ⚡ Realtime WebSocket
+
+- [WebSocket Arquitectura Reusable](./guides/websocket-arquitectura-reusable.md)
 
 ---
 
@@ -59,7 +75,6 @@ docs/
 ├── architecture/
 │   ├── overview.md                 # Capas, stack, flujo general
 │   ├── rbac.md                     # Roles, permisos, guards
-│   ├── rbac-frontend.md            # 🆕 Arquitectura frontend RBAC CRUD
 │   ├── authentication.md           # JWT, cookies, CSRF, refresh
 │   ├── rate-limiting.md            # Rate limiting 3 niveles + Redis
 │   └── otp-redis.md                # Sistema OTP para password recovery
@@ -71,7 +86,16 @@ docs/
 │   ├── rbac-crud-user-guide.md     # 🆕 Guía de uso sistema RBAC CRUD
 │   ├── ui-components.md            # shadcn + Metro CDMX
 │   ├── rbac-frontend.md            # Ejemplos RBAC en componentes
-│   └── testing.md                  # Mocks + estrategias
+│   ├── testing.md                  # Mocks + estrategias
+│   ├── kan4-implementacion-overview.md              # Playbook KAN-4
+│   ├── kan4-fase-0-baseline-planeacion.md           # Baseline cerrado de planeacion
+│   ├── kan4-fase-1-tdd-fundaciones.md               # Fase TDD + base dominio
+│   ├── kan4-fase-2-implementacion-recepcion-somatometria.md # Vertical recepcion/somato
+│   ├── kan4-fase-3-consulta-y-tiempo-real.md        # Vertical doctor + WebSocket
+│   ├── kan4-fase-4-qa-y-release.md                  # Gate final de calidad
+│   ├── kan4-matriz-tickets-y-dependencias.md        # Mapa operativo de tickets
+│   ├── kan4-remediacion-pivot-websocket.md          # Backlog de ajustes post-pivot
+│   └── websocket-arquitectura-reusable.md           # Base WebSocket reusable
 │
 ├── adr/                            # Architecture Decision Records
 │   ├── 001-jwt-cookies-httponly.md # JWT en cookies HttpOnly (no localStorage)

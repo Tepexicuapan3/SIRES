@@ -1,4 +1,5 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import type { ClipboardEvent, KeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface OtpInputProps {
@@ -49,13 +50,10 @@ export const OtpInput = ({
     }
   }, [value, length, onComplete]);
 
-  const focusInput = useCallback(
-    (index: number) => {
-      const clampedIndex = Math.max(0, Math.min(index, length - 1));
-      inputRefs.current[clampedIndex]?.focus();
-    },
-    [length],
-  );
+  const focusInput = (index: number) => {
+    const clampedIndex = Math.max(0, Math.min(index, length - 1));
+    inputRefs.current[clampedIndex]?.focus();
+  };
 
   const handleChange = (index: number, inputValue: string) => {
     // Solo permitir dígitos
@@ -76,10 +74,7 @@ export const OtpInput = ({
     }
   };
 
-  const handleKeyDown = (
-    index: number,
-    e: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
+  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     switch (e.key) {
       case "Backspace":
         e.preventDefault();
@@ -114,7 +109,7 @@ export const OtpInput = ({
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
+  const handlePaste = (e: ClipboardEvent) => {
     e.preventDefault();
     const pastedData = e.clipboardData
       .getData("text")

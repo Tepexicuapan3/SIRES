@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Lock, Eye, EyeOff, CheckCircle2, ShieldCheck } from "lucide-react";
+import {
+  Lock,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  ShieldCheck,
+  Loader2,
+  ArrowRight,
+} from "lucide-react";
 
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
@@ -104,11 +112,12 @@ export const AuthPasswordForm = ({
             <button
               type="button"
               onClick={() => setShowPass(!showPass)}
+              className="p-1 hover:text-brand transition-colors focus-visible:outline-none focus-visible:text-brand rounded-md"
+              disabled={isPending}
               aria-label={
                 showPass ? "Ocultar contraseña" : "Mostrar contraseña"
               }
               aria-pressed={showPass}
-              className="text-txt-muted hover:text-brand transition-colors"
             >
               {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -136,13 +145,21 @@ export const AuthPasswordForm = ({
         type="submit"
         disabled={isPending}
         size="default"
-        className="w-full mt-4"
+        className="w-full h-12 mt-4 group"
       >
-        {isPending
-          ? "Procesando..."
-          : mode === "recovery"
-            ? "Restablecer Contraseña"
-            : "Finalizar y Acceder"}
+        {isPending ? (
+          <Loader2 className="size-5 animate-spin" />
+        ) : (
+          <>
+            {mode === "recovery"
+              ? "Restablecer Contraseña"
+              : "Finalizar y Acceder"}
+            <ArrowRight
+              size={18}
+              className="group-hover:translate-x-1 transition-transform"
+            />
+          </>
+        )}
       </Button>
     </form>
   );

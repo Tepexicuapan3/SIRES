@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { authAPI } from "@api/resources/auth.api";
 import { clearAuthSession } from "@features/auth/utils/auth-cache";
+import { useSidebarStore } from "@/store/sidebarStore";
+import { useThemeStore } from "@/store/themeStore";
 
 /**
  * Mutation de logout.
@@ -19,6 +21,8 @@ export const useLogout = () => {
     queryClient.cancelQueries();
     queryClient.clear();
     clearAuthSession(queryClient);
+    useSidebarStore.getState().resetSidebarState();
+    useThemeStore.getState().resetTheme();
   };
 
   const navigateToLogin = () => {

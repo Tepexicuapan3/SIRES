@@ -51,6 +51,8 @@ export interface UserListItem {
   clinic: CentroAtencionRef | null;
   primaryRole: string;
   isActive: boolean;
+  termsAccepted?: boolean;
+  mustChangePassword?: boolean;
 }
 
 /**
@@ -144,14 +146,12 @@ export interface UpdateUserRequest {
 // =============================================================================
 
 /**
- * Response al crear un usuario (incluye contraseña temporal).
+ * Response al crear un usuario.
  * POST /api/v1/users
  */
 export interface CreateUserResponse {
   id: number;
   username: string;
-  /** Contraseña temporal generada (mostrar solo una vez) */
-  temporaryPassword: string;
 }
 
 /**
@@ -183,6 +183,7 @@ export interface UsersListParams extends PaginationParams {
   isActive?: boolean;
   roleId?: number;
   clinicId?: number;
+  status?: "active" | "inactive" | "pending";
 }
 
 /**
@@ -277,7 +278,7 @@ export interface AddUserOverrideResponse {
 
 /**
  * Response al eliminar un override.
- * DELETE /api/v1/users/:id/overrides/:overrideId
+ * DELETE /api/v1/users/:id/overrides/:code
  */
 export interface RemoveUserOverrideResponse {
   userId: number;

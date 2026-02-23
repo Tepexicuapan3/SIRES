@@ -2,6 +2,9 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { server } from "./mocks/server";
+import { resetMockSessionUser } from "@/test/mocks/session";
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 // Iniciar servidor MSW antes de todos los tests
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -10,6 +13,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   cleanup();
   server.resetHandlers(); // Resetear handlers para que no se contaminen entre tests
+  resetMockSessionUser();
 });
 
 // Cerrar servidor al finalizar
@@ -98,3 +102,16 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 } as unknown as typeof ResizeObserver;
+
+// Mock de Pointer Capture (Radix Select)
+if (typeof window !== "undefined" && window.HTMLElement) {
+  if (!window.HTMLElement.prototype.hasPointerCapture) {
+    window.HTMLElement.prototype.hasPointerCapture = () => false;
+  }
+  if (!window.HTMLElement.prototype.setPointerCapture) {
+    window.HTMLElement.prototype.setPointerCapture = () => {};
+  }
+  if (!window.HTMLElement.prototype.releasePointerCapture) {
+    window.HTMLElement.prototype.releasePointerCapture = () => {};
+  }
+}
