@@ -35,8 +35,10 @@ const normalizeApiBaseUrl = (url: string): string => {
     return url;
   }
 
-  if (import.meta.env.MODE === "test") {
-    const normalizedPath = url.startsWith("/") ? url : `/${url}`;
+  const normalizedPath = url.startsWith("/") ? url : `/${url}`;
+  const isNodeRuntime = typeof window === "undefined";
+
+  if (import.meta.env.MODE === "test" || isNodeRuntime) {
     return `http://localhost${normalizedPath}`;
   }
 
@@ -50,6 +52,10 @@ const normalizeApiBaseUrl = (url: string): string => {
 const apiClient: AxiosInstance = axios.create({
   baseURL: normalizeApiBaseUrl(env.apiUrl),
   timeout: env.apiTimeout,
+  adapter:
+    import.meta.env.MODE === "test" || import.meta.env.VITEST
+      ? "fetch"
+      : undefined,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",

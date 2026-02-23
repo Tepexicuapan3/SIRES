@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import { OTP_LENGTH, PASSWORD_REQUIREMENTS } from "./auth.rules";
 
 const usernameSchema = z
