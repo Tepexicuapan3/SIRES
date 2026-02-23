@@ -41,4 +41,5 @@ def authenticate_request(request):
     if user.est_bloqueado or user.fch_baja:
         raise AuthServiceError("SESSION_EXPIRED", "Tu sesión ha expirado", 401)
 
+    request.user = user
     return user

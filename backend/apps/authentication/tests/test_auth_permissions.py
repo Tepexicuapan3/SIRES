@@ -43,6 +43,7 @@ class AuthPermissionsTests(TestCase):
         self.assertEqual(auth_user["permissions"], ["*"])
         self.assertEqual(auth_user["effectivePermissions"], ["*"])
         self.assertEqual(auth_user["permissionDependenciesVersion"], "v1")
+        self.assertTrue(auth_user["authRevision"])
         self.assertTrue(auth_user["capabilities"]["admin.users.editFull"]["granted"])
         self.assertEqual(auth_user["roles"], ["ADMIN"])
         self.assertEqual(auth_user["primaryRole"], "ADMIN")

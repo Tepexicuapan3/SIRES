@@ -86,8 +86,14 @@ export function UsersPage() {
       allOf: ["admin:gestion:permisos:read"],
     },
   );
+  const canReadClinicsCatalog = hasCapability(
+    "admin.users.clinicsCatalog.read",
+    {
+      allOf: ["admin:catalogos:centros_atencion:read"],
+    },
+  );
 
-  const { data, isLoading, error, refetch } = useUsersList({
+  const { data, isLoading, isFetching, error, refetch } = useUsersList({
     page,
     pageSize,
     search: debouncedSearch || undefined,
@@ -112,11 +118,16 @@ export function UsersPage() {
     data: clinicsData,
     isLoading: isLoadingClinicsCatalog,
     isFetching: isFetchingClinicsCatalog,
-  } = useCentrosAtencionList({
-    page: 1,
-    pageSize: 100,
-    isActive: true,
-  });
+  } = useCentrosAtencionList(
+    {
+      page: 1,
+      pageSize: 100,
+      isActive: true,
+    },
+    {
+      enabled: canReadClinicsCatalog,
+    },
+  );
   const roleOptions = rolesData?.items ?? [];
   const clinicOptions = clinicsData?.items ?? [];
 
@@ -202,7 +213,13 @@ export function UsersPage() {
       id: "refresh-users",
       label: "Actualizar",
       icon: RotateCcw,
+      isLoading: isFetching,
+      disabled: isFetching,
       onSelect: () => {
+        if (isFetching) {
+          return;
+        }
+
         void refetch();
       },
     },
@@ -266,21 +283,25 @@ export function UsersPage() {
           },
         ]
       : []),
-    {
-      id: "clinic",
-      label: "Centro",
-      options: [
-        ...clinicOptions.map((clinic) => ({
-          id: clinic.id.toString(),
-          label: clinic.name,
-          selected: clinicFilter === clinic.id.toString(),
-          onSelect: () => {
-            setClinicFilter(clinic.id.toString());
-            setPage(1);
+    ...(canReadClinicsCatalog
+      ? [
+          {
+            id: "clinic",
+            label: "Centro",
+            options: [
+              ...clinicOptions.map((clinic) => ({
+                id: clinic.id.toString(),
+                label: clinic.name,
+                selected: clinicFilter === clinic.id.toString(),
+                onSelect: () => {
+                  setClinicFilter(clinic.id.toString());
+                  setPage(1);
+                },
+              })),
+            ],
           },
-        })),
-      ],
-    },
+        ]
+      : []),
   ];
 
   return (

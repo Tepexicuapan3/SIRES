@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 
 from django.contrib.auth.hashers import make_password
@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelUsuarioOverride, RelUsuarioRol
+from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
 from apps.catalogos.models import CatCentroAtencion, CatPermiso, CatRol
@@ -103,6 +103,40 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
         self.client.cookies = login_response.cookies
         self.csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+    def _login_as(self, username, password):
+        self.client.cookies.clear()
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": username, "password": password},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.client.cookies = response.cookies
+        self.csrf_token = response.cookies.get(CSRF_COOKIE).value
+
+    def _ensure_permission(self, code, description, is_system=False):
+        permission, _ = CatPermiso.objects.get_or_create(
+            codigo=code,
+            defaults={
+                "descripcion": description,
+                "is_active": True,
+                "es_sistema": is_system,
+            },
+        )
+        update_fields = []
+        if not permission.is_active:
+            permission.is_active = True
+            update_fields.append("is_active")
+        if permission.descripcion != description:
+            permission.descripcion = description
+            update_fields.append("descripcion")
+        if permission.es_sistema != is_system:
+            permission.es_sistema = is_system
+            update_fields.append("es_sistema")
+        if update_fields:
+            permission.save(update_fields=update_fields)
+        return permission
 
     def test_users_list_pending_filter(self):
         pending_user = SyUsuario.objects.create(
@@ -443,6 +477,8 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.data["code"], "USER_NOT_FOUND")
 
     def test_assign_roles_and_set_primary(self):
+        before_assign_revision = self.target_user.fch_modf
+
         assign_response = self.client.post(
             f"/api/v1/users/{self.target_user.id_usuario}/roles",
             {"roleIds": [self.role_recepcion.id_rol]},
@@ -450,6 +486,8 @@ class RbacUsersApiTests(APITestCase):
             HTTP_X_CSRF_TOKEN=self.csrf_token,
         )
         self.assertEqual(assign_response.status_code, status.HTTP_201_CREATED)
+        self.target_user.refresh_from_db()
+        self.assertNotEqual(self.target_user.fch_modf, before_assign_revision)
         assigned_role_names = {role["name"] for role in assign_response.data["roles"]}
         self.assertIn("RECEPCION_USERS", assigned_role_names)
 
@@ -613,6 +651,8 @@ class RbacUsersApiTests(APITestCase):
 
     def test_override_upsert_and_remove(self):
         expires_at = (timezone.now() + timedelta(days=2)).isoformat()
+        initial_revision = self.target_user.fch_modf
+
         upsert_response = self.client.post(
             f"/api/v1/users/{self.target_user.id_usuario}/overrides",
             {
@@ -627,6 +667,9 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(upsert_response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(upsert_response.data["overrides"]), 1)
         self.assertEqual(upsert_response.data["overrides"][0]["effect"], "ALLOW")
+        self.target_user.refresh_from_db()
+        self.assertNotEqual(self.target_user.fch_modf, initial_revision)
+        revision_after_upsert = self.target_user.fch_modf
 
         remove_response = self.client.delete(
             f"/api/v1/users/{self.target_user.id_usuario}/overrides/{self.override_permission.codigo}",
@@ -634,6 +677,8 @@ class RbacUsersApiTests(APITestCase):
         )
         self.assertEqual(remove_response.status_code, status.HTTP_200_OK)
         self.assertEqual(remove_response.data["overrides"], [])
+        self.target_user.refresh_from_db()
+        self.assertNotEqual(self.target_user.fch_modf, revision_after_upsert)
 
     def test_override_upsert_date_only_expires_at_is_end_of_day(self):
         response = self.client.post(
@@ -657,6 +702,354 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(expires_local.hour, 23)
         self.assertEqual(expires_local.minute, 59)
         self.assertEqual(expires_local.second, 59)
+
+    def test_override_upsert_datetime_with_timezone_normalizes_to_local_day_end(self):
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+                "expiresAt": "2030-01-03T02:15:00Z",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        override = RelUsuarioOverride.objects.get(
+            id_usuario=self.target_user,
+            id_permiso=self.override_permission,
+            fch_baja__isnull=True,
+        )
+        expires_local = timezone.localtime(override.fch_expira)
+        expected_local_date = timezone.localtime(
+            datetime(2030, 1, 3, 2, 15, 0, tzinfo=dt_timezone.utc),
+            timezone.get_current_timezone(),
+        ).date()
+        self.assertEqual(expires_local.date(), expected_local_date)
+        self.assertEqual(expires_local.hour, 23)
+        self.assertEqual(expires_local.minute, 59)
+        self.assertEqual(expires_local.second, 59)
+        self.assertEqual(expires_local.microsecond, 999999)
+
+    def test_override_same_day_past_time_remains_active_until_day_end(self):
+        now_local = timezone.make_aware(
+            datetime(2030, 1, 6, 22, 0, 0),
+            timezone.get_current_timezone(),
+        )
+
+        with patch("apps.administracion.views.rbac_views.timezone.now", return_value=now_local):
+            upsert_response = self.client.post(
+                f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+                {
+                    "permissionCode": self.override_permission.codigo,
+                    "effect": "ALLOW",
+                    "expiresAt": "2030-01-06T08:00:00-06:00",
+                },
+                format="json",
+                HTTP_X_CSRF_TOKEN=self.csrf_token,
+            )
+
+        self.assertEqual(upsert_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(upsert_response.data["overrides"][0]["isExpired"])
+
+        after_end_of_day = now_local + timedelta(hours=3)
+        with patch("apps.administracion.views.rbac_views.timezone.now", return_value=after_end_of_day):
+            detail_response = self.client.get(f"/api/v1/users/{self.target_user.id_usuario}")
+
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(detail_response.data["overrides"][0]["isExpired"])
+
+    def test_override_is_expired_when_now_equals_expires_at(self):
+        fixed_now = timezone.make_aware(
+            datetime(2030, 1, 7, 12, 0, 0),
+            timezone.get_current_timezone(),
+        )
+        RelUsuarioOverride.objects.create(
+            id_usuario=self.target_user,
+            id_permiso=self.override_permission,
+            efecto="ALLOW",
+            fch_expira=fixed_now,
+            usr_asignacion=self.admin,
+        )
+
+        with patch("apps.administracion.views.rbac_views.timezone.now", return_value=fixed_now):
+            response = self.client.get(f"/api/v1/users/{self.target_user.id_usuario}")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["overrides"][0]["isExpired"])
+
+    def test_override_endpoints_require_csrf_for_authorized_actor(self):
+        upsert_response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+            },
+            format="json",
+        )
+
+        self.assertEqual(upsert_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(upsert_response.data["code"], "PERMISSION_DENIED")
+
+        remove_response = self.client.delete(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides/{self.override_permission.codigo}",
+        )
+
+        self.assertEqual(remove_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(remove_response.data["code"], "PERMISSION_DENIED")
+
+    def test_override_upsert_blocks_self_override_without_wildcard(self):
+        users_update = self._ensure_permission(
+            "admin:gestion:usuarios:update",
+            "Actualizar usuarios",
+        )
+        users_read = self._ensure_permission(
+            "admin:gestion:usuarios:read",
+            "Leer usuarios",
+        )
+        roles_update = self._ensure_permission(
+            "admin:gestion:roles:update",
+            "Actualizar roles",
+        )
+
+        limited_role = CatRol.objects.create(
+            rol="LIMITED_USERS_OVERRIDE_SELF",
+            desc_rol="Gestor usuarios sin wildcard",
+            landing_route="/admin/users",
+            is_active=True,
+        )
+        RelUsuarioRol.objects.create(id_usuario=self.target_user, id_rol=limited_role, is_primary=False)
+        RelUsuarioRol.objects.create(id_usuario=self.admin, id_rol=limited_role, is_primary=False)
+
+        limited_actor = SyUsuario.objects.create(
+            usuario="limited_override_self",
+            correo="limited.override.self@example.com",
+            clave_hash=make_password("Limited_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=limited_actor,
+            nombre="Limited",
+            paterno="Self",
+            materno="",
+            nombre_completo="Limited Self",
+        )
+        RelUsuarioRol.objects.create(id_usuario=limited_actor, id_rol=limited_role, is_primary=True)
+
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_update)
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_read)
+
+        self._login_as("limited_override_self", "Limited_123456")
+
+        response = self.client.post(
+            f"/api/v1/users/{limited_actor.id_usuario}/overrides",
+            {
+                "permissionCode": roles_update.codigo,
+                "effect": "ALLOW",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "SELF_OVERRIDE_FORBIDDEN")
+        self.assertFalse(
+            RelUsuarioOverride.objects.filter(
+                id_usuario=limited_actor,
+                id_permiso=roles_update,
+                fch_baja__isnull=True,
+            ).exists()
+        )
+
+    def test_override_upsert_blocks_permission_outside_actor_scope(self):
+        users_update = self._ensure_permission(
+            "admin:gestion:usuarios:update",
+            "Actualizar usuarios",
+        )
+        users_read = self._ensure_permission(
+            "admin:gestion:usuarios:read",
+            "Leer usuarios",
+        )
+        roles_update = self._ensure_permission(
+            "admin:gestion:roles:update",
+            "Actualizar roles",
+        )
+
+        limited_role = CatRol.objects.create(
+            rol="LIMITED_USERS_OVERRIDE_SCOPE",
+            desc_rol="Gestor usuarios scope limitado",
+            landing_route="/admin/users",
+            is_active=True,
+        )
+
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_update)
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_read)
+
+        limited_actor = SyUsuario.objects.create(
+            usuario="limited_override_scope",
+            correo="limited.override.scope@example.com",
+            clave_hash=make_password("Limited_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=limited_actor,
+            nombre="Limited",
+            paterno="Scope",
+            materno="",
+            nombre_completo="Limited Scope",
+        )
+        RelUsuarioRol.objects.create(id_usuario=limited_actor, id_rol=limited_role, is_primary=True)
+
+        self._login_as("limited_override_scope", "Limited_123456")
+
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": roles_update.codigo,
+                "effect": "ALLOW",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_GRANT_NOT_ALLOWED")
+        self.assertFalse(
+            RelUsuarioOverride.objects.filter(
+                id_usuario=self.target_user,
+                id_permiso=roles_update,
+                fch_baja__isnull=True,
+            ).exists()
+        )
+
+    def test_override_upsert_blocks_system_permission_without_wildcard(self):
+        users_update = self._ensure_permission(
+            "admin:gestion:usuarios:update",
+            "Actualizar usuarios",
+        )
+        users_read = self._ensure_permission(
+            "admin:gestion:usuarios:read",
+            "Leer usuarios",
+        )
+        system_permission = self._ensure_permission(
+            "admin:seguridad:sistema:read",
+            "Permiso de sistema",
+            is_system=True,
+        )
+
+        limited_role = CatRol.objects.create(
+            rol="LIMITED_USERS_OVERRIDE_SYSTEM",
+            desc_rol="Gestor usuarios sin permisos sistema",
+            landing_route="/admin/users",
+            is_active=True,
+        )
+
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_update)
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_read)
+
+        limited_actor = SyUsuario.objects.create(
+            usuario="limited_override_system",
+            correo="limited.override.system@example.com",
+            clave_hash=make_password("Limited_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=limited_actor,
+            nombre="Limited",
+            paterno="System",
+            materno="",
+            nombre_completo="Limited System",
+        )
+        RelUsuarioRol.objects.create(id_usuario=limited_actor, id_rol=limited_role, is_primary=True)
+
+        self._login_as("limited_override_system", "Limited_123456")
+
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": system_permission.codigo,
+                "effect": "DENY",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_SYSTEM_PROTECTED")
+        self.assertFalse(
+            RelUsuarioOverride.objects.filter(
+                id_usuario=self.target_user,
+                id_permiso=system_permission,
+                fch_baja__isnull=True,
+            ).exists()
+        )
+
+    def test_override_remove_blocks_permission_outside_actor_scope(self):
+        users_update = self._ensure_permission(
+            "admin:gestion:usuarios:update",
+            "Actualizar usuarios",
+        )
+        users_read = self._ensure_permission(
+            "admin:gestion:usuarios:read",
+            "Leer usuarios",
+        )
+        roles_update = self._ensure_permission(
+            "admin:gestion:roles:update",
+            "Actualizar roles",
+        )
+
+        limited_role = CatRol.objects.create(
+            rol="LIMITED_USERS_OVERRIDE_REMOVE",
+            desc_rol="Gestor usuarios remover override",
+            landing_route="/admin/users",
+            is_active=True,
+        )
+
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_update)
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_read)
+
+        limited_actor = SyUsuario.objects.create(
+            usuario="limited_override_remove",
+            correo="limited.override.remove@example.com",
+            clave_hash=make_password("Limited_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=limited_actor,
+            nombre="Limited",
+            paterno="Remove",
+            materno="",
+            nombre_completo="Limited Remove",
+        )
+        RelUsuarioRol.objects.create(id_usuario=limited_actor, id_rol=limited_role, is_primary=True)
+
+        override = RelUsuarioOverride.objects.create(
+            id_usuario=self.target_user,
+            id_permiso=roles_update,
+            efecto="ALLOW",
+            usr_asignacion=self.admin,
+        )
+
+        self._login_as("limited_override_remove", "Limited_123456")
+
+        response = self.client.delete(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides/{roles_update.codigo}",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_GRANT_NOT_ALLOWED")
+        override.refresh_from_db()
+        self.assertIsNone(override.fch_baja)
 
     def test_override_upsert_updates_existing_override(self):
         RelUsuarioOverride.objects.create(
@@ -727,6 +1120,45 @@ class RbacUsersApiTests(APITestCase):
         )
         self.assertEqual(invalid_date_response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(invalid_date_response.data["code"], "INVALID_FORMAT")
+
+        invalid_day_response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+                "expiresAt": "2030-02-30",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+        self.assertEqual(invalid_day_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(invalid_day_response.data["code"], "INVALID_FORMAT")
+
+        invalid_hour_response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+                "expiresAt": "2030-01-03T24:00:00Z",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+        self.assertEqual(invalid_hour_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(invalid_hour_response.data["code"], "INVALID_FORMAT")
+
+        out_of_range_response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+                "expiresAt": "9999-12-31T23:59:59Z",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+        self.assertEqual(out_of_range_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(out_of_range_response.data["code"], "INVALID_FORMAT")
 
     def test_override_permission_not_found(self):
         response = self.client.post(

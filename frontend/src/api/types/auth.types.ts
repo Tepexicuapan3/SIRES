@@ -29,6 +29,7 @@ export interface AuthUser {
   effectivePermissions?: string[];
   capabilities?: Record<string, AuthCapabilityState>;
   permissionDependenciesVersion?: string;
+  authRevision?: string;
   mustChangePassword: boolean;
   requiresOnboarding?: boolean;
 }

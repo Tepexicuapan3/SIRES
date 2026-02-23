@@ -49,6 +49,9 @@ type CenterStatusFilter =
 type CenterTypeFilter =
   (typeof CENTER_TYPE_FILTER)[keyof typeof CENTER_TYPE_FILTER];
 
+const normalizeSearchValue = (value: string | number | null | undefined) =>
+  String(value ?? "").toLowerCase();
+
 export function CentrosAtencionPage() {
   const { hasCapability } = usePermissionDependencies();
   const [page, setPage] = useState(1);
@@ -100,23 +103,24 @@ export function CentrosAtencionPage() {
   const readOnlyCatalogMessage =
     "No tienes acceso para consultar este catalogo.";
 
-  const { data, isLoading, error, refetch } = useCentrosAtencionList(
-    {
-      page,
-      pageSize,
-      isActive:
-        statusFilter === CENTER_STATUS_FILTER.ALL
-          ? undefined
-          : statusFilter === CENTER_STATUS_FILTER.ACTIVE,
-      isExternal:
-        typeFilter === CENTER_TYPE_FILTER.ALL
-          ? undefined
-          : typeFilter === CENTER_TYPE_FILTER.EXTERNAL,
-    },
-    {
-      enabled: canReadCenter,
-    },
-  );
+  const { data, isLoading, isFetching, error, refetch } =
+    useCentrosAtencionList(
+      {
+        page,
+        pageSize,
+        isActive:
+          statusFilter === CENTER_STATUS_FILTER.ALL
+            ? undefined
+            : statusFilter === CENTER_STATUS_FILTER.ACTIVE,
+        isExternal:
+          typeFilter === CENTER_TYPE_FILTER.ALL
+            ? undefined
+            : typeFilter === CENTER_TYPE_FILTER.EXTERNAL,
+      },
+      {
+        enabled: canReadCenter,
+      },
+    );
 
   const allRows = data?.items ?? [];
   const normalizedSearch = debouncedSearch.trim().toLowerCase();
@@ -124,12 +128,12 @@ export function CentrosAtencionPage() {
     normalizedSearch.length === 0
       ? allRows
       : allRows.filter((center) => {
-          const matchesName = center.name
-            .toLowerCase()
-            .includes(normalizedSearch);
-          const matchesFolio = center.folioCode
-            .toLowerCase()
-            .includes(normalizedSearch);
+          const matchesName = normalizeSearchValue(center.name).includes(
+            normalizedSearch,
+          );
+          const matchesFolio = normalizeSearchValue(center.folioCode).includes(
+            normalizedSearch,
+          );
           return matchesName || matchesFolio;
         });
 
@@ -225,7 +229,13 @@ export function CentrosAtencionPage() {
       id: "refresh-centers",
       label: "Actualizar",
       icon: RotateCcw,
+      isLoading: isFetching,
+      disabled: isFetching,
       onSelect: () => {
+        if (isFetching) {
+          return;
+        }
+
         void refetch();
       },
     },

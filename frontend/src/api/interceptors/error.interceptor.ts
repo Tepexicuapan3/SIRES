@@ -29,6 +29,7 @@ import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { createRequestId } from "@api/utils/request-id";
 import { queryClient } from "@/config/query-client";
 import { clearAuthSession } from "@features/auth/utils/auth-cache";
+import { syncAuthSessionRevision } from "@features/auth/utils/auth-session-sync";
 import { emitSessionExpired } from "@features/auth/utils/session-events";
 import { env } from "@/config/env";
 
@@ -51,13 +52,25 @@ let refreshPromise: Promise<boolean> | null = null;
 export function setupErrorInterceptor(client: AxiosInstance): void {
   client.interceptors.response.use(
     // Success: pasar la respuesta sin modificar
-    (response) => response,
+    (response) => {
+      syncAuthSessionRevision({
+        headers: response.headers,
+        requestUrl: response.config?.url,
+      });
+
+      return response;
+    },
 
     // Error: manejar 401 y transformar a ApiError
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & {
         _retry?: boolean;
       };
+
+      syncAuthSessionRevision({
+        headers: error.response?.headers,
+        requestUrl: originalRequest?.url,
+      });
 
       // ¿Es un 401 que podemos reintentar?
       const shouldAttemptRefresh =

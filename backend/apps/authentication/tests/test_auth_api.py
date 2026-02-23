@@ -85,6 +85,7 @@ class AuthApiTests(APITestCase):
         self.assertEqual(response.data["user"]["landingRoute"], "/expedientes")
         self.assertEqual(response.data["user"]["roles"], ["MEDICO"])
         self.assertEqual(response.data["user"]["permissions"], ["expedientes:read"])
+        self.assertTrue(response.data["user"]["authRevision"])
         self.assertTrue(response.data["user"]["requiresOnboarding"])
         self.assertEqual(
             AuditoriaEvento.objects.filter(accion="LOGIN_SUCCESS").count(), 1
@@ -124,6 +125,8 @@ class AuthApiTests(APITestCase):
         self.assertEqual(response.data["username"], "abelb")
         self.assertEqual(response.data["roles"], ["MEDICO"])
         self.assertEqual(response.data["permissions"], ["expedientes:read"])
+        self.assertTrue(response.data["authRevision"])
+        self.assertEqual(response["X-Auth-Revision"], response.data["authRevision"])
 
     def test_verify_requires_auth(self):
         response = self.client.get("/api/v1/auth/verify")

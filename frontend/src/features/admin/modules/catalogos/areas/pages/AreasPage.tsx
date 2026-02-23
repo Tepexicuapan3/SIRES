@@ -41,6 +41,9 @@ const AREA_STATUS_FILTER = {
 type AreaStatusFilter =
   (typeof AREA_STATUS_FILTER)[keyof typeof AREA_STATUS_FILTER];
 
+const normalizeSearchValue = (value: string | number | null | undefined) =>
+  String(value ?? "").toLowerCase();
+
 export function AreasPage() {
   const { hasCapability } = usePermissionDependencies();
   const [page, setPage] = useState(1);
@@ -87,7 +90,7 @@ export function AreasPage() {
   const readOnlyCatalogMessage =
     "No tienes acceso para consultar este catalogo.";
 
-  const { data, isLoading, error, refetch } = useAreasList(
+  const { data, isLoading, isFetching, error, refetch } = useAreasList(
     {
       page,
       pageSize,
@@ -107,12 +110,12 @@ export function AreasPage() {
     normalizedSearch.length === 0
       ? allRows
       : allRows.filter((area) => {
-          const matchesName = area.name
-            .toLowerCase()
-            .includes(normalizedSearch);
-          const matchesCode = area.code
-            .toLowerCase()
-            .includes(normalizedSearch);
+          const matchesName = normalizeSearchValue(area.name).includes(
+            normalizedSearch,
+          );
+          const matchesCode = normalizeSearchValue(area.code).includes(
+            normalizedSearch,
+          );
           return matchesName || matchesCode;
         });
 
@@ -205,7 +208,13 @@ export function AreasPage() {
       id: "refresh-areas",
       label: "Actualizar",
       icon: RotateCcw,
+      isLoading: isFetching,
+      disabled: isFetching,
       onSelect: () => {
+        if (isFetching) {
+          return;
+        }
+
         void refetch();
       },
     },
