@@ -227,6 +227,7 @@ export function UsersPage() {
       id: "export-users",
       label: "Exportar",
       icon: Download,
+      loadingAnimation: "pulse",
     },
   ];
 

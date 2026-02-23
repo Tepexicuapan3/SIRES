@@ -196,6 +196,7 @@ export function RolesPage() {
       id: "export-roles",
       label: "Exportar",
       icon: Download,
+      loadingAnimation: "pulse",
     },
   ];
 

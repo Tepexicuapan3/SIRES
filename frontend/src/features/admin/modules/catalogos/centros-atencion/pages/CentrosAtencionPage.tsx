@@ -243,6 +243,7 @@ export function CentrosAtencionPage() {
       id: "export-centers",
       label: "Exportar",
       icon: Download,
+      loadingAnimation: "pulse",
     },
   ];
 

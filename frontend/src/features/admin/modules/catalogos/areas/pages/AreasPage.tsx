@@ -222,6 +222,7 @@ export function AreasPage() {
       id: "export-areas",
       label: "Exportar",
       icon: Download,
+      loadingAnimation: "pulse",
     },
   ];
 

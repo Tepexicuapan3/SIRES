@@ -16,6 +16,7 @@ export interface TableOptionItem {
   onSelect?: () => void | Promise<unknown>;
   disabled?: boolean;
   isLoading?: boolean;
+  loadingAnimation?: "spin" | "pulse";
 }
 
 export interface TableOptionsMenuProps {
@@ -48,6 +49,10 @@ export function TableOptionsMenu({
           const isOptionLoading =
             option.isLoading || transientLoading[option.id];
           const isOptionDisabled = option.disabled || isOptionLoading;
+          const loadingIconClass =
+            option.loadingAnimation === "pulse"
+              ? "animate-pulse"
+              : "animate-spin [animation-direction:reverse]";
 
           return (
             <DropdownMenuItem
@@ -83,16 +88,12 @@ export function TableOptionsMenu({
             >
               {Icon ? (
                 <Icon
-                  className={cn(
-                    "size-4",
-                    isOptionLoading &&
-                      "animate-spin [animation-direction:reverse]",
-                  )}
+                  className={cn("size-4", isOptionLoading && loadingIconClass)}
                 />
               ) : null}
               {option.label}
               {isOptionLoading ? (
-                <span className="sr-only">Actualizando tabla...</span>
+                <span className="sr-only">{`${option.label} en progreso...`}</span>
               ) : null}
             </DropdownMenuItem>
           );
