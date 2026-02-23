@@ -260,6 +260,11 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-csrf-token',
 ]
 
+CORS_EXPOSE_HEADERS = [
+    'X-Request-ID',
+    'X-Auth-Revision',
+]
+
 # Email SMTP (configurar via .env)
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND",

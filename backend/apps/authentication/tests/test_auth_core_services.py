@@ -12,6 +12,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
+from apps.authentication.services.auth_revision import serialize_auth_revision
 from apps.authentication.services.response_service import (error_response,
                                                            get_request_id)
 from apps.authentication.services.session_service import authenticate_request
@@ -27,6 +28,7 @@ from apps.authentication.services.token_service import (ACCESS_COOKIE,
                                                         set_auth_cookies,
                                                         set_reset_cookie,
                                                         validate_refresh_token)
+from middlewares.auth import JWTAuthenticationMiddleware
 
 
 class AuthCoreServicesTests(TestCase):
@@ -211,3 +213,44 @@ class AuthCoreServicesTests(TestCase):
             authenticate_request(request)
 
         self.assertEqual(ctx.exception.code, "SESSION_EXPIRED")
+
+    def test_jwt_auth_middleware_adds_auth_revision_header(self):
+        request = self.factory.get("/api/test")
+        request.user = self.user
+
+        middleware = JWTAuthenticationMiddleware(lambda _request: HttpResponse("ok"))
+        response = middleware(request)
+
+        self.assertIn("X-Auth-Revision", response)
+        self.assertTrue(response["X-Auth-Revision"])
+
+    def test_jwt_auth_middleware_skips_header_without_authenticated_user(self):
+        request = self.factory.get("/api/test")
+
+        class AnonymousUser:
+            is_authenticated = False
+
+        request.user = AnonymousUser()
+        middleware = JWTAuthenticationMiddleware(lambda _request: HttpResponse("ok"))
+        response = middleware(request)
+
+        self.assertNotIn("X-Auth-Revision", response)
+
+    def test_jwt_auth_middleware_refreshes_revision_on_mutating_requests(self):
+        request = self.factory.patch("/api/test")
+        request.user = self.user
+
+        def get_response(_request):
+            SyUsuario.objects.filter(id_usuario=self.user.id_usuario).update(
+                fch_modf=timezone.now() + timedelta(minutes=2)
+            )
+            return HttpResponse("ok")
+
+        middleware = JWTAuthenticationMiddleware(get_response)
+        response = middleware(request)
+
+        self.user.refresh_from_db()
+        self.assertEqual(
+            response["X-Auth-Revision"],
+            serialize_auth_revision(self.user),
+        )

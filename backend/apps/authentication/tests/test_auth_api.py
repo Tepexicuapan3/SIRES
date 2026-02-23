@@ -86,12 +86,13 @@ class AuthApiTests(APITestCase):
         self.assertEqual(response.data["user"]["landingRoute"], "/expedientes")
         self.assertEqual(response.data["user"]["roles"], ["MEDICO"])
         self.assertEqual(response.data["user"]["permissions"], ["expedientes:read"])
+        self.assertTrue(response.data["user"]["authRevision"])
         self.assertTrue(response.data["user"]["requiresOnboarding"])
         self.assertEqual(
             AuditoriaEvento.objects.filter(accion="LOGIN_SUCCESS").count(), 1
         )
 
-    def test_login_rejects_when_session_active(self):
+    def test_login_allows_relogin_when_session_is_active(self):
         self._login()
 
         response = self.client.post(
@@ -100,8 +101,40 @@ class AuthApiTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(response.data["code"], "SESSION_ACTIVE")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(ACCESS_COOKIE, response.cookies)
+        self.assertIn(REFRESH_COOKIE, response.cookies)
+
+    def test_login_with_active_session_still_validates_credentials(self):
+        self._login()
+
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "ClaveMala1"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["code"], "INVALID_CREDENTIALS")
+
+    def test_login_allows_multiple_browser_sessions_for_same_user(self):
+        first_login = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "Abel_180903"},
+            format="json",
+        )
+        self.assertEqual(first_login.status_code, status.HTTP_200_OK)
+
+        second_client = self.client_class()
+        second_login = second_client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "Abel_180903"},
+            format="json",
+        )
+
+        self.assertEqual(second_login.status_code, status.HTTP_200_OK)
+        self.assertIn(ACCESS_COOKIE, second_login.cookies)
+        self.assertIn(REFRESH_COOKIE, second_login.cookies)
 
     def test_login_invalid_password_has_request_id(self):
         response = self.client.post(
@@ -125,6 +158,8 @@ class AuthApiTests(APITestCase):
         self.assertEqual(response.data["username"], "abelb")
         self.assertEqual(response.data["roles"], ["MEDICO"])
         self.assertEqual(response.data["permissions"], ["expedientes:read"])
+        self.assertTrue(response.data["authRevision"])
+        self.assertEqual(response["X-Auth-Revision"], response.data["authRevision"])
 
     def test_verify_requires_auth(self):
         response = self.client.get("/api/v1/auth/verify")

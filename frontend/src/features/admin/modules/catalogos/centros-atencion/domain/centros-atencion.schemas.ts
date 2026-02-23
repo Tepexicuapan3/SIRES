@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 const requiredText = (label: string, maxLength = 160) =>
   z

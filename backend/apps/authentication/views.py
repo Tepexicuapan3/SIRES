@@ -53,28 +53,6 @@ class LoginView(APIView):
     permission_classes = []
 
     def post(self, request):
-        try:
-            session_user = authenticate_request(request)
-        except AuthServiceError:
-            session_user = None
-
-        if session_user:
-            log_event(
-                request,
-                "LOGIN_BLOCKED",
-                "FAIL",
-                actor_user=session_user,
-                target_user=session_user,
-                error_code="SESSION_ACTIVE",
-                meta={"endpoint": "/auth/login"},
-            )
-            return error_response(
-                "SESSION_ACTIVE",
-                "Ya existe una sesión activa. Cierra sesión para continuar.",
-                status.HTTP_409_CONFLICT,
-                request_id=get_request_id(request),
-            )
-
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
             log_event(

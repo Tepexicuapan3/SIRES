@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import SyUsuario
+from apps.authentication.services.auth_revision import serialize_auth_revision
 from apps.authentication.services.permission_dependencies import (
     build_permission_context,
 )
@@ -127,6 +128,7 @@ class UserRepository:
             "permissionDependenciesVersion": permission_context[
                 "permissionDependenciesVersion"
             ],
+            "authRevision": serialize_auth_revision(user),
             "mustChangePassword": user.cambiar_clave,
             "requiresOnboarding": user.cambiar_clave or not user.terminos_acept,
         }

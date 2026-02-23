@@ -27,6 +27,8 @@ export const useAuthSession = () => {
     queryKey: authKeys.session(),
     queryFn: () => authAPI.getCurrentUser(),
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     retry: false,
   });
 

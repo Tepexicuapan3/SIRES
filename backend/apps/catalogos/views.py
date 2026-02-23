@@ -268,14 +268,14 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
 
 #####Views Areas
 class AreasListCreateView(CatalogBaseListCreateView):
-    #catalog = "areas"
+    catalog = "areas"
     model = Areas
     list_serializer = AreasListSerializer
     write_serializer = AreasWriteSerializer
     error_codes = {"exists": "AREAS_EXISTS"}
     
 class AreasDetailView(CatalogBaseDetailView):
-    #catalog = "areas"
+    catalog = "areas"
     model = Areas
     detail_serializer = AreasDetailSerializer
     write_serializer = AreasWriteSerializer

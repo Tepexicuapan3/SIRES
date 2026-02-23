@@ -81,6 +81,17 @@ class RbacRolesPermissionsApiTests(APITestCase):
         self.client.cookies = login_response.cookies
         self.csrf_token = login_response.cookies.get(CSRF_COOKIE).value
 
+    def _login_as(self, username, password):
+        self.client.cookies.clear()
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": username, "password": password},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.client.cookies = response.cookies
+        self.csrf_token = response.cookies.get(CSRF_COOKIE).value
+
     def test_roles_list_invalid_sort_by_returns_validation_error(self):
         response = self.client.get("/api/v1/roles?sortBy=invalido")
 
@@ -359,6 +370,45 @@ class RbacRolesPermissionsApiTests(APITestCase):
         relation.refresh_from_db()
         self.assertIsNone(relation.fch_baja)
 
+    def test_assign_role_permissions_updates_auth_revision_for_associated_users(self):
+        target_user = SyUsuario.objects.create(
+            usuario="role_sync_user",
+            correo="role.sync.user@example.com",
+            clave_hash=make_password("RoleSync_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=target_user,
+            nombre="Role",
+            paterno="Sync",
+            materno="User",
+            nombre_completo="Role Sync User",
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=target_user,
+            id_rol=self.target_role,
+            is_primary=True,
+            usr_asignacion=self.admin,
+        )
+
+        self.assertIsNone(target_user.fch_modf)
+
+        response = self.client.post(
+            "/api/v1/permissions/assign",
+            {
+                "roleId": self.target_role.id_rol,
+                "permissionIds": [self.perm_extra.id_permiso],
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        target_user.refresh_from_db()
+        self.assertIsNotNone(target_user.fch_modf)
+
     def test_assign_role_permissions_deactivates_unrequested_relations(self):
         keep_relation = RelRolPermiso.objects.create(
             id_rol=self.target_role,
@@ -426,6 +476,167 @@ class RbacRolesPermissionsApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["code"], "ROLE_NOT_FOUND")
+
+    def test_assign_role_permissions_blocks_self_role_escalation(self):
+        roles_update = CatPermiso.objects.create(
+            codigo="admin:gestion:roles:update",
+            descripcion="Actualizar roles",
+            is_active=True,
+        )
+        users_update = CatPermiso.objects.create(
+            codigo="admin:gestion:usuarios:update",
+            descripcion="Actualizar usuarios",
+            is_active=True,
+        )
+        limited_role = CatRol.objects.create(
+            rol="LIMITED_ROLE_MANAGER",
+            desc_rol="Gestor limitado",
+            landing_route="/admin/roles",
+            is_active=True,
+        )
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=roles_update)
+
+        limited_user = SyUsuario.objects.create(
+            usuario="limited_role_manager",
+            correo="limited.role.manager@example.com",
+            clave_hash=make_password("Limited_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=limited_user,
+            nombre="Limited",
+            paterno="Manager",
+            materno="",
+            nombre_completo="Limited Manager",
+        )
+        RelUsuarioRol.objects.create(id_usuario=limited_user, id_rol=limited_role, is_primary=True)
+
+        self._login_as("limited_role_manager", "Limited_123456")
+
+        response = self.client.post(
+            "/api/v1/permissions/assign",
+            {
+                "roleId": limited_role.id_rol,
+                "permissionIds": [roles_update.id_permiso, users_update.id_permiso],
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "SELF_ROLE_PERMISSION_ASSIGNMENT_FORBIDDEN")
+        self.assertFalse(
+            RelRolPermiso.objects.filter(id_rol=limited_role, id_permiso=users_update, fch_baja__isnull=True).exists()
+        )
+
+    def test_assign_role_permissions_blocks_updating_admin_role_without_wildcard(self):
+        roles_update = CatPermiso.objects.create(
+            codigo="admin:gestion:roles:update",
+            descripcion="Actualizar roles",
+            is_active=True,
+        )
+        limited_role = CatRol.objects.create(
+            rol="LIMITED_ADMIN_ROLE_EDITOR",
+            desc_rol="Editor de roles admin",
+            landing_route="/admin/roles",
+            is_active=True,
+        )
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=roles_update)
+
+        limited_user = SyUsuario.objects.create(
+            usuario="limited_admin_editor",
+            correo="limited.admin.editor@example.com",
+            clave_hash=make_password("Limited_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=limited_user,
+            nombre="Limited",
+            paterno="Admin",
+            materno="",
+            nombre_completo="Limited Admin",
+        )
+        RelUsuarioRol.objects.create(id_usuario=limited_user, id_rol=limited_role, is_primary=True)
+
+        self._login_as("limited_admin_editor", "Limited_123456")
+
+        response = self.client.post(
+            "/api/v1/permissions/assign",
+            {
+                "roleId": self.admin_role.id_rol,
+                "permissionIds": [roles_update.id_permiso],
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "ROLE_ADMIN_PROTECTED")
+
+    def test_assign_role_permissions_blocks_granting_permissions_actor_does_not_have(self):
+        roles_update = CatPermiso.objects.create(
+            codigo="admin:gestion:roles:update",
+            descripcion="Actualizar roles",
+            is_active=True,
+        )
+        users_update = CatPermiso.objects.create(
+            codigo="admin:gestion:usuarios:update",
+            descripcion="Actualizar usuarios",
+            is_active=True,
+        )
+        limited_role = CatRol.objects.create(
+            rol="LIMITED_PERMISSION_GRANTER",
+            desc_rol="Gestor sin permisos de usuarios",
+            landing_route="/admin/roles",
+            is_active=True,
+        )
+        RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=roles_update)
+
+        limited_user = SyUsuario.objects.create(
+            usuario="limited_permission_granter",
+            correo="limited.permission.granter@example.com",
+            clave_hash=make_password("Limited_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=limited_user,
+            nombre="Limited",
+            paterno="Granter",
+            materno="",
+            nombre_completo="Limited Granter",
+        )
+        RelUsuarioRol.objects.create(id_usuario=limited_user, id_rol=limited_role, is_primary=True)
+
+        external_role = CatRol.objects.create(
+            rol="EXTERNAL_TARGET_ROLE",
+            desc_rol="Rol externo",
+            landing_route="/target",
+            is_active=True,
+        )
+
+        self._login_as("limited_permission_granter", "Limited_123456")
+
+        response = self.client.post(
+            "/api/v1/permissions/assign",
+            {
+                "roleId": external_role.id_rol,
+                "permissionIds": [roles_update.id_permiso, users_update.id_permiso],
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_GRANT_NOT_ALLOWED")
+        self.assertFalse(
+            RelRolPermiso.objects.filter(id_rol=external_role, id_permiso=users_update, fch_baja__isnull=True).exists()
+        )
 
     def test_revoke_read_permission_with_dependency_returns_error(self):
         RelRolPermiso.objects.create(id_rol=self.target_role, id_permiso=self.perm_read)

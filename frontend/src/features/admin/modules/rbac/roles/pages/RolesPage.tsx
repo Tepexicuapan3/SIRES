@@ -81,7 +81,7 @@ export function RolesPage() {
   const debouncedSearch = useDebounce(search, 400);
   const deleteRole = useDeleteRole();
 
-  const { data, isLoading, error, refetch } = useRolesList({
+  const { data, isLoading, isFetching, error, refetch } = useRolesList({
     page,
     pageSize,
     search: debouncedSearch || undefined,
@@ -182,7 +182,13 @@ export function RolesPage() {
       id: "refresh-roles",
       label: "Actualizar",
       icon: RotateCcw,
+      isLoading: isFetching,
+      disabled: isFetching,
       onSelect: () => {
+        if (isFetching) {
+          return;
+        }
+
         void refetch();
       },
     },
@@ -190,6 +196,7 @@ export function RolesPage() {
       id: "export-roles",
       label: "Exportar",
       icon: Download,
+      loadingAnimation: "pulse",
     },
   ];
 

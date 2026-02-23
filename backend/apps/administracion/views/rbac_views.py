@@ -20,6 +20,10 @@ from apps.administracion.models import (
 )
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.repositories.user_repository import UserRepository
+from apps.authentication.services.auth_revision import (
+    touch_user_auth_revision,
+    touch_users_auth_revision,
+)
 from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.email_service import send_user_credentials_email
 from apps.authentication.services.errors import AuthServiceError
@@ -47,22 +51,33 @@ def _parse_expires_at_end_of_day(raw_value):
     if not raw_value:
         return None
 
-    parsed_datetime = parse_datetime(raw_value)
     tz = timezone.get_current_timezone()
+    try:
+        parsed_datetime = parse_datetime(raw_value)
+    except (TypeError, ValueError, OverflowError):
+        return "invalid"
 
-    if parsed_datetime:
-        base = parsed_datetime
-    else:
-        parsed_date = parse_date(raw_value)
-        if not parsed_date:
-            return "invalid"
-        base = datetime.combine(parsed_date, time.min)
+    try:
+        if parsed_datetime:
+            base = parsed_datetime
+        else:
+            parsed_date = parse_date(raw_value)
+            if not parsed_date:
+                return "invalid"
+            base = datetime.combine(parsed_date, time.min)
+    except (TypeError, ValueError, OverflowError):
+        return "invalid"
 
-    if timezone.is_naive(base):
-        base = timezone.make_aware(base, tz)
+    try:
+        if timezone.is_naive(base):
+            base = timezone.make_aware(base, tz)
 
-    localized = timezone.localtime(base, tz)
-    return localized.replace(hour=23, minute=59, second=59, microsecond=999999)
+        localized = timezone.localtime(base, tz)
+        end_of_day = localized.replace(hour=23, minute=59, second=59, microsecond=999999)
+        end_of_day.astimezone(dt_timezone.utc)
+        return end_of_day
+    except (TypeError, ValueError, OverflowError):
+        return "invalid"
 
 
 def _generate_temporary_password(length=TEMP_PASSWORD_LENGTH):
@@ -222,6 +237,14 @@ def _active_user_role_relations(user):
     )
 
 
+def _active_user_ids_for_role(role):
+    return list(
+        RelUsuarioRol.objects.filter(id_rol=role, fch_baja__isnull=True)
+        .values_list("id_usuario_id", flat=True)
+        .distinct()
+    )
+
+
 def _serialize_user_roles(user):
     roles = []
     for relation in _active_user_role_relations(user):
@@ -333,6 +356,86 @@ def _ensure_read_dependencies(permission_ids):
                 expanded.add(read_permission.id_permiso)
 
     return expanded
+
+
+def _scope_error(request, code, message, details=None):
+    return error_response(
+        code,
+        message,
+        status.HTTP_403_FORBIDDEN,
+        details=details,
+        request_id=_request_id(request),
+    )
+
+
+def _validate_role_permission_scope(request, actor, role, actor_permissions, requested_codes=None):
+    has_wildcard = "*" in actor_permissions
+
+    if role.es_sistema and not has_wildcard:
+        return _scope_error(
+            request,
+            "ROLE_SYSTEM_PROTECTED",
+            "No puedes modificar permisos de un rol de sistema",
+        )
+
+    if role.is_admin and not has_wildcard:
+        return _scope_error(
+            request,
+            "ROLE_ADMIN_PROTECTED",
+            "No puedes modificar permisos de un rol administrador",
+        )
+
+    has_role_assigned = RelUsuarioRol.objects.filter(
+        id_usuario=actor,
+        id_rol=role,
+        fch_baja__isnull=True,
+    ).exists()
+    if has_role_assigned and not has_wildcard:
+        return _scope_error(
+            request,
+            "SELF_ROLE_PERMISSION_ASSIGNMENT_FORBIDDEN",
+            "No puedes modificar permisos de tus propios roles",
+        )
+
+    if requested_codes and not has_wildcard:
+        disallowed_codes = sorted(code for code in requested_codes if code not in actor_permissions)
+        if disallowed_codes:
+            return _scope_error(
+                request,
+                "PERMISSION_GRANT_NOT_ALLOWED",
+                "No puedes asignar permisos que no tienes",
+                details={"permissionCodes": disallowed_codes},
+            )
+
+    return None
+
+
+def _validate_user_override_scope(request, actor, target_user, permission, actor_permissions):
+    has_wildcard = "*" in actor_permissions
+
+    if permission.es_sistema and not has_wildcard:
+        return _scope_error(
+            request,
+            "PERMISSION_SYSTEM_PROTECTED",
+            "No puedes gestionar overrides para un permiso de sistema",
+        )
+
+    if target_user.id_usuario == actor.id_usuario and not has_wildcard:
+        return _scope_error(
+            request,
+            "SELF_OVERRIDE_FORBIDDEN",
+            "No puedes gestionar overrides sobre tu propio usuario",
+        )
+
+    if permission.codigo not in actor_permissions and not has_wildcard:
+        return _scope_error(
+            request,
+            "PERMISSION_GRANT_NOT_ALLOWED",
+            "No puedes gestionar overrides para permisos que no tienes",
+            details={"permissionCodes": [permission.codigo]},
+        )
+
+    return None
 
 
 def _authorize(request, permission_code=None, require_csrf=False):
@@ -639,6 +742,13 @@ class RoleDetailView(APIView):
         role.updated_at = timezone.now()
         role.updated_by_id = user.id_usuario
         role.save()
+        after = _serialize_role(role)
+
+        if after != before:
+            touch_users_auth_revision(
+                _active_user_ids_for_role(role),
+                actor_id=user.id_usuario,
+            )
 
         _audit(
             request,
@@ -647,9 +757,9 @@ class RoleDetailView(APIView):
             resource_id=role.id_rol,
             result="SUCCESS",
             before=before,
-            after=_serialize_role(role),
+            after=after,
         )
-        return Response({"role": _serialize_role(role)}, status=status.HTTP_200_OK)
+        return Response({"role": after}, status=status.HTTP_200_OK)
 
     @transaction.atomic
     def delete(self, request, role_id):
@@ -695,6 +805,11 @@ class RoleDetailView(APIView):
         role.deleted_at = timezone.now()
         role.deleted_by_id = user.id_usuario
         role.save(update_fields=["is_active", "deleted_at", "deleted_by_id"])
+
+        touch_users_auth_revision(
+            _active_user_ids_for_role(role),
+            actor_id=user.id_usuario,
+        )
 
         _audit(
             request,
@@ -770,6 +885,19 @@ class AssignRolePermissionsView(APIView):
                 request_id=_request_id(request),
             )
 
+        actor_permissions = set(UserRepository.build_auth_user(user).get("permissions", []))
+        scope_error = _validate_role_permission_scope(request, user, role, actor_permissions)
+        if scope_error:
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSIONS_ASSIGN",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code=scope_error.data.get("code"),
+            )
+            return scope_error
+
         requested_ids = set(permission_ids)
         requested_ids = _ensure_read_dependencies(requested_ids)
 
@@ -788,11 +916,31 @@ class AssignRolePermissionsView(APIView):
                 request_id=_request_id(request),
             )
 
+        requested_codes = {permission.codigo for permission in permissions.values()}
+        scope_error = _validate_role_permission_scope(
+            request,
+            user,
+            role,
+            actor_permissions,
+            requested_codes=requested_codes,
+        )
+        if scope_error:
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSIONS_ASSIGN",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code=scope_error.data.get("code"),
+            )
+            return scope_error
+
         before = _role_permissions(role)
         relations = {
             relation.id_permiso_id: relation
             for relation in RelRolPermiso.objects.filter(id_rol=role)
         }
+        has_permission_changes = False
 
         for permission_id in requested_ids:
             relation = relations.get(permission_id)
@@ -801,6 +949,7 @@ class AssignRolePermissionsView(APIView):
                     relation.fch_baja = None
                     relation.usr_baja = None
                     relation.save(update_fields=["fch_baja", "usr_baja"])
+                    has_permission_changes = True
                 continue
 
             RelRolPermiso.objects.create(
@@ -808,6 +957,7 @@ class AssignRolePermissionsView(APIView):
                 id_permiso=permissions[permission_id],
                 usr_asignacion=user,
             )
+            has_permission_changes = True
 
         for permission_id, relation in relations.items():
             if permission_id in requested_ids:
@@ -816,6 +966,13 @@ class AssignRolePermissionsView(APIView):
                 relation.fch_baja = timezone.now()
                 relation.usr_baja = user
                 relation.save(update_fields=["fch_baja", "usr_baja"])
+                has_permission_changes = True
+
+        if has_permission_changes:
+            touch_users_auth_revision(
+                _active_user_ids_for_role(role),
+                actor_id=user.id_usuario,
+            )
 
         payload = {"roleId": role.id_rol, "permissions": _role_permissions(role)}
         _audit(
@@ -854,6 +1011,19 @@ class RevokeRolePermissionView(APIView):
                 status.HTTP_404_NOT_FOUND,
                 request_id=_request_id(request),
             )
+
+        actor_permissions = set(UserRepository.build_auth_user(user).get("permissions", []))
+        scope_error = _validate_role_permission_scope(request, user, role, actor_permissions)
+        if scope_error:
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSION_REVOKE",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code=scope_error.data.get("code"),
+            )
+            return scope_error
 
         relation = RelRolPermiso.objects.select_related("id_permiso").filter(
             id_rol=role,
@@ -894,6 +1064,12 @@ class RevokeRolePermissionView(APIView):
         relation.fch_baja = timezone.now()
         relation.usr_baja = user
         relation.save(update_fields=["fch_baja", "usr_baja"])
+
+        touch_users_auth_revision(
+            _active_user_ids_for_role(role),
+            actor_id=user.id_usuario,
+        )
+
         payload = {"roleId": role.id_rol, "permissions": _role_permissions(role)}
 
         _audit(
@@ -1343,6 +1519,7 @@ class UserRolesView(APIView):
             )
 
         before = _serialize_user_roles(user)
+        has_role_changes = False
 
         for role_id in role_ids:
             role = roles[role_id]
@@ -1352,6 +1529,7 @@ class UserRolesView(APIView):
                     relation.fch_baja = None
                     relation.usr_baja = None
                     relation.save(update_fields=["fch_baja", "usr_baja"])
+                    has_role_changes = True
                 continue
             RelUsuarioRol.objects.create(
                 id_usuario=user,
@@ -1359,6 +1537,7 @@ class UserRolesView(APIView):
                 is_primary=False,
                 usr_asignacion=actor,
             )
+            has_role_changes = True
 
         has_primary = RelUsuarioRol.objects.filter(
             id_usuario=user,
@@ -1367,9 +1546,13 @@ class UserRolesView(APIView):
         ).exists()
         if not has_primary:
             first_relation = RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True).order_by("id_usuario_rol").first()
-            if first_relation:
+            if first_relation and not first_relation.is_primary:
                 first_relation.is_primary = True
                 first_relation.save(update_fields=["is_primary"])
+                has_role_changes = True
+
+        if has_role_changes:
+            touch_user_auth_revision(user, actor_id=actor.id_usuario)
 
         payload = {"userId": user.id_usuario, "roles": _serialize_user_roles(user)}
         _audit(
@@ -1521,6 +1704,8 @@ class UserRoleRevokeView(APIView):
                 replacement.is_primary = True
                 replacement.save(update_fields=["is_primary"])
 
+        touch_user_auth_revision(user, actor_id=actor.id_usuario)
+
         payload = {"userId": user.id_usuario, "roles": _serialize_user_roles(user)}
         _audit(
             request,
@@ -1587,6 +1772,20 @@ class UserOverridesView(APIView):
                 request_id=_request_id(request),
             )
 
+        actor_permissions = set(UserRepository.build_auth_user(actor).get("permissions", []))
+        scope_error = _validate_user_override_scope(request, actor, user, permission, actor_permissions)
+        if scope_error:
+            _audit(
+                request,
+                "RBAC_USER_OVERRIDE_UPSERT",
+                "user_override",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code=scope_error.data.get("code"),
+                target_user=user,
+            )
+            return scope_error
+
         expires_at = None
         if expires_at_raw:
             expires_at = _parse_expires_at_end_of_day(expires_at_raw)
@@ -1601,9 +1800,16 @@ class UserOverridesView(APIView):
                 )
 
         before = _serialize_user_overrides(user)
+        has_override_changes = False
 
         override = RelUsuarioOverride.objects.filter(id_usuario=user, id_permiso=permission).first()
         if override:
+            has_override_changes = (
+                override.efecto != effect
+                or override.fch_expira != expires_at
+                or override.fch_baja is not None
+                or override.usr_baja_id is not None
+            )
             override.efecto = effect
             override.fch_expira = expires_at
             override.fch_baja = None
@@ -1619,6 +1825,10 @@ class UserOverridesView(APIView):
                 fch_expira=expires_at,
                 usr_asignacion=actor,
             )
+            has_override_changes = True
+
+        if has_override_changes:
+            touch_user_auth_revision(user, actor_id=actor.id_usuario)
 
         payload = {"userId": user.id_usuario, "overrides": _serialize_user_overrides(user)}
         _audit(
@@ -1660,15 +1870,40 @@ class UserOverrideRemoveView(APIView):
             )
 
         before = _serialize_user_overrides(user)
+        removed_override = False
         override = (
             RelUsuarioOverride.objects.select_related("id_permiso")
             .filter(id_usuario=user, id_permiso__codigo=code, fch_baja__isnull=True)
             .first()
         )
         if override:
+            actor_permissions = set(UserRepository.build_auth_user(actor).get("permissions", []))
+            scope_error = _validate_user_override_scope(
+                request,
+                actor,
+                user,
+                override.id_permiso,
+                actor_permissions,
+            )
+            if scope_error:
+                _audit(
+                    request,
+                    "RBAC_USER_OVERRIDE_REMOVE",
+                    "user_override",
+                    resource_id=user.id_usuario,
+                    result="FAIL",
+                    error_code=scope_error.data.get("code"),
+                    target_user=user,
+                )
+                return scope_error
+
             override.fch_baja = timezone.now()
             override.usr_baja = actor
             override.save(update_fields=["fch_baja", "usr_baja"])
+            removed_override = True
+
+        if removed_override:
+            touch_user_auth_revision(user, actor_id=actor.id_usuario)
 
         payload = {"userId": user.id_usuario, "overrides": _serialize_user_overrides(user)}
         _audit(
