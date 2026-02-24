@@ -7,6 +7,12 @@ from apps.realtime.publisher import RealtimePublishMetadata, RealtimePublisher
 
 _SEQUENCE_GENERATOR = count(start=max(1, time_ns() // 1_000_000), step=1)
 
+VISIT_EVENT_CREATED = "visit.created"
+VISIT_EVENT_STATUS_CHANGED = "visit.status.changed"
+VISIT_EVENT_CANCELLED = "visit.cancelled"
+VISIT_EVENT_NO_SHOW = "visit.no_show"
+VISIT_EVENT_CLOSED = "visit.closed"
+
 
 def _build_metadata(*, request_id, correlation_id):
     normalized_request_id = (request_id or "").strip() or str(uuid4())
@@ -19,10 +25,11 @@ def _build_metadata(*, request_id, correlation_id):
     )
 
 
-def publish_visit_status_changed(
+def _publish_visit_event(
     *,
+    event_type,
     visit_id,
-    status,
+    payload,
     request_id,
     correlation_id=None,
     publisher=None,
@@ -32,13 +39,102 @@ def publish_visit_status_changed(
 
     return realtime_publisher.publish(
         group_names=[VISITS_STREAM_GROUP],
-        event_type="visit.status.changed",
+        event_type=event_type,
         entity="visit",
         entity_id=visit_id,
         metadata=metadata,
-        payload={
-            "status": status,
-        },
+        payload=payload,
+    )
+
+
+def _build_status_payload(*, status, previous_status=None):
+    payload = {"status": status}
+    if previous_status is not None:
+        payload["previousStatus"] = previous_status
+    return payload
+
+
+def publish_visit_created(
+    *,
+    visit_id,
+    status,
+    request_id,
+    correlation_id=None,
+    publisher=None,
+):
+    return _publish_visit_event(
+        event_type=VISIT_EVENT_CREATED,
+        visit_id=visit_id,
+        payload=_build_status_payload(status=status),
+        request_id=request_id,
+        correlation_id=correlation_id,
+        publisher=publisher,
+    )
+
+
+def publish_visit_status_changed(
+    *,
+    visit_id,
+    status,
+    previous_status=None,
+    request_id,
+    correlation_id=None,
+    publisher=None,
+):
+    return _publish_visit_event(
+        event_type=VISIT_EVENT_STATUS_CHANGED,
+        visit_id=visit_id,
+        payload=_build_status_payload(
+            status=status,
+            previous_status=previous_status,
+        ),
+        request_id=request_id,
+        correlation_id=correlation_id,
+        publisher=publisher,
+    )
+
+
+def publish_visit_cancelled(
+    *,
+    visit_id,
+    status,
+    previous_status=None,
+    request_id,
+    correlation_id=None,
+    publisher=None,
+):
+    return _publish_visit_event(
+        event_type=VISIT_EVENT_CANCELLED,
+        visit_id=visit_id,
+        payload=_build_status_payload(
+            status=status,
+            previous_status=previous_status,
+        ),
+        request_id=request_id,
+        correlation_id=correlation_id,
+        publisher=publisher,
+    )
+
+
+def publish_visit_no_show(
+    *,
+    visit_id,
+    status,
+    previous_status=None,
+    request_id,
+    correlation_id=None,
+    publisher=None,
+):
+    return _publish_visit_event(
+        event_type=VISIT_EVENT_NO_SHOW,
+        visit_id=visit_id,
+        payload=_build_status_payload(
+            status=status,
+            previous_status=previous_status,
+        ),
+        request_id=request_id,
+        correlation_id=correlation_id,
+        publisher=publisher,
     )
 
 
@@ -49,14 +145,11 @@ def publish_visit_closed(
     correlation_id=None,
     publisher=None,
 ):
-    realtime_publisher = publisher or RealtimePublisher()
-    metadata = _build_metadata(request_id=request_id, correlation_id=correlation_id)
-
-    return realtime_publisher.publish(
-        group_names=[VISITS_STREAM_GROUP],
-        event_type="visit.closed",
-        entity="visit",
-        entity_id=visit_id,
-        metadata=metadata,
+    return _publish_visit_event(
+        event_type=VISIT_EVENT_CLOSED,
+        visit_id=visit_id,
         payload={},
+        request_id=request_id,
+        correlation_id=correlation_id,
+        publisher=publisher,
     )

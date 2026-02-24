@@ -12,7 +12,7 @@ from apps.consulta_medica.services.realtime_events import (
 from apps.recepcion.services.realtime_events import (
     build_visit_status_changed_event,
 )
-from config.asgi import application
+from config.asgi import build_application
 from infrastructure.realtime.contracts import (
     validate_realtime_event_envelope,
 )
@@ -20,7 +20,11 @@ from infrastructure.realtime.ordering import evaluate_sequence_progression
 from infrastructure.realtime.ws_app import WS_VISITS_STREAM_PATH
 
 
-@override_settings(ALLOWED_HOSTS=["localhost", "testserver"])
+@override_settings(
+    ALLOWED_HOSTS=["localhost", "testserver"],
+    WS_ALLOW_ALL_ORIGINS=False,
+    WS_ALLOWED_ORIGINS=[],
+)
 class VisitWebSocketContractsTests(TestCase):
     def setUp(self):
         self.user = SyUsuario.objects.create(
@@ -108,6 +112,7 @@ class VisitWebSocketContractsTests(TestCase):
 
     def _connect_once(self, headers):
         async def run_connect():
+            application = build_application()
             communicator = ApplicationCommunicator(
                 application,
                 {
