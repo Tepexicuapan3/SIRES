@@ -64,14 +64,18 @@ const buildEnvelope = (
 });
 
 describe("useVisitRealtimeSync", () => {
+  const createListResponse = () => ({
+    items: [],
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    totalPages: 0,
+  });
+
   it("detecta gap y dispara resync por API", async () => {
-    const getAllSpy = vi.spyOn(visitsAPI, "getAll").mockResolvedValue({
-      items: [],
-      page: 1,
-      pageSize: 20,
-      total: 0,
-      totalPages: 0,
-    });
+    const getAllSpy = vi
+      .spyOn(visitsAPI, "getAll")
+      .mockResolvedValue(createListResponse());
 
     const socket = new FakeWebSocket("ws://localhost/ws/v1/visits/stream");
 
@@ -107,13 +111,7 @@ describe("useVisitRealtimeSync", () => {
   });
 
   it("maneja error y cierre de socket sin romper estado del hook", async () => {
-    vi.spyOn(visitsAPI, "getAll").mockResolvedValue({
-      items: [],
-      page: 1,
-      pageSize: 20,
-      total: 0,
-      totalPages: 0,
-    });
+    vi.spyOn(visitsAPI, "getAll").mockResolvedValue(createListResponse());
 
     const socket = new FakeWebSocket("ws://localhost/ws/v1/visits/stream");
 

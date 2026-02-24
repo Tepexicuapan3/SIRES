@@ -1,8 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { visitsAPI } from "@api/resources/visits.api";
-import { VISIT_STATUS } from "@api/types";
+import { VISIT_STATUS, type VisitStatus } from "@api/types";
 import { visitFlowKeys } from "@features/flujo-clinico/queries/visit-flow.keys";
 import { createVisitsRealtimeAdapter } from "@/realtime/adapters/visits";
 import type { RealtimeEventEnvelope } from "@/realtime/protocol";
@@ -10,6 +10,7 @@ import type { RealtimeEventEnvelope } from "@/realtime/protocol";
 const buildEvent = (
   eventType: string,
   sequence: number,
+  payload: Record<string, unknown> = { status: VISIT_STATUS.EN_CONSULTA },
 ): RealtimeEventEnvelope => ({
   eventId: `evt-${sequence}`,
   eventType,
@@ -20,7 +21,7 @@ const buildEvent = (
   requestId: "req-9001",
   correlationId: "corr-9001",
   sequence,
-  payload: { status: "en_consulta" },
+  payload,
 });
 
 const createListResponse = () => ({
@@ -31,21 +32,100 @@ const createListResponse = () => ({
   totalPages: 0,
 });
 
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+}
+
+const createDeferred = <T>(): Deferred<T> => {
+  let resolve!: (value: T) => void;
+
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
+};
+
 describe("createVisitsRealtimeAdapter", () => {
-  it("eventos relevantes invalidan query keys de flujo clinico", async () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const expectInvalidationForStatuses = (
+    invalidateSpy: ReturnType<typeof vi.spyOn>,
+    statuses: Array<VisitStatus | undefined>,
+  ) => {
+    for (const status of statuses) {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: visitFlowKeys.list({ status }),
+        exact: true,
+      });
+    }
+  };
+
+  it("status changed invalida colas origen, destino y cola general", async () => {
     const queryClient = new QueryClient();
     const invalidateSpy = vi
       .spyOn(queryClient, "invalidateQueries")
       .mockResolvedValue();
     const adapter = createVisitsRealtimeAdapter({ queryClient });
 
-    await adapter.handleEvent(buildEvent("visit.status.changed", 10));
-    await adapter.handleEvent(buildEvent("visit.closed", 11));
+    await adapter.handleEvent(
+      buildEvent("visit.status.changed", 10, {
+        status: VISIT_STATUS.EN_SOMATOMETRIA,
+        previousStatus: VISIT_STATUS.EN_ESPERA,
+      }),
+    );
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(3);
+    expectInvalidationForStatuses(invalidateSpy, [
+      VISIT_STATUS.EN_SOMATOMETRIA,
+      VISIT_STATUS.EN_ESPERA,
+      undefined,
+    ]);
+  });
+
+  it("evento visit.created invalida cola de espera y cola general", async () => {
+    const queryClient = new QueryClient();
+    const invalidateSpy = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockResolvedValue();
+    const adapter = createVisitsRealtimeAdapter({ queryClient });
+
+    await adapter.handleEvent(
+      buildEvent("visit.created", 20, {
+        status: VISIT_STATUS.EN_ESPERA,
+      }),
+    );
 
     expect(invalidateSpy).toHaveBeenCalledTimes(2);
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: visitFlowKeys.lists(),
-    });
+    expectInvalidationForStatuses(invalidateSpy, [
+      VISIT_STATUS.EN_ESPERA,
+      undefined,
+    ]);
+  });
+
+  it("evento visit.no_show invalida origen, destino y cola general", async () => {
+    const queryClient = new QueryClient();
+    const invalidateSpy = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockResolvedValue();
+    const adapter = createVisitsRealtimeAdapter({ queryClient });
+
+    await adapter.handleEvent(
+      buildEvent("visit.no_show", 21, {
+        status: VISIT_STATUS.NO_SHOW,
+        previousStatus: VISIT_STATUS.EN_ESPERA,
+      }),
+    );
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(3);
+    expectInvalidationForStatuses(invalidateSpy, [
+      VISIT_STATUS.NO_SHOW,
+      VISIT_STATUS.EN_ESPERA,
+      undefined,
+    ]);
   });
 
   it("gap detection dispara resync esperado por API", async () => {
@@ -73,9 +153,41 @@ describe("createVisitsRealtimeAdapter", () => {
       pageSize: 20,
       status: VISIT_STATUS.EN_ESPERA,
     });
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: visitFlowKeys.lists(),
+    expect(invalidateSpy).toHaveBeenCalledTimes(2);
+    expectInvalidationForStatuses(invalidateSpy, [
+      VISIT_STATUS.EN_ESPERA,
+      undefined,
+    ]);
+  });
+
+  it("coalesce resync cuando gap llega con resync en vuelo", async () => {
+    const queryClient = new QueryClient();
+    const deferred = createDeferred<ReturnType<typeof createListResponse>>();
+    const getAllSpy = vi
+      .spyOn(visitsAPI, "getAll")
+      .mockImplementation(() => deferred.promise);
+
+    const adapter = createVisitsRealtimeAdapter({
+      queryClient,
+      resyncParams: {
+        page: 1,
+        pageSize: 20,
+        status: VISIT_STATUS.EN_ESPERA,
+      },
     });
+
+    const firstResyncPromise = adapter.resync();
+    const gapResyncPromise = adapter.handleGap({
+      expectedSequence: 31,
+      receivedSequence: 34,
+    });
+
+    expect(getAllSpy).toHaveBeenCalledTimes(1);
+
+    deferred.resolve(createListResponse());
+    await Promise.all([firstResyncPromise, gapResyncPromise]);
+
+    expect(getAllSpy).toHaveBeenCalledTimes(1);
   });
 
   it("eventos desconocidos no rompen el flujo", async () => {
