@@ -48,8 +48,14 @@ bunx playwright test
 # Smoke E2E KAN-27
 bun run test:e2e:smoke
 
+# Suite E2E KAN-4 (smoke + excepciones)
+bun run test:e2e:kan4
+
 # Quality gate KAN-4 smoke (critical UI + API + E2E)
 bun run quality:kan4:smoke
+
+# Quality gate KAN-4 release (suite completa)
+bun run quality:kan4:release
 ```
 
 ## Integracion CI reproducible (agnostica)

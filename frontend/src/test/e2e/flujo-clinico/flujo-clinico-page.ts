@@ -39,6 +39,8 @@ interface SavePrescriptionInput {
   items: string[];
 }
 
+type VisitStatusTransitionTarget = "en_somatometria" | "cancelada" | "no_show";
+
 type Credentials = {
   username: string;
   password: string;
@@ -122,6 +124,13 @@ export class FlujoClinicoPage {
   }
 
   async moveVisitToSomatometria(visitId: number): Promise<APIResponse> {
+    return this.updateVisitStatus(visitId, "en_somatometria");
+  }
+
+  async updateVisitStatus(
+    visitId: number,
+    targetStatus: VisitStatusTransitionTarget,
+  ): Promise<APIResponse> {
     const csrfToken = await this.getCookieValue("csrf_token");
     const apiBaseUrl = this.getApiBaseUrl();
 
@@ -129,11 +138,11 @@ export class FlujoClinicoPage {
       .context()
       .request.patch(`${apiBaseUrl}/visits/${visitId}/status`, {
         data: {
-          targetStatus: "en_somatometria",
+          targetStatus,
         },
         headers: {
           "X-CSRF-TOKEN": csrfToken,
-          "X-Request-ID": `kan27-recepcion-${Date.now()}`,
+          "X-Request-ID": `kan19-${targetStatus}-${Date.now()}`,
         },
       });
 
