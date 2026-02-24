@@ -3,6 +3,8 @@ from django.test import TestCase
 from apps.consulta_medica.models import VisitConsultation
 from apps.consulta_medica.uses_case.consultation_usecase import (
     close_consultation,
+    save_diagnosis,
+    save_prescriptions,
     start_consultation,
 )
 from apps.recepcion.models import Visit
@@ -134,3 +136,83 @@ class ConsultationUseCaseTests(TestCase):
         consultation = VisitConsultation.objects.get(id_visit=visit)
         self.assertEqual(consultation.doctor_id, 202)
         self.assertEqual(consultation.primary_diagnosis, "Dx final")
+
+    def test_save_diagnosis_happy_path_persists_without_closing_visit(self):
+        visit = self._visit("en_consulta")
+
+        payload = save_diagnosis(
+            visit_id=visit.id_visit,
+            roles=["DOCTOR"],
+            primary_diagnosis="Faringitis aguda",
+            final_note="Paciente estable.",
+            doctor_id=101,
+        )
+
+        self.assertEqual(payload["visitId"], visit.id_visit)
+        self.assertEqual(payload["status"], "en_consulta")
+        self.assertEqual(payload["primaryDiagnosis"], "Faringitis aguda")
+
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, "en_consulta")
+
+        consultation = VisitConsultation.objects.get(id_visit=visit)
+        self.assertEqual(consultation.primary_diagnosis, "Faringitis aguda")
+        self.assertEqual(consultation.final_note, "Paciente estable.")
+
+    def test_save_diagnosis_invalid_state_raises_visit_state_invalid(self):
+        visit = self._visit("lista_para_doctor")
+
+        with self.assertRaises(VisitDomainError) as raised:
+            save_diagnosis(
+                visit_id=visit.id_visit,
+                roles=["DOCTOR"],
+                primary_diagnosis="Dx",
+                final_note="Nota",
+                doctor_id=101,
+            )
+
+        self.assertEqual(raised.exception.code, "VISIT_STATE_INVALID")
+        self.assertEqual(raised.exception.status_code, 409)
+
+    def test_save_prescriptions_happy_path(self):
+        visit = self._visit("en_consulta")
+
+        payload = save_prescriptions(
+            visit_id=visit.id_visit,
+            roles=["DOCTOR"],
+            items=["Paracetamol 500mg", "Reposo domiciliario"],
+            doctor_id=101,
+        )
+
+        self.assertEqual(payload["visitId"], visit.id_visit)
+        self.assertEqual(payload["status"], "en_consulta")
+        self.assertEqual(
+            payload["items"],
+            ["Paracetamol 500mg", "Reposo domiciliario"],
+        )
+
+    def test_close_consultation_is_idempotent_for_same_payload(self):
+        visit = self._visit("en_consulta")
+
+        first_payload = close_consultation(
+            visit_id=visit.id_visit,
+            roles=["DOCTOR"],
+            primary_diagnosis="Dx estable",
+            final_note="Nota estable",
+            doctor_id=101,
+        )
+
+        second_payload = close_consultation(
+            visit_id=visit.id_visit,
+            roles=["DOCTOR"],
+            primary_diagnosis="Dx estable",
+            final_note="Nota estable",
+            doctor_id=101,
+        )
+
+        self.assertEqual(first_payload["visit"]["status"], "cerrada")
+        self.assertEqual(second_payload["visit"]["status"], "cerrada")
+        self.assertEqual(
+            second_payload["consultation"]["primaryDiagnosis"],
+            "Dx estable",
+        )

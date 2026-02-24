@@ -4,6 +4,7 @@ from apps.authentication.services.permission_dependencies import (
     evaluate_permission_requirement,
 )
 from apps.consulta_medica.repositories.consultation_repository import ConsultationRepository
+from apps.consulta_medica.repositories.prescription_repository import PrescriptionRepository
 from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.services.errors import VisitDomainError
 from apps.recepcion.uses_case.visit_state_machine_usecase import (
@@ -46,6 +47,24 @@ def _get_visit_or_error(visit_id):
     return visit
 
 
+def _ensure_visit_in_consultation(visit):
+    if visit.status != "en_consulta":
+        raise VisitDomainError(
+            "VISIT_STATE_INVALID",
+            "La visita debe estar en consulta para ejecutar esta accion.",
+            409,
+        )
+
+
+def _normalize_prescription_items(items):
+    normalized_items = []
+    for item in items or []:
+        normalized_item = (item or "").strip()
+        if normalized_item:
+            normalized_items.append(normalized_item)
+    return normalized_items
+
+
 def start_consultation(visit_id, roles, permissions=None):
     ensure_doctor_role(roles, permissions)
     visit = _get_visit_or_error(visit_id)
@@ -57,6 +76,82 @@ def start_consultation(visit_id, roles, permissions=None):
     )
     visit = VisitRepository.update_status(visit, next_state)
     return VisitRepository.to_contract(visit)
+
+
+def save_diagnosis(
+    visit_id,
+    roles,
+    primary_diagnosis,
+    final_note,
+    doctor_id,
+    permissions=None,
+):
+    ensure_doctor_role(roles, permissions)
+
+    visit = _get_visit_or_error(visit_id)
+    _ensure_visit_in_consultation(visit)
+
+    normalized_primary_diagnosis = (primary_diagnosis or "").strip()
+    normalized_final_note = (final_note or "").strip()
+    if not normalized_primary_diagnosis or not normalized_final_note:
+        raise VisitDomainError(
+            "VISIT_STATE_INVALID",
+            "No se puede guardar diagnostico: falta diagnostico o nota final.",
+            409,
+        )
+
+    with transaction.atomic():
+        consultation, _ = ConsultationRepository.upsert_for_visit(
+            visit,
+            doctor_id=doctor_id,
+            primary_diagnosis=normalized_primary_diagnosis,
+            final_note=normalized_final_note,
+            created_by_id=doctor_id,
+            updated_by_id=doctor_id,
+        )
+
+    return {
+        "visitId": visit.id_visit,
+        "status": visit.status,
+        "primaryDiagnosis": consultation.primary_diagnosis,
+        "finalNote": consultation.final_note,
+    }
+
+
+def save_prescriptions(
+    visit_id,
+    roles,
+    items,
+    doctor_id,
+    permissions=None,
+):
+    ensure_doctor_role(roles, permissions)
+
+    visit = _get_visit_or_error(visit_id)
+    _ensure_visit_in_consultation(visit)
+
+    normalized_items = _normalize_prescription_items(items)
+    if not normalized_items:
+        raise VisitDomainError(
+            "VALIDATION_ERROR",
+            "Hay errores en el formulario",
+            422,
+            details={"items": ["Debes indicar al menos una receta."]},
+        )
+
+    with transaction.atomic():
+        prescription, _ = PrescriptionRepository.upsert_for_visit(
+            visit,
+            items=normalized_items,
+            created_by_id=doctor_id,
+            updated_by_id=doctor_id,
+        )
+
+    return {
+        "visitId": visit.id_visit,
+        "status": visit.status,
+        "items": list(prescription.items or []),
+    }
 
 
 def close_consultation(
@@ -72,6 +167,40 @@ def close_consultation(
     normalized_final_note = (final_note or "").strip()
 
     visit = _get_visit_or_error(visit_id)
+
+    if visit.status == "cerrada":
+        existing_consultation = ConsultationRepository.get_by_visit(visit)
+        if (
+            existing_consultation is not None
+            and existing_consultation.primary_diagnosis == normalized_primary_diagnosis
+            and existing_consultation.final_note == normalized_final_note
+        ):
+            return {
+                "visit": VisitRepository.to_contract(visit),
+                "consultation": ConsultationRepository.to_contract(existing_consultation),
+            }
+
+        if existing_consultation is not None:
+            raise VisitDomainError(
+                "CONFLICT_DUPLICATE_ACTION",
+                "La consulta ya fue cerrada con datos diferentes.",
+                409,
+            )
+
+        with transaction.atomic():
+            consultation, _ = ConsultationRepository.upsert_for_visit(
+                visit,
+                doctor_id=doctor_id,
+                primary_diagnosis=normalized_primary_diagnosis,
+                final_note=normalized_final_note,
+                created_by_id=doctor_id,
+                updated_by_id=doctor_id,
+            )
+
+        return {
+            "visit": VisitRepository.to_contract(visit),
+            "consultation": ConsultationRepository.to_contract(consultation),
+        }
 
     next_state = transition_visit_state(
         current_state=visit.status,

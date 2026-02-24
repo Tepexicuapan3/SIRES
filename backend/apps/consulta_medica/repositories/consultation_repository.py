@@ -3,6 +3,10 @@ from apps.consulta_medica.models import VisitConsultation
 
 class ConsultationRepository:
     @staticmethod
+    def get_by_visit(visit):
+        return VisitConsultation.objects.filter(id_visit=visit).first()
+
+    @staticmethod
     def upsert_for_visit(
         visit,
         *,

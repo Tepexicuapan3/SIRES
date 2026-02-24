@@ -11,6 +11,8 @@ VISIT_EVENT_CREATED = "visit.created"
 VISIT_EVENT_STATUS_CHANGED = "visit.status.changed"
 VISIT_EVENT_CANCELLED = "visit.cancelled"
 VISIT_EVENT_NO_SHOW = "visit.no_show"
+VISIT_EVENT_DIAGNOSIS_SAVED = "visit.diagnosis.saved"
+VISIT_EVENT_PRESCRIPTIONS_SAVED = "visit.prescriptions.saved"
 VISIT_EVENT_CLOSED = "visit.closed"
 
 
@@ -132,6 +134,52 @@ def publish_visit_no_show(
             status=status,
             previous_status=previous_status,
         ),
+        request_id=request_id,
+        correlation_id=correlation_id,
+        publisher=publisher,
+    )
+
+
+def publish_visit_diagnosis_saved(
+    *,
+    visit_id,
+    status,
+    primary_diagnosis,
+    final_note,
+    request_id,
+    correlation_id=None,
+    publisher=None,
+):
+    return _publish_visit_event(
+        event_type=VISIT_EVENT_DIAGNOSIS_SAVED,
+        visit_id=visit_id,
+        payload={
+            "status": status,
+            "primaryDiagnosis": primary_diagnosis,
+            "finalNote": final_note,
+        },
+        request_id=request_id,
+        correlation_id=correlation_id,
+        publisher=publisher,
+    )
+
+
+def publish_visit_prescriptions_saved(
+    *,
+    visit_id,
+    status,
+    items,
+    request_id,
+    correlation_id=None,
+    publisher=None,
+):
+    return _publish_visit_event(
+        event_type=VISIT_EVENT_PRESCRIPTIONS_SAVED,
+        visit_id=visit_id,
+        payload={
+            "status": status,
+            "items": list(items),
+        },
         request_id=request_id,
         correlation_id=correlation_id,
         publisher=publisher,

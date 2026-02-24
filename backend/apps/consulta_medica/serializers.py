@@ -5,7 +5,7 @@ class StartConsultationSerializer(serializers.Serializer):
     """No payload required for start action."""
 
 
-class CloseConsultationSerializer(serializers.Serializer):
+class SaveDiagnosisSerializer(serializers.Serializer):
     primaryDiagnosis = serializers.CharField(max_length=255, allow_blank=False)
     finalNote = serializers.CharField(allow_blank=False)
 
@@ -20,3 +20,26 @@ class CloseConsultationSerializer(serializers.Serializer):
         if not normalized:
             raise serializers.ValidationError("finalNote es obligatorio.")
         return normalized
+
+
+class SavePrescriptionsSerializer(serializers.Serializer):
+    items = serializers.ListField(
+        child=serializers.CharField(max_length=255, allow_blank=False),
+        allow_empty=False,
+    )
+
+    def validate_items(self, value):
+        normalized_items = []
+        for item in value:
+            normalized_item = item.strip()
+            if normalized_item:
+                normalized_items.append(normalized_item)
+
+        if not normalized_items:
+            raise serializers.ValidationError("Debes indicar al menos una receta.")
+
+        return normalized_items
+
+
+class CloseConsultationSerializer(SaveDiagnosisSerializer):
+    pass

@@ -2,7 +2,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelRolPermiso, RelUsuarioRol
+from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Permisos, Roles
 from apps.consulta_medica.models import VisitConsultation
@@ -136,6 +136,13 @@ class ConsultationContractsApiTests(APITestCase):
         self.assertEqual(response.data["id"], self.visit_ready.id_visit)
         self.assertEqual(response.data["status"], "en_consulta")
 
+        audit_event = AuditoriaEvento.objects.get(
+            accion="ConsultationStarted",
+            request_id=self.request_id,
+        )
+        self.assertEqual(audit_event.resultado, "SUCCESS")
+        self.assertEqual(audit_event.meta.get("module"), "consulta_medica")
+
     def test_start_consultation_role_not_allowed(self):
         self._login_as("recepcion_user", self.recepcion_password)
 
@@ -188,6 +195,161 @@ class ConsultationContractsApiTests(APITestCase):
 
         consultation = VisitConsultation.objects.get(id_visit=self.visit_in_consultation)
         self.assertEqual(consultation.doctor_id, self.doctor_user.id_usuario)
+
+        audit_event = AuditoriaEvento.objects.get(
+            accion="ConsultationClosed",
+            request_id=self.request_id,
+        )
+        self.assertEqual(audit_event.resultado, "SUCCESS")
+
+    def test_save_diagnosis_happy_path_contract(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_consultation.id_visit}/diagnosis",
+            {
+                "primaryDiagnosis": "Gastroenteritis aguda",
+                "finalNote": "Paciente hidratado y estable.",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["visitId"], self.visit_in_consultation.id_visit)
+        self.assertEqual(response.data["status"], "en_consulta")
+        self.assertEqual(response.data["primaryDiagnosis"], "Gastroenteritis aguda")
+        self.assertEqual(response.data["finalNote"], "Paciente hidratado y estable.")
+
+        consultation = VisitConsultation.objects.get(id_visit=self.visit_in_consultation)
+        self.assertEqual(consultation.primary_diagnosis, "Gastroenteritis aguda")
+        self.assertEqual(consultation.final_note, "Paciente hidratado y estable.")
+
+        audit_event = AuditoriaEvento.objects.get(
+            accion="DiagnosisSaved",
+            request_id=self.request_id,
+        )
+        self.assertEqual(audit_event.resultado, "SUCCESS")
+
+    def test_save_diagnosis_invalid_state_returns_visit_state_invalid(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_ready.id_visit}/diagnosis",
+            {
+                "primaryDiagnosis": "Dx",
+                "finalNote": "Nota",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["code"], "VISIT_STATE_INVALID")
+        self.assertEqual(response.data["status"], 409)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_save_prescriptions_happy_path_contract(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_consultation.id_visit}/prescriptions",
+            {
+                "items": [
+                    "Paracetamol 500mg cada 8h por 3 dias",
+                    "Hidratacion oral libre",
+                ]
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["visitId"], self.visit_in_consultation.id_visit)
+        self.assertEqual(response.data["status"], "en_consulta")
+        self.assertEqual(
+            response.data["items"],
+            [
+                "Paracetamol 500mg cada 8h por 3 dias",
+                "Hidratacion oral libre",
+            ],
+        )
+
+        audit_event = AuditoriaEvento.objects.get(
+            accion="PrescriptionsSaved",
+            request_id=self.request_id,
+        )
+        self.assertEqual(audit_event.resultado, "SUCCESS")
+
+    def test_save_prescriptions_validation_error_when_items_are_empty(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_consultation.id_visit}/prescriptions",
+            {
+                "items": [],
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+        self.assertEqual(response.data["status"], 422)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_close_consultation_supports_close_alias_route(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_consultation.id_visit}/close",
+            {
+                "primaryDiagnosis": "Dx alias",
+                "finalNote": "Nota alias",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["visit"]["status"], "cerrada")
+
+    def test_close_consultation_idempotent_retry_returns_same_contract(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        payload = {
+            "primaryDiagnosis": "Dx de egreso",
+            "finalNote": "Nota final idempotente",
+        }
+
+        first_response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_consultation.id_visit}/consultation/close",
+            payload,
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+
+        second_response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_consultation.id_visit}/consultation/close",
+            payload,
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.data["visit"]["status"], "cerrada")
+        self.assertEqual(
+            second_response.data["consultation"]["primaryDiagnosis"],
+            payload["primaryDiagnosis"],
+        )
 
     def test_close_consultation_allows_clinico_with_consultas_permission(self):
         self._login_as("clinico_user", "Clinico_123456")

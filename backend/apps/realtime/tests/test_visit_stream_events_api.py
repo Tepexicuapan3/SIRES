@@ -14,7 +14,9 @@ from apps.realtime.consumers.visits import VISITS_STREAM_GROUP
 from apps.realtime.events import (
     VISIT_EVENT_CANCELLED,
     VISIT_EVENT_CREATED,
+    VISIT_EVENT_DIAGNOSIS_SAVED,
     VISIT_EVENT_NO_SHOW,
+    VISIT_EVENT_PRESCRIPTIONS_SAVED,
     VISIT_EVENT_STATUS_CHANGED,
 )
 from apps.realtime.publisher import REALTIME_EVENT_HANDLER
@@ -400,3 +402,70 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
             expected_entity_id=self.visit_doctor_open.id_visit,
         )
         self.assertEqual(event.get("payload"), {})
+
+    def test_save_diagnosis_publishes_diagnosis_saved_event(self):
+        self._login_as("doctor_ws", self.doctor_password)
+        channel_layer, channel_name = self._subscribe_visits_stream()
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_doctor_open.id_visit}/diagnosis",
+            {
+                "primaryDiagnosis": "Lumbalgia mecanica",
+                "finalNote": "Manejo sintomatico ambulatorio.",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        message = self._read_group_message(channel_layer, channel_name)
+        self._unsubscribe_visits_stream(channel_layer, channel_name)
+
+        self.assertEqual(message.get("type"), REALTIME_EVENT_HANDLER)
+        event = message.get("event") or {}
+        self._assert_event_envelope(
+            event,
+            expected_event_type=VISIT_EVENT_DIAGNOSIS_SAVED,
+            expected_entity_id=self.visit_doctor_open.id_visit,
+        )
+        self.assertEqual(
+            event.get("payload", {}).get("primaryDiagnosis"),
+            "Lumbalgia mecanica",
+        )
+
+    def test_save_prescriptions_publishes_prescriptions_saved_event(self):
+        self._login_as("doctor_ws", self.doctor_password)
+        channel_layer, channel_name = self._subscribe_visits_stream()
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_doctor_open.id_visit}/prescriptions",
+            {
+                "items": [
+                    "Paracetamol 500mg cada 8h por 3 dias",
+                    "Reposo domiciliario",
+                ]
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        message = self._read_group_message(channel_layer, channel_name)
+        self._unsubscribe_visits_stream(channel_layer, channel_name)
+
+        self.assertEqual(message.get("type"), REALTIME_EVENT_HANDLER)
+        event = message.get("event") or {}
+        self._assert_event_envelope(
+            event,
+            expected_event_type=VISIT_EVENT_PRESCRIPTIONS_SAVED,
+            expected_entity_id=self.visit_doctor_open.id_visit,
+        )
+        self.assertEqual(
+            event.get("payload", {}).get("items"),
+            [
+                "Paracetamol 500mg cada 8h por 3 dias",
+                "Reposo domiciliario",
+            ],
+        )
