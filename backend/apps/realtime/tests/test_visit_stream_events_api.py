@@ -316,6 +316,37 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
             "en_espera",
         )
 
+    def test_create_visit_publishes_created_and_status_changed_events(self):
+        self._login_as("recepcion_ws", self.recepcion_password)
+        channel_layer, channel_name = self._subscribe_visits_stream()
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "patientId": 94001,
+                "arrivalType": "appointment",
+                "appointmentId": "APP-WS-94001",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        first_message = self._read_group_message(channel_layer, channel_name)
+        second_message = self._read_group_message(channel_layer, channel_name)
+        self._unsubscribe_visits_stream(channel_layer, channel_name)
+
+        first_event = first_message.get("event") or {}
+        second_event = second_message.get("event") or {}
+        event_types = {first_event.get("eventType"), second_event.get("eventType")}
+
+        self.assertEqual(event_types, {"visit.created", "visit.status.changed"})
+        for event in (first_event, second_event):
+            self.assertEqual(event.get("entity"), "visit")
+            self.assertEqual(event.get("requestId"), self.request_id)
+            self.assertEqual(event.get("payload", {}).get("status"), "en_espera")
+
     def test_capture_vitals_publishes_status_changed_event(self):
         self._login_as("clinico_ws", self.clinico_password)
         channel_layer, channel_name = self._subscribe_visits_stream()

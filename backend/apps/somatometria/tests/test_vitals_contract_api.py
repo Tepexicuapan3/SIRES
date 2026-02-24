@@ -114,6 +114,11 @@ class VitalsContractsApiTests(APITestCase):
             "oxygenSaturationPct": 98,
         }
 
+    def _csrf_headers(self):
+        csrf_token = "csrf-token-test"
+        self.client.cookies["csrf_token"] = csrf_token
+        return {"HTTP_X_CSRF_TOKEN": csrf_token}
+
     def test_capture_vitals_happy_path_contract(self):
         self._login_as("somato_user", self.somato_password)
 
@@ -310,3 +315,18 @@ class VitalsContractsApiTests(APITestCase):
         self.assertEqual(response.data["vitals"]["respiratoryRateBpm"], 16)
         self.assertEqual(response.data["vitals"]["bloodPressureSystolic"], 118)
         self.assertEqual(response.data["vitals"]["bloodPressureDiastolic"], 76)
+
+    def test_capture_vitals_without_csrf_returns_permission_denied(self):
+        self._login_as("somato_user", self.somato_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_DENIED")
+        self.assertEqual(response.data["status"], 403)
+        self.assertEqual(response.data["requestId"], self.request_id)

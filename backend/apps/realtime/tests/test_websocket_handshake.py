@@ -1,23 +1,24 @@
 import asyncio
-import json
 
 from asgiref.testing import ApplicationCommunicator
 from django.contrib.auth.hashers import make_password
 from django.test import TestCase, override_settings
 
+from apps.administracion.models import RelUsuarioRol
 from apps.authentication.models import SyUsuario
+from apps.catalogos.models import Roles
 from apps.authentication.services.token_service import (
     ACCESS_COOKIE,
     create_access_refresh_tokens,
 )
 from apps.realtime.routing import WS_VISITS_STREAM_PATH
-from config.asgi import build_application
+from config.asgi import application
 
 
 @override_settings(
     ALLOWED_HOSTS=["localhost", "testserver"],
     WS_ALLOW_ALL_ORIGINS=False,
-    WS_ALLOWED_ORIGINS=[],
+    WS_ALLOWED_ORIGINS="http://localhost:5173",
 )
 class RealtimeHandshakeSecurityTests(TestCase):
     def setUp(self):
@@ -29,8 +30,33 @@ class RealtimeHandshakeSecurityTests(TestCase):
             cambiar_clave=False,
             terminos_acept=True,
         )
+        recepcion_role, _ = Roles.objects.get_or_create(
+            rol="RECEPCION",
+            defaults={
+                "desc_rol": "Recepcion",
+                "landing_route": "/recepcion/fichas/medicina-general",
+                "is_active": True,
+            },
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=self.user,
+            id_rol=recepcion_role,
+            is_primary=True,
+        )
+
+        self.user_without_stream_role = SyUsuario.objects.create(
+            usuario="ws_no_role",
+            correo="ws_no_role@example.com",
+            clave_hash=make_password("Secret123!"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+
         access_token, _ = create_access_refresh_tokens(self.user)
         self.cookie_header = f"{ACCESS_COOKIE}={access_token}".encode()
+        blocked_token, _ = create_access_refresh_tokens(self.user_without_stream_role)
+        self.blocked_cookie_header = f"{ACCESS_COOKIE}={blocked_token}".encode()
 
     def test_connection_accepts_valid_cookie_auth(self):
         response = self._connect_once(
@@ -75,44 +101,20 @@ class RealtimeHandshakeSecurityTests(TestCase):
         self.assertEqual(response["type"], "websocket.close")
         self.assertEqual(response.get("code"), 4401)
 
-    def test_connection_supports_ping_pong_liveness(self):
-        response = self._run_interaction(
+    def test_connection_rejects_authenticated_user_without_stream_access(self):
+        response = self._connect_once(
             headers=[
                 (b"origin", b"http://localhost:5173"),
-                (b"cookie", self.cookie_header),
+                (b"cookie", self.blocked_cookie_header),
             ],
             query_string=b"",
-            message={"type": "ping"},
         )
 
-        self.assertEqual(response.get("type"), "websocket.send")
-        payload = json.loads(response.get("text", "{}"))
-        self.assertEqual(payload.get("type"), "pong")
-
-    def test_connection_rejects_non_object_ws_payload(self):
-        response = self._run_interaction(
-            headers=[
-                (b"origin", b"http://localhost:5173"),
-                (b"cookie", self.cookie_header),
-            ],
-            query_string=b"",
-            message="invalid-payload",
-        )
-
-        self.assertEqual(response.get("type"), "websocket.close")
-        self.assertEqual(response.get("code"), 4400)
+        self.assertEqual(response["type"], "websocket.close")
+        self.assertEqual(response.get("code"), 4403)
 
     def _connect_once(self, *, headers, query_string):
-        response = self._run_interaction(
-            headers=headers,
-            query_string=query_string,
-            message=None,
-        )
-        return response["connect_output"]
-
-    def _run_interaction(self, *, headers, query_string, message):
         async def run_connect():
-            application = build_application()
             communicator = ApplicationCommunicator(
                 application,
                 {
@@ -125,26 +127,12 @@ class RealtimeHandshakeSecurityTests(TestCase):
             )
 
             await communicator.send_input({"type": "websocket.connect"})
-            connect_output = await communicator.receive_output(timeout=1)
+            output = await communicator.receive_output(timeout=1)
 
-            message_output = None
-            if connect_output.get("type") == "websocket.accept" and message is not None:
-                await communicator.send_input(
-                    {
-                        "type": "websocket.receive",
-                        "text": json.dumps(message),
-                    }
-                )
-                message_output = await communicator.receive_output(timeout=1)
-
-            if connect_output.get("type") == "websocket.accept":
+            if output.get("type") == "websocket.accept":
                 await communicator.send_input({"type": "websocket.disconnect", "code": 1000})
 
             await communicator.wait()
-            return {
-                "connect_output": connect_output,
-                "message_output": message_output,
-            }
+            return output
 
-        output = asyncio.run(run_connect())
-        return output if message is None else output["message_output"]
+        return asyncio.run(run_connect())

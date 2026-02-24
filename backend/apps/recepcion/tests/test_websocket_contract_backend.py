@@ -4,15 +4,17 @@ from asgiref.testing import ApplicationCommunicator
 from django.contrib.auth.hashers import make_password
 from django.test import TestCase, override_settings
 
+from apps.administracion.models import RelUsuarioRol
 from apps.authentication.models import SyUsuario
 from apps.authentication.services.token_service import ACCESS_COOKIE, create_access_refresh_tokens
+from apps.catalogos.models import Roles
 from apps.consulta_medica.services.realtime_events import (
     build_visit_closed_event,
 )
 from apps.recepcion.services.realtime_events import (
     build_visit_status_changed_event,
 )
-from config.asgi import build_application
+from config.asgi import application
 from infrastructure.realtime.contracts import (
     validate_realtime_event_envelope,
 )
@@ -23,7 +25,7 @@ from infrastructure.realtime.ws_app import WS_VISITS_STREAM_PATH
 @override_settings(
     ALLOWED_HOSTS=["localhost", "testserver"],
     WS_ALLOW_ALL_ORIGINS=False,
-    WS_ALLOWED_ORIGINS=[],
+    WS_ALLOWED_ORIGINS="http://localhost:5173",
 )
 class VisitWebSocketContractsTests(TestCase):
     def setUp(self):
@@ -34,6 +36,19 @@ class VisitWebSocketContractsTests(TestCase):
             est_activo=True,
             cambiar_clave=False,
             terminos_acept=True,
+        )
+        recepcion_role, _ = Roles.objects.get_or_create(
+            rol="RECEPCION",
+            defaults={
+                "desc_rol": "Recepcion",
+                "landing_route": "/recepcion/fichas/medicina-general",
+                "is_active": True,
+            },
+        )
+        RelUsuarioRol.objects.get_or_create(
+            id_usuario=self.user,
+            id_rol=recepcion_role,
+            defaults={"is_primary": True},
         )
         access_token, _ = create_access_refresh_tokens(self.user)
         self.cookie_header = f"{ACCESS_COOKIE}={access_token}".encode()
@@ -112,7 +127,6 @@ class VisitWebSocketContractsTests(TestCase):
 
     def _connect_once(self, headers):
         async def run_connect():
-            application = build_application()
             communicator = ApplicationCommunicator(
                 application,
                 {

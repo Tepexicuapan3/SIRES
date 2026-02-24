@@ -1,11 +1,12 @@
-from itertools import count
-from time import time_ns
 from uuid import uuid4
 
+from django.db import transaction
+
 from apps.realtime.consumers.visits import VISITS_STREAM_GROUP
+from apps.realtime.models import RealtimeSequence
 from apps.realtime.publisher import RealtimePublishMetadata, RealtimePublisher
 
-_SEQUENCE_GENERATOR = count(start=max(1, time_ns() // 1_000_000), step=1)
+VISITS_STREAM_SEQUENCE_KEY = "visits.stream"
 
 VISIT_EVENT_CREATED = "visit.created"
 VISIT_EVENT_STATUS_CHANGED = "visit.status.changed"
@@ -23,7 +24,41 @@ def _build_metadata(*, request_id, correlation_id):
     return RealtimePublishMetadata(
         request_id=normalized_request_id,
         correlation_id=normalized_correlation_id,
-        sequence=next(_SEQUENCE_GENERATOR),
+        sequence=_next_stream_sequence(VISITS_STREAM_SEQUENCE_KEY),
+    )
+
+
+def _next_stream_sequence(stream_key):
+    with transaction.atomic():
+        sequence_row, _ = RealtimeSequence.objects.select_for_update().get_or_create(
+            stream_key=stream_key,
+            defaults={"last_sequence": 0},
+        )
+        sequence_row.last_sequence += 1
+        sequence_row.save(update_fields=["last_sequence", "fch_modf"])
+        return sequence_row.last_sequence
+
+
+def publish_visit_created(
+    *,
+    visit_id,
+    status,
+    request_id,
+    correlation_id=None,
+    publisher=None,
+):
+    realtime_publisher = publisher or RealtimePublisher()
+    metadata = _build_metadata(request_id=request_id, correlation_id=correlation_id)
+
+    return realtime_publisher.publish(
+        group_names=[VISITS_STREAM_GROUP],
+        event_type="visit.created",
+        entity="visit",
+        entity_id=visit_id,
+        metadata=metadata,
+        payload={
+            "status": status,
+        },
     )
 
 

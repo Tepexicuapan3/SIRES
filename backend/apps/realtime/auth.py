@@ -2,6 +2,7 @@ from http.cookies import SimpleCookie
 from urllib.parse import parse_qs
 
 from channels.middleware import BaseMiddleware
+from django.conf import settings
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.settings import api_settings
 
@@ -22,13 +23,16 @@ class CookieJWTAuthMiddleware(BaseMiddleware):
             mutable_scope[REALTIME_USER_SCOPE_KEY] = None
             return await super().__call__(mutable_scope, receive, send)
 
-        mutable_scope[REALTIME_USER_SCOPE_KEY] = authenticate_websocket_scope(
+        mutable_scope[REALTIME_USER_SCOPE_KEY] = await authenticate_websocket_scope(
             mutable_scope
         )
         return await super().__call__(mutable_scope, receive, send)
 
 
-def authenticate_websocket_scope(scope):
+async def authenticate_websocket_scope(scope):
+    if not is_origin_allowed(scope):
+        return None
+
     raw_token = extract_cookie_value(scope, ACCESS_COOKIE)
     if not raw_token:
         return None
@@ -42,8 +46,12 @@ def authenticate_websocket_scope(scope):
     if user_id in (None, ""):
         return None
 
+    roles = payload.get("roles") or []
+    permissions = payload.get("permissions") or []
     return {
         "id": str(user_id),
+        "roles": roles,
+        "permissions": permissions,
     }
 
 
@@ -59,6 +67,17 @@ def has_forbidden_query_token(scope):
             return True
 
     return False
+
+
+def is_origin_allowed(scope):
+    if getattr(settings, "WS_ALLOW_ALL_ORIGINS", False):
+        return True
+
+    origin = extract_header(scope, b"origin")
+    if not origin:
+        return False
+
+    return origin in getattr(settings, "WS_ALLOWED_ORIGINS", [])
 
 
 def extract_header(scope, header_name):
