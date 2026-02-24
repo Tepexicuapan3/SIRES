@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ApiError } from "@api/utils/errors";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { VISIT_STATUS, type VisitStatus } from "@api/types";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import {
+  VisitTimelinePanel,
+  type VisitTimelineEntry,
+} from "@features/flujo-clinico/components/VisitTimelinePanel";
 import { VisitStageNavigator } from "@features/flujo-clinico/components/VisitStageNavigator";
 import {
   VISIT_STAGE,
@@ -13,39 +19,222 @@ import {
   canStartConsultation,
 } from "@features/flujo-clinico/domain/visit-flow.constants";
 import {
-  closeVisitFormSchema,
-  type CloseVisitFormInput,
-  type CloseVisitFormValues,
+  saveDiagnosisFormSchema,
+  savePrescriptionsFormSchema,
+  type SaveDiagnosisFormInput,
+  type SaveDiagnosisFormValues,
+  type SavePrescriptionsFormInput,
+  type SavePrescriptionsFormValues,
 } from "@features/flujo-clinico/domain/visit-flow.schemas";
 import { useCloseVisit } from "@features/flujo-clinico/mutations/useCloseVisit";
+import { useSaveDiagnosis } from "@features/flujo-clinico/mutations/useSaveDiagnosis";
+import { useSavePrescriptions } from "@features/flujo-clinico/mutations/useSavePrescriptions";
 import { useStartConsultation } from "@features/flujo-clinico/mutations/useStartConsultation";
 import { useDoctorQueue } from "@features/flujo-clinico/queries/useDoctorQueue";
 
-const DEFAULT_FORM_VALUES: CloseVisitFormInput = {
+const DOCTOR_QUEUE_PERMISSION_REQUIREMENT = {
+  allOf: ["clinico:consultas:read"],
+} as const;
+
+const DOCTOR_WRITE_PERMISSION_REQUIREMENT = {
+  allOf: ["clinico:consultas:read"],
+} as const;
+
+const START_CONSULTATION_DOMAIN_ERROR_MESSAGE: Record<
+  | "ROLE_NOT_ALLOWED"
+  | "VISIT_STATE_INVALID"
+  | "VISIT_NOT_FOUND"
+  | "PERMISSION_DENIED",
+  string
+> = {
+  ROLE_NOT_ALLOWED: "No tenes permiso para iniciar consulta.",
+  VISIT_STATE_INVALID:
+    "La visita ya no esta en un estado valido para iniciar consulta.",
+  VISIT_NOT_FOUND: "La visita ya no existe o fue actualizada por otro usuario.",
+  PERMISSION_DENIED: "No tenes permiso para ejecutar esta accion.",
+};
+
+const SAVE_DIAGNOSIS_DOMAIN_ERROR_MESSAGE: Record<
+  | "ROLE_NOT_ALLOWED"
+  | "VISIT_STATE_INVALID"
+  | "VISIT_NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "PERMISSION_DENIED",
+  string
+> = {
+  ROLE_NOT_ALLOWED: "No tenes permiso para guardar diagnostico.",
+  VISIT_STATE_INVALID:
+    "La visita ya no esta en consulta. Actualiza la bandeja del doctor.",
+  VISIT_NOT_FOUND: "La visita ya no existe o fue cerrada por otro usuario.",
+  VALIDATION_ERROR: "Revisa los campos del diagnostico antes de guardar.",
+  PERMISSION_DENIED: "No tenes permiso para ejecutar esta accion.",
+};
+
+const SAVE_PRESCRIPTIONS_DOMAIN_ERROR_MESSAGE: Record<
+  | "ROLE_NOT_ALLOWED"
+  | "VISIT_STATE_INVALID"
+  | "VISIT_NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "PERMISSION_DENIED",
+  string
+> = {
+  ROLE_NOT_ALLOWED: "No tenes permiso para guardar receta.",
+  VISIT_STATE_INVALID:
+    "La visita ya no esta en consulta. Actualiza la bandeja del doctor.",
+  VISIT_NOT_FOUND: "La visita ya no existe o fue cerrada por otro usuario.",
+  VALIDATION_ERROR: "Agrega al menos una indicacion valida de receta.",
+  PERMISSION_DENIED: "No tenes permiso para ejecutar esta accion.",
+};
+
+const CLOSE_CONSULTATION_DOMAIN_ERROR_MESSAGE: Record<
+  | "ROLE_NOT_ALLOWED"
+  | "VISIT_STATE_INVALID"
+  | "VISIT_NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "PERMISSION_DENIED"
+  | "CONFLICT_DUPLICATE_ACTION",
+  string
+> = {
+  ROLE_NOT_ALLOWED: "No tenes permiso para cerrar consulta.",
+  VISIT_STATE_INVALID:
+    "La visita ya no esta en un estado valido para cerrar consulta.",
+  VISIT_NOT_FOUND: "La visita ya no existe o fue cerrada por otro usuario.",
+  VALIDATION_ERROR:
+    "Completa diagnostico y nota final para cerrar la consulta.",
+  PERMISSION_DENIED: "No tenes permiso para ejecutar esta accion.",
+  CONFLICT_DUPLICATE_ACTION:
+    "La consulta ya fue cerrada con informacion diferente. Actualiza la bandeja.",
+};
+
+const FALLBACK_START_CONSULTATION_ERROR_MESSAGE =
+  "No se pudo iniciar la consulta. Intenta nuevamente.";
+const FALLBACK_SAVE_DIAGNOSIS_ERROR_MESSAGE =
+  "No se pudo guardar el diagnostico. Intenta nuevamente.";
+const FALLBACK_SAVE_PRESCRIPTIONS_ERROR_MESSAGE =
+  "No se pudo guardar la receta. Intenta nuevamente.";
+const FALLBACK_CLOSE_CONSULTATION_ERROR_MESSAGE =
+  "No se pudo cerrar la consulta. Intenta nuevamente.";
+
+const DEFAULT_DIAGNOSIS_FORM_VALUES: SaveDiagnosisFormInput = {
   primaryDiagnosis: "",
   finalNote: "",
 };
+
+const DEFAULT_PRESCRIPTIONS_FORM_VALUES: SavePrescriptionsFormInput = {
+  itemsText: "",
+};
+
+interface FeedbackState {
+  kind: "success" | "error";
+  message: string;
+}
 
 const formatStatusLabel = (status: string): string => {
   return status.replace(/_/g, " ");
 };
 
+const resolveDomainErrorMessage = <TDomainCode extends string>(
+  error: unknown,
+  domainErrors: Record<TDomainCode, string>,
+  fallback: string,
+): string => {
+  if (!(error instanceof ApiError)) {
+    return fallback;
+  }
+
+  const domainCode = error.code as TDomainCode;
+  if (Object.prototype.hasOwnProperty.call(domainErrors, domainCode)) {
+    return domainErrors[domainCode];
+  }
+
+  return error.message || fallback;
+};
+
+const toPrescriptionItems = (itemsText: string): string[] => {
+  return itemsText
+    .split("\n")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+};
+
+const buildDiagnosisFingerprint = ({
+  primaryDiagnosis,
+  finalNote,
+}: SaveDiagnosisFormValues): string => {
+  return `${primaryDiagnosis.trim()}::${finalNote.trim()}`;
+};
+
+const createTimelineEntry = (
+  title: string,
+  description?: string,
+): VisitTimelineEntry => {
+  const createdAt = new Date().toISOString();
+
+  return {
+    id: `${createdAt}-${Math.random().toString(36).slice(2)}`,
+    title,
+    description,
+    createdAt,
+  };
+};
+
 export const DoctorConsultationPage = () => {
-  const queueQuery = useDoctorQueue();
+  const { hasCapability } = usePermissionDependencies();
+  const canReadDoctorQueue = hasCapability(
+    "flow.doctor.queue.read",
+    DOCTOR_QUEUE_PERMISSION_REQUIREMENT,
+  );
+  const canStartDoctorConsultation = hasCapability(
+    "flow.doctor.consultation.start",
+    DOCTOR_WRITE_PERMISSION_REQUIREMENT,
+  );
+  const canCloseDoctorConsultation = hasCapability(
+    "flow.doctor.consultation.close",
+    DOCTOR_WRITE_PERMISSION_REQUIREMENT,
+  );
+  const canWriteDoctorConsultation =
+    canStartDoctorConsultation && canCloseDoctorConsultation;
+
+  const queueQuery = useDoctorQueue({ enabled: canReadDoctorQueue });
   const startConsultation = useStartConsultation();
+  const saveDiagnosis = useSaveDiagnosis();
+  const savePrescriptions = useSavePrescriptions();
   const closeVisit = useCloseVisit();
   const [selectedVisitIdState, setSelectedVisitIdState] = useState<
     number | null
   >(null);
-  const [localStatusesByVisitId, setLocalStatusesByVisitId] = useState<
+  const [selectedVisitStatusOverride, setSelectedVisitStatusOverride] =
+    useState<VisitStatus | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [timelineEntriesByVisitId, setTimelineEntriesByVisitId] = useState<
+    Record<number, VisitTimelineEntry[]>
+  >({});
+  const [lastKnownStatusByVisitId, setLastKnownStatusByVisitId] = useState<
     Record<number, VisitStatus>
   >({});
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [
+    savedDiagnosisFingerprintByVisitId,
+    setSavedDiagnosisFingerprintByVisitId,
+  ] = useState<Record<number, string>>({});
 
-  const form = useForm<CloseVisitFormInput, unknown, CloseVisitFormValues>({
-    resolver: zodResolver(closeVisitFormSchema),
+  const diagnosisForm = useForm<
+    SaveDiagnosisFormInput,
+    unknown,
+    SaveDiagnosisFormValues
+  >({
+    resolver: zodResolver(saveDiagnosisFormSchema),
     mode: "onChange",
-    defaultValues: DEFAULT_FORM_VALUES,
+    defaultValues: DEFAULT_DIAGNOSIS_FORM_VALUES,
+  });
+
+  const prescriptionsForm = useForm<
+    SavePrescriptionsFormInput,
+    unknown,
+    SavePrescriptionsFormValues
+  >({
+    resolver: zodResolver(savePrescriptionsFormSchema),
+    mode: "onChange",
+    defaultValues: DEFAULT_PRESCRIPTIONS_FORM_VALUES,
   });
 
   const visits = queueQuery.data?.items ?? [];
@@ -59,63 +248,270 @@ export const DoctorConsultationPage = () => {
   const selectedVisit =
     visits.find((visit) => visit.id === selectedVisitId) ?? null;
 
-  const getEffectiveStatus = (
-    visitId: number,
-    baseStatus: VisitStatus,
-  ): VisitStatus => {
-    return localStatusesByVisitId[visitId] ?? baseStatus;
-  };
-
   const selectedVisitStatus = selectedVisit
-    ? getEffectiveStatus(selectedVisit.id, selectedVisit.status)
+    ? (selectedVisitStatusOverride ?? selectedVisit.status)
     : VISIT_STATUS.LISTA_PARA_DOCTOR;
 
-  const canStartSelectedVisit = selectedVisit
-    ? canStartConsultation(selectedVisitStatus)
-    : false;
+  const canStartSelectedVisit =
+    Boolean(selectedVisit) &&
+    canStartDoctorConsultation &&
+    canStartConsultation(selectedVisitStatus);
 
-  const canCloseSelectedVisit = selectedVisit
-    ? canCloseConsultation(selectedVisitStatus)
-    : false;
+  const canSaveClinicalData =
+    Boolean(selectedVisit) &&
+    canCloseDoctorConsultation &&
+    selectedVisitStatus === VISIT_STATUS.EN_CONSULTA;
+
+  const canCloseSelectedVisit =
+    Boolean(selectedVisit) &&
+    canCloseDoctorConsultation &&
+    canCloseConsultation(selectedVisitStatus);
+
+  const selectedTimelineEntries = selectedVisit
+    ? (timelineEntriesByVisitId[selectedVisit.id] ?? [])
+    : [];
+
+  useEffect(() => {
+    if (!selectedVisit) {
+      setSelectedVisitStatusOverride(null);
+      return;
+    }
+
+    if (
+      selectedVisitStatusOverride !== null &&
+      selectedVisit.status === selectedVisitStatusOverride
+    ) {
+      setSelectedVisitStatusOverride(null);
+    }
+  }, [selectedVisit, selectedVisitStatusOverride]);
+
+  useEffect(() => {
+    if (!selectedVisit) {
+      return;
+    }
+
+    const previousStatus = lastKnownStatusByVisitId[selectedVisit.id];
+    if (previousStatus === selectedVisitStatus) {
+      return;
+    }
+
+    setLastKnownStatusByVisitId((current) => ({
+      ...current,
+      [selectedVisit.id]: selectedVisitStatus,
+    }));
+
+    setTimelineEntriesByVisitId((current) => {
+      const currentEntries = current[selectedVisit.id] ?? [];
+      const statusLabel = formatStatusLabel(selectedVisitStatus);
+      const previousStatusLabel = previousStatus
+        ? formatStatusLabel(previousStatus)
+        : null;
+      const nextEntry = createTimelineEntry(
+        previousStatusLabel
+          ? `Estado actualizado a ${statusLabel}`
+          : `Estado actual: ${statusLabel}`,
+        previousStatusLabel
+          ? `Cambio de ${previousStatusLabel} a ${statusLabel}.`
+          : `Seguimiento inicial para ${selectedVisit.folio}.`,
+      );
+
+      return {
+        ...current,
+        [selectedVisit.id]: [nextEntry, ...currentEntries].slice(0, 20),
+      };
+    });
+  }, [selectedVisit, selectedVisitStatus, lastKnownStatusByVisitId]);
+
+  const appendTimelineEntry = (
+    visitId: number,
+    title: string,
+    description?: string,
+  ) => {
+    setTimelineEntriesByVisitId((current) => {
+      const currentEntries = current[visitId] ?? [];
+      const entry = createTimelineEntry(title, description);
+
+      return {
+        ...current,
+        [visitId]: [entry, ...currentEntries].slice(0, 20),
+      };
+    });
+  };
 
   const handleStartConsultation = async () => {
     if (!selectedVisit || !canStartSelectedVisit) {
       return;
     }
 
-    setFeedbackMessage(null);
+    setFeedback(null);
 
-    const result = await startConsultation.mutateAsync({
-      visitId: selectedVisit.id,
-    });
+    try {
+      const result = await startConsultation.mutateAsync({
+        visitId: selectedVisit.id,
+      });
 
-    setLocalStatusesByVisitId((current) => ({
-      ...current,
-      [selectedVisit.id]: result.status,
-    }));
-    setFeedbackMessage("Consulta iniciada.");
+      setSelectedVisitStatusOverride(result.status);
+      appendTimelineEntry(
+        selectedVisit.id,
+        "Consulta iniciada",
+        `La visita ${selectedVisit.folio} paso a ${formatStatusLabel(result.status)}.`,
+      );
+      setFeedback({ kind: "success", message: "Consulta iniciada." });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: resolveDomainErrorMessage(
+          error,
+          START_CONSULTATION_DOMAIN_ERROR_MESSAGE,
+          FALLBACK_START_CONSULTATION_ERROR_MESSAGE,
+        ),
+      });
+    }
   };
 
-  const handleCloseVisit = async (values: CloseVisitFormValues) => {
+  const handleSaveDiagnosis = async (values: SaveDiagnosisFormValues) => {
+    if (!selectedVisit || !canSaveClinicalData) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      const result = await saveDiagnosis.mutateAsync({
+        visitId: selectedVisit.id,
+        data: {
+          primaryDiagnosis: values.primaryDiagnosis,
+          finalNote: values.finalNote,
+        },
+      });
+
+      setSavedDiagnosisFingerprintByVisitId((current) => ({
+        ...current,
+        [selectedVisit.id]: buildDiagnosisFingerprint(values),
+      }));
+      appendTimelineEntry(
+        selectedVisit.id,
+        "Diagnostico guardado",
+        `${result.primaryDiagnosis}.`,
+      );
+      setFeedback({
+        kind: "success",
+        message: "Diagnostico guardado correctamente.",
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: resolveDomainErrorMessage(
+          error,
+          SAVE_DIAGNOSIS_DOMAIN_ERROR_MESSAGE,
+          FALLBACK_SAVE_DIAGNOSIS_ERROR_MESSAGE,
+        ),
+      });
+    }
+  };
+
+  const handleSavePrescriptions = async (
+    values: SavePrescriptionsFormValues,
+  ) => {
+    if (!selectedVisit || !canSaveClinicalData) {
+      return;
+    }
+
+    setFeedback(null);
+
+    const items = toPrescriptionItems(values.itemsText);
+
+    try {
+      const result = await savePrescriptions.mutateAsync({
+        visitId: selectedVisit.id,
+        data: { items },
+      });
+
+      appendTimelineEntry(
+        selectedVisit.id,
+        "Receta guardada",
+        `${result.items.length} indicacion(es) registradas.`,
+      );
+      setFeedback({
+        kind: "success",
+        message: "Receta guardada correctamente.",
+      });
+      prescriptionsForm.reset(DEFAULT_PRESCRIPTIONS_FORM_VALUES);
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: resolveDomainErrorMessage(
+          error,
+          SAVE_PRESCRIPTIONS_DOMAIN_ERROR_MESSAGE,
+          FALLBACK_SAVE_PRESCRIPTIONS_ERROR_MESSAGE,
+        ),
+      });
+    }
+  };
+
+  const handleCloseVisit = async (values: SaveDiagnosisFormValues) => {
     if (!selectedVisit || !canCloseSelectedVisit) {
       return;
     }
 
-    setFeedbackMessage(null);
-    await closeVisit.mutateAsync({
-      visitId: selectedVisit.id,
-      data: {
-        primaryDiagnosis: values.primaryDiagnosis,
-        finalNote: values.finalNote,
-      },
-    });
+    setFeedback(null);
 
-    setLocalStatusesByVisitId((current) => ({
-      ...current,
-      [selectedVisit.id]: VISIT_STATUS.CERRADA,
-    }));
-    setFeedbackMessage("Consulta cerrada correctamente.");
-    form.reset(DEFAULT_FORM_VALUES);
+    const diagnosisFingerprint = buildDiagnosisFingerprint(values);
+    const hasMatchingSavedDiagnosis =
+      savedDiagnosisFingerprintByVisitId[selectedVisit.id] ===
+      diagnosisFingerprint;
+
+    try {
+      if (!hasMatchingSavedDiagnosis) {
+        await saveDiagnosis.mutateAsync({
+          visitId: selectedVisit.id,
+          data: {
+            primaryDiagnosis: values.primaryDiagnosis,
+            finalNote: values.finalNote,
+          },
+        });
+
+        setSavedDiagnosisFingerprintByVisitId((current) => ({
+          ...current,
+          [selectedVisit.id]: diagnosisFingerprint,
+        }));
+        appendTimelineEntry(
+          selectedVisit.id,
+          "Diagnostico sincronizado",
+          "Se guardo diagnostico antes del cierre clinico.",
+        );
+      }
+
+      await closeVisit.mutateAsync({
+        visitId: selectedVisit.id,
+        data: {
+          primaryDiagnosis: values.primaryDiagnosis,
+          finalNote: values.finalNote,
+        },
+      });
+
+      setSelectedVisitStatusOverride(VISIT_STATUS.CERRADA);
+      appendTimelineEntry(
+        selectedVisit.id,
+        "Consulta cerrada",
+        `La visita ${selectedVisit.folio} se cerro correctamente.`,
+      );
+      setFeedback({
+        kind: "success",
+        message: "Consulta cerrada correctamente.",
+      });
+      diagnosisForm.reset(DEFAULT_DIAGNOSIS_FORM_VALUES);
+      prescriptionsForm.reset(DEFAULT_PRESCRIPTIONS_FORM_VALUES);
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: resolveDomainErrorMessage(
+          error,
+          CLOSE_CONSULTATION_DOMAIN_ERROR_MESSAGE,
+          FALLBACK_CLOSE_CONSULTATION_ERROR_MESSAGE,
+        ),
+      });
+    }
   };
 
   return (
@@ -125,7 +521,7 @@ export const DoctorConsultationPage = () => {
           Bandeja del doctor
         </h1>
         <p className="text-sm text-txt-muted">
-          Inicia consulta, registra diagnostico y cierra atencion.
+          Inicia consulta, registra diagnostico y receta, y cierra atencion.
         </p>
         <VisitStageNavigator
           currentStatus={selectedVisitStatus}
@@ -133,11 +529,17 @@ export const DoctorConsultationPage = () => {
         />
       </header>
 
-      {queueQuery.isLoading ? (
+      {!canReadDoctorQueue ? (
+        <p className="text-sm text-txt-muted" role="status">
+          No tenes permisos completos para cargar la bandeja del doctor.
+        </p>
+      ) : null}
+
+      {canReadDoctorQueue && queueQuery.isLoading ? (
         <p className="text-sm text-txt-muted">Cargando bandeja del doctor...</p>
       ) : null}
 
-      {queueQuery.isError ? (
+      {canReadDoctorQueue && queueQuery.isError ? (
         <Alert variant="warning">
           <AlertTitle>Error al cargar</AlertTitle>
           <AlertDescription>
@@ -146,14 +548,27 @@ export const DoctorConsultationPage = () => {
         </Alert>
       ) : null}
 
-      {!queueQuery.isLoading && !queueQuery.isError && visits.length === 0 ? (
+      {canReadDoctorQueue &&
+      !queueQuery.isLoading &&
+      !queueQuery.isError &&
+      visits.length === 0 ? (
         <p className="text-sm text-txt-muted">
           No hay pacientes listos para doctor.
         </p>
       ) : null}
 
-      {!queueQuery.isLoading && !queueQuery.isError && visits.length > 0 ? (
+      {canReadDoctorQueue &&
+      !queueQuery.isLoading &&
+      !queueQuery.isError &&
+      visits.length > 0 ? (
         <section className="space-y-4 rounded-xl border border-line-struct bg-paper p-4">
+          {!canWriteDoctorConsultation ? (
+            <p className="text-sm text-txt-muted" role="status">
+              No tenes permisos completos para registrar diagnostico, receta o
+              cierre de consulta.
+            </p>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="doctor-visit-selector">Visita</Label>
             <select
@@ -162,10 +577,15 @@ export const DoctorConsultationPage = () => {
               value={selectedVisitId?.toString() ?? ""}
               onChange={(event) => {
                 setSelectedVisitIdState(Number(event.target.value));
+                setSelectedVisitStatusOverride(null);
+                setFeedback(null);
               }}
             >
               {visits.map((visit) => {
-                const status = getEffectiveStatus(visit.id, visit.status);
+                const status =
+                  visit.id === selectedVisit?.id
+                    ? selectedVisitStatus
+                    : visit.status;
 
                 return (
                   <option key={visit.id} value={visit.id}>
@@ -180,7 +600,12 @@ export const DoctorConsultationPage = () => {
             <Button
               type="button"
               variant="outline"
-              disabled={!canStartSelectedVisit || startConsultation.isPending}
+              disabled={
+                !canStartSelectedVisit ||
+                startConsultation.isPending ||
+                saveDiagnosis.isPending ||
+                closeVisit.isPending
+              }
               onClick={() => {
                 void handleStartConsultation();
               }}
@@ -192,18 +617,19 @@ export const DoctorConsultationPage = () => {
           <form
             className="space-y-4"
             noValidate
-            onSubmit={form.handleSubmit(handleCloseVisit)}
+            onSubmit={diagnosisForm.handleSubmit(handleCloseVisit)}
           >
             <div className="space-y-2">
               <Label htmlFor="primaryDiagnosis">Diagnostico principal</Label>
               <Textarea
                 id="primaryDiagnosis"
                 rows={3}
-                {...form.register("primaryDiagnosis")}
+                disabled={!canSaveClinicalData || saveDiagnosis.isPending}
+                {...diagnosisForm.register("primaryDiagnosis")}
               />
-              {form.formState.errors.primaryDiagnosis?.message ? (
+              {diagnosisForm.formState.errors.primaryDiagnosis?.message ? (
                 <p className="text-sm text-status-critical" role="alert">
-                  {form.formState.errors.primaryDiagnosis.message}
+                  {diagnosisForm.formState.errors.primaryDiagnosis.message}
                 </p>
               ) : null}
             </div>
@@ -213,32 +639,89 @@ export const DoctorConsultationPage = () => {
               <Textarea
                 id="finalNote"
                 rows={4}
-                {...form.register("finalNote")}
+                disabled={!canSaveClinicalData || saveDiagnosis.isPending}
+                {...diagnosisForm.register("finalNote")}
               />
-              {form.formState.errors.finalNote?.message ? (
+              {diagnosisForm.formState.errors.finalNote?.message ? (
                 <p className="text-sm text-status-critical" role="alert">
-                  {form.formState.errors.finalNote.message}
+                  {diagnosisForm.formState.errors.finalNote.message}
                 </p>
               ) : null}
             </div>
 
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={
+                  !canSaveClinicalData ||
+                  !diagnosisForm.formState.isValid ||
+                  saveDiagnosis.isPending ||
+                  closeVisit.isPending
+                }
+                onClick={() => {
+                  void diagnosisForm.handleSubmit(handleSaveDiagnosis)();
+                }}
+              >
+                Guardar diagnostico
+              </Button>
+
+              <Button
+                type="submit"
+                disabled={
+                  !canCloseSelectedVisit ||
+                  !diagnosisForm.formState.isValid ||
+                  closeVisit.isPending ||
+                  saveDiagnosis.isPending
+                }
+              >
+                Cerrar consulta
+              </Button>
+            </div>
+          </form>
+
+          <form
+            className="space-y-2"
+            noValidate
+            onSubmit={prescriptionsForm.handleSubmit(handleSavePrescriptions)}
+          >
+            <Label htmlFor="prescriptions">
+              Receta (una indicacion por linea)
+            </Label>
+            <Textarea
+              id="prescriptions"
+              rows={4}
+              disabled={!canSaveClinicalData || savePrescriptions.isPending}
+              {...prescriptionsForm.register("itemsText")}
+            />
+            {prescriptionsForm.formState.errors.itemsText?.message ? (
+              <p className="text-sm text-status-critical" role="alert">
+                {prescriptionsForm.formState.errors.itemsText.message}
+              </p>
+            ) : null}
             <Button
               type="submit"
+              variant="outline"
               disabled={
-                !canCloseSelectedVisit ||
-                !form.formState.isValid ||
-                closeVisit.isPending
+                !canSaveClinicalData ||
+                !prescriptionsForm.formState.isValid ||
+                savePrescriptions.isPending
               }
             >
-              Cerrar consulta
+              Guardar receta
             </Button>
           </form>
 
-          {feedbackMessage ? (
-            <p className="text-sm text-status-info" role="status">
-              {feedbackMessage}
-            </p>
+          {feedback ? (
+            <Alert variant={feedback.kind === "error" ? "warning" : "success"}>
+              <AlertTitle>
+                {feedback.kind === "error" ? "No se pudo completar" : "Listo"}
+              </AlertTitle>
+              <AlertDescription>{feedback.message}</AlertDescription>
+            </Alert>
           ) : null}
+
+          <VisitTimelinePanel entries={selectedTimelineEntries} />
         </section>
       ) : null}
     </section>

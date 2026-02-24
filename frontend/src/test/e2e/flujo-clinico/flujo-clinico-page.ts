@@ -35,6 +35,10 @@ interface CloseConsultationInput {
   finalNote: string;
 }
 
+interface SavePrescriptionInput {
+  items: string[];
+}
+
 type Credentials = {
   username: string;
   password: string;
@@ -192,6 +196,47 @@ export class FlujoClinicoPage {
     await expect(this.page.getByText("Consulta iniciada.")).toBeVisible();
   }
 
+  async saveDiagnosis(input: CloseConsultationInput): Promise<void> {
+    await this.page
+      .getByLabel("Diagnostico principal")
+      .fill(input.primaryDiagnosis);
+    await this.page.getByLabel("Nota final").fill(input.finalNote);
+
+    const [diagnosisResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes("/diagnosis") &&
+          response.request().method() === "POST",
+      ),
+      this.page.getByRole("button", { name: "Guardar diagnostico" }).click(),
+    ]);
+
+    expect(diagnosisResponse.status()).toBe(200);
+    await expect(
+      this.page.getByText("Diagnostico guardado correctamente."),
+    ).toBeVisible();
+  }
+
+  async savePrescription(input: SavePrescriptionInput): Promise<void> {
+    await this.page
+      .getByLabel("Receta (una indicacion por linea)")
+      .fill(input.items.join("\n"));
+
+    const [prescriptionsResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes("/prescriptions") &&
+          response.request().method() === "POST",
+      ),
+      this.page.getByRole("button", { name: "Guardar receta" }).click(),
+    ]);
+
+    expect(prescriptionsResponse.status()).toBe(200);
+    await expect(
+      this.page.getByText("Receta guardada correctamente."),
+    ).toBeVisible();
+  }
+
   async closeConsultation(input: CloseConsultationInput): Promise<void> {
     await this.page
       .getByLabel("Diagnostico principal")
@@ -201,8 +246,12 @@ export class FlujoClinicoPage {
     const [closeResponse] = await Promise.all([
       this.page.waitForResponse(
         (response) =>
-          response.url().includes("/consultation/close") &&
+          (response.url().includes("/consultation/close") ||
+            response.url().includes("/close")) &&
           response.request().method() === "POST",
+        {
+          timeout: DEFAULT_TIMEOUT_MS,
+        },
       ),
       this.page.getByRole("button", { name: "Cerrar consulta" }).click(),
     ]);

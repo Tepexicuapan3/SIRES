@@ -57,6 +57,16 @@ test.describe("Flujo clinico smoke", () => {
 
           await clinicoPage.captureVitals(createdVisit.folio);
           await clinicoPage.startConsultation(createdVisit.folio);
+          await clinicoPage.saveDiagnosis({
+            primaryDiagnosis: "Dolor lumbar inespecifico",
+            finalNote: "Paciente estable, egreso con indicaciones generales.",
+          });
+          await clinicoPage.savePrescription({
+            items: [
+              "Paracetamol 500mg cada 8h por 3 dias",
+              "Reposo relativo y ejercicios de estiramiento lumbar",
+            ],
+          });
           await clinicoPage.closeConsultation({
             primaryDiagnosis: "Dolor lumbar inespecifico",
             finalNote: "Paciente estable, egreso con indicaciones generales.",
@@ -173,7 +183,7 @@ test.describe("Flujo clinico smoke", () => {
 
       const e2eSmokeScript = packageJson.scripts?.["test:e2e:smoke"] ?? "";
       expect(e2eSmokeScript).toContain(
-        "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --project=chromium",
+        "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=playwright.smoke.docker.config.mjs --project=chromium",
       );
 
       const qualityGateScript =
