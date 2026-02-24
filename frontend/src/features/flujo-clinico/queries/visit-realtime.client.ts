@@ -42,6 +42,8 @@ interface VisitRealtimeClientOptions {
   backoffMaxMs?: number;
   jitterRatio?: number;
   random?: () => number;
+  heartbeatIntervalMs?: number;
+  heartbeatTimeoutMs?: number;
 }
 
 export class VisitRealtimeClient {
@@ -55,6 +57,8 @@ export class VisitRealtimeClient {
       backoffMaxMs: options.backoffMaxMs,
       jitterRatio: options.jitterRatio,
       random: options.random,
+      heartbeatIntervalMs: options.heartbeatIntervalMs,
+      heartbeatTimeoutMs: options.heartbeatTimeoutMs,
       onGap: (gap: RealtimeSequenceGap) => {
         options.onGapDetected?.(gap);
         options.onResyncRequested?.();

@@ -10,6 +10,7 @@ import type { RealtimeEventEnvelope } from "@/realtime/protocol";
 class FakeWebSocket implements RealtimeWebSocketLike {
   url: string;
   readyState = 0;
+  sentMessages: string[] = [];
   onopen: ((event: Event) => void) | null = null;
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onclose: ((event: CloseEvent) => void) | null = null;
@@ -21,9 +22,12 @@ class FakeWebSocket implements RealtimeWebSocketLike {
 
   close(): void {
     this.readyState = 3;
+    this.onclose?.({ code: 1000, reason: "client.close" } as CloseEvent);
   }
 
-  send(): void {}
+  send(payload: string): void {
+    this.sentMessages.push(payload);
+  }
 
   open(): void {
     this.readyState = 1;
@@ -32,6 +36,10 @@ class FakeWebSocket implements RealtimeWebSocketLike {
 
   serverMessage(payload: RealtimeEventEnvelope): void {
     this.onmessage?.({ data: JSON.stringify(payload) } as MessageEvent<string>);
+  }
+
+  serverRawMessage(payload: string): void {
+    this.onmessage?.({ data: payload } as MessageEvent<string>);
   }
 
   serverClose(code = 1006, reason = "network"): void {
@@ -193,5 +201,49 @@ describe("RealtimeClient", () => {
       expectedSequence: 101,
       receivedSequence: 102,
     });
+  });
+
+  it("envia ping y fuerza cierre cuando no llega pong", () => {
+    const socket = new FakeWebSocket("ws://localhost/ws/v1/visits/stream");
+    const client = new RealtimeClient({
+      url: "ws://localhost/ws/v1/visits/stream",
+      createSocket: () => socket,
+      random: () => 0,
+      heartbeatIntervalMs: 1000,
+      heartbeatTimeoutMs: 500,
+    });
+
+    client.connect();
+    socket.open();
+
+    vi.advanceTimersByTime(1000);
+    expect(socket.sentMessages).toContain('{"type":"ping"}');
+
+    vi.advanceTimersByTime(500);
+    expect(client.getState().connectionStatus).toBe(
+      REALTIME_CONNECTION_STATUS.DISCONNECTED,
+    );
+  });
+
+  it("mantiene conexion cuando llega pong dentro de timeout", () => {
+    const socket = new FakeWebSocket("ws://localhost/ws/v1/visits/stream");
+    const client = new RealtimeClient({
+      url: "ws://localhost/ws/v1/visits/stream",
+      createSocket: () => socket,
+      random: () => 0,
+      heartbeatIntervalMs: 1000,
+      heartbeatTimeoutMs: 500,
+    });
+
+    client.connect();
+    socket.open();
+
+    vi.advanceTimersByTime(1000);
+    socket.serverRawMessage('{"type":"pong"}');
+    vi.advanceTimersByTime(500);
+
+    expect(client.getState().connectionStatus).toBe(
+      REALTIME_CONNECTION_STATUS.CONNECTED,
+    );
   });
 });

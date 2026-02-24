@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_BACKEND_PORT?: string;
   readonly VITE_VISITS_STREAM_URL?: string;
   readonly VITE_VISITS_STREAM_PATH?: string;
+  readonly VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS?: string;
+  readonly VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS?: string;
 }
 
 interface ImportMeta {

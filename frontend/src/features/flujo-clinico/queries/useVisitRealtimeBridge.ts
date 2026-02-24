@@ -24,6 +24,7 @@ interface UseVisitRealtimeBridgeOptions {
   jitterRatio?: number;
   random?: () => number;
   heartbeatIntervalMs?: number;
+  heartbeatTimeoutMs?: number;
 }
 
 interface UseVisitRealtimeBridgeResult {
@@ -46,6 +47,7 @@ export const useVisitRealtimeBridge = (
     jitterRatio,
     random,
     heartbeatIntervalMs,
+    heartbeatTimeoutMs,
   } = options;
   const queryClient = useQueryClient();
 
@@ -89,6 +91,7 @@ export const useVisitRealtimeBridge = (
       jitterRatio,
       random: randomRef.current,
       heartbeatIntervalMs,
+      heartbeatTimeoutMs,
       onGap: (gap) => {
         void adapter.handleGap(gap);
       },
@@ -128,6 +131,7 @@ export const useVisitRealtimeBridge = (
     backoffMaxMs,
     jitterRatio,
     heartbeatIntervalMs,
+    heartbeatTimeoutMs,
   ]);
 
   return {

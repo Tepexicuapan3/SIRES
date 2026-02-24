@@ -30,9 +30,14 @@ websocket_application = CookieJWTAuthMiddleware(
     URLRouter(cast(list[Any], websocket_urlpatterns)),  # type: ignore[arg-type]
 )
 
-application = ProtocolTypeRouter(
-    {
-        "http": django_asgi_application,
-        "websocket": build_websocket_origin_validator(websocket_application),
-    }
-)
+
+def build_application():
+    return ProtocolTypeRouter(
+        {
+            "http": django_asgi_application,
+            "websocket": build_websocket_origin_validator(websocket_application),
+        }
+    )
+
+
+application = build_application()

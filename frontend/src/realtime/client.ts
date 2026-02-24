@@ -49,6 +49,7 @@ export interface RealtimeClientOptions {
   jitterRatio?: number;
   random?: () => number;
   heartbeatIntervalMs?: number;
+  heartbeatTimeoutMs?: number;
   heartbeatMessage?: string;
   onGap?: (gap: RealtimeSequenceGap) => void;
   onSocketError?: () => void;
@@ -59,7 +60,12 @@ const DEFAULT_BACKOFF_BASE_MS = 1000;
 const DEFAULT_BACKOFF_MAX_MS = 30000;
 const DEFAULT_JITTER_RATIO = 0.1;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 0;
-const DEFAULT_HEARTBEAT_MESSAGE = "ping";
+const DEFAULT_HEARTBEAT_TIMEOUT_MS = 10000;
+const DEFAULT_HEARTBEAT_MESSAGE = JSON.stringify({ type: "ping" });
+
+interface HeartbeatMessage {
+  type: string;
+}
 
 const createDefaultSocket = (url: string): RealtimeWebSocketLike => {
   if (typeof WebSocket === "undefined") {
@@ -77,6 +83,7 @@ export class RealtimeClient {
   private readonly jitterRatio: number;
   private readonly random: () => number;
   private readonly heartbeatIntervalMs: number;
+  private readonly heartbeatTimeoutMs: number;
   private readonly heartbeatMessage: string;
   private readonly onGap?: (gap: RealtimeSequenceGap) => void;
   private readonly onSocketError?: () => void;
@@ -86,6 +93,8 @@ export class RealtimeClient {
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private awaitingPong = false;
   private isStopped = false;
   private readonly seenEventIds = new Set<string>();
   private readonly eventHandlers = new Map<string, Set<RealtimeEventHandler>>();
@@ -105,6 +114,8 @@ export class RealtimeClient {
     this.random = options.random ?? Math.random;
     this.heartbeatIntervalMs =
       options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+    this.heartbeatTimeoutMs =
+      options.heartbeatTimeoutMs ?? DEFAULT_HEARTBEAT_TIMEOUT_MS;
     this.heartbeatMessage =
       options.heartbeatMessage ?? DEFAULT_HEARTBEAT_MESSAGE;
     this.onGap = options.onGap;
@@ -182,6 +193,7 @@ export class RealtimeClient {
     socket.onopen = () => {
       this.reconnectAttempts = 0;
       this.setConnectionStatus(REALTIME_CONNECTION_STATUS.CONNECTED);
+      this.awaitingPong = false;
       this.startHeartbeat();
     };
     socket.onmessage = (event) => {
@@ -203,6 +215,11 @@ export class RealtimeClient {
   }
 
   private handleRawMessage(rawData: string): void {
+    if (this.isHeartbeatPong(rawData)) {
+      this.acknowledgeHeartbeat();
+      return;
+    }
+
     const event = parseRealtimeEnvelope(rawData);
     if (!event) {
       return;
@@ -285,6 +302,7 @@ export class RealtimeClient {
       }
 
       this.socket.send(this.heartbeatMessage);
+      this.trackHeartbeatProbe();
     }, this.heartbeatIntervalMs);
   }
 
@@ -299,11 +317,55 @@ export class RealtimeClient {
 
   private clearHeartbeatTimer(): void {
     if (!this.heartbeatTimer) {
+      this.clearHeartbeatTimeoutTimer();
+      this.awaitingPong = false;
       return;
     }
 
     clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = null;
+    this.clearHeartbeatTimeoutTimer();
+    this.awaitingPong = false;
+  }
+
+  private clearHeartbeatTimeoutTimer(): void {
+    if (!this.heartbeatTimeoutTimer) {
+      return;
+    }
+
+    clearTimeout(this.heartbeatTimeoutTimer);
+    this.heartbeatTimeoutTimer = null;
+  }
+
+  private trackHeartbeatProbe(): void {
+    if (this.heartbeatTimeoutMs <= 0) {
+      return;
+    }
+
+    this.awaitingPong = true;
+    this.clearHeartbeatTimeoutTimer();
+
+    this.heartbeatTimeoutTimer = setTimeout(() => {
+      if (!this.awaitingPong || this.isStopped || !this.socket) {
+        return;
+      }
+
+      this.socket.close();
+    }, this.heartbeatTimeoutMs);
+  }
+
+  private acknowledgeHeartbeat(): void {
+    this.awaitingPong = false;
+    this.clearHeartbeatTimeoutTimer();
+  }
+
+  private isHeartbeatPong(rawData: string): boolean {
+    try {
+      const message = JSON.parse(rawData) as HeartbeatMessage;
+      return message?.type === "pong";
+    } catch {
+      return false;
+    }
   }
 
   private setConnectionStatus(status: RealtimeConnectionStatus): void {

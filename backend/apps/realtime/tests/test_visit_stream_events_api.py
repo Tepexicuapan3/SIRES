@@ -12,6 +12,7 @@ from apps.catalogos.models import Permisos, Roles
 from apps.recepcion.models import Visit
 from apps.realtime.consumers.visits import VISITS_STREAM_GROUP
 from apps.realtime.publisher import REALTIME_EVENT_HANDLER
+from apps.realtime.schemas import ENVELOPE_VERSION
 
 
 class VisitStreamRealtimeEventsApiTests(APITestCase):
@@ -154,6 +155,47 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
     def _unsubscribe_visits_stream(self, channel_layer, channel_name):
         async_to_sync(channel_layer.group_discard)(VISITS_STREAM_GROUP, channel_name)
 
+    def _assert_event_envelope(self, event, *, expected_event_type, expected_entity_id):
+        self.assertEqual(event.get("eventType"), expected_event_type)
+        self.assertEqual(event.get("entity"), "visit")
+        self.assertEqual(event.get("entityId"), str(expected_entity_id))
+        self.assertEqual(event.get("version"), ENVELOPE_VERSION)
+        self.assertEqual(event.get("requestId"), self.request_id)
+        self.assertEqual(event.get("correlationId"), self.request_id)
+        self.assertIsInstance(event.get("sequence"), int)
+        self.assertGreater(event.get("sequence"), 0)
+
+    def test_create_visit_publishes_status_changed_event(self):
+        self._login_as("recepcion_ws", self.recepcion_password)
+        channel_layer, channel_name = self._subscribe_visits_stream()
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "patientId": 91555,
+                "arrivalType": "appointment",
+                "appointmentId": "APP-WS-CREATE",
+                "doctorId": 77,
+                "notes": "visita creada para prueba realtime",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        message = self._read_group_message(channel_layer, channel_name)
+        self._unsubscribe_visits_stream(channel_layer, channel_name)
+
+        self.assertEqual(message.get("type"), REALTIME_EVENT_HANDLER)
+        event = message.get("event") or {}
+        self._assert_event_envelope(
+            event,
+            expected_event_type="visit.status.changed",
+            expected_entity_id=response.data["id"],
+        )
+        self.assertEqual(event.get("payload", {}).get("status"), "en_espera")
+
     def test_patch_visit_status_publishes_status_changed_event(self):
         self._login_as("recepcion_ws", self.recepcion_password)
         channel_layer, channel_name = self._subscribe_visits_stream()
@@ -172,10 +214,11 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
 
         self.assertEqual(message.get("type"), REALTIME_EVENT_HANDLER)
         event = message.get("event") or {}
-        self.assertEqual(event.get("eventType"), "visit.status.changed")
-        self.assertEqual(event.get("entity"), "visit")
-        self.assertEqual(event.get("entityId"), str(self.visit_recepcion.id_visit))
-        self.assertEqual(event.get("requestId"), self.request_id)
+        self._assert_event_envelope(
+            event,
+            expected_event_type="visit.status.changed",
+            expected_entity_id=self.visit_recepcion.id_visit,
+        )
         self.assertEqual(event.get("payload", {}).get("status"), "cancelada")
 
     def test_capture_vitals_publishes_status_changed_event(self):
@@ -200,8 +243,11 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
 
         self.assertEqual(message.get("type"), REALTIME_EVENT_HANDLER)
         event = message.get("event") or {}
-        self.assertEqual(event.get("eventType"), "visit.status.changed")
-        self.assertEqual(event.get("entityId"), str(self.visit_somatometria.id_visit))
+        self._assert_event_envelope(
+            event,
+            expected_event_type="visit.status.changed",
+            expected_entity_id=self.visit_somatometria.id_visit,
+        )
         self.assertEqual(event.get("payload", {}).get("status"), "lista_para_doctor")
 
     def test_start_consultation_publishes_status_changed_event(self):
@@ -222,8 +268,11 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
 
         self.assertEqual(message.get("type"), REALTIME_EVENT_HANDLER)
         event = message.get("event") or {}
-        self.assertEqual(event.get("eventType"), "visit.status.changed")
-        self.assertEqual(event.get("entityId"), str(self.visit_doctor_ready.id_visit))
+        self._assert_event_envelope(
+            event,
+            expected_event_type="visit.status.changed",
+            expected_entity_id=self.visit_doctor_ready.id_visit,
+        )
         self.assertEqual(event.get("payload", {}).get("status"), "en_consulta")
 
     def test_close_consultation_publishes_visit_closed_event(self):
@@ -247,6 +296,9 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
 
         self.assertEqual(message.get("type"), REALTIME_EVENT_HANDLER)
         event = message.get("event") or {}
-        self.assertEqual(event.get("eventType"), "visit.closed")
-        self.assertEqual(event.get("entityId"), str(self.visit_doctor_open.id_visit))
+        self._assert_event_envelope(
+            event,
+            expected_event_type="visit.closed",
+            expected_entity_id=self.visit_doctor_open.id_visit,
+        )
         self.assertEqual(event.get("payload"), {})

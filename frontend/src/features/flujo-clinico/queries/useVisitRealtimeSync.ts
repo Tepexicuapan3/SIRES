@@ -16,6 +16,8 @@ interface UseVisitRealtimeSyncOptions {
   backoffMaxMs?: number;
   jitterRatio?: number;
   random?: () => number;
+  heartbeatIntervalMs?: number;
+  heartbeatTimeoutMs?: number;
 }
 
 interface UseVisitRealtimeSyncResult {
@@ -24,6 +26,21 @@ interface UseVisitRealtimeSyncResult {
 }
 
 const DEFAULT_VISIT_STREAM_PATH = "/ws/v1/visits/stream";
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
+const DEFAULT_HEARTBEAT_TIMEOUT_MS = 10_000;
+
+const parsePositiveNumber = (value: string | undefined): number | null => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+};
 
 const resolveVisitStreamPath = (): string => {
   const configuredPath = import.meta.env.VITE_VISITS_STREAM_PATH;
@@ -97,6 +114,22 @@ const resolveDefaultVisitStreamUrl = (): string => {
   return resolveVisitStreamPath();
 };
 
+const resolveHeartbeatIntervalMs = (): number => {
+  return (
+    parsePositiveNumber(
+      import.meta.env.VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS,
+    ) ?? DEFAULT_HEARTBEAT_INTERVAL_MS
+  );
+};
+
+const resolveHeartbeatTimeoutMs = (): number => {
+  return (
+    parsePositiveNumber(
+      import.meta.env.VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS,
+    ) ?? DEFAULT_HEARTBEAT_TIMEOUT_MS
+  );
+};
+
 export const useVisitRealtimeSync = (
   options: UseVisitRealtimeSyncOptions = {},
 ): UseVisitRealtimeSyncResult => {
@@ -109,6 +142,8 @@ export const useVisitRealtimeSync = (
     backoffMaxMs,
     jitterRatio,
     random,
+    heartbeatIntervalMs = resolveHeartbeatIntervalMs(),
+    heartbeatTimeoutMs = resolveHeartbeatTimeoutMs(),
   } = options;
 
   const bridge = useVisitRealtimeBridge({
@@ -120,6 +155,8 @@ export const useVisitRealtimeSync = (
     backoffMaxMs,
     jitterRatio,
     random,
+    heartbeatIntervalMs,
+    heartbeatTimeoutMs,
   });
 
   return {

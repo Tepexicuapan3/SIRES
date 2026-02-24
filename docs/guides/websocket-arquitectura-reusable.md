@@ -121,6 +121,22 @@ Reglas:
 - Al reconectar, validar continuidad por `sequence`.
 - Si hay hueco de secuencia: hacer `resync` por REST (snapshot) y continuar stream.
 
+### Politica operativa KAN-22 (v1)
+
+- Heartbeat FE por defecto en stream de visitas:
+  - `ping` cada `30000ms`
+  - timeout de `10000ms` para `pong`
+  - si no llega `pong`, se cierra socket y se activa reconexion del cliente
+- Contrato de heartbeat:
+  - cliente envia `{"type":"ping"}`
+  - backend responde `{"type":"pong"}`
+- Codigos de cierre funcionales en consumer:
+  - `4401`: no autenticado / token en query string
+  - `4400`: payload WS invalido (no objeto JSON)
+- Origin invalido:
+  - se rechaza en handshake por validador de origen (`AllowedHostsOriginValidator` / `OriginValidator`)
+  - para v1 no se fija close code funcional adicional (p.ej. `4403`), se prioriza rechazo de handshake + trazabilidad en logs
+
 ### Regla anti-drift
 
 Si el cliente detecta `sequence` no consecutivo:

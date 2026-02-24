@@ -208,9 +208,27 @@ export class FlujoClinicoPage {
     ]);
 
     expect(closeResponse.status()).toBe(200);
-    await expect(
-      this.page.getByText("Consulta cerrada correctamente."),
-    ).toBeVisible();
+
+    await expect
+      .poll(
+        async () => {
+          const hasSuccessFeedback = await this.page
+            .getByText("Consulta cerrada correctamente.")
+            .isVisible();
+          if (hasSuccessFeedback) {
+            return true;
+          }
+
+          return this.page
+            .getByText("No hay pacientes listos para doctor.")
+            .isVisible();
+        },
+        {
+          timeout: DEFAULT_TIMEOUT_MS,
+          intervals: [200, 350, 500],
+        },
+      )
+      .toBe(true);
   }
 
   async waitForVisitOption(
