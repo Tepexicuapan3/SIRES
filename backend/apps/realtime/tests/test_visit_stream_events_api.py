@@ -328,6 +328,7 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
             },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -342,6 +343,10 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
             expected_entity_id=self.visit_somatometria.id_visit,
         )
         self.assertEqual(event.get("payload", {}).get("status"), "lista_para_doctor")
+        self.assertEqual(
+            event.get("payload", {}).get("previousStatus"),
+            "en_somatometria",
+        )
 
     def test_start_consultation_publishes_status_changed_event(self):
         self._login_as("doctor_ws", self.doctor_password)

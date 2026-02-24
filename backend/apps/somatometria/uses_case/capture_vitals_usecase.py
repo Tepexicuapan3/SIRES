@@ -1,5 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.db import transaction
+
 from apps.authentication.services.permission_dependencies import (
     evaluate_permission_requirement,
 )
@@ -54,8 +56,9 @@ def capture_vitals(visit_id, vitals_payload):
     payload = dict(vitals_payload)
     payload["bmi"] = _calculate_bmi(payload["weightKg"], payload["heightCm"])
 
-    vital_signs = VitalsRepository.upsert_for_visit(visit, payload)
-    VisitRepository.update_status(visit, next_state)
+    with transaction.atomic():
+        vital_signs = VitalsRepository.upsert_for_visit(visit, payload)
+        VisitRepository.update_status(visit, next_state)
 
     return {
         "visitId": visit.id_visit,

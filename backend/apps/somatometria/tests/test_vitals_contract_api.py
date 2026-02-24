@@ -2,7 +2,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelRolPermiso, RelUsuarioRol
+from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Permisos, Roles
 from apps.recepcion.models import Visit
@@ -101,6 +101,11 @@ class VitalsContractsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.client.cookies = response.cookies
 
+    def _csrf_headers(self):
+        csrf_token = "csrf-token-test"
+        self.client.cookies["csrf_token"] = csrf_token
+        return {"HTTP_X_CSRF_TOKEN": csrf_token}
+
     def _valid_payload(self):
         return {
             "weightKg": 70,
@@ -117,6 +122,7 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -128,6 +134,29 @@ class VitalsContractsApiTests(APITestCase):
         self.visit_in_somato.refresh_from_db()
         self.assertEqual(self.visit_in_somato.status, "lista_para_doctor")
 
+        audit_event = AuditoriaEvento.objects.get(
+            accion="VitalsCompleted",
+            request_id=self.request_id,
+        )
+        self.assertEqual(audit_event.resultado, "SUCCESS")
+        self.assertEqual(audit_event.meta.get("module"), "somatometria")
+        self.assertEqual(audit_event.meta.get("visitId"), self.visit_in_somato.id_visit)
+
+    def test_capture_vitals_missing_csrf_returns_permission_denied(self):
+        self._login_as("somato_user", self.somato_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_DENIED")
+        self.assertEqual(response.data["status"], 403)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
     def test_capture_vitals_allows_clinico_with_somatometria_permission(self):
         self._login_as("clinico_user", "Clinico_123456")
 
@@ -136,6 +165,7 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -151,6 +181,7 @@ class VitalsContractsApiTests(APITestCase):
             payload,
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -170,6 +201,7 @@ class VitalsContractsApiTests(APITestCase):
             payload,
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -191,6 +223,7 @@ class VitalsContractsApiTests(APITestCase):
             },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -209,6 +242,7 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
@@ -224,6 +258,7 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -239,6 +274,7 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -265,6 +301,7 @@ class VitalsContractsApiTests(APITestCase):
             payload,
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
