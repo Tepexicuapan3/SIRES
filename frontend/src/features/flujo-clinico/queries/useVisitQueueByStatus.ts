@@ -5,6 +5,7 @@ import { visitFlowKeys } from "@features/flujo-clinico/queries/visit-flow.keys";
 
 interface UseVisitQueueByStatusOptions {
   enabled?: boolean;
+  refetchIntervalMs?: number;
 }
 
 export const useVisitQueueByStatus = (
@@ -16,5 +17,6 @@ export const useVisitQueueByStatus = (
     queryFn: () => visitsAPI.getAll({ page: 1, pageSize: 20, status }),
     staleTime: 30 * 1000,
     enabled: options.enabled ?? true,
+    refetchInterval: options.refetchIntervalMs,
   });
 };

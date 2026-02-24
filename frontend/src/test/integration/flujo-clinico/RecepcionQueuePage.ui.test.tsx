@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, within, waitFor } from "@/test/utils";
+import { ApiError } from "@api/utils/errors";
 import RecepcionQueuePage from "@features/flujo-clinico/pages/RecepcionQueuePage";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useRecepcionQueue } from "@features/flujo-clinico/queries/useRecepcionQueue";
 import { useCreateVisit } from "@features/flujo-clinico/mutations/useCreateVisit";
 import { useVisitStatusAction } from "@features/flujo-clinico/mutations/useVisitStatusAction";
@@ -17,6 +19,10 @@ vi.mock("@features/flujo-clinico/mutations/useCreateVisit", () => ({
 
 vi.mock("@features/flujo-clinico/mutations/useVisitStatusAction", () => ({
   useVisitStatusAction: vi.fn(),
+}));
+
+vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
+  usePermissionDependencies: vi.fn(),
 }));
 
 const createVisit = (
@@ -38,6 +44,12 @@ describe("RecepcionQueuePage UI", () => {
   const statusMutateAsync = vi.fn();
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: () => true,
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
+
     vi.mocked(useRecepcionQueue).mockReturnValue({
       data: {
         items: [
@@ -66,6 +78,53 @@ describe("RecepcionQueuePage UI", () => {
 
     createMutateAsync.mockResolvedValue({ id: 99 });
     statusMutateAsync.mockResolvedValue({ id: 1, status: "cancelada" });
+  });
+
+  it("deshabilita carga de cola cuando no tiene permiso de lectura", () => {
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: () => false,
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
+
+    vi.mocked(useRecepcionQueue).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useRecepcionQueue>);
+
+    render(<RecepcionQueuePage />);
+
+    expect(useRecepcionQueue).toHaveBeenCalledWith({ enabled: false });
+    expect(
+      screen.getByText(
+        "No tenes permisos completos para cargar la bandeja de recepcion.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("muestra aviso neutral y bloquea escrituras cuando no tiene permisos completos", () => {
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: (capability: string) =>
+        capability === "flow.visits.queue.read",
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
+
+    render(<RecepcionQueuePage />);
+
+    expect(
+      screen.getByText(
+        "No tenes permisos completos para registrar llegadas o actualizar estados.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Registrar llegada" }),
+    ).toBeDisabled();
+    const firstRow = screen.getByText("VST-001").closest("tr");
+    expect(firstRow).not.toBeNull();
+    expect(
+      within(firstRow as HTMLElement).getByRole("button", {
+        name: "Cancelar visita",
+      }),
+    ).toBeDisabled();
   });
 
   it("renderiza estado loading", () => {
@@ -119,6 +178,69 @@ describe("RecepcionQueuePage UI", () => {
     expect(screen.getByText("VST-002")).toBeVisible();
   });
 
+  it("aplica filtros y orden en la cola", async () => {
+    vi.mocked(useRecepcionQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            id: 1,
+            folio: "VST-001",
+            patientId: 9001,
+            arrivalType: "appointment",
+            status: "en_espera",
+          }),
+          createVisit({
+            id: 2,
+            folio: "VST-010",
+            patientId: 9010,
+            arrivalType: "walk_in",
+            appointmentId: null,
+            status: "en_espera",
+          }),
+          createVisit({
+            id: 3,
+            folio: "VST-003",
+            patientId: 9003,
+            arrivalType: "appointment",
+            status: "en_espera",
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 3,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useRecepcionQueue>);
+
+    const user = userEvent.setup();
+    render(<RecepcionQueuePage />);
+
+    await user.selectOptions(
+      screen.getByLabelText("Ordenar por"),
+      "patient_desc",
+    );
+
+    const table = screen.getByRole("table", { name: "Cola de recepcion" });
+    const rows = within(table).getAllByRole("row");
+    expect(within(rows[1] as HTMLElement).getByText("VST-010")).toBeVisible();
+
+    await user.type(screen.getByLabelText("Buscar paciente o folio"), "9003");
+    expect(screen.getByText("VST-003")).toBeVisible();
+    expect(screen.queryByText("VST-001")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Buscar paciente o folio"));
+    await user.selectOptions(
+      screen.getByLabelText("Filtrar por tipo de llegada"),
+      "walk_in",
+    );
+
+    expect(screen.getByText("VST-010")).toBeVisible();
+    expect(screen.queryByText("VST-003")).not.toBeInTheDocument();
+  });
+
   it("valida formulario critico de llegada", async () => {
     const user = userEvent.setup();
     render(<RecepcionQueuePage />);
@@ -153,6 +275,33 @@ describe("RecepcionQueuePage UI", () => {
         notes: "Paciente sin acompanante",
       });
     });
+
+    expect(screen.getByText("Llegada registrada correctamente.")).toBeVisible();
+  });
+
+  it("mapea errores de dominio al registrar llegada", async () => {
+    createMutateAsync.mockRejectedValueOnce(
+      new ApiError(
+        "VISIT_DUPLICATE_SUBMIT",
+        "VISIT_DUPLICATE_SUBMIT",
+        409,
+        undefined,
+        "req-test",
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(<RecepcionQueuePage />);
+
+    await user.type(screen.getByLabelText("ID paciente"), "1234");
+    await user.type(screen.getByLabelText("ID de cita"), "APP-1234");
+    await user.click(screen.getByRole("button", { name: "Registrar llegada" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Ya existe una visita abierta para este paciente."),
+      ).toBeVisible();
+    });
   });
 
   it("bloquea acciones invalidas segun estado de visita", () => {
@@ -162,12 +311,92 @@ describe("RecepcionQueuePage UI", () => {
     expect(row).not.toBeNull();
 
     expect(
-      within(row as HTMLElement).getByRole("button", { name: "Cancelar" }),
+      within(row as HTMLElement).getByRole("button", {
+        name: "Cancelar visita",
+      }),
     ).toBeDisabled();
     expect(
       within(row as HTMLElement).getByRole("button", {
         name: "Marcar no show",
       }),
     ).toBeDisabled();
+  });
+
+  it("confirma accion de cancelacion antes de mutar", async () => {
+    const user = userEvent.setup();
+    render(<RecepcionQueuePage />);
+
+    const firstRow = screen.getByText("VST-001").closest("tr");
+    expect(firstRow).not.toBeNull();
+
+    await user.click(
+      within(firstRow as HTMLElement).getByRole("button", {
+        name: "Cancelar visita",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirmar cancelacion" }),
+    );
+
+    await waitFor(() => {
+      expect(statusMutateAsync).toHaveBeenCalledWith({
+        visitId: 1,
+        targetStatus: "cancelada",
+      });
+    });
+
+    expect(screen.getByText("Visita marcada como cancelada.")).toBeVisible();
+  });
+
+  it("permite abortar la confirmacion de no show", async () => {
+    const user = userEvent.setup();
+    render(<RecepcionQueuePage />);
+
+    const firstRow = screen.getByText("VST-001").closest("tr");
+    expect(firstRow).not.toBeNull();
+
+    await user.click(
+      within(firstRow as HTMLElement).getByRole("button", {
+        name: "Marcar no show",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Volver" }));
+
+    expect(statusMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("mapea errores de dominio al actualizar estado", async () => {
+    statusMutateAsync.mockRejectedValueOnce(
+      new ApiError(
+        "VISIT_STATE_INVALID",
+        "VISIT_STATE_INVALID",
+        409,
+        undefined,
+        "req-test",
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(<RecepcionQueuePage />);
+
+    const firstRow = screen.getByText("VST-001").closest("tr");
+    expect(firstRow).not.toBeNull();
+
+    await user.click(
+      within(firstRow as HTMLElement).getByRole("button", {
+        name: "Cancelar visita",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirmar cancelacion" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "La visita ya no esta en un estado valido para esta accion. Actualiza la cola.",
+        ),
+      ).toBeVisible();
+    });
   });
 });

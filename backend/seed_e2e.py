@@ -84,13 +84,22 @@ PERMISSIONS = [
     ("clinico:expedientes:create", "Clinico - Crear expediente"),
     ("clinico:somatometria:read", "Clinico - Ver somatometria"),
     (
+        "recepcion:fichas:medicina_general:read",
+        "Recepcion - Ver ficha medicina general",
+    ),
+    (
         "recepcion:fichas:medicina_general:create",
         "Recepcion - Ficha medicina general",
+    ),
+    (
+        "recepcion:fichas:especialidad:read",
+        "Recepcion - Ver ficha especialidad",
     ),
     (
         "recepcion:fichas:especialidad:create",
         "Recepcion - Ficha especialidad",
     ),
+    ("recepcion:fichas:urgencias:read", "Recepcion - Ver ficha urgencias"),
     ("recepcion:fichas:urgencias:create", "Recepcion - Ficha urgencias"),
     ("recepcion:incapacidad:create", "Recepcion - Incapacidad"),
     ("farmacia:recetas:dispensar", "Farmacia - Dispensar recetas"),
@@ -237,8 +246,11 @@ ROLE_DEFS = [
         "desc": "Recepcion",
         "landing": "/recepcion/fichas/medicina-general",
         "perms": [
+            "recepcion:fichas:medicina_general:read",
             "recepcion:fichas:medicina_general:create",
+            "recepcion:fichas:especialidad:read",
             "recepcion:fichas:especialidad:create",
+            "recepcion:fichas:urgencias:read",
             "recepcion:fichas:urgencias:create",
             "recepcion:incapacidad:create",
         ],

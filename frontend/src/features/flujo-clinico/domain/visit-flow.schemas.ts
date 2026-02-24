@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import { ARRIVAL_TYPE } from "@api/types";
 
 const parseOptionalNumber = (value: unknown): unknown => {

@@ -1,6 +1,5 @@
 import { expect, type APIResponse, type Page } from "@playwright/test";
 
-const API_BASE_URL = "http://localhost:5000/api/v1";
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 export const FLUJO_CLINICO_USERS = {
@@ -120,10 +119,11 @@ export class FlujoClinicoPage {
 
   async moveVisitToSomatometria(visitId: number): Promise<APIResponse> {
     const csrfToken = await this.getCookieValue("csrf_token");
+    const apiBaseUrl = this.getApiBaseUrl();
 
     const response = await this.page
       .context()
-      .request.patch(`${API_BASE_URL}/visits/${visitId}/status`, {
+      .request.patch(`${apiBaseUrl}/visits/${visitId}/status`, {
         data: {
           targetStatus: "en_somatometria",
         },
@@ -277,6 +277,17 @@ export class FlujoClinicoPage {
     const cookies = await this.page.context().cookies();
     const cookie = cookies.find((entry) => entry.name === cookieName);
     return cookie?.value ?? "";
+  }
+
+  private getApiBaseUrl(): string {
+    const currentUrl = this.page.url();
+
+    if (!currentUrl) {
+      return "http://localhost:5000/api/v1";
+    }
+
+    const { origin } = new URL(currentUrl);
+    return `${origin}/api/v1`;
   }
 
   private async selectVisitByFolio(

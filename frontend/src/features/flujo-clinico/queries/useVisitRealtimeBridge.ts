@@ -55,6 +55,9 @@ export const useVisitRealtimeBridge = (
   const socketFactoryRef = useRef(socketFactory);
   const randomRef = useRef(random);
   const resyncParamsRef = useRef(resyncParams);
+  const previousConnectionStatusRef = useRef<RealtimeConnectionStatus>(
+    REALTIME_CONNECTION_STATUS.IDLE,
+  );
 
   useEffect(() => {
     socketFactoryRef.current = socketFactory;
@@ -96,8 +99,18 @@ export const useVisitRealtimeBridge = (
     ]);
     const unbindSubscriptions = bindSubscriptionsRegistry(client, registry);
     const unbindState = client.onStateChange((state) => {
+      const previousStatus = previousConnectionStatusRef.current;
+      previousConnectionStatusRef.current = state.connectionStatus;
+
       setConnectionStatus(state.connectionStatus);
       setLastSequence(state.lastSequence);
+
+      if (
+        state.connectionStatus === REALTIME_CONNECTION_STATUS.CONNECTED &&
+        previousStatus !== REALTIME_CONNECTION_STATUS.CONNECTED
+      ) {
+        void adapter.resync();
+      }
     });
 
     client.connect();

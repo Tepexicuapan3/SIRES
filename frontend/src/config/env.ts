@@ -38,11 +38,6 @@ const getApiUrl = (): string => {
   }
 
   if (import.meta.env.DEV) {
-    if (typeof window !== "undefined") {
-      const backendPort = import.meta.env.VITE_BACKEND_PORT || "5000";
-      return `${window.location.protocol}//${window.location.hostname}:${backendPort}/api/v1`;
-    }
-
     return "/api/v1";
   }
 

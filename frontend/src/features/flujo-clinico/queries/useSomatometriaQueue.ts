@@ -20,5 +20,9 @@ export const useSomatometriaQueue = (
     },
   });
 
-  return useVisitQueueByStatus(VISIT_STATUS.EN_SOMATOMETRIA, options);
+  return useVisitQueueByStatus(VISIT_STATUS.EN_SOMATOMETRIA, {
+    ...options,
+    refetchIntervalMs:
+      enabled && import.meta.env.MODE !== "test" ? 2_000 : undefined,
+  });
 };
