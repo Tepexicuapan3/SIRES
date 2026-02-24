@@ -32,9 +32,9 @@ docker-compose up --build -d
 ```
 
 `docker-compose` toma variables compartidas desde `.env` en la raiz.
-Con eso cada desarrollador puede tener su propia configuracion local (puertos, host LAN, websocket) sin tocar el `docker-compose.yml`.
+Con eso cada desarrollador puede tener su propia configuracion local (puertos, host LAN, websocket) sin tocar `docker-compose.yml`.
 
-Para pruebas LAN, deja `ALLOW_ALL_HOSTS=true` en `.env` para evitar `DisallowedHost` al abrir con IP.
+Para pruebas LAN, deja `ALLOW_ALL_HOSTS=true` en `.env` para evitar `DisallowedHost` al abrir con IP local.
 
 ### 3) Verificar
 
@@ -85,8 +85,8 @@ python manage.py test
 - Frontend unit/integration: `cd frontend && bun test`
 - Frontend coverage: `cd frontend && bun run test:coverage`
 - Frontend E2E: `cd frontend && bunx playwright test`
-- Frontend smoke E2E KAN-27: `cd frontend && bun run test:e2e:smoke`
-- Frontend quality gate KAN-4 smoke: `cd frontend && bun run quality:kan4:smoke`
+- Frontend smoke E2E KAN-27: `cd frontend && bun run test:e2e:smoke` (flujo rapido de regresion)
+- Frontend quality gate KAN-4 smoke: `cd frontend && bun run quality:kan4:smoke` (UI critica + API + E2E)
 - Backend tests: `cd backend && python manage.py test`
 
 ## Estructura del Proyecto
