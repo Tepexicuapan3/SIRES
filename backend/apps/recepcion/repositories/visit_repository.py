@@ -6,11 +6,19 @@ from apps.recepcion.models import Visit
 
 class VisitRepository:
     @staticmethod
-    def create(patient_id, arrival_type, appointment_id=None, doctor_id=None, notes=None):
+    def create(
+        patient_id,
+        arrival_type,
+        service_type=Visit.ServiceType.MEDICINA_GENERAL,
+        appointment_id=None,
+        doctor_id=None,
+        notes=None,
+    ):
         return Visit.objects.create(
             folio=VisitRepository._build_folio(),
             patient_id=patient_id,
             arrival_type=arrival_type,
+            service_type=service_type,
             appointment_id=appointment_id,
             doctor_id=doctor_id,
             notes=notes,
@@ -36,7 +44,14 @@ class VisitRepository:
         return visit
 
     @staticmethod
-    def list_paginated(page, page_size, status_filter=None, date_filter=None, doctor_id=None):
+    def list_paginated(
+        page,
+        page_size,
+        status_filter=None,
+        date_filter=None,
+        doctor_id=None,
+        service_type=None,
+    ):
         queryset = Visit.objects.order_by("-id_visit")
 
         if status_filter:
@@ -45,6 +60,8 @@ class VisitRepository:
             queryset = queryset.filter(fch_alta__date=date_filter)
         if doctor_id:
             queryset = queryset.filter(doctor_id=doctor_id)
+        if service_type:
+            queryset = queryset.filter(service_type=service_type)
 
         total = queryset.count()
         start = (page - 1) * page_size
@@ -61,6 +78,7 @@ class VisitRepository:
             "folio": visit.folio,
             "patientId": visit.patient_id,
             "arrivalType": visit.arrival_type,
+            "serviceType": visit.service_type,
             "appointmentId": visit.appointment_id,
             "doctorId": visit.doctor_id,
             "notes": visit.notes,

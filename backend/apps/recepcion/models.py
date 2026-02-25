@@ -5,6 +5,12 @@ class Visit(models.Model):
     class ArrivalType(models.TextChoices):
         APPOINTMENT = "appointment", "appointment"
         WALK_IN = "walk_in", "walk_in"
+
+    class ServiceType(models.TextChoices):
+        MEDICINA_GENERAL = "medicina_general", "medicina_general"
+        ESPECIALIDAD = "especialidad", "especialidad"
+        URGENCIAS = "urgencias", "urgencias"
+
     id_visit = models.BigAutoField(primary_key=True, db_column="id_visit")
     # unique=True ya crea indice, no hace falta db_index=True
     folio = models.CharField(max_length=32, db_column="folio", unique=True)
@@ -13,6 +19,12 @@ class Visit(models.Model):
         max_length=16,
         choices=ArrivalType.choices,
         db_column="arrival_type",
+    )
+    service_type = models.CharField(
+        max_length=32,
+        choices=ServiceType.choices,
+        db_column="service_type",
+        default=ServiceType.MEDICINA_GENERAL,
     )
     appointment_id = models.CharField(
         max_length=64,

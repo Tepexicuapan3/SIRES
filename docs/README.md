@@ -38,6 +38,7 @@ Guías técnicas para desarrollo del Sistema de Información de Registros Electr
 | **Configurar rate limiting** | [Rate Limiting](./architecture/rate-limiting.md) | 25 min |
 | **Implementar OTP/Recovery** | [OTP con Redis](./architecture/otp-redis.md) | 20 min |
 | **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
+| **Operar Recepcion con UI/UX enfocada** | [Recepcion Operacion UI/UX](./guides/recepcion-operacion-ui-ux.md) | 15 min |
 | **Ejecutar KAN-4 con IA (sin supuestos)** | [KAN-4 Playbook](./guides/kan4-implementacion-overview.md) | 25 min |
 | **Implementar tiempo real con WebSocket** | [WebSocket Reusable](./guides/websocket-arquitectura-reusable.md) | 20 min |
 | **Auth queries/mutations** | [Auth Queries](./guides/auth-queries-mutations.md) | 15 min |
@@ -81,6 +82,7 @@ docs/
 │
 ├── guides/
 │   ├── adding-feature.md           # Checklist backend → frontend
+│   ├── recepcion-operacion-ui-ux.md # Guia operativa de recepcion (agenda + check-in)
 │   ├── auth-queries-mutations.md   # Guia de auth con TanStack Query
 │   ├── rbac-crud-implementation.md # 🆕 Plan implementación RBAC CRUD completo
 │   ├── rbac-crud-user-guide.md     # 🆕 Guía de uso sistema RBAC CRUD

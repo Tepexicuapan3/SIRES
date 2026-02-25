@@ -91,7 +91,7 @@ Con eso MSW intercepta requests en navegador y permite desarrollar sin backend a
 | --- | --- |
 | `admin` | `/admin/roles` |
 | `clinico` o `medico` | `/clinico/consultas` |
-| `recepcion` | `/recepcion/fichas` |
+| `recepcion` | `/recepcion/agenda` |
 | `farmacia` | `/farmacia/recetas` |
 | `urgencias` | `/urgencias/triage` |
 | `hospital` | `/hospital` |

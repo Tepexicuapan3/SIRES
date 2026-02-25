@@ -7,6 +7,14 @@ export const ARRIVAL_TYPE = {
 
 export type ArrivalType = (typeof ARRIVAL_TYPE)[keyof typeof ARRIVAL_TYPE];
 
+export const VISIT_SERVICE = {
+  MEDICINA_GENERAL: "medicina_general",
+  ESPECIALIDAD: "especialidad",
+  URGENCIAS: "urgencias",
+} as const;
+
+export type VisitService = (typeof VISIT_SERVICE)[keyof typeof VISIT_SERVICE];
+
 export const VISIT_STATUS = {
   EN_ESPERA: "en_espera",
   EN_SOMATOMETRIA: "en_somatometria",
@@ -24,6 +32,7 @@ export interface VisitQueueItem {
   folio: string;
   patientId: number;
   arrivalType: ArrivalType;
+  serviceType: VisitService;
   appointmentId: string | null;
   doctorId: number | null;
   notes: string | null;
@@ -34,6 +43,7 @@ export interface VisitsListParams {
   page?: number;
   pageSize?: number;
   status?: VisitStatus;
+  serviceType?: VisitService;
   date?: string;
   doctorId?: number;
 }
@@ -43,6 +53,7 @@ export type VisitsListResponse = ListResponse<VisitQueueItem>;
 export interface CreateVisitRequest {
   patientId: number;
   arrivalType: ArrivalType;
+  serviceType: VisitService;
   appointmentId?: string;
   doctorId?: number;
   notes?: string;

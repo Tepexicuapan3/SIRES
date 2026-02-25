@@ -135,6 +135,7 @@ class VisitsView(APIView):
             visit = create_visit(
                 patient_id=serializer.validated_data["patientId"],
                 arrival_type=serializer.validated_data["arrivalType"],
+                service_type=serializer.validated_data.get("serviceType"),
                 appointment_id=serializer.validated_data.get("appointmentId"),
                 doctor_id=serializer.validated_data.get("doctorId"),
                 notes=serializer.validated_data.get("notes"),
@@ -186,6 +187,7 @@ class VisitsView(APIView):
             status_filter=serializer.validated_data.get("status"),
             date_filter=serializer.validated_data.get("date"),
             doctor_id=serializer.validated_data.get("doctorId"),
+            service_type=serializer.validated_data.get("serviceType"),
         )
         return Response(payload, status=status.HTTP_200_OK)
 

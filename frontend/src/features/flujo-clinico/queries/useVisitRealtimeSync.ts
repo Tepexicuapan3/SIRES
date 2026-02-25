@@ -28,6 +28,7 @@ interface UseVisitRealtimeSyncResult {
 const DEFAULT_VISIT_STREAM_PATH = "/ws/v1/visits/stream";
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 const DEFAULT_HEARTBEAT_TIMEOUT_MS = 10_000;
+const DEFAULT_DEV_BACKEND_PORT = 5000;
 
 const parsePositiveNumber = (value: string | undefined): number | null => {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -42,6 +43,20 @@ const parsePositiveNumber = (value: string | undefined): number | null => {
   return parsed;
 };
 
+const parsePortNumber = (value: string | undefined): number | null => {
+  const parsed = parsePositiveNumber(value);
+  if (parsed === null) {
+    return null;
+  }
+
+  const normalizedPort = Math.trunc(parsed);
+  if (normalizedPort < 1 || normalizedPort > 65_535) {
+    return null;
+  }
+
+  return normalizedPort;
+};
+
 const resolveVisitStreamPath = (): string => {
   const configuredPath = import.meta.env.VITE_VISITS_STREAM_PATH;
   if (typeof configuredPath === "string" && configuredPath.trim().length > 0) {
@@ -52,9 +67,20 @@ const resolveVisitStreamPath = (): string => {
 };
 
 const buildWsUrlFromPath = (path: string): string => {
+  return buildWsUrlFromHost(path, window.location.host);
+};
+
+const buildWsUrlFromHost = (path: string, host: string): string => {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${protocol}://${window.location.host}${normalizedPath}`;
+  return `${protocol}://${host}${normalizedPath}`;
+};
+
+const resolveDevBackendPort = (): number => {
+  return (
+    parsePortNumber(import.meta.env.VITE_BACKEND_PORT) ??
+    DEFAULT_DEV_BACKEND_PORT
+  );
 };
 
 const normalizeWebSocketUrl = (rawUrl: string): string => {
@@ -88,11 +114,51 @@ const normalizeWebSocketUrl = (rawUrl: string): string => {
 const resolveWsUrlFromApiUrl = (): string | null => {
   const apiUrl = env.apiUrl;
   if (!/^https?:\/\//i.test(apiUrl)) {
+    if (
+      import.meta.env.DEV &&
+      typeof window !== "undefined" &&
+      apiUrl.startsWith("/")
+    ) {
+      const hostName = window.location.hostname.trim();
+      if (hostName.length === 0) {
+        return null;
+      }
+
+      const normalizedHostName = hostName.includes(":")
+        ? `[${hostName}]`
+        : hostName;
+      const backendHost = `${normalizedHostName}:${resolveDevBackendPort()}`;
+      return buildWsUrlFromHost(resolveVisitStreamPath(), backendHost);
+    }
+
     return null;
   }
 
   const parsedUrl = new URL(apiUrl);
   const protocol = parsedUrl.protocol === "https:" ? "wss" : "ws";
+
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    const runtimeHostName = window.location.hostname.trim();
+    const configuredHostName = parsedUrl.hostname.trim().toLowerCase();
+    const shouldUseRuntimeHost =
+      runtimeHostName.length > 0 &&
+      ["backend", "localhost", "127.0.0.1", "0.0.0.0"].includes(
+        configuredHostName,
+      ) &&
+      runtimeHostName.toLowerCase() !== configuredHostName;
+
+    if (shouldUseRuntimeHost) {
+      const normalizedRuntimeHost = runtimeHostName.includes(":")
+        ? `[${runtimeHostName}]`
+        : runtimeHostName;
+      const runtimeHostWithPort = parsedUrl.port
+        ? `${normalizedRuntimeHost}:${parsedUrl.port}`
+        : normalizedRuntimeHost;
+
+      return `${protocol}://${runtimeHostWithPort}${resolveVisitStreamPath()}`;
+    }
+  }
+
   return `${protocol}://${parsedUrl.host}${resolveVisitStreamPath()}`;
 };
 

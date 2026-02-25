@@ -59,7 +59,7 @@ describe("createVisitsRealtimeAdapter", () => {
     for (const status of statuses) {
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: visitFlowKeys.list({ status }),
-        exact: true,
+        exact: false,
       });
     }
   };

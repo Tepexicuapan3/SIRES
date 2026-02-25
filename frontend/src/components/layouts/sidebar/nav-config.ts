@@ -2,6 +2,7 @@ import {
   Activity,
   Ambulance,
   BookOpen,
+  CalendarClock,
   ClipboardList,
   Database,
   FileText,
@@ -200,32 +201,26 @@ export const NAV_CONFIG: NavSection[] = [
     title: "Recepcion",
     items: [
       {
-        title: "Fichas",
-        icon: ClipboardList,
-        items: [
-          {
-            title: "Medicina general",
-            url: "/recepcion/fichas/medicina-general",
-            permissions: ["recepcion:fichas:medicina_general:create"],
-          },
-          {
-            title: "Especialidad",
-            url: "/recepcion/fichas/especialidad",
-            permissions: ["recepcion:fichas:especialidad:create"],
-          },
-          {
-            title: "Urgencias",
-            url: "/recepcion/fichas/urgencias",
-            permissions: ["recepcion:fichas:urgencias:create"],
-          },
+        title: "Agenda",
+        url: "/recepcion/agenda",
+        icon: CalendarClock,
+        permissions: [
+          "recepcion:fichas:medicina_general:create",
+          "recepcion:fichas:especialidad:create",
+          "recepcion:fichas:urgencias:create",
+          "clinico:consultas:read",
+          "clinico:somatometria:read",
         ],
       },
       {
-        title: "Incapacidad",
-        url: "/recepcion/incapacidad",
-        icon: FileText,
-        permissions: ["recepcion:incapacidad:create"],
-        badge: PLACEHOLDER_BADGE,
+        title: "Check-in",
+        url: "/recepcion/checkin",
+        icon: ClipboardList,
+        permissions: [
+          "recepcion:fichas:medicina_general:create",
+          "recepcion:fichas:especialidad:create",
+          "recepcion:fichas:urgencias:create",
+        ],
       },
     ],
   },

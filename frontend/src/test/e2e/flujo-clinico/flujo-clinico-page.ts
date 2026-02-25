@@ -65,11 +65,13 @@ export class FlujoClinicoPage {
   }
 
   async gotoRecepcionQueue(): Promise<void> {
-    await this.page.goto("/recepcion/fichas/medicina-general", {
+    await this.page.goto("/recepcion/checkin", {
       waitUntil: "domcontentloaded",
     });
     await expect(
-      this.page.getByRole("heading", { name: "Bandeja de recepcion" }),
+      this.page.getByRole("heading", {
+        name: "Check-in y registro de llegada",
+      }),
     ).toBeVisible();
   }
 

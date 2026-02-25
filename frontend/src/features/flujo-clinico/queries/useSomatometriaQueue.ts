@@ -1,6 +1,7 @@
 import { VISIT_STATUS } from "@api/types";
 import { useVisitQueueByStatus } from "@features/flujo-clinico/queries/useVisitQueueByStatus";
 import { useVisitRealtimeSync } from "@features/flujo-clinico/queries/useVisitRealtimeSync";
+import { SOCKET_CONNECTION_STATUS } from "@features/flujo-clinico/queries/visit-realtime.client";
 
 interface UseSomatometriaQueueOptions {
   enabled?: boolean;
@@ -11,7 +12,7 @@ export const useSomatometriaQueue = (
 ) => {
   const enabled = options.enabled ?? true;
 
-  useVisitRealtimeSync({
+  const realtime = useVisitRealtimeSync({
     enabled: enabled && import.meta.env.MODE !== "test",
     resyncParams: {
       page: 1,
@@ -20,9 +21,13 @@ export const useSomatometriaQueue = (
     },
   });
 
+  const shouldUsePollingFallback =
+    enabled &&
+    import.meta.env.MODE !== "test" &&
+    realtime.connectionStatus !== SOCKET_CONNECTION_STATUS.CONNECTED;
+
   return useVisitQueueByStatus(VISIT_STATUS.EN_SOMATOMETRIA, {
     ...options,
-    refetchIntervalMs:
-      enabled && import.meta.env.MODE !== "test" ? 2_000 : undefined,
+    refetchIntervalMs: shouldUsePollingFallback ? 2_000 : undefined,
   });
 };

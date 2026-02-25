@@ -27,6 +27,7 @@ const createVisit = (
   folio: "VST-1001",
   patientId: 1001,
   arrivalType: "appointment",
+  serviceType: "medicina_general",
   appointmentId: "APP-1001",
   doctorId: 90,
   notes: "Paciente en observacion",

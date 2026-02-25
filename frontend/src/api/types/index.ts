@@ -162,6 +162,7 @@ export type {
 // =============================================================================
 export type {
   ArrivalType,
+  VisitService,
   VisitStatus,
   VisitQueueItem,
   VisitsListParams,
@@ -186,6 +187,7 @@ export type {
 
 export {
   ARRIVAL_TYPE,
+  VISIT_SERVICE,
   VISIT_STATUS,
   RECEPCION_STATUS_ACTION,
 } from "@api/types/visits.types";

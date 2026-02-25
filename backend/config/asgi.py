@@ -19,6 +19,11 @@ def build_websocket_origin_validator(websocket_application):
     if getattr(settings, "WS_ALLOW_ALL_ORIGINS", False):
         return OriginValidator(websocket_application, ["*"])
 
+    if getattr(settings, "DEBUG", False) and getattr(
+        settings, "ALLOW_ALL_HOSTS", False
+    ):
+        return OriginValidator(websocket_application, ["*"])
+
     allowed_origins = getattr(settings, "WS_ALLOWED_ORIGINS", [])
     if allowed_origins:
         return OriginValidator(websocket_application, allowed_origins)

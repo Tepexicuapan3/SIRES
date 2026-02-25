@@ -45,7 +45,7 @@ const ROLE_SEEDS: RoleSeed[] = [
     name: "Recepcion",
     description: "Personal de recepcion",
     isSystem: true,
-    landingRoute: "/recepcion/fichas/medicina-general",
+    landingRoute: "/recepcion/agenda",
     usersCount: 17,
   },
   {

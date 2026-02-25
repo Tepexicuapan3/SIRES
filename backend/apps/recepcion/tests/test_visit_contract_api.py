@@ -91,7 +91,11 @@ class VisitContractsApiTests(APITestCase):
         return {"HTTP_X_CSRF_TOKEN": csrf_token}
 
     def _create_visit(self, patient_id=1001, arrival_type="appointment", **kwargs):
-        payload = {"patientId": patient_id, "arrivalType": arrival_type}
+        payload = {
+            "patientId": patient_id,
+            "arrivalType": arrival_type,
+            "serviceType": kwargs.get("serviceType", "medicina_general"),
+        }
 
         appointment_id = kwargs.get("appointmentId")
         if appointment_id is None and arrival_type == "appointment":
@@ -121,6 +125,7 @@ class VisitContractsApiTests(APITestCase):
             {
                 "patientId": 1234,
                 "arrivalType": "appointment",
+                "serviceType": "especialidad",
                 "appointmentId": "APP-456",
                 "doctorId": 120,
                 "notes": "Paciente puntual",
@@ -135,6 +140,7 @@ class VisitContractsApiTests(APITestCase):
         self.assertIn("folio", response.data)
         self.assertEqual(response.data["patientId"], 1234)
         self.assertEqual(response.data["arrivalType"], "appointment")
+        self.assertEqual(response.data["serviceType"], "especialidad")
         self.assertEqual(response.data["appointmentId"], "APP-456")
         self.assertEqual(response.data["doctorId"], 120)
         self.assertEqual(response.data["notes"], "Paciente puntual")
@@ -181,7 +187,11 @@ class VisitContractsApiTests(APITestCase):
     def test_list_visits_happy_path_contract(self):
         self._login_as("recepcion_user", self.recepcion_password)
         self._create_visit(patient_id=2001)
-        self._create_visit(patient_id=2002, arrival_type="walk_in")
+        self._create_visit(
+            patient_id=2002,
+            arrival_type="walk_in",
+            serviceType="urgencias",
+        )
 
         response = self.client.get(
             "/api/v1/visits?page=1&pageSize=20",
@@ -201,10 +211,51 @@ class VisitContractsApiTests(APITestCase):
         self.assertIn("folio", first_item)
         self.assertIn("patientId", first_item)
         self.assertIn("arrivalType", first_item)
+        self.assertIn("serviceType", first_item)
         self.assertIn("appointmentId", first_item)
         self.assertIn("doctorId", first_item)
         self.assertIn("notes", first_item)
         self.assertIn("status", first_item)
+
+    def test_list_visits_filters_by_service_type(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        self._create_visit(patient_id=2401, serviceType="medicina_general")
+        self._create_visit(
+            patient_id=2402,
+            arrival_type="walk_in",
+            serviceType="urgencias",
+        )
+
+        response = self.client.get(
+            "/api/v1/visits?page=1&pageSize=20&serviceType=urgencias",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(response.data["total"], 1)
+        for item in response.data["items"]:
+            self.assertEqual(item["serviceType"], "urgencias")
+
+    def test_create_visit_urgencias_requires_walk_in(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "patientId": 2233,
+                "arrivalType": "appointment",
+                "serviceType": "urgencias",
+                "appointmentId": "APP-URG-01",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+        self.assertIn("details", response.data)
+        self.assertIn("arrivalType", response.data["details"])
 
     def test_list_visits_allows_clinico_with_somatometria_permission(self):
         self._login_as("recepcion_user", self.recepcion_password)

@@ -115,7 +115,7 @@ export const createVisitsRealtimeAdapter = (
       normalizedStatuses.map(async (status) => {
         await queryClient.invalidateQueries({
           queryKey: visitFlowKeys.list({ status }),
-          exact: true,
+          exact: false,
         });
       }),
     );

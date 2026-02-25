@@ -1,5 +1,9 @@
 import * as z from "zod";
-import { ARRIVAL_TYPE } from "@api/types";
+import {
+  createCheckinFormSchema,
+  type CheckinFormInput,
+  type CheckinFormValues,
+} from "@features/recepcion/modules/checkin/domain/checkin.schemas";
 
 const parseOptionalNumber = (value: unknown): unknown => {
   if (value === "" || value === null || value === undefined) {
@@ -34,46 +38,10 @@ const hasSingleDecimalPrecision = (value: number): boolean => {
   return Math.abs(value * 10 - Math.round(value * 10)) < Number.EPSILON;
 };
 
-export const createVisitFormSchema = z
-  .object({
-    patientId: z.coerce
-      .number()
-      .int()
-      .min(1, { error: "Ingresa un ID de paciente valido." }),
-    arrivalType: z.enum([ARRIVAL_TYPE.APPOINTMENT, ARRIVAL_TYPE.WALK_IN]),
-    appointmentId: z.preprocess(parseOptionalText, z.string().optional()),
-    doctorId: z.preprocess(
-      parseOptionalNumber,
-      z.coerce.number().int().min(1).optional(),
-    ),
-    notes: z.preprocess(parseOptionalText, z.string().max(255).optional()),
-  })
-  .superRefine((data, ctx) => {
-    if (
-      data.arrivalType === ARRIVAL_TYPE.APPOINTMENT &&
-      !data.appointmentId?.trim()
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["appointmentId"],
-        message: "appointmentId es obligatorio para arrivalType=appointment.",
-      });
-    }
+export const createVisitFormSchema = createCheckinFormSchema;
 
-    if (
-      data.arrivalType === ARRIVAL_TYPE.WALK_IN &&
-      data.appointmentId?.trim()
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["appointmentId"],
-        message: "appointmentId debe ir vacio para arrivalType=walk_in.",
-      });
-    }
-  });
-
-export type CreateVisitFormValues = z.infer<typeof createVisitFormSchema>;
-export type CreateVisitFormInput = z.input<typeof createVisitFormSchema>;
+export type CreateVisitFormValues = CheckinFormValues;
+export type CreateVisitFormInput = CheckinFormInput;
 
 export const captureVitalsFormSchema = z.object({
   weightKg: z.coerce.number().min(1, { error: "Ingresa el peso en kg." }),

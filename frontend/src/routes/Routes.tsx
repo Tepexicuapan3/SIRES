@@ -28,11 +28,7 @@ const OnboardingPage = lazy(() =>
 const CoreRoutes = lazy(() => import("@/routes/modules/core.routes"));
 const AdminRoutes = lazy(() => import("@/routes/modules/admin.routes"));
 const ClinicoRoutes = lazy(() => import("@/routes/modules/clinico.routes"));
-const RecepcionRoutes = lazy(() =>
-  import("@/routes/modules/placeholders.routes").then((m) => ({
-    default: m.RecepcionRoutes,
-  })),
-);
+const RecepcionRoutes = lazy(() => import("@/routes/modules/recepcion.routes"));
 const FarmaciaRoutes = lazy(() =>
   import("@/routes/modules/placeholders.routes").then((m) => ({
     default: m.FarmaciaRoutes,

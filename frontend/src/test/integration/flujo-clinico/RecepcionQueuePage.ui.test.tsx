@@ -32,6 +32,7 @@ const createVisit = (
   folio: "VST-001",
   patientId: 1001,
   arrivalType: "appointment",
+  serviceType: "medicina_general",
   appointmentId: "APP-1001",
   doctorId: 12,
   notes: "Paciente puntual",
@@ -172,7 +173,7 @@ describe("RecepcionQueuePage UI", () => {
     render(<RecepcionQueuePage />);
 
     expect(
-      screen.getByRole("heading", { name: "Bandeja de recepcion" }),
+      screen.getByRole("heading", { name: "Check-in y registro de llegada" }),
     ).toBeVisible();
     expect(screen.getByText("VST-001")).toBeVisible();
     expect(screen.getByText("VST-002")).toBeVisible();
@@ -270,6 +271,7 @@ describe("RecepcionQueuePage UI", () => {
       expect(createMutateAsync).toHaveBeenCalledWith({
         patientId: 1234,
         arrivalType: "appointment",
+        serviceType: "medicina_general",
         appointmentId: "APP-1234",
         doctorId: undefined,
         notes: "Paciente sin acompanante",
@@ -277,6 +279,34 @@ describe("RecepcionQueuePage UI", () => {
     });
 
     expect(screen.getByText("Llegada registrada correctamente.")).toBeVisible();
+  });
+
+  it("fuerza llegada sin cita para servicio de urgencias", async () => {
+    const user = userEvent.setup();
+    render(<RecepcionQueuePage />);
+
+    await user.selectOptions(
+      screen.getByLabelText("Servicio de atencion"),
+      "urgencias",
+    );
+
+    expect(screen.queryByLabelText("ID de cita")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Tipo de llegada")).toBeDisabled();
+
+    await user.type(screen.getByLabelText("ID paciente"), "2001");
+    await user.type(screen.getByLabelText("Notas"), "Ingreso por dolor agudo");
+    await user.click(screen.getByRole("button", { name: "Registrar llegada" }));
+
+    await waitFor(() => {
+      expect(createMutateAsync).toHaveBeenCalledWith({
+        patientId: 2001,
+        arrivalType: "walk_in",
+        serviceType: "urgencias",
+        appointmentId: undefined,
+        doctorId: undefined,
+        notes: "Ingreso por dolor agudo",
+      });
+    });
   });
 
   it("mapea errores de dominio al registrar llegada", async () => {
