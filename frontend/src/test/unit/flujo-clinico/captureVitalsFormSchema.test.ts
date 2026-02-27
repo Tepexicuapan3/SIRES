@@ -43,3 +43,30 @@ describe("captureVitalsFormSchema temperatureC validation", () => {
     );
   });
 });
+
+describe("captureVitalsFormSchema waistCircumferenceCm validation", () => {
+  it("acepta circunferencia abdominal valida", () => {
+    const result = captureVitalsFormSchema.safeParse({
+      ...baseVitals,
+      temperatureC: 36.6,
+      waistCircumferenceCm: 95,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rechaza circunferencia abdominal fuera de rango", () => {
+    const result = captureVitalsFormSchema.safeParse({
+      ...baseVitals,
+      temperatureC: 36.6,
+      waistCircumferenceCm: 10,
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) {
+      return;
+    }
+
+    expect(result.error.issues[0]?.path).toEqual(["waistCircumferenceCm"]);
+  });
+});

@@ -80,7 +80,7 @@ export class FlujoClinicoPage {
       waitUntil: "domcontentloaded",
     });
     await expect(
-      this.page.getByRole("heading", { name: "Bandeja de somatometria" }),
+      this.page.getByRole("heading", { name: "Registro de Somatometria" }),
     ).toBeVisible();
   }
 
@@ -156,23 +156,23 @@ export class FlujoClinicoPage {
     await this.waitForVisitOption("#visit-selector", folio);
     await this.selectVisitByFolio("#visit-selector", folio);
 
-    await this.page.getByLabel("Peso (kg)").fill(DEFAULT_VITALS_INPUT.weightKg);
+    await this.page.getByLabel("Peso").fill(DEFAULT_VITALS_INPUT.weightKg);
+    await this.page.getByLabel("Estatura").fill(DEFAULT_VITALS_INPUT.heightCm);
     await this.page
-      .getByLabel("Talla (cm)")
-      .fill(DEFAULT_VITALS_INPUT.heightCm);
-    await this.page
-      .getByLabel("Temperatura (C)")
+      .getByLabel("Temperatura")
       .fill(DEFAULT_VITALS_INPUT.temperatureC);
     await this.page
-      .getByLabel("Saturacion O2 (%)")
+      .getByLabel("Saturacion de oxigeno")
       .fill(DEFAULT_VITALS_INPUT.oxygenSaturationPct);
     await this.page
-      .getByLabel("Frecuencia cardiaca (opcional)")
+      .getByLabel("Frecuencia cardiaca")
       .fill(DEFAULT_VITALS_INPUT.heartRateBpm);
     await this.page
-      .getByLabel("Frecuencia respiratoria (opcional)")
+      .getByLabel("Frecuencia respiratoria")
       .fill(DEFAULT_VITALS_INPUT.respiratoryRateBpm);
-    await this.page.getByLabel("Notas").fill(DEFAULT_VITALS_INPUT.notes);
+    await this.page
+      .getByLabel("Observaciones")
+      .fill(DEFAULT_VITALS_INPUT.notes);
 
     const [captureResponse] = await Promise.all([
       this.page.waitForResponse(
@@ -180,7 +180,7 @@ export class FlujoClinicoPage {
           response.url().includes("/vitals") &&
           response.request().method() === "POST",
       ),
-      this.page.getByRole("button", { name: "Guardar vitales" }).click(),
+      this.page.getByRole("button", { name: "Guardar" }).click(),
     ]);
 
     expect(captureResponse.status()).toBe(200);

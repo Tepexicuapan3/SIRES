@@ -3,18 +3,24 @@ import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
 import { ApiError } from "@api/utils/errors";
 import SomatometriaCapturePage from "@features/flujo-clinico/pages/SomatometriaCapturePage";
-import { useSomatometriaQueue } from "@features/flujo-clinico/queries/useSomatometriaQueue";
-import { useCaptureVitals } from "@features/flujo-clinico/mutations/useCaptureVitals";
+import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
+import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import type { VisitQueueItem } from "@api/types";
 
-vi.mock("@features/flujo-clinico/queries/useSomatometriaQueue", () => ({
-  useSomatometriaQueue: vi.fn(),
-}));
+vi.mock(
+  "@features/somatometria/modules/captura/queries/useSomatometriaQueue",
+  () => ({
+    useSomatometriaQueue: vi.fn(),
+  }),
+);
 
-vi.mock("@features/flujo-clinico/mutations/useCaptureVitals", () => ({
-  useCaptureVitals: vi.fn(),
-}));
+vi.mock(
+  "@features/somatometria/modules/captura/mutations/useCaptureVitals",
+  () => ({
+    useCaptureVitals: vi.fn(),
+  }),
+);
 
 vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
   usePermissionDependencies: vi.fn(),
@@ -98,7 +104,7 @@ describe("SomatometriaCapturePage UI", () => {
 
   it("muestra aviso neutral cuando falta permiso para guardar vitales", () => {
     vi.mocked(usePermissionDependencies).mockReturnValue({
-      hasCapability: (capability) =>
+      hasCapability: (capability: string) =>
         capability === "flow.somatometria.queue.read",
     } as unknown as ReturnType<typeof usePermissionDependencies>);
 
@@ -107,9 +113,7 @@ describe("SomatometriaCapturePage UI", () => {
     expect(
       screen.getByText("No tenes permisos completos para guardar vitales."),
     ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Guardar vitales" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Guardar" })).toBeDisabled();
   });
 
   it("renderiza estado loading", () => {
@@ -159,7 +163,7 @@ describe("SomatometriaCapturePage UI", () => {
     const user = userEvent.setup();
     render(<SomatometriaCapturePage />);
 
-    await user.click(screen.getByRole("button", { name: "Guardar vitales" }));
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     expect(screen.getByText("Ingresa el peso en kg.")).toBeVisible();
     expect(screen.getByText("Ingresa la talla en cm.")).toBeVisible();
@@ -172,12 +176,12 @@ describe("SomatometriaCapturePage UI", () => {
     const user = userEvent.setup();
     render(<SomatometriaCapturePage />);
 
-    await user.type(screen.getByLabelText("Peso (kg)"), "70");
-    await user.type(screen.getByLabelText("Talla (cm)"), "175");
-    await user.type(screen.getByLabelText("Temperatura (C)"), "36.6");
-    await user.type(screen.getByLabelText("Saturacion O2 (%)"), "98");
+    await user.type(screen.getByLabelText("Peso"), "70");
+    await user.type(screen.getByLabelText("Estatura"), "175");
+    await user.type(screen.getByLabelText("Temperatura"), "36.6");
+    await user.type(screen.getByLabelText("Saturacion de oxigeno"), "98");
 
-    await user.click(screen.getByRole("button", { name: "Guardar vitales" }));
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     await waitFor(() => {
       expect(captureMutateAsync).toHaveBeenCalledWith({
@@ -191,6 +195,7 @@ describe("SomatometriaCapturePage UI", () => {
           respiratoryRateBpm: undefined,
           bloodPressureSystolic: undefined,
           bloodPressureDiastolic: undefined,
+          waistCircumferenceCm: undefined,
           notes: undefined,
         },
       });
@@ -199,17 +204,17 @@ describe("SomatometriaCapturePage UI", () => {
     expect(
       screen.getByText("Signos vitales guardados correctamente."),
     ).toBeVisible();
-    expect(screen.getByText("IMC capturado: 22.86")).toBeVisible();
+    expect(screen.getByText("IMC calculado: 22.86")).toBeVisible();
   });
 
   it("muestra IMC estimado en tiempo real con peso y talla", async () => {
     const user = userEvent.setup();
     render(<SomatometriaCapturePage />);
 
-    await user.type(screen.getByLabelText("Peso (kg)"), "70");
-    await user.type(screen.getByLabelText("Talla (cm)"), "175");
+    await user.type(screen.getByLabelText("Peso"), "70");
+    await user.type(screen.getByLabelText("Estatura"), "175");
 
-    expect(screen.getByText("IMC estimado: 22.86")).toBeVisible();
+    expect(screen.getByText("IMC calculado: 22.86")).toBeVisible();
   });
 
   const domainErrors = [
@@ -239,11 +244,11 @@ describe("SomatometriaCapturePage UI", () => {
       const user = userEvent.setup();
       render(<SomatometriaCapturePage />);
 
-      await user.type(screen.getByLabelText("Peso (kg)"), "70");
-      await user.type(screen.getByLabelText("Talla (cm)"), "175");
-      await user.type(screen.getByLabelText("Temperatura (C)"), "36.6");
-      await user.type(screen.getByLabelText("Saturacion O2 (%)"), "98");
-      await user.click(screen.getByRole("button", { name: "Guardar vitales" }));
+      await user.type(screen.getByLabelText("Peso"), "70");
+      await user.type(screen.getByLabelText("Estatura"), "175");
+      await user.type(screen.getByLabelText("Temperatura"), "36.6");
+      await user.type(screen.getByLabelText("Saturacion de oxigeno"), "98");
+      await user.click(screen.getByRole("button", { name: "Guardar" }));
 
       await waitFor(() => {
         expect(screen.getByText(message)).toBeVisible();
@@ -272,8 +277,6 @@ describe("SomatometriaCapturePage UI", () => {
         "Selecciona una visita en somatometria para capturar vitales.",
       ),
     ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Guardar vitales" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Guardar" })).toBeDisabled();
   });
 });

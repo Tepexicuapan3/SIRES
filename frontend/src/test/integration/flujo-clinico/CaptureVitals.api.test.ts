@@ -10,6 +10,7 @@ const validPayload = {
   heightCm: 175,
   temperatureC: 36.6,
   oxygenSaturationPct: 98,
+  waistCircumferenceCm: 95,
 };
 
 const expectApiError = async (

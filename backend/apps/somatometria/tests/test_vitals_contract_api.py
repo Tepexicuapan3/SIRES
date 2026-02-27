@@ -134,6 +134,8 @@ class VitalsContractsApiTests(APITestCase):
         self.assertEqual(response.data["visitId"], self.visit_in_somato.id_visit)
         self.assertEqual(response.data["status"], "lista_para_doctor")
         self.assertIn("vitals", response.data)
+        self.assertIn("waistCircumferenceCm", response.data["vitals"])
+        self.assertIsNone(response.data["vitals"]["waistCircumferenceCm"])
         self.assertAlmostEqual(response.data["vitals"]["bmi"], 22.86, places=2)
 
         self.visit_in_somato.refresh_from_db()
@@ -216,6 +218,26 @@ class VitalsContractsApiTests(APITestCase):
         self.assertIn("details", response.data)
         self.assertIn("temperatureC", response.data["details"])
 
+    def test_capture_vitals_invalid_waist_circumference_returns_validation_error(self):
+        self._login_as("somato_user", self.somato_password)
+
+        payload = self._valid_payload()
+        payload["waistCircumferenceCm"] = 10
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            payload,
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+        self.assertEqual(response.data["status"], 422)
+        self.assertEqual(response.data["requestId"], self.request_id)
+        self.assertIn("details", response.data)
+        self.assertIn("waistCircumferenceCm", response.data["details"])
+
     def test_capture_vitals_incomplete_minimum_data_returns_vitals_incomplete(self):
         self._login_as("somato_user", self.somato_password)
 
@@ -297,6 +319,7 @@ class VitalsContractsApiTests(APITestCase):
                 "respiratoryRateBpm": 16,
                 "bloodPressureSystolic": 118,
                 "bloodPressureDiastolic": 76,
+                "waistCircumferenceCm": 95,
                 "notes": "Paciente cooperador durante la toma.",
             }
         )
@@ -315,6 +338,7 @@ class VitalsContractsApiTests(APITestCase):
         self.assertEqual(response.data["vitals"]["respiratoryRateBpm"], 16)
         self.assertEqual(response.data["vitals"]["bloodPressureSystolic"], 118)
         self.assertEqual(response.data["vitals"]["bloodPressureDiastolic"], 76)
+        self.assertEqual(response.data["vitals"]["waistCircumferenceCm"], 95)
 
     def test_capture_vitals_without_csrf_returns_permission_denied(self):
         self._login_as("somato_user", self.somato_password)

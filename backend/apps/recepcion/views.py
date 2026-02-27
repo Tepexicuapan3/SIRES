@@ -12,7 +12,13 @@ from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
-from apps.realtime.events import publish_visit_created, publish_visit_status_changed
+from apps.realtime.events import (
+    publish_visit_cancelled,
+    publish_visit_created,
+    publish_visit_no_show,
+    publish_visit_status_changed,
+)
+from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.serializers import (
     CreateVisitSerializer,
     ListVisitsQuerySerializer,
@@ -68,13 +74,14 @@ def _csrf_or_error(request):
     )
 
 
-def _emit_visit_status_changed_event(request, *, visit_id, status):
+def _emit_visit_status_changed_event(request, *, visit_id, status, previous_status=None):
     request_id = get_request_id(request)
 
     try:
         publish_visit_status_changed(
             visit_id=visit_id,
             status=status,
+            previous_status=previous_status,
             request_id=request_id,
             correlation_id=request_id,
         )
@@ -98,6 +105,42 @@ def _emit_visit_created_event(request, *, visit_id, status):
     except Exception:
         logger.exception(
             "No se pudo publicar evento realtime de creacion de visita",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
+
+
+def _emit_visit_cancelled_event(request, *, visit_id, status, previous_status=None):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_cancelled(
+            visit_id=visit_id,
+            status=status,
+            previous_status=previous_status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de cancelacion de visita",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
+
+
+def _emit_visit_no_show_event(request, *, visit_id, status, previous_status=None):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_no_show(
+            visit_id=visit_id,
+            status=status,
+            previous_status=previous_status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de no show de visita",
             extra={"visit_id": visit_id, "status": status, "request_id": request_id},
         )
 
@@ -223,6 +266,10 @@ class VisitStatusView(APIView):
 
         try:
             target_status = serializer.validated_data["targetStatus"]
+            previous_status = None
+            current_visit = VisitRepository.get_by_id(visit_id)
+            if current_visit is not None:
+                previous_status = current_visit.status
             visit = change_visit_status(visit_id, target_status)
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)
@@ -247,6 +294,12 @@ class VisitStatusView(APIView):
                 actor_user=user,
                 meta={"module": "recepcion", "endpoint": request.path, "visitId": visit.get("id")},
             )
+            _emit_visit_cancelled_event(
+                request,
+                visit_id=visit.get("id"),
+                status=visit.get("status"),
+                previous_status=previous_status,
+            )
         if target_status == "no_show":
             log_event(
                 request,
@@ -255,11 +308,18 @@ class VisitStatusView(APIView):
                 actor_user=user,
                 meta={"module": "recepcion", "endpoint": request.path, "visitId": visit.get("id")},
             )
+            _emit_visit_no_show_event(
+                request,
+                visit_id=visit.get("id"),
+                status=visit.get("status"),
+                previous_status=previous_status,
+            )
 
         _emit_visit_status_changed_event(
             request,
             visit_id=visit.get("id"),
             status=visit.get("status"),
+            previous_status=previous_status,
         )
 
         return Response(visit, status=status.HTTP_200_OK)

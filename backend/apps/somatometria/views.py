@@ -7,11 +7,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authentication.repositories.user_repository import UserRepository
+from apps.authentication.services.audit_service import log_event
 from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
 from apps.realtime.events import publish_visit_status_changed
+from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.services.errors import VisitDomainError
 from apps.somatometria.serializers import CaptureVitalsSerializer
 from apps.somatometria.uses_case.capture_vitals_usecase import (
@@ -64,13 +66,14 @@ def _csrf_or_error(request):
     )
 
 
-def _emit_visit_status_changed_event(request, *, visit_id, status):
+def _emit_visit_status_changed_event(request, *, visit_id, status, previous_status=None):
     request_id = get_request_id(request)
 
     try:
         publish_visit_status_changed(
             visit_id=visit_id,
             status=status,
+            previous_status=previous_status,
             request_id=request_id,
             correlation_id=request_id,
         )
@@ -110,15 +113,33 @@ class VisitVitalsView(APIView):
                 request_id=get_request_id(request),
             )
 
+        previous_status = None
+        current_visit = VisitRepository.get_by_id(visit_id)
+        if current_visit is not None:
+            previous_status = current_visit.status
+
         try:
             result = capture_vitals(visit_id, serializer.validated_data)
         except VisitDomainError as exc:
             return _domain_error_response(request, exc)
 
+        log_event(
+            request,
+            "VitalsCompleted",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "somatometria",
+                "endpoint": request.path,
+                "visitId": result.get("visitId"),
+            },
+        )
+
         _emit_visit_status_changed_event(
             request,
             visit_id=result.get("visitId"),
             status=result.get("status"),
+            previous_status=previous_status,
         )
 
         return Response(result, status=status.HTTP_200_OK)

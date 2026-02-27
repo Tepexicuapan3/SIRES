@@ -88,6 +88,7 @@ export interface CaptureVitalsRequest {
   respiratoryRateBpm?: number;
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
+  waistCircumferenceCm?: number;
   notes?: string;
 }
 
