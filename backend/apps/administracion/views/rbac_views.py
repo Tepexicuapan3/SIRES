@@ -1,6 +1,7 @@
 import secrets
 import string
 import uuid
+import re
 from datetime import datetime, time, timezone as dt_timezone
 
 from django.contrib.auth.hashers import make_password
@@ -35,6 +36,10 @@ from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
 TEMP_PASSWORD_LENGTH = 12
 TEMP_PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{}"
 TEMP_PASSWORD_ALPHABET = string.ascii_letters + string.digits + TEMP_PASSWORD_SYMBOLS
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ISO_DATETIME_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?$"
+)
 
 
 def _request_id(request):
@@ -51,9 +56,22 @@ def _parse_expires_at_end_of_day(raw_value):
     if not raw_value:
         return None
 
+    normalized = str(raw_value).strip()
+    if not normalized:
+        return None
+
+    if "T" in normalized:
+        if not ISO_DATETIME_RE.fullmatch(normalized):
+            return "invalid"
+        hour_value = int(normalized.split("T", maxsplit=1)[1][:2])
+        if hour_value > 23:
+            return "invalid"
+    elif not ISO_DATE_RE.fullmatch(normalized):
+        return "invalid"
+
     tz = timezone.get_current_timezone()
     try:
-        parsed_datetime = parse_datetime(raw_value)
+        parsed_datetime = parse_datetime(normalized)
     except (TypeError, ValueError, OverflowError):
         return "invalid"
 
@@ -61,11 +79,14 @@ def _parse_expires_at_end_of_day(raw_value):
         if parsed_datetime:
             base = parsed_datetime
         else:
-            parsed_date = parse_date(raw_value)
+            parsed_date = parse_date(normalized)
             if not parsed_date:
                 return "invalid"
             base = datetime.combine(parsed_date, time.min)
     except (TypeError, ValueError, OverflowError):
+        return "invalid"
+
+    if base.year >= 9999:
         return "invalid"
 
     try:

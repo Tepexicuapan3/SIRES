@@ -32,7 +32,12 @@ export const mapCheckinFormToCreateVisitRequest = (
 export const mapVisitToCheckinDefaults = (
   visit: Pick<
     VisitQueueItem,
-    "patientId" | "arrivalType" | "appointmentId" | "doctorId" | "notes"
+    | "patientId"
+    | "serviceType"
+    | "arrivalType"
+    | "appointmentId"
+    | "doctorId"
+    | "notes"
   >,
 ): Partial<CheckinFormInput> => {
   const resolvedService = resolveRecepcionService(visit);

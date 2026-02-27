@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -89,11 +89,21 @@ export const RecepcionQuickCheckinDialog = ({
     defaultValues: DEFAULT_CHECKIN_FORM_VALUES,
   });
 
-  const serviceType = form.watch("serviceType");
-  const arrivalType = form.watch("arrivalType");
+  const [serviceType, arrivalType] = useWatch({
+    control: form.control,
+    name: ["serviceType", "arrivalType"],
+  });
   const isWalkInOnlyService = isServiceForcedToWalkIn(serviceType);
   const serviceTypeField = form.register("serviceType");
   const arrivalTypeField = form.register("arrivalType");
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setFeedback(null);
+    }
+
+    onOpenChange(nextOpen);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -104,7 +114,6 @@ export const RecepcionQuickCheckinDialog = ({
       ...DEFAULT_CHECKIN_FORM_VALUES,
       ...initialValues,
     });
-    setFeedback(null);
   }, [form, initialValues, open]);
 
   const handleSubmit = async (values: CheckinFormValues) => {
@@ -134,7 +143,7 @@ export const RecepcionQuickCheckinDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Check-in rapido</DialogTitle>

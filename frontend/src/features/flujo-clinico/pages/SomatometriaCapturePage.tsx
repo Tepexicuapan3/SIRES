@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ApiError } from "@api/utils/errors";
@@ -146,8 +146,10 @@ export const SomatometriaCapturePage = () => {
     ? canCaptureSomatometriaVitals && canCaptureVitals(selectedVisit.status)
     : false;
 
-  const watchedWeightKg = form.watch("weightKg");
-  const watchedHeightCm = form.watch("heightCm");
+  const [watchedWeightKg, watchedHeightCm] = useWatch({
+    control: form.control,
+    name: ["weightKg", "heightCm"],
+  });
   const previewWeight = toPositiveNumber(watchedWeightKg);
   const previewHeight = toPositiveNumber(watchedHeightCm);
   const bmiPreview =

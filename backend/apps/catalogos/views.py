@@ -35,6 +35,12 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
 
     def get_queryset(self):
         return self.model.objects.all()
+
+    def _model_field_names(self):
+        model_meta = getattr(self.model, "_meta", None)
+        if model_meta is None:
+            return set()
+        return {field.name for field in model_meta.get_fields()}
      
     def get(self, request):
         qs = self.get_queryset()
@@ -153,7 +159,7 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
                 details={"name": ["Duplicado"]},
             )
         actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
-        model_fields = {field.name for field in self.model._meta.get_fields()}
+        model_fields = self._model_field_names()
         save_kwargs = {}
         if "created_at" in model_fields:
             save_kwargs["created_at"] = timezone.now()
@@ -186,6 +192,12 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
     def get_object(self, pk):
         pk_name = self.pk_field or self.model._meta.pk.name
         return self.model.objects.filter(**{pk_name: pk}).first()
+
+    def _model_field_names(self):
+        model_meta = getattr(self.model, "_meta", None)
+        if model_meta is None:
+            return set()
+        return {field.name for field in model_meta.get_fields()}
     
     def get(self, request, pk):
         item = self.get_object(pk)
@@ -229,7 +241,7 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 details={"name": ["Duplicado"]},
             )
         actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
-        model_fields = {field.name for field in self.model._meta.get_fields()}
+        model_fields = self._model_field_names()
         save_kwargs = {}
         if "updated_at" in model_fields:
             save_kwargs["updated_at"] = timezone.now()
@@ -249,7 +261,7 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 message="No encontrado",
                 http_status=status.HTTP_404_NOT_FOUND,
             )
-        model_fields = {field.name for field in self.model._meta.get_fields()}
+        model_fields = self._model_field_names()
         update_fields = []
 
         if "is_active" in model_fields:

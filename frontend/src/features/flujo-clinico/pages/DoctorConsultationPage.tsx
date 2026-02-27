@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -129,6 +129,11 @@ interface FeedbackState {
   message: string;
 }
 
+interface VisitStatusOverrideState {
+  visitId: number;
+  status: VisitStatus;
+}
+
 const formatStatusLabel = (status: string): string => {
   return status.replace(/_/g, " ");
 };
@@ -204,13 +209,10 @@ export const DoctorConsultationPage = () => {
     number | null
   >(null);
   const [selectedVisitStatusOverride, setSelectedVisitStatusOverride] =
-    useState<VisitStatus | null>(null);
+    useState<VisitStatusOverrideState | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [timelineEntriesByVisitId, setTimelineEntriesByVisitId] = useState<
     Record<number, VisitTimelineEntry[]>
-  >({});
-  const [lastKnownStatusByVisitId, setLastKnownStatusByVisitId] = useState<
-    Record<number, VisitStatus>
   >({});
   const [
     savedDiagnosisFingerprintByVisitId,
@@ -248,8 +250,15 @@ export const DoctorConsultationPage = () => {
   const selectedVisit =
     visits.find((visit) => visit.id === selectedVisitId) ?? null;
 
+  const selectedVisitStatusOverrideValue =
+    selectedVisit &&
+    selectedVisitStatusOverride?.visitId === selectedVisit.id &&
+    selectedVisitStatusOverride.status !== selectedVisit.status
+      ? selectedVisitStatusOverride.status
+      : null;
+
   const selectedVisitStatus = selectedVisit
-    ? (selectedVisitStatusOverride ?? selectedVisit.status)
+    ? (selectedVisitStatusOverrideValue ?? selectedVisit.status)
     : VISIT_STATUS.LISTA_PARA_DOCTOR;
 
   const canStartSelectedVisit =
@@ -270,57 +279,6 @@ export const DoctorConsultationPage = () => {
   const selectedTimelineEntries = selectedVisit
     ? (timelineEntriesByVisitId[selectedVisit.id] ?? [])
     : [];
-
-  useEffect(() => {
-    if (!selectedVisit) {
-      setSelectedVisitStatusOverride(null);
-      return;
-    }
-
-    if (
-      selectedVisitStatusOverride !== null &&
-      selectedVisit.status === selectedVisitStatusOverride
-    ) {
-      setSelectedVisitStatusOverride(null);
-    }
-  }, [selectedVisit, selectedVisitStatusOverride]);
-
-  useEffect(() => {
-    if (!selectedVisit) {
-      return;
-    }
-
-    const previousStatus = lastKnownStatusByVisitId[selectedVisit.id];
-    if (previousStatus === selectedVisitStatus) {
-      return;
-    }
-
-    setLastKnownStatusByVisitId((current) => ({
-      ...current,
-      [selectedVisit.id]: selectedVisitStatus,
-    }));
-
-    setTimelineEntriesByVisitId((current) => {
-      const currentEntries = current[selectedVisit.id] ?? [];
-      const statusLabel = formatStatusLabel(selectedVisitStatus);
-      const previousStatusLabel = previousStatus
-        ? formatStatusLabel(previousStatus)
-        : null;
-      const nextEntry = createTimelineEntry(
-        previousStatusLabel
-          ? `Estado actualizado a ${statusLabel}`
-          : `Estado actual: ${statusLabel}`,
-        previousStatusLabel
-          ? `Cambio de ${previousStatusLabel} a ${statusLabel}.`
-          : `Seguimiento inicial para ${selectedVisit.folio}.`,
-      );
-
-      return {
-        ...current,
-        [selectedVisit.id]: [nextEntry, ...currentEntries].slice(0, 20),
-      };
-    });
-  }, [selectedVisit, selectedVisitStatus, lastKnownStatusByVisitId]);
 
   const appendTimelineEntry = (
     visitId: number,
@@ -350,7 +308,10 @@ export const DoctorConsultationPage = () => {
         visitId: selectedVisit.id,
       });
 
-      setSelectedVisitStatusOverride(result.status);
+      setSelectedVisitStatusOverride({
+        visitId: selectedVisit.id,
+        status: result.status,
+      });
       appendTimelineEntry(
         selectedVisit.id,
         "Consulta iniciada",
@@ -490,7 +451,10 @@ export const DoctorConsultationPage = () => {
         },
       });
 
-      setSelectedVisitStatusOverride(VISIT_STATUS.CERRADA);
+      setSelectedVisitStatusOverride({
+        visitId: selectedVisit.id,
+        status: VISIT_STATUS.CERRADA,
+      });
       appendTimelineEntry(
         selectedVisit.id,
         "Consulta cerrada",

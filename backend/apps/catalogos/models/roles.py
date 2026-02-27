@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Roles(models.Model):
     id_rol = models.BigAutoField(primary_key=True, db_column="id_rol")
     rol = models.CharField(max_length=80, db_column="rol", unique=True)
@@ -11,18 +12,13 @@ class Roles(models.Model):
     created_at = models.DateTimeField(db_column="fch_alta", auto_now_add=True)
     updated_at = models.DateTimeField(db_column="fch_modf", null=True, blank=True)
     deleted_at = models.DateTimeField(db_column="fch_baja", null=True, blank=True)
+    created_by_id = models.BigIntegerField(db_column="usr_alta", null=True, blank=True)
+    updated_by_id = models.BigIntegerField(db_column="usr_modf", null=True, blank=True)
+    deleted_by_id = models.BigIntegerField(db_column="usr_baja", null=True, blank=True)
 
     class Meta:
         db_table = "cat_roles"
         managed = False
-
-    @property
-    def created_by_id(self):
-        return None
-
-    @property
-    def updated_by_id(self):
-        return None
 
     @property
     def id(self):

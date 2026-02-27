@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -242,8 +242,10 @@ export const RecepcionCheckinPage = () => {
     defaultValues: DEFAULT_CHECKIN_FORM_VALUES,
   });
 
-  const serviceType = form.watch("serviceType");
-  const arrivalType = form.watch("arrivalType");
+  const [serviceType, arrivalType] = useWatch({
+    control: form.control,
+    name: ["serviceType", "arrivalType"],
+  });
   const isWalkInOnlyService = isServiceForcedToWalkIn(serviceType);
   const serviceTypeField = form.register("serviceType");
   const arrivalTypeField = form.register("arrivalType");

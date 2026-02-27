@@ -21,8 +21,8 @@ from .pases import Pases
 # 🔑 ALIAS IMPORTANTES
 from .roles import Roles
 from .permisos import Permisos
-from .roles import Roles as Roles
-from .permisos import Permisos as Permisos
+from .roles import Roles as CatRol
+from .permisos import Permisos as CatPermiso
 
 from .tipos_areas import TiposAreas
 from .tipos_autorizacion import TpAutorizacion
@@ -53,8 +53,8 @@ __all__ = [
     "Pases",
     "Roles",
     "Permisos",
-    "Roles",        # alias
-    "Permisos",    # alias
+    "CatRol",
+    "CatPermiso",
     "TiposAreas",
     "TpAutorizacion",
     "TipoDeCitas",

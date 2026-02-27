@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
-from apps.catalogos.models import Permisos, Roles
+from apps.catalogos.models import CatPermiso, CatRol, Permisos, Roles
 
 
 class RbacRolesPermissionsApiTests(APITestCase):
