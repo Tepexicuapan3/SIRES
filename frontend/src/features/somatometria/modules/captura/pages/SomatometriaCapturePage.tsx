@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { VISIT_STATUS } from "@api/types";
-import { VisitStageNavigator } from "@features/flujo-clinico/components/VisitStageNavigator";
+import { VisitStageNavigator } from "@features/operativo/shared/components/VisitStageNavigator";
 import {
   VISIT_STAGE,
   canCaptureVitals,
-} from "@features/flujo-clinico/domain/visit-flow.constants";
+} from "@features/operativo/shared/domain/visit-flow.constants";
 import {
   captureVitalsFormSchema,
   type CaptureVitalsFormInput,

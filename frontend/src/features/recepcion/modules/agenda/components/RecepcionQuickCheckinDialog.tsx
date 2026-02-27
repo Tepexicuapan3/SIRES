@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ARRIVAL_TYPE } from "@api/types";
 import { ApiError } from "@api/utils/errors";
-import { useCreateVisit } from "@features/flujo-clinico/mutations/useCreateVisit";
+import { useCreateVisit } from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
 import { mapCheckinFormToCreateVisitRequest } from "@features/recepcion/modules/checkin/domain/checkin.mappers";
 import {
   createCheckinFormSchema,

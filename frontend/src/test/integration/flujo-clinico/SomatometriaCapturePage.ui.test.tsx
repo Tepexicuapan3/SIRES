@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
 import { ApiError } from "@api/utils/errors";
-import SomatometriaCapturePage from "@features/flujo-clinico/pages/SomatometriaCapturePage";
+import SomatometriaCapturePage from "@features/somatometria/modules/captura/pages/SomatometriaCapturePage";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";

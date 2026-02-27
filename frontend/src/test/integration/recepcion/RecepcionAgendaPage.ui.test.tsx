@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@/test/utils";
 import RecepcionAgendaPage from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useRecepcionAgendaQueue } from "@features/recepcion/modules/agenda/queries/useRecepcionAgendaQueue";
-import { useCreateVisit } from "@features/flujo-clinico/mutations/useCreateVisit";
+import { useCreateVisit } from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
 import type { VisitQueueItem } from "@api/types";
 
 vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
@@ -18,7 +18,7 @@ vi.mock(
   }),
 );
 
-vi.mock("@features/flujo-clinico/mutations/useCreateVisit", () => ({
+vi.mock("@features/recepcion/modules/checkin/mutations/useCreateVisit", () => ({
   useCreateVisit: vi.fn(),
 }));
 

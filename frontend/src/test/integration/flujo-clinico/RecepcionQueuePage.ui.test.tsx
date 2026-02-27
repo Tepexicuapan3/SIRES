@@ -2,24 +2,30 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, within, waitFor } from "@/test/utils";
 import { ApiError } from "@api/utils/errors";
-import RecepcionQueuePage from "@features/flujo-clinico/pages/RecepcionQueuePage";
+import RecepcionQueuePage from "@features/recepcion/modules/checkin/pages/RecepcionCheckinPage";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
-import { useRecepcionQueue } from "@features/flujo-clinico/queries/useRecepcionQueue";
-import { useCreateVisit } from "@features/flujo-clinico/mutations/useCreateVisit";
-import { useVisitStatusAction } from "@features/flujo-clinico/mutations/useVisitStatusAction";
+import { useRecepcionCheckinQueue } from "@features/recepcion/modules/checkin/queries/useRecepcionCheckinQueue";
+import { useCreateVisit } from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
+import { useVisitStatusAction } from "@features/recepcion/modules/checkin/mutations/useVisitStatusAction";
 import type { VisitQueueItem } from "@api/types";
 
-vi.mock("@features/flujo-clinico/queries/useRecepcionQueue", () => ({
-  useRecepcionQueue: vi.fn(),
-}));
+vi.mock(
+  "@features/recepcion/modules/checkin/queries/useRecepcionCheckinQueue",
+  () => ({
+    useRecepcionCheckinQueue: vi.fn(),
+  }),
+);
 
-vi.mock("@features/flujo-clinico/mutations/useCreateVisit", () => ({
+vi.mock("@features/recepcion/modules/checkin/mutations/useCreateVisit", () => ({
   useCreateVisit: vi.fn(),
 }));
 
-vi.mock("@features/flujo-clinico/mutations/useVisitStatusAction", () => ({
-  useVisitStatusAction: vi.fn(),
-}));
+vi.mock(
+  "@features/recepcion/modules/checkin/mutations/useVisitStatusAction",
+  () => ({
+    useVisitStatusAction: vi.fn(),
+  }),
+);
 
 vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
   usePermissionDependencies: vi.fn(),
@@ -51,7 +57,7 @@ describe("RecepcionQueuePage UI", () => {
       hasCapability: () => true,
     } as unknown as ReturnType<typeof usePermissionDependencies>);
 
-    vi.mocked(useRecepcionQueue).mockReturnValue({
+    vi.mocked(useRecepcionCheckinQueue).mockReturnValue({
       data: {
         items: [
           createVisit({ id: 1, folio: "VST-001", status: "en_espera" }),
@@ -65,7 +71,7 @@ describe("RecepcionQueuePage UI", () => {
       isLoading: false,
       isError: false,
       error: null,
-    } as unknown as ReturnType<typeof useRecepcionQueue>);
+    } as unknown as ReturnType<typeof useRecepcionCheckinQueue>);
 
     vi.mocked(useCreateVisit).mockReturnValue({
       mutateAsync: createMutateAsync,
@@ -86,16 +92,16 @@ describe("RecepcionQueuePage UI", () => {
       hasCapability: () => false,
     } as unknown as ReturnType<typeof usePermissionDependencies>);
 
-    vi.mocked(useRecepcionQueue).mockReturnValue({
+    vi.mocked(useRecepcionCheckinQueue).mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: false,
       error: null,
-    } as unknown as ReturnType<typeof useRecepcionQueue>);
+    } as unknown as ReturnType<typeof useRecepcionCheckinQueue>);
 
     render(<RecepcionQueuePage />);
 
-    expect(useRecepcionQueue).toHaveBeenCalledWith({ enabled: false });
+    expect(useRecepcionCheckinQueue).toHaveBeenCalledWith({ enabled: false });
     expect(
       screen.getByText(
         "No tenes permisos completos para cargar la bandeja de recepcion.",
@@ -129,12 +135,12 @@ describe("RecepcionQueuePage UI", () => {
   });
 
   it("renderiza estado loading", () => {
-    vi.mocked(useRecepcionQueue).mockReturnValue({
+    vi.mocked(useRecepcionCheckinQueue).mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
       error: null,
-    } as unknown as ReturnType<typeof useRecepcionQueue>);
+    } as unknown as ReturnType<typeof useRecepcionCheckinQueue>);
 
     render(<RecepcionQueuePage />);
 
@@ -142,12 +148,12 @@ describe("RecepcionQueuePage UI", () => {
   });
 
   it("renderiza estado empty", () => {
-    vi.mocked(useRecepcionQueue).mockReturnValue({
+    vi.mocked(useRecepcionCheckinQueue).mockReturnValue({
       data: { items: [], page: 1, pageSize: 20, total: 0, totalPages: 0 },
       isLoading: false,
       isError: false,
       error: null,
-    } as unknown as ReturnType<typeof useRecepcionQueue>);
+    } as unknown as ReturnType<typeof useRecepcionCheckinQueue>);
 
     render(<RecepcionQueuePage />);
 
@@ -155,12 +161,12 @@ describe("RecepcionQueuePage UI", () => {
   });
 
   it("renderiza estado error", () => {
-    vi.mocked(useRecepcionQueue).mockReturnValue({
+    vi.mocked(useRecepcionCheckinQueue).mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
       error: new Error("Network error"),
-    } as unknown as ReturnType<typeof useRecepcionQueue>);
+    } as unknown as ReturnType<typeof useRecepcionCheckinQueue>);
 
     render(<RecepcionQueuePage />);
 
@@ -180,7 +186,7 @@ describe("RecepcionQueuePage UI", () => {
   });
 
   it("aplica filtros y orden en la cola", async () => {
-    vi.mocked(useRecepcionQueue).mockReturnValue({
+    vi.mocked(useRecepcionCheckinQueue).mockReturnValue({
       data: {
         items: [
           createVisit({
@@ -214,7 +220,7 @@ describe("RecepcionQueuePage UI", () => {
       isLoading: false,
       isError: false,
       error: null,
-    } as unknown as ReturnType<typeof useRecepcionQueue>);
+    } as unknown as ReturnType<typeof useRecepcionCheckinQueue>);
 
     const user = userEvent.setup();
     render(<RecepcionQueuePage />);

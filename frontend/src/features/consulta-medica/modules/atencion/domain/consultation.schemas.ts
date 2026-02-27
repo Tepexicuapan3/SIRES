@@ -1,19 +1,4 @@
 import * as z from "zod";
-import {
-  createCheckinFormSchema,
-  type CheckinFormInput,
-  type CheckinFormValues,
-} from "@features/recepcion/modules/checkin/domain/checkin.schemas";
-export {
-  captureVitalsFormSchema,
-  type CaptureVitalsFormInput,
-  type CaptureVitalsFormValues,
-} from "@features/somatometria/modules/captura/domain/capture-vitals.schemas";
-
-export const createVisitFormSchema = createCheckinFormSchema;
-
-export type CreateVisitFormValues = CheckinFormValues;
-export type CreateVisitFormInput = CheckinFormInput;
 
 const diagnosisFieldsSchema = z.object({
   primaryDiagnosis: z

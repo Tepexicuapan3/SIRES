@@ -1,6 +1,7 @@
 import { VISIT_STATUS } from "@api/types";
-import { useVisitQueueByStatus } from "@features/flujo-clinico/queries/useVisitQueueByStatus";
-import { useVisitRealtimeSync } from "@features/flujo-clinico/queries/useVisitRealtimeSync";
+import { SOCKET_CONNECTION_STATUS } from "@/realtime/visits/client";
+import { useVisitQueueByStatus } from "@/realtime/visits/useVisitQueueByStatus";
+import { useVisitRealtimeSync } from "@/realtime/visits/useVisitRealtimeSync";
 
 interface UseRecepcionCheckinQueueOptions {
   enabled?: boolean;
@@ -20,9 +21,15 @@ export const useRecepcionCheckinQueue = (
     },
   });
 
+  const shouldUsePollingFallback =
+    enabled &&
+    import.meta.env.MODE !== "test" &&
+    realtime.connectionStatus !== SOCKET_CONNECTION_STATUS.CONNECTED;
+
   const queueQuery = useVisitQueueByStatus(VISIT_STATUS.EN_ESPERA, {
     ...options,
     pageSize: 20,
+    refetchIntervalMs: shouldUsePollingFallback ? 5_000 : undefined,
   });
 
   return {

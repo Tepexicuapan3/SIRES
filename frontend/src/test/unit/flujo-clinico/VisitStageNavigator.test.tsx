@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen } from "@/test/utils";
-import { VisitStageNavigator } from "@features/flujo-clinico/components/VisitStageNavigator";
+import { VisitStageNavigator } from "@features/operativo/shared/components/VisitStageNavigator";
 
 describe("VisitStageNavigator", () => {
   it("bloquea navegacion a etapas futuras desde en_espera", () => {

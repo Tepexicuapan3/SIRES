@@ -2,34 +2,49 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
 import { ApiError } from "@api/utils/errors";
-import DoctorConsultationPage from "@features/flujo-clinico/pages/DoctorConsultationPage";
+import DoctorConsultationPage from "@features/consulta-medica/modules/atencion/pages/DoctorConsultationPage";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
-import { useCloseVisit } from "@features/flujo-clinico/mutations/useCloseVisit";
-import { useSaveDiagnosis } from "@features/flujo-clinico/mutations/useSaveDiagnosis";
-import { useSavePrescriptions } from "@features/flujo-clinico/mutations/useSavePrescriptions";
-import { useStartConsultation } from "@features/flujo-clinico/mutations/useStartConsultation";
-import { useDoctorQueue } from "@features/flujo-clinico/queries/useDoctorQueue";
+import { useCloseVisit } from "@features/consulta-medica/modules/atencion/mutations/useCloseVisit";
+import { useSaveDiagnosis } from "@features/consulta-medica/modules/atencion/mutations/useSaveDiagnosis";
+import { useSavePrescriptions } from "@features/consulta-medica/modules/atencion/mutations/useSavePrescriptions";
+import { useStartConsultation } from "@features/consulta-medica/modules/atencion/mutations/useStartConsultation";
+import { useDoctorQueue } from "@features/consulta-medica/modules/atencion/queries/useDoctorQueue";
 import type { VisitQueueItem } from "@api/types";
 
-vi.mock("@features/flujo-clinico/queries/useDoctorQueue", () => ({
-  useDoctorQueue: vi.fn(),
-}));
+vi.mock(
+  "@features/consulta-medica/modules/atencion/queries/useDoctorQueue",
+  () => ({
+    useDoctorQueue: vi.fn(),
+  }),
+);
 
-vi.mock("@features/flujo-clinico/mutations/useStartConsultation", () => ({
-  useStartConsultation: vi.fn(),
-}));
+vi.mock(
+  "@features/consulta-medica/modules/atencion/mutations/useStartConsultation",
+  () => ({
+    useStartConsultation: vi.fn(),
+  }),
+);
 
-vi.mock("@features/flujo-clinico/mutations/useSaveDiagnosis", () => ({
-  useSaveDiagnosis: vi.fn(),
-}));
+vi.mock(
+  "@features/consulta-medica/modules/atencion/mutations/useSaveDiagnosis",
+  () => ({
+    useSaveDiagnosis: vi.fn(),
+  }),
+);
 
-vi.mock("@features/flujo-clinico/mutations/useSavePrescriptions", () => ({
-  useSavePrescriptions: vi.fn(),
-}));
+vi.mock(
+  "@features/consulta-medica/modules/atencion/mutations/useSavePrescriptions",
+  () => ({
+    useSavePrescriptions: vi.fn(),
+  }),
+);
 
-vi.mock("@features/flujo-clinico/mutations/useCloseVisit", () => ({
-  useCloseVisit: vi.fn(),
-}));
+vi.mock(
+  "@features/consulta-medica/modules/atencion/mutations/useCloseVisit",
+  () => ({
+    useCloseVisit: vi.fn(),
+  }),
+);
 
 vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
   usePermissionDependencies: vi.fn(),
@@ -185,13 +200,13 @@ describe("DoctorConsultationPage UI", () => {
       screen.getByRole("button", { name: "Iniciar consulta" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Guardar diagnostico" }),
+      screen.getByRole("button", { name: "Guardar borrador" }),
     ).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "Guardar receta" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Cerrar consulta" }),
+      screen.getByRole("button", { name: "Finalizar consulta" }),
     ).toBeDisabled();
   });
 
@@ -255,6 +270,7 @@ describe("DoctorConsultationPage UI", () => {
     const user = userEvent.setup();
     render(<DoctorConsultationPage />);
 
+    await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(
       screen.getByLabelText("Diagnostico principal"),
       "Gastroenteritis aguda",
@@ -264,9 +280,7 @@ describe("DoctorConsultationPage UI", () => {
       "Paciente estable y con manejo ambulatorio.",
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Guardar diagnostico" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
 
     await waitFor(() => {
       expect(saveDiagnosisMutateAsync).toHaveBeenCalledWith({
@@ -301,6 +315,7 @@ describe("DoctorConsultationPage UI", () => {
     const user = userEvent.setup();
     render(<DoctorConsultationPage />);
 
+    await user.click(screen.getByRole("tab", { name: "Receta medica" }));
     await user.type(
       screen.getByLabelText("Receta (una indicacion por linea)"),
       "Paracetamol 500mg cada 8h por 3 dias\nHidratacion oral libre",
@@ -328,7 +343,9 @@ describe("DoctorConsultationPage UI", () => {
     const user = userEvent.setup();
     render(<DoctorConsultationPage />);
 
-    const closeButton = screen.getByRole("button", { name: "Cerrar consulta" });
+    const closeButton = screen.getByRole("button", {
+      name: "Finalizar consulta",
+    });
     expect(closeButton).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "Iniciar consulta" }));
@@ -336,6 +353,7 @@ describe("DoctorConsultationPage UI", () => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
+    await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(screen.getByLabelText("Nota final"), "Nota clinica");
 
@@ -353,12 +371,15 @@ describe("DoctorConsultationPage UI", () => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
+    await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx final");
     await user.type(
       screen.getByLabelText("Nota final"),
       "Nota final de egreso",
     );
-    await user.click(screen.getByRole("button", { name: "Cerrar consulta" }));
+    await user.click(
+      screen.getByRole("button", { name: "Finalizar consulta" }),
+    );
 
     await waitFor(() => {
       expect(saveDiagnosisMutateAsync).toHaveBeenCalledWith({
@@ -403,9 +424,12 @@ describe("DoctorConsultationPage UI", () => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
+    await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(screen.getByLabelText("Nota final"), "Nota");
-    await user.click(screen.getByRole("button", { name: "Cerrar consulta" }));
+    await user.click(
+      screen.getByRole("button", { name: "Finalizar consulta" }),
+    );
 
     await waitFor(() => {
       expect(

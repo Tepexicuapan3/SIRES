@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { visitsAPI } from "@api/resources/visits.api";
 import { VISIT_STATUS, type VisitStatus } from "@api/types";
-import { visitFlowKeys } from "@features/flujo-clinico/queries/visit-flow.keys";
+import { visitFlowKeys } from "@features/recepcion/shared/queries/visit-flow.keys";
 import { createVisitsRealtimeAdapter } from "@/realtime/adapters/visits";
 import type { RealtimeEventEnvelope } from "@/realtime/protocol";
 
@@ -82,6 +82,28 @@ describe("createVisitsRealtimeAdapter", () => {
     expectInvalidationForStatuses(invalidateSpy, [
       VISIT_STATUS.EN_SOMATOMETRIA,
       VISIT_STATUS.EN_ESPERA,
+      undefined,
+    ]);
+  });
+
+  it("transicion somatometria -> doctor invalida ambos modulos sin refresh", async () => {
+    const queryClient = new QueryClient();
+    const invalidateSpy = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockResolvedValue();
+    const adapter = createVisitsRealtimeAdapter({ queryClient });
+
+    await adapter.handleEvent(
+      buildEvent("visit.status.changed", 11, {
+        status: VISIT_STATUS.LISTA_PARA_DOCTOR,
+        previousStatus: VISIT_STATUS.EN_SOMATOMETRIA,
+      }),
+    );
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(3);
+    expectInvalidationForStatuses(invalidateSpy, [
+      VISIT_STATUS.LISTA_PARA_DOCTOR,
+      VISIT_STATUS.EN_SOMATOMETRIA,
       undefined,
     ]);
   });

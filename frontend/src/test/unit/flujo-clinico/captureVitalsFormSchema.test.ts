@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { captureVitalsFormSchema } from "@features/flujo-clinico/domain/visit-flow.schemas";
+import { captureVitalsFormSchema } from "@features/somatometria/modules/captura/domain/capture-vitals.schemas";
 
 const baseVitals = {
   weightKg: 70,

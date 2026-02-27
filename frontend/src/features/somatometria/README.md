@@ -13,7 +13,7 @@ Modulo clinico para captura de signos vitales y liberacion de visita.
 
 ## Compatibilidad
 
-- Se mantienen re-exports en `features/flujo-clinico` para no romper imports legacy.
+- Compatibilidad legacy removida: usar imports directos de `features/somatometria/modules/captura/*`.
 
 ## UI objetivo
 

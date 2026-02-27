@@ -80,7 +80,9 @@ export class FlujoClinicoPage {
       waitUntil: "domcontentloaded",
     });
     await expect(
-      this.page.getByRole("heading", { name: "Registro de Somatometria" }),
+      this.page.getByRole("heading", {
+        name: /Registro de Somatometr(i|í)a/i,
+      }),
     ).toBeVisible();
   }
 
@@ -89,7 +91,7 @@ export class FlujoClinicoPage {
       waitUntil: "domcontentloaded",
     });
     await expect(
-      this.page.getByRole("heading", { name: "Bandeja del doctor" }),
+      this.page.getByRole("heading", { name: "Consulta medica" }),
     ).toBeVisible();
   }
 
@@ -208,6 +210,8 @@ export class FlujoClinicoPage {
   }
 
   async saveDiagnosis(input: CloseConsultationInput): Promise<void> {
+    await this.page.getByRole("tab", { name: "Diagnostico" }).click();
+
     await this.page
       .getByLabel("Diagnostico principal")
       .fill(input.primaryDiagnosis);
@@ -219,7 +223,7 @@ export class FlujoClinicoPage {
           response.url().includes("/diagnosis") &&
           response.request().method() === "POST",
       ),
-      this.page.getByRole("button", { name: "Guardar diagnostico" }).click(),
+      this.page.getByRole("button", { name: "Guardar borrador" }).click(),
     ]);
 
     expect(diagnosisResponse.status()).toBe(200);
@@ -229,6 +233,8 @@ export class FlujoClinicoPage {
   }
 
   async savePrescription(input: SavePrescriptionInput): Promise<void> {
+    await this.page.getByRole("tab", { name: "Receta medica" }).click();
+
     await this.page
       .getByLabel("Receta (una indicacion por linea)")
       .fill(input.items.join("\n"));
@@ -249,6 +255,8 @@ export class FlujoClinicoPage {
   }
 
   async closeConsultation(input: CloseConsultationInput): Promise<void> {
+    await this.page.getByRole("tab", { name: "Diagnostico" }).click();
+
     await this.page
       .getByLabel("Diagnostico principal")
       .fill(input.primaryDiagnosis);
@@ -264,7 +272,7 @@ export class FlujoClinicoPage {
           timeout: DEFAULT_TIMEOUT_MS,
         },
       ),
-      this.page.getByRole("button", { name: "Cerrar consulta" }).click(),
+      this.page.getByRole("button", { name: "Finalizar consulta" }).click(),
     ]);
 
     expect(closeResponse.status()).toBe(200);

@@ -1,6 +1,6 @@
-import { useVisitQueueByStatus } from "@features/flujo-clinico/queries/useVisitQueueByStatus";
-import { useVisitRealtimeSync } from "@features/flujo-clinico/queries/useVisitRealtimeSync";
-import { SOCKET_CONNECTION_STATUS } from "@features/flujo-clinico/queries/visit-realtime.client";
+import { SOCKET_CONNECTION_STATUS } from "@/realtime/visits/client";
+import { useVisitQueueByStatus } from "@/realtime/visits/useVisitQueueByStatus";
+import { useVisitRealtimeSync } from "@/realtime/visits/useVisitRealtimeSync";
 
 interface UseRecepcionAgendaQueueOptions {
   enabled?: boolean;

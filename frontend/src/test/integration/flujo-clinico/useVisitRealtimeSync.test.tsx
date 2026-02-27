@@ -6,9 +6,9 @@ import { VISIT_STATUS } from "@api/types";
 import {
   SOCKET_CONNECTION_STATUS,
   type WebSocketLike,
-} from "@features/flujo-clinico/queries/visit-realtime.client";
-import type { VisitRealtimeEventEnvelope } from "@features/flujo-clinico/queries/visit-realtime.protocol";
-import { useVisitRealtimeSync } from "@features/flujo-clinico/queries/useVisitRealtimeSync";
+} from "@/realtime/visits/client";
+import type { VisitRealtimeEventEnvelope } from "@/realtime/visits/protocol";
+import { useVisitRealtimeSync } from "@/realtime/visits/useVisitRealtimeSync";
 
 class FakeWebSocket implements WebSocketLike {
   url: string;

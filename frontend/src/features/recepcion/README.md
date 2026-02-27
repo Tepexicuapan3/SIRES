@@ -22,7 +22,7 @@ utils/
 
 ## Notas de migracion
 
-- Se mantienen re-exports de compatibilidad en `features/flujo-clinico/` para evitar romper imports antiguos.
+- Compatibilidad legacy removida: usar imports directos de `features/recepcion/modules/*`.
 - Las rutas legacy `/recepcion/fichas/*` redirigen a `checkin`.
 
 ## Modelo operativo

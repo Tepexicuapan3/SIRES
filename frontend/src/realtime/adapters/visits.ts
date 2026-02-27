@@ -6,13 +6,13 @@ import {
   type VisitStatus,
   type VisitsListParams,
 } from "@api/types";
-import { visitFlowKeys } from "@features/flujo-clinico/queries/visit-flow.keys";
+import { visitFlowKeys } from "@/realtime/visits/query-keys";
 import type { RealtimeSequenceGap } from "@/realtime/client";
 import type { RealtimeEventEnvelope } from "@/realtime/protocol";
 import type { RealtimeFeatureSubscriptions } from "@/realtime/subscriptions";
 
 export const VISITS_REALTIME_ADAPTER = {
-  FEATURE: "flujo-clinico",
+  FEATURE: "visits",
 } as const;
 
 export const VISITS_REALTIME_EVENT_TYPE = {

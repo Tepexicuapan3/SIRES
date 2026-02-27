@@ -7,7 +7,7 @@ import {
   type RealtimeSocketClosedInfo,
   type RealtimeWebSocketLike,
 } from "@/realtime/client";
-import type { VisitRealtimeEventEnvelope } from "@features/flujo-clinico/queries/visit-realtime.protocol";
+import type { VisitRealtimeEventEnvelope } from "@/realtime/visits/protocol";
 
 export const SOCKET_CONNECTION_STATUS = REALTIME_CONNECTION_STATUS;
 

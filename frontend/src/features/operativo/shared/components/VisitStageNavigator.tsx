@@ -4,7 +4,7 @@ import {
   VISIT_STAGE,
   isStageAvailableForStatus,
   type VisitStage,
-} from "@features/flujo-clinico/domain/visit-flow.constants";
+} from "@features/operativo/shared/domain/visit-flow.constants";
 
 interface VisitStageNavigatorProps {
   currentStatus: VisitStatus;

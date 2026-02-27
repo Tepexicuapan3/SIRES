@@ -6,7 +6,7 @@ import NuevaConsultaPage from "@features/consultas/pages/NuevaConsultaPage";
 import HistorialPage from "@features/consultas/pages/HistorialPage";
 import ExpedientesListPage from "@features/expedientes/pages/ExpedientesListPage";
 import ExpedienteDetailPage from "@features/expedientes/pages/ExpedienteDetailPage";
-import DoctorConsultationPage from "@features/flujo-clinico/pages/DoctorConsultationPage";
+import DoctorConsultationPage from "@features/consulta-medica/modules/atencion/pages/DoctorConsultationPage";
 import SomatometriaCapturePage from "@features/somatometria/modules/captura/pages/SomatometriaCapturePage";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
 

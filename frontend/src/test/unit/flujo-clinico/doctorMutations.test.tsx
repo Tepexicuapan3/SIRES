@@ -4,9 +4,9 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { visitsAPI } from "@api/resources/visits.api";
-import { useSaveDiagnosis } from "@features/flujo-clinico/mutations/useSaveDiagnosis";
-import { useSavePrescriptions } from "@features/flujo-clinico/mutations/useSavePrescriptions";
-import { visitFlowKeys } from "@features/flujo-clinico/queries/visit-flow.keys";
+import { useSaveDiagnosis } from "@features/consulta-medica/modules/atencion/mutations/useSaveDiagnosis";
+import { useSavePrescriptions } from "@features/consulta-medica/modules/atencion/mutations/useSavePrescriptions";
+import { visitFlowKeys } from "@features/recepcion/shared/queries/visit-flow.keys";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: ReactNode }) => (

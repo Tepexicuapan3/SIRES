@@ -110,16 +110,23 @@ test.describe("Flujo clinico smoke", () => {
     async ({ browser }) => {
       const actorAContext = await browser.newContext();
       const actorBContext = await browser.newContext();
+      const actorCContext = await browser.newContext();
 
       try {
         const actorA = new FlujoClinicoPage(await actorAContext.newPage());
         const actorB = new FlujoClinicoPage(await actorBContext.newPage());
+        const actorC = new FlujoClinicoPage(await actorCContext.newPage());
 
         await actorA.login(FLUJO_CLINICO_USERS.recepcion);
         await actorB.login(FLUJO_CLINICO_USERS.clinico);
+        await actorC.login(FLUJO_CLINICO_USERS.clinico);
 
         await actorB.gotoSomatometriaQueue();
+        await actorC.gotoDoctorQueue();
+
         const navigationEntriesBefore = await actorB.getNavigationEntryCount();
+        const doctorNavigationEntriesBefore =
+          await actorC.getNavigationEntryCount();
 
         const patientId = createPatientId();
         const createdVisit = await actorA.registerArrival({
@@ -153,9 +160,28 @@ test.describe("Flujo clinico smoke", () => {
 
         const navigationEntriesAfter = await actorB.getNavigationEntryCount();
         expect(navigationEntriesAfter).toBe(navigationEntriesBefore);
+
+        const doctorRealtimeStartAt = Date.now();
+        await actorB.captureVitals(createdVisit.folio);
+
+        await actorC.waitForVisitOption(
+          "#doctor-visit-selector",
+          createdVisit.folio,
+          5_000,
+        );
+
+        const doctorRealtimeLatencyMs = Date.now() - doctorRealtimeStartAt;
+        expect(doctorRealtimeLatencyMs).toBeLessThanOrEqual(5_000);
+
+        const doctorNavigationEntriesAfter =
+          await actorC.getNavigationEntryCount();
+        expect(doctorNavigationEntriesAfter).toBe(
+          doctorNavigationEntriesBefore,
+        );
       } finally {
         await actorAContext.close();
         await actorBContext.close();
+        await actorCContext.close();
       }
     },
   );

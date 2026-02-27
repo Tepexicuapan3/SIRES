@@ -23,15 +23,15 @@ import {
   RECEPCION_STATUS_ACTION,
   VISIT_STATUS,
 } from "@api/types";
-import { VisitStageNavigator } from "@features/flujo-clinico/components/VisitStageNavigator";
+import { VisitStageNavigator } from "@features/operativo/shared/components/VisitStageNavigator";
 import {
   VISIT_STAGE,
   canRunRecepcionStatusAction,
-} from "@features/flujo-clinico/domain/visit-flow.constants";
+} from "@features/operativo/shared/domain/visit-flow.constants";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
-import { useCreateVisit } from "@features/flujo-clinico/mutations/useCreateVisit";
-import { useVisitStatusAction } from "@features/flujo-clinico/mutations/useVisitStatusAction";
-import { useRecepcionQueue } from "@features/flujo-clinico/queries/useRecepcionQueue";
+import { useCreateVisit } from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
+import { useVisitStatusAction } from "@features/recepcion/modules/checkin/mutations/useVisitStatusAction";
+import { useRecepcionCheckinQueue } from "@features/recepcion/modules/checkin/queries/useRecepcionCheckinQueue";
 import {
   createCheckinFormSchema,
   DEFAULT_CHECKIN_FORM_VALUES,
@@ -219,7 +219,9 @@ export const RecepcionCheckinPage = () => {
     RECEPCION_WRITE_PERMISSION_REQUIREMENT,
   );
 
-  const queueQuery = useRecepcionQueue({ enabled: canReadRecepcionQueue });
+  const queueQuery = useRecepcionCheckinQueue({
+    enabled: canReadRecepcionQueue,
+  });
   const createVisit = useCreateVisit();
   const visitStatusAction = useVisitStatusAction();
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);

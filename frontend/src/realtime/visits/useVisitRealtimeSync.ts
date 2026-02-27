@@ -1,11 +1,11 @@
+import { env } from "@/config/env";
 import type { VisitsListParams } from "@api/types";
 import {
   SOCKET_CONNECTION_STATUS,
   type SocketConnectionStatus,
   type WebSocketLike,
-} from "@features/flujo-clinico/queries/visit-realtime.client";
-import { useVisitRealtimeBridge } from "@features/flujo-clinico/queries/useVisitRealtimeBridge";
-import { env } from "@/config/env";
+} from "@/realtime/visits/client";
+import { useVisitRealtimeBridge } from "@/realtime/visits/useVisitRealtimeBridge";
 
 interface UseVisitRealtimeSyncOptions {
   enabled?: boolean;
