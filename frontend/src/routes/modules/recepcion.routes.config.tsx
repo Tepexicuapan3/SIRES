@@ -2,11 +2,7 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
 import RecepcionAgendaPage from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
-import RecepcionCheckinPage from "@features/recepcion/modules/checkin/pages/RecepcionCheckinPage";
-import {
-  RECEPCION_QUEUE_READ_PERMISSIONS,
-  RECEPCION_WRITE_PERMISSIONS,
-} from "@features/recepcion/shared/domain/recepcion.permissions";
+import { RECEPCION_QUEUE_READ_PERMISSIONS } from "@features/recepcion/shared/domain/recepcion.permissions";
 
 const agendaElement = (
   <ProtectedRoute
@@ -17,13 +13,8 @@ const agendaElement = (
   </ProtectedRoute>
 );
 
-const checkinElement = (
-  <ProtectedRoute
-    requiredAnyPermissions={[...RECEPCION_WRITE_PERMISSIONS]}
-    dependencyAware
-  >
-    <RecepcionCheckinPage />
-  </ProtectedRoute>
+const recepcionCheckinRedirect = (
+  <Navigate to="/recepcion/agenda?focus=checkin" replace />
 );
 
 export const recepcionRoutes: RouteObject[] = [
@@ -37,23 +28,23 @@ export const recepcionRoutes: RouteObject[] = [
   },
   {
     path: "checkin",
-    element: checkinElement,
+    element: recepcionCheckinRedirect,
   },
   {
     path: "fichas",
-    element: <Navigate to="/recepcion/checkin" replace />,
+    element: recepcionCheckinRedirect,
   },
   {
     path: "fichas/medicina-general",
-    element: checkinElement,
+    element: recepcionCheckinRedirect,
   },
   {
     path: "fichas/especialidad",
-    element: checkinElement,
+    element: recepcionCheckinRedirect,
   },
   {
     path: "fichas/urgencias",
-    element: checkinElement,
+    element: recepcionCheckinRedirect,
   },
   {
     path: "incapacidad",

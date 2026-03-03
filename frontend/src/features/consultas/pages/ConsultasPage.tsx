@@ -1,196 +1,103 @@
-/**
- * Panel de Consultas - Médicos
- * Landing page para usuarios con rol MEDICOS
- */
-
 import {
-  Stethoscope,
   Calendar,
-  FileText,
-  Pill,
-  TestTube,
   ClipboardList,
+  FileText,
+  Plus,
+  Stethoscope,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
-import { Link } from "react-router-dom";
+
+const HUB_ACTIONS = [
+  {
+    title: "Nueva consulta",
+    description: "Iniciar atencion clinica de forma inmediata.",
+    icon: Plus,
+    to: "/clinico/consultas/nueva",
+  },
+  {
+    title: "Agenda",
+    description: "Revisar citas programadas y estado de atencion.",
+    icon: Calendar,
+    to: "/clinico/consultas/agenda",
+  },
+  {
+    title: "Historial",
+    description: "Consultar evolucion clinica por paciente.",
+    icon: ClipboardList,
+    to: "/clinico/consultas/historial",
+  },
+  {
+    title: "Expedientes",
+    description: "Abrir expedientes y datos administrativos.",
+    icon: FileText,
+    to: "/clinico/expedientes",
+  },
+] as const;
 
 export const ConsultasPage = () => {
   const { data: user } = useAuthSession();
 
-  const medicalModules = [
-    {
-      title: "Nueva Consulta",
-      description: "Registrar consulta médica y diagnóstico",
-      icon: Stethoscope,
-      link: "/consultas/nueva",
-      badge: "Rápido",
-      variant: "stable" as const,
-    },
-    {
-      title: "Agenda del Día",
-      description: "Ver citas programadas y pacientes pendientes",
-      icon: Calendar,
-      link: "/consultas/agenda",
-      badge: "12 citas",
-      variant: "info" as const,
-    },
-    {
-      title: "Expedientes",
-      description: "Buscar y consultar historiales clínicos",
-      icon: FileText,
-      link: "/consultas/expedientes",
-      badge: "Buscar",
-      variant: "secondary" as const,
-    },
-    {
-      title: "Recetas",
-      description: "Generar recetas médicas y prescripciones",
-      icon: Pill,
-      link: "/consultas/recetas",
-      badge: "Activo",
-      variant: "stable" as const,
-    },
-    {
-      title: "Laboratorio",
-      description: "Solicitar estudios y ver resultados",
-      icon: TestTube,
-      link: "/consultas/laboratorio",
-      badge: "3 pendientes",
-      variant: "alert" as const,
-    },
-    {
-      title: "Pases Médicos",
-      description: "Generar pases y referencias",
-      icon: ClipboardList,
-      link: "/consultas/pases",
-      badge: "Disponible",
-      variant: "info" as const,
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-app p-6 md:p-10">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-brand/10 rounded-lg">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <header className="rounded-xl border border-line-struct bg-paper p-5 md:p-6">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-brand/10 p-2">
               <Stethoscope className="size-6 text-brand" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-txt-body">
-                Consulta Médica
+              <h1 className="text-2xl font-semibold text-txt-body">
+                Consultas
               </h1>
-              <p className="text-txt-muted">Dr(a). {user?.nombre_completo}</p>
+              <p className="text-sm text-txt-muted">
+                {user?.fullName
+                  ? `Equipo de ${user.fullName}`
+                  : "Navegacion clinica"}
+              </p>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Citas Hoy</CardDescription>
-              <CardTitle className="text-4xl">12</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="stable">3 completadas</Badge>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Pendientes</CardDescription>
-              <CardTitle className="text-4xl">9</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="alert">Próximo: 10:30</Badge>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Consultas/Mes</CardDescription>
-              <CardTitle className="text-4xl">287</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="info">Promedio: 14/día</Badge>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Recetas Generadas</CardDescription>
-              <CardTitle className="text-4xl">45</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="secondary">Esta semana</Badge>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Módulos de Consulta */}
-        <div>
-          <h2 className="text-xl font-semibold text-txt-body mb-4">
-            Herramientas de Consulta
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {medicalModules.map((module) => (
-              <Link key={module.link} to={module.link}>
-                <Card className="h-full hover:shadow-md hover:border-brand/50 transition-all cursor-pointer">
+        <section>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {HUB_ACTIONS.map((action) => (
+              <Link key={action.to} to={action.to}>
+                <Card className="h-full border-line-struct transition-colors hover:border-brand/40">
                   <CardHeader>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="p-2 bg-subtle rounded-lg">
-                        <module.icon className="size-5 text-brand" />
-                      </div>
-                      <Badge variant={module.variant}>{module.badge}</Badge>
+                    <div className="mb-3 inline-flex rounded-lg bg-subtle p-2">
+                      <action.icon className="size-5 text-brand" />
                     </div>
-                    <CardTitle className="text-lg">{module.title}</CardTitle>
-                    <CardDescription>{module.description}</CardDescription>
+                    <CardTitle>{action.title}</CardTitle>
+                    <CardDescription>{action.description}</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start p-0 h-auto font-normal text-brand hover:text-brand-hover"
-                    >
-                      Acceder →
-                    </Button>
-                  </CardContent>
                 </Card>
               </Link>
             ))}
           </div>
-        </div>
 
-        {/* Acceso Rápido */}
-        <div className="mt-8 p-6 bg-paper border border-line-struct rounded-xl">
-          <h3 className="text-lg font-semibold text-txt-body mb-4">
-            Acceso Rápido
-          </h3>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="default" asChild>
-              <Link to="/consultas/nueva">Iniciar Consulta</Link>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button asChild>
+              <Link to="/clinico/consultas/nueva">Iniciar consulta</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link to="/consultas/agenda">Ver Agenda</Link>
+              <Link to="/clinico/consultas/agenda">Abrir agenda</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link to="/consultas/expedientes">Buscar Paciente</Link>
+              <Link to="/clinico/consultas/historial">Ver historial</Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="ghost" asChild>
               <Link to="/dashboard">Dashboard</Link>
             </Button>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

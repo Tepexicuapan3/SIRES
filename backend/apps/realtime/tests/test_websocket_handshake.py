@@ -53,12 +53,82 @@ class RealtimeHandshakeSecurityTests(TestCase):
             terminos_acept=True,
         )
 
+        self.admin_user = SyUsuario.objects.create(
+            usuario="ws_admin_user",
+            correo="ws_admin_user@example.com",
+            clave_hash=make_password("Secret123!"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        admin_role, _ = Roles.objects.get_or_create(
+            rol="ADMIN",
+            defaults={
+                "desc_rol": "Administracion",
+                "landing_route": "/dashboard",
+                "is_active": True,
+                "is_admin": True,
+            },
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=self.admin_user,
+            id_rol=admin_role,
+            is_primary=True,
+        )
+
         access_token, _ = create_access_refresh_tokens(self.user)
         self.cookie_header = f"{ACCESS_COOKIE}={access_token}".encode()
         blocked_token, _ = create_access_refresh_tokens(self.user_without_stream_role)
         self.blocked_cookie_header = f"{ACCESS_COOKIE}={blocked_token}".encode()
+        admin_token, _ = create_access_refresh_tokens(self.admin_user)
+        self.admin_cookie_header = f"{ACCESS_COOKIE}={admin_token}".encode()
 
     def test_connection_accepts_valid_cookie_auth(self):
+        response = self._connect_once(
+            headers=[
+                (b"origin", b"http://localhost:5173"),
+                (b"cookie", self.cookie_header),
+            ],
+            query_string=b"",
+        )
+
+        self.assertEqual(response["type"], "websocket.accept")
+
+    def test_connection_accepts_admin_with_wildcard_permissions(self):
+        response = self._connect_once(
+            headers=[
+                (b"origin", b"http://localhost:5173"),
+                (b"cookie", self.admin_cookie_header),
+            ],
+            query_string=b"",
+        )
+
+        self.assertEqual(response["type"], "websocket.accept")
+
+    @override_settings(
+        DEBUG=True,
+        ALLOW_ALL_HOSTS=True,
+        WS_ALLOW_ALL_ORIGINS=False,
+        WS_ALLOWED_ORIGINS="",
+    )
+    def test_connection_accepts_origin_when_debug_allow_all_hosts_enabled(self):
+        response = self._connect_once(
+            headers=[
+                (b"origin", b"http://localhost:5173"),
+                (b"cookie", self.cookie_header),
+            ],
+            query_string=b"",
+        )
+
+        self.assertEqual(response["type"], "websocket.accept")
+
+    @override_settings(
+        DEBUG=False,
+        WS_ALLOW_ALL_ORIGINS=False,
+        WS_ALLOWED_ORIGINS="",
+        ALLOWED_HOSTS=["localhost", "testserver"],
+    )
+    def test_connection_accepts_origin_matching_allowed_hosts_fallback(self):
         response = self._connect_once(
             headers=[
                 (b"origin", b"http://localhost:5173"),

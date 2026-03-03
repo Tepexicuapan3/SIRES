@@ -5,7 +5,7 @@ import type { VisitsListParams } from "@api/types";
 import { createVisitsRealtimeAdapter } from "@/realtime/adapters/visits";
 import {
   REALTIME_CONNECTION_STATUS,
-  createRealtimeClient,
+  acquireRealtimeClient,
   type RealtimeConnectionStatus,
   type RealtimeWebSocketLike,
 } from "@/realtime/client";
@@ -25,6 +25,7 @@ interface UseVisitRealtimeBridgeOptions {
   random?: () => number;
   heartbeatIntervalMs?: number;
   heartbeatTimeoutMs?: number;
+  disconnectGraceMs?: number;
 }
 
 interface UseVisitRealtimeBridgeResult {
@@ -48,6 +49,7 @@ export const useVisitRealtimeBridge = (
     random,
     heartbeatIntervalMs,
     heartbeatTimeoutMs,
+    disconnectGraceMs,
   } = options;
   const queryClient = useQueryClient();
 
@@ -83,18 +85,25 @@ export const useVisitRealtimeBridge = (
       resyncParams: resyncParamsRef.current,
     });
 
-    const client = createRealtimeClient({
-      url,
-      createSocket: socketFactoryRef.current,
-      backoffBaseMs,
-      backoffMaxMs,
-      jitterRatio,
-      random: randomRef.current,
-      heartbeatIntervalMs,
-      heartbeatTimeoutMs,
-      onGap: (gap) => {
-        void adapter.handleGap(gap);
+    const lease = acquireRealtimeClient(
+      {
+        url,
+        createSocket: socketFactoryRef.current,
+        backoffBaseMs,
+        backoffMaxMs,
+        jitterRatio,
+        random: randomRef.current,
+        heartbeatIntervalMs,
+        heartbeatTimeoutMs,
       },
+      {
+        disconnectGraceMs,
+      },
+    );
+
+    const client = lease.client;
+    const unbindGap = client.onGapDetected((gap) => {
+      void adapter.handleGap(gap);
     });
 
     const registry = createRealtimeSubscriptionsRegistry([
@@ -121,7 +130,8 @@ export const useVisitRealtimeBridge = (
     return () => {
       unbindState();
       unbindSubscriptions();
-      client.disconnect();
+      unbindGap();
+      lease.release();
     };
   }, [
     enabled,
@@ -132,6 +142,7 @@ export const useVisitRealtimeBridge = (
     jitterRatio,
     heartbeatIntervalMs,
     heartbeatTimeoutMs,
+    disconnectGraceMs,
   ]);
 
   return {

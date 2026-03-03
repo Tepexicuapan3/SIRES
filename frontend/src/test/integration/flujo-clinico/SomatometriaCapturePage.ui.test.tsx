@@ -2,11 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
 import { ApiError } from "@api/utils/errors";
+import { toast } from "sonner";
 import SomatometriaCapturePage from "@features/somatometria/modules/captura/pages/SomatometriaCapturePage";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import type { VisitQueueItem } from "@api/types";
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 vi.mock(
   "@features/somatometria/modules/captura/queries/useSomatometriaQueue",
@@ -45,6 +53,8 @@ describe("SomatometriaCapturePage UI", () => {
   const captureMutateAsync = vi.fn();
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
     vi.mocked(usePermissionDependencies).mockReturnValue({
       hasCapability: () => true,
     } as unknown as ReturnType<typeof usePermissionDependencies>);
@@ -201,9 +211,12 @@ describe("SomatometriaCapturePage UI", () => {
       });
     });
 
-    expect(
-      screen.getByText("Signos vitales guardados correctamente."),
-    ).toBeVisible();
+    expect(toast.success).toHaveBeenCalledWith(
+      "Signos vitales guardados correctamente.",
+      {
+        description: "Visita VST-1001 actualizada.",
+      },
+    );
     expect(screen.getByText("IMC calculado: 22.86")).toBeVisible();
   });
 
@@ -251,7 +264,9 @@ describe("SomatometriaCapturePage UI", () => {
       await user.click(screen.getByRole("button", { name: "Guardar" }));
 
       await waitFor(() => {
-        expect(screen.getByText(message)).toBeVisible();
+        expect(toast.error).toHaveBeenCalledWith("No se pudo guardar", {
+          description: message,
+        });
       });
     },
   );

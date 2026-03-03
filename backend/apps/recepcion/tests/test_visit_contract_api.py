@@ -13,6 +13,7 @@ class VisitContractsApiTests(APITestCase):
         self.request_id = "11111111-1111-1111-1111-111111111111"
         self.recepcion_password = "Recep_123456"
         self.medico_password = "Medico_123456"
+        self.admin_password = "Admin_123456"
 
         self._create_user_with_role(
             username="recepcion_user",
@@ -33,8 +34,25 @@ class VisitContractsApiTests(APITestCase):
             role_code="CLINICO",
             permissions=["clinico:somatometria:read"],
         )
+        self._create_user_with_role(
+            username="admin_user",
+            email="admin@example.com",
+            password=self.admin_password,
+            role_code="ADMIN",
+            landing_route="/admin",
+            is_admin=True,
+        )
 
-    def _create_user_with_role(self, username, email, password, role_code, permissions=None):
+    def _create_user_with_role(
+        self,
+        username,
+        email,
+        password,
+        role_code,
+        permissions=None,
+        landing_route=None,
+        is_admin=False,
+    ):
         user = SyUsuario.objects.create(
             usuario=username,
             correo=email,
@@ -50,10 +68,14 @@ class VisitContractsApiTests(APITestCase):
             materno="User",
             nombre_completo=f"{username} Test User",
         )
+        resolved_landing_route = landing_route or (
+            "/recepcion" if role_code == "RECEPCION" else "/consultas"
+        )
         role = Roles.objects.create(
             rol=role_code,
             desc_rol=f"Rol {role_code}",
-            landing_route="/recepcion" if role_code == "RECEPCION" else "/consultas",
+            landing_route=resolved_landing_route,
+            is_admin=is_admin,
         )
         RelUsuarioRol.objects.create(
             id_usuario=user,
@@ -183,6 +205,25 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.data["code"], "ROLE_NOT_ALLOWED")
         self.assertEqual(response.data["status"], 403)
         self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_create_visit_allows_admin_with_wildcard_permissions(self):
+        self._login_as("admin_user", self.admin_password)
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "patientId": 1235,
+                "arrivalType": "appointment",
+                "appointmentId": "APP-ADMIN-001",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["patientId"], 1235)
+        self.assertEqual(response.data["status"], "en_espera")
 
     def test_list_visits_happy_path_contract(self):
         self._login_as("recepcion_user", self.recepcion_password)
@@ -396,6 +437,23 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.data["code"], "ROLE_NOT_ALLOWED")
         self.assertEqual(response.data["status"], 403)
         self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_patch_visit_status_allows_admin_with_wildcard_permissions(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit = self._create_visit(patient_id=3007)
+
+        self._login_as("admin_user", self.admin_password)
+        response = self.client.patch(
+            f"/api/v1/visits/{visit['id']}/status",
+            {"targetStatus": "cancelada"},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], visit["id"])
+        self.assertEqual(response.data["status"], "cancelada")
 
     def test_patch_visit_status_invalid_transition_returns_visit_state_invalid(self):
         self._login_as("recepcion_user", self.recepcion_password)

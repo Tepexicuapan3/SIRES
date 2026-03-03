@@ -100,6 +100,13 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
             "clinico:somatometria:read",
         ]
     },
+    "flow.recepcion.queue.write": {
+        "anyOf": [
+            "recepcion:fichas:medicina_general:create",
+            "recepcion:fichas:especialidad:create",
+            "recepcion:fichas:urgencias:create",
+        ]
+    },
     "flow.somatometria.queue.read": {
         "allOf": ["clinico:somatometria:read"]
     },

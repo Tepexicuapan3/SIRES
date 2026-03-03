@@ -18,6 +18,7 @@ interface UseVisitRealtimeSyncOptions {
   random?: () => number;
   heartbeatIntervalMs?: number;
   heartbeatTimeoutMs?: number;
+  disconnectGraceMs?: number;
 }
 
 interface UseVisitRealtimeSyncResult {
@@ -29,6 +30,10 @@ const DEFAULT_VISIT_STREAM_PATH = "/ws/v1/visits/stream";
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 const DEFAULT_HEARTBEAT_TIMEOUT_MS = 10_000;
 const DEFAULT_DEV_BACKEND_PORT = 5000;
+const DEFAULT_BACKOFF_BASE_MS = 1_000;
+const DEFAULT_BACKOFF_MAX_MS = 30_000;
+const DEFAULT_JITTER_RATIO = 0.1;
+const DEFAULT_DISCONNECT_GRACE_MS = 1_500;
 
 const parsePositiveNumber = (value: string | undefined): number | null => {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -37,6 +42,19 @@ const parsePositiveNumber = (value: string | undefined): number | null => {
 
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+};
+
+const parseNonNegativeNumber = (value: string | undefined): number | null => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
     return null;
   }
 
@@ -196,6 +214,39 @@ const resolveHeartbeatTimeoutMs = (): number => {
   );
 };
 
+const resolveBackoffBaseMs = (): number => {
+  return (
+    parsePositiveNumber(import.meta.env.VITE_VISITS_STREAM_BACKOFF_BASE_MS) ??
+    DEFAULT_BACKOFF_BASE_MS
+  );
+};
+
+const resolveBackoffMaxMs = (): number => {
+  return (
+    parsePositiveNumber(import.meta.env.VITE_VISITS_STREAM_BACKOFF_MAX_MS) ??
+    DEFAULT_BACKOFF_MAX_MS
+  );
+};
+
+const resolveJitterRatio = (): number => {
+  const configuredJitter = parseNonNegativeNumber(
+    import.meta.env.VITE_VISITS_STREAM_JITTER_RATIO,
+  );
+  if (configuredJitter === null) {
+    return DEFAULT_JITTER_RATIO;
+  }
+
+  return Math.min(configuredJitter, 1);
+};
+
+const resolveDisconnectGraceMs = (): number => {
+  return (
+    parseNonNegativeNumber(
+      import.meta.env.VITE_VISITS_STREAM_DISCONNECT_GRACE_MS,
+    ) ?? DEFAULT_DISCONNECT_GRACE_MS
+  );
+};
+
 export const useVisitRealtimeSync = (
   options: UseVisitRealtimeSyncOptions = {},
 ): UseVisitRealtimeSyncResult => {
@@ -204,13 +255,16 @@ export const useVisitRealtimeSync = (
     url = resolveDefaultVisitStreamUrl(),
     resyncParams,
     socketFactory,
-    backoffBaseMs,
-    backoffMaxMs,
-    jitterRatio,
+    backoffBaseMs = resolveBackoffBaseMs(),
+    backoffMaxMs = resolveBackoffMaxMs(),
+    jitterRatio = resolveJitterRatio(),
     random,
     heartbeatIntervalMs = resolveHeartbeatIntervalMs(),
     heartbeatTimeoutMs = resolveHeartbeatTimeoutMs(),
+    disconnectGraceMs = resolveDisconnectGraceMs(),
   } = options;
+
+  const normalizedBackoffMaxMs = Math.max(backoffMaxMs, backoffBaseMs);
 
   const bridge = useVisitRealtimeBridge({
     enabled,
@@ -218,11 +272,12 @@ export const useVisitRealtimeSync = (
     resyncParams,
     socketFactory,
     backoffBaseMs,
-    backoffMaxMs,
+    backoffMaxMs: normalizedBackoffMaxMs,
     jitterRatio,
     random,
     heartbeatIntervalMs,
     heartbeatTimeoutMs,
+    disconnectGraceMs,
   });
 
   return {

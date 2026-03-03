@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   REALTIME_CONNECTION_STATUS,
   RealtimeClient,
+  acquireRealtimeClient,
+  resetRealtimeClientSingletonsForTests,
   type RealtimeWebSocketLike,
 } from "@/realtime/client";
 import type { RealtimeEventEnvelope } from "@/realtime/protocol";
@@ -67,10 +69,12 @@ const buildEnvelope = (
 
 describe("RealtimeClient", () => {
   beforeEach(() => {
+    resetRealtimeClientSingletonsForTests();
     vi.useFakeTimers();
   });
 
   afterEach(() => {
+    resetRealtimeClientSingletonsForTests();
     vi.useRealTimers();
   });
 
@@ -136,6 +140,66 @@ describe("RealtimeClient", () => {
 
     vi.advanceTimersByTime(1);
     expect(sockets).toHaveLength(2);
+  });
+
+  it("no reconecta cuando el cierre es de autorizacion", () => {
+    const sockets: FakeWebSocket[] = [];
+    const client = new RealtimeClient({
+      url: "ws://localhost/ws/v1/visits/stream",
+      createSocket: (url) => {
+        const socket = new FakeWebSocket(url);
+        sockets.push(socket);
+        return socket;
+      },
+      random: () => 0,
+      backoffBaseMs: 1000,
+      backoffMaxMs: 8000,
+      jitterRatio: 0,
+    });
+
+    client.connect();
+    expect(sockets).toHaveLength(1);
+
+    sockets[0].open();
+    sockets[0].serverClose(4403, "forbidden");
+
+    vi.advanceTimersByTime(30_000);
+    expect(sockets).toHaveLength(1);
+    expect(client.getState().connectionStatus).toBe(
+      REALTIME_CONNECTION_STATUS.DISCONNECTED,
+    );
+  });
+
+  it("comparte cliente por URL con release en ventana de gracia", () => {
+    const sockets: FakeWebSocket[] = [];
+    const options = {
+      url: "ws://localhost/ws/v1/visits/stream",
+      createSocket: (url: string) => {
+        const socket = new FakeWebSocket(url);
+        sockets.push(socket);
+        return socket;
+      },
+      random: () => 0,
+    };
+
+    const leaseA = acquireRealtimeClient(options, {
+      disconnectGraceMs: 1000,
+    });
+    expect(sockets).toHaveLength(1);
+    sockets[0].open();
+
+    leaseA.release();
+    vi.advanceTimersByTime(900);
+
+    const leaseB = acquireRealtimeClient(options, {
+      disconnectGraceMs: 1000,
+    });
+    expect(sockets).toHaveLength(1);
+    expect(sockets[0].readyState).toBe(1);
+
+    leaseB.release();
+    vi.advanceTimersByTime(1000);
+    expect(sockets[0].readyState).toBe(3);
   });
 
   it("hace dedupe por eventId", () => {

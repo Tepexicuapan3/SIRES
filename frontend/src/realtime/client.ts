@@ -25,6 +25,7 @@ export interface RealtimeSocketClosedInfo {
 }
 
 export interface RealtimeWebSocketLike {
+  readyState?: number;
   onopen: ((event: Event) => void) | null;
   onmessage: ((event: MessageEvent<string>) => void) | null;
   onclose: ((event: CloseEvent) => void) | null;
@@ -51,6 +52,7 @@ export interface RealtimeClientOptions {
   heartbeatIntervalMs?: number;
   heartbeatTimeoutMs?: number;
   heartbeatMessage?: string;
+  shouldReconnectOnClose?: (info: RealtimeSocketClosedInfo) => boolean;
   onGap?: (gap: RealtimeSequenceGap) => void;
   onSocketError?: () => void;
   onSocketClosed?: (info: RealtimeSocketClosedInfo) => void;
@@ -62,6 +64,12 @@ const DEFAULT_JITTER_RATIO = 0.1;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 0;
 const DEFAULT_HEARTBEAT_TIMEOUT_MS = 10000;
 const DEFAULT_HEARTBEAT_MESSAGE = JSON.stringify({ type: "ping" });
+const NON_RECONNECTABLE_CLOSE_CODES = new Set([1000, 1001, 4401, 4403]);
+
+const SOCKET_READY_STATE = {
+  CONNECTING: 0,
+  OPEN: 1,
+} as const;
 
 interface HeartbeatMessage {
   type: string;
@@ -85,6 +93,9 @@ export class RealtimeClient {
   private readonly heartbeatIntervalMs: number;
   private readonly heartbeatTimeoutMs: number;
   private readonly heartbeatMessage: string;
+  private readonly shouldReconnectOnClose: (
+    info: RealtimeSocketClosedInfo,
+  ) => boolean;
   private readonly onGap?: (gap: RealtimeSequenceGap) => void;
   private readonly onSocketError?: () => void;
   private readonly onSocketClosed?: (info: RealtimeSocketClosedInfo) => void;
@@ -99,6 +110,11 @@ export class RealtimeClient {
   private readonly seenEventIds = new Set<string>();
   private readonly eventHandlers = new Map<string, Set<RealtimeEventHandler>>();
   private readonly stateHandlers = new Set<RealtimeStateChangeHandler>();
+  private readonly gapHandlers = new Set<(gap: RealtimeSequenceGap) => void>();
+  private readonly socketErrorHandlers = new Set<() => void>();
+  private readonly socketClosedHandlers = new Set<
+    (info: RealtimeSocketClosedInfo) => void
+  >();
 
   private state: RealtimeClientState = {
     connectionStatus: REALTIME_CONNECTION_STATUS.IDLE,
@@ -118,12 +134,25 @@ export class RealtimeClient {
       options.heartbeatTimeoutMs ?? DEFAULT_HEARTBEAT_TIMEOUT_MS;
     this.heartbeatMessage =
       options.heartbeatMessage ?? DEFAULT_HEARTBEAT_MESSAGE;
+    this.shouldReconnectOnClose =
+      options.shouldReconnectOnClose ??
+      ((info) => !NON_RECONNECTABLE_CLOSE_CODES.has(info.code));
     this.onGap = options.onGap;
     this.onSocketError = options.onSocketError;
     this.onSocketClosed = options.onSocketClosed;
   }
 
   connect(): void {
+    if (this.socket) {
+      const currentReadyState = this.socket.readyState;
+      if (
+        currentReadyState === SOCKET_READY_STATE.CONNECTING ||
+        currentReadyState === SOCKET_READY_STATE.OPEN
+      ) {
+        return;
+      }
+    }
+
     this.isStopped = false;
     this.clearReconnectTimer();
     this.openSocket(false);
@@ -201,14 +230,18 @@ export class RealtimeClient {
     };
     socket.onerror = () => {
       this.setConnectionStatus(REALTIME_CONNECTION_STATUS.ERROR);
-      this.onSocketError?.();
+      this.notifySocketError();
     };
     socket.onclose = (event) => {
       this.clearHeartbeatTimer();
       this.setConnectionStatus(REALTIME_CONNECTION_STATUS.DISCONNECTED);
-      this.onSocketClosed?.({ code: event.code, reason: event.reason });
+      const closedInfo = {
+        code: event.code,
+        reason: event.reason,
+      };
+      this.notifySocketClosed(closedInfo);
 
-      if (!this.isStopped) {
+      if (!this.isStopped && this.shouldReconnectOnClose(closedInfo)) {
         this.scheduleReconnect();
       }
     };
@@ -249,7 +282,7 @@ export class RealtimeClient {
     }
 
     if (sequence > lastSequence + 1) {
-      this.onGap?.({
+      this.notifyGap({
         expectedSequence: lastSequence + 1,
         receivedSequence: sequence,
       });
@@ -372,6 +405,53 @@ export class RealtimeClient {
     this.setState({ connectionStatus: status });
   }
 
+  onGapDetected(handler: (gap: RealtimeSequenceGap) => void): () => void {
+    this.gapHandlers.add(handler);
+
+    return () => {
+      this.gapHandlers.delete(handler);
+    };
+  }
+
+  onSocketErrorDetected(handler: () => void): () => void {
+    this.socketErrorHandlers.add(handler);
+
+    return () => {
+      this.socketErrorHandlers.delete(handler);
+    };
+  }
+
+  onSocketClosedDetected(
+    handler: (info: RealtimeSocketClosedInfo) => void,
+  ): () => void {
+    this.socketClosedHandlers.add(handler);
+
+    return () => {
+      this.socketClosedHandlers.delete(handler);
+    };
+  }
+
+  private notifyGap(gap: RealtimeSequenceGap): void {
+    this.onGap?.(gap);
+    for (const handler of this.gapHandlers) {
+      handler(gap);
+    }
+  }
+
+  private notifySocketError(): void {
+    this.onSocketError?.();
+    for (const handler of this.socketErrorHandlers) {
+      handler();
+    }
+  }
+
+  private notifySocketClosed(info: RealtimeSocketClosedInfo): void {
+    this.onSocketClosed?.(info);
+    for (const handler of this.socketClosedHandlers) {
+      handler(info);
+    }
+  }
+
   private setState(next: Partial<RealtimeClientState>): void {
     this.state = {
       ...this.state,
@@ -385,7 +465,50 @@ export class RealtimeClient {
   }
 }
 
-const realtimeClientSingletons = new Map<string, RealtimeClient>();
+interface RealtimeClientRegistryEntry {
+  client: RealtimeClient;
+  refCount: number;
+  disconnectTimer: ReturnType<typeof setTimeout> | null;
+}
+
+interface AcquireRealtimeClientOptions {
+  disconnectGraceMs?: number;
+}
+
+export interface RealtimeClientLease {
+  client: RealtimeClient;
+  release: () => void;
+}
+
+const DEFAULT_DISCONNECT_GRACE_MS = 1_500;
+const realtimeClientSingletons = new Map<string, RealtimeClientRegistryEntry>();
+
+const clearDisconnectTimer = (entry: RealtimeClientRegistryEntry): void => {
+  if (!entry.disconnectTimer) {
+    return;
+  }
+
+  clearTimeout(entry.disconnectTimer);
+  entry.disconnectTimer = null;
+};
+
+const getOrCreateRegistryEntry = (
+  options: RealtimeClientOptions,
+): RealtimeClientRegistryEntry => {
+  const existing = realtimeClientSingletons.get(options.url);
+  if (existing) {
+    return existing;
+  }
+
+  const entry: RealtimeClientRegistryEntry = {
+    client: createRealtimeClient(options),
+    refCount: 0,
+    disconnectTimer: null,
+  };
+
+  realtimeClientSingletons.set(options.url, entry);
+  return entry;
+};
 
 export const createRealtimeClient = (
   options: RealtimeClientOptions,
@@ -393,22 +516,63 @@ export const createRealtimeClient = (
   return new RealtimeClient(options);
 };
 
+export const acquireRealtimeClient = (
+  options: RealtimeClientOptions,
+  acquireOptions: AcquireRealtimeClientOptions = {},
+): RealtimeClientLease => {
+  const entry = getOrCreateRegistryEntry(options);
+  const disconnectGraceMs = Math.max(
+    0,
+    acquireOptions.disconnectGraceMs ?? DEFAULT_DISCONNECT_GRACE_MS,
+  );
+
+  entry.refCount += 1;
+  clearDisconnectTimer(entry);
+  entry.client.connect();
+
+  let released = false;
+  return {
+    client: entry.client,
+    release: () => {
+      if (released) {
+        return;
+      }
+      released = true;
+
+      const current = realtimeClientSingletons.get(options.url);
+      if (!current || current.client !== entry.client) {
+        return;
+      }
+
+      current.refCount = Math.max(0, current.refCount - 1);
+      if (current.refCount > 0) {
+        return;
+      }
+
+      clearDisconnectTimer(current);
+      current.disconnectTimer = setTimeout(() => {
+        const latest = realtimeClientSingletons.get(options.url);
+        if (!latest || latest !== current || latest.refCount > 0) {
+          return;
+        }
+
+        latest.client.disconnect();
+        realtimeClientSingletons.delete(options.url);
+      }, disconnectGraceMs);
+    },
+  };
+};
+
 export const getOrCreateRealtimeClient = (
   options: RealtimeClientOptions,
 ): RealtimeClient => {
-  const existing = realtimeClientSingletons.get(options.url);
-  if (existing) {
-    return existing;
-  }
-
-  const client = createRealtimeClient(options);
-  realtimeClientSingletons.set(options.url, client);
-  return client;
+  return getOrCreateRegistryEntry(options).client;
 };
 
 export const resetRealtimeClientSingletonsForTests = (): void => {
-  for (const client of realtimeClientSingletons.values()) {
-    client.disconnect();
+  for (const entry of realtimeClientSingletons.values()) {
+    clearDisconnectTimer(entry);
+    entry.client.disconnect();
   }
   realtimeClientSingletons.clear();
 };

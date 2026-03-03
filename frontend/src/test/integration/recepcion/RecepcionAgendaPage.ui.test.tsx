@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@/test/utils";
+import { render, screen, waitFor, within } from "@/test/utils";
+import { toast } from "sonner";
 import RecepcionAgendaPage from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useRecepcionAgendaQueue } from "@features/recepcion/modules/agenda/queries/useRecepcionAgendaQueue";
 import { useCreateVisit } from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
+import { useVisitStatusAction } from "@features/recepcion/modules/checkin/mutations/useVisitStatusAction";
 import type { VisitQueueItem } from "@api/types";
 
 vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
@@ -20,6 +22,20 @@ vi.mock(
 
 vi.mock("@features/recepcion/modules/checkin/mutations/useCreateVisit", () => ({
   useCreateVisit: vi.fn(),
+}));
+
+vi.mock(
+  "@features/recepcion/modules/checkin/mutations/useVisitStatusAction",
+  () => ({
+    useVisitStatusAction: vi.fn(),
+  }),
+);
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 const createVisit = (
@@ -39,6 +55,7 @@ const createVisit = (
 
 describe("RecepcionAgendaPage UI", () => {
   const createMutateAsync = vi.fn();
+  const statusMutateAsync = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -87,7 +104,16 @@ describe("RecepcionAgendaPage UI", () => {
       isPending: false,
     } as unknown as ReturnType<typeof useCreateVisit>);
 
+    vi.mocked(useVisitStatusAction).mockReturnValue({
+      mutateAsync: statusMutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useVisitStatusAction>);
+
     createMutateAsync.mockResolvedValue({ id: 99 });
+    statusMutateAsync.mockResolvedValue({ id: 1, status: "cancelada" });
+
+    vi.mocked(toast.success).mockClear();
+    vi.mocked(toast.error).mockClear();
   });
 
   it("deshabilita carga de agenda cuando no tiene permiso de lectura", () => {
@@ -122,11 +148,9 @@ describe("RecepcionAgendaPage UI", () => {
     expect(
       screen.getByRole("heading", { name: "Agenda operativa" }),
     ).toBeVisible();
-    expect(
-      screen.getByRole("option", { name: "Medicina general" }),
-    ).toBeVisible();
-    expect(screen.getByRole("option", { name: "Especialidad" })).toBeVisible();
-    expect(screen.getByRole("option", { name: "Urgencias" })).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "Mostrar filtros avanzados" }),
+    );
 
     await user.selectOptions(screen.getByLabelText("Servicio"), "urgencias");
 
@@ -138,7 +162,9 @@ describe("RecepcionAgendaPage UI", () => {
     const user = userEvent.setup();
     render(<RecepcionAgendaPage />);
 
-    await user.click(screen.getByRole("button", { name: "Check-in rapido" }));
+    await user.click(
+      screen.getByRole("button", { name: "Abrir check-in integrado" }),
+    );
     await user.type(screen.getByLabelText("ID paciente"), "1234");
     await user.type(screen.getByLabelText("ID de cita"), "APP-1234");
     await user.type(screen.getByLabelText("Notas"), "Paciente sin acompanante");
@@ -155,14 +181,18 @@ describe("RecepcionAgendaPage UI", () => {
       });
     });
 
-    expect(screen.getByText("Llegada registrada correctamente.")).toBeVisible();
+    expect(toast.success).toHaveBeenCalledWith(
+      "Llegada registrada correctamente.",
+    );
   });
 
   it("fuerza walk-in para urgencias en check-in rapido", async () => {
     const user = userEvent.setup();
     render(<RecepcionAgendaPage />);
 
-    await user.click(screen.getByRole("button", { name: "Check-in rapido" }));
+    await user.click(
+      screen.getByRole("button", { name: "Abrir check-in integrado" }),
+    );
     await user.selectOptions(
       screen.getByLabelText("Servicio de atencion"),
       "urgencias",
@@ -184,5 +214,38 @@ describe("RecepcionAgendaPage UI", () => {
         notes: "Ingreso directo por trauma",
       });
     });
+  });
+
+  it("confirma accion de cancelacion y notifica con toast", async () => {
+    const user = userEvent.setup();
+    render(<RecepcionAgendaPage />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Abrir check-in integrado" }),
+    );
+
+    const queueTable = screen.getByRole("table", { name: "Cola de recepcion" });
+    const row = within(queueTable).getByText("VST-001").closest("tr");
+    expect(row).not.toBeNull();
+
+    await user.click(
+      within(row as HTMLElement).getByRole("button", {
+        name: "Cancelar visita",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirmar cancelacion" }),
+    );
+
+    await waitFor(() => {
+      expect(statusMutateAsync).toHaveBeenCalledWith({
+        visitId: 1,
+        targetStatus: "cancelada",
+      });
+    });
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "Visita marcada como cancelada.",
+    );
   });
 });

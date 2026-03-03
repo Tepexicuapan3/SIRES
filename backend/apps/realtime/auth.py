@@ -1,8 +1,10 @@
 from http.cookies import SimpleCookie
-from urllib.parse import parse_qs
+from typing import cast
+from urllib.parse import parse_qs, urlparse
 
 from channels.middleware import BaseMiddleware
 from django.conf import settings
+from django.http.request import validate_host
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.settings import api_settings
 
@@ -14,19 +16,13 @@ REALTIME_QUERY_TOKEN_SCOPE_KEY = "realtime_query_token_present"
 
 class CookieJWTAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
-        mutable_scope = dict(scope)
+        scope[REALTIME_QUERY_TOKEN_SCOPE_KEY] = has_forbidden_query_token(scope)
+        if scope[REALTIME_QUERY_TOKEN_SCOPE_KEY]:
+            scope[REALTIME_USER_SCOPE_KEY] = None
+            return await super().__call__(scope, receive, send)
 
-        mutable_scope[REALTIME_QUERY_TOKEN_SCOPE_KEY] = has_forbidden_query_token(
-            mutable_scope
-        )
-        if mutable_scope[REALTIME_QUERY_TOKEN_SCOPE_KEY]:
-            mutable_scope[REALTIME_USER_SCOPE_KEY] = None
-            return await super().__call__(mutable_scope, receive, send)
-
-        mutable_scope[REALTIME_USER_SCOPE_KEY] = await authenticate_websocket_scope(
-            mutable_scope
-        )
-        return await super().__call__(mutable_scope, receive, send)
+        scope[REALTIME_USER_SCOPE_KEY] = await authenticate_websocket_scope(scope)
+        return await super().__call__(scope, receive, send)
 
 
 async def authenticate_websocket_scope(scope):
@@ -42,7 +38,8 @@ async def authenticate_websocket_scope(scope):
     except TokenError:
         return None
 
-    user_id = payload.get(api_settings.USER_ID_CLAIM)
+    user_id_claim = cast(str, api_settings.USER_ID_CLAIM)
+    user_id = payload.get(user_id_claim)
     if user_id in (None, ""):
         return None
 
@@ -73,11 +70,30 @@ def is_origin_allowed(scope):
     if getattr(settings, "WS_ALLOW_ALL_ORIGINS", False):
         return True
 
+    if getattr(settings, "DEBUG", False) and getattr(
+        settings, "ALLOW_ALL_HOSTS", False
+    ):
+        return True
+
     origin = extract_header(scope, b"origin")
     if not origin:
         return False
 
-    return origin in getattr(settings, "WS_ALLOWED_ORIGINS", [])
+    allowed_origins = getattr(settings, "WS_ALLOWED_ORIGINS", [])
+    if allowed_origins:
+        return origin in allowed_origins
+
+    allowed_hosts = getattr(settings, "ALLOWED_HOSTS", [])
+    origin_host = extract_origin_host(origin)
+    if not origin_host:
+        return False
+
+    return validate_host(origin_host, allowed_hosts)
+
+
+def extract_origin_host(origin):
+    parsed_origin = urlparse(origin)
+    return parsed_origin.hostname
 
 
 def extract_header(scope, header_name):

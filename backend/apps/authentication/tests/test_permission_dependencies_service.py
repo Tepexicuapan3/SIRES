@@ -89,3 +89,19 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
         )
 
         self.assertTrue(complete_context["capabilities"]["flow.visits.queue.read"]["granted"])
+
+    def test_flow_recepcion_write_capability_requires_dependency_complete(self):
+        context = build_permission_context(["recepcion:fichas:especialidad:create"])
+
+        self.assertFalse(context["capabilities"]["flow.recepcion.queue.write"]["granted"])
+
+        complete_context = build_permission_context(
+            [
+                "recepcion:fichas:especialidad:create",
+                "recepcion:fichas:especialidad:read",
+            ]
+        )
+
+        self.assertTrue(
+            complete_context["capabilities"]["flow.recepcion.queue.write"]["granted"]
+        )

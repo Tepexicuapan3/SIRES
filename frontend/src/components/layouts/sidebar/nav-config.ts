@@ -3,7 +3,6 @@ import {
   Ambulance,
   BookOpen,
   CalendarClock,
-  ClipboardList,
   Database,
   FileText,
   FolderOpen,
@@ -137,13 +136,11 @@ export const NAV_CONFIG: NavSection[] = [
     title: "Clinico",
     items: [
       {
-        title:
-          "Consultas Clinicas, Seguimiento Integral y Control Continuo de Pacientes",
+        title: "Consultas",
         icon: Stethoscope,
         items: [
           {
-            title:
-              "Listado Completo y Detallado de Consultas Programadas, Realizadas y Pendientes",
+            title: "Panel",
             url: "/clinico/consultas",
             permissions: ["clinico:consultas:read"],
           },
@@ -158,13 +155,12 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["clinico:consultas:create"],
           },
           {
-            title:
-              "Historial Clinico Extenso y Detallado de Consultas Previas y Evolucion del Paciente",
+            title: "Historial",
             url: "/clinico/consultas/historial",
             permissions: ["clinico:consultas:historial:read"],
           },
           {
-            title: "Bandeja Doctor (Flujo)",
+            title: "Bandeja",
             url: "/clinico/consultas/doctor",
             permissions: ["clinico:consultas:read"],
           },
@@ -201,7 +197,7 @@ export const NAV_CONFIG: NavSection[] = [
     title: "Recepcion",
     items: [
       {
-        title: "Agenda",
+        title: "Agenda + Check-in",
         url: "/recepcion/agenda",
         icon: CalendarClock,
         permissions: [
@@ -210,16 +206,6 @@ export const NAV_CONFIG: NavSection[] = [
           "recepcion:fichas:urgencias:create",
           "clinico:consultas:read",
           "clinico:somatometria:read",
-        ],
-      },
-      {
-        title: "Check-in",
-        url: "/recepcion/checkin",
-        icon: ClipboardList,
-        permissions: [
-          "recepcion:fichas:medicina_general:create",
-          "recepcion:fichas:especialidad:create",
-          "recepcion:fichas:urgencias:create",
         ],
       },
     ],

@@ -11,6 +11,10 @@ interface ImportMetaEnv {
   readonly VITE_VISITS_STREAM_PATH?: string;
   readonly VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS?: string;
   readonly VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS?: string;
+  readonly VITE_VISITS_STREAM_BACKOFF_BASE_MS?: string;
+  readonly VITE_VISITS_STREAM_BACKOFF_MAX_MS?: string;
+  readonly VITE_VISITS_STREAM_JITTER_RATIO?: string;
+  readonly VITE_VISITS_STREAM_DISCONNECT_GRACE_MS?: string;
 }
 
 interface ImportMeta {

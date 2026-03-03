@@ -41,8 +41,8 @@ class BaseRealtimeConsumer(AsyncJsonWebsocketConsumer):
         payload = event.get("event", {})
         await self.send_json(payload)
 
-    def get_group_names(self):
+    def get_group_names(self) -> list[str]:
         return []
 
-    def authorize_scope(self, realtime_user):
+    def authorize_scope(self, realtime_user) -> bool:
         return True

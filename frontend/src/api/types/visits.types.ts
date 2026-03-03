@@ -37,6 +37,7 @@ export interface VisitQueueItem {
   doctorId: number | null;
   notes: string | null;
   status: VisitStatus;
+  vitals?: VisitVitalsPayload | null;
 }
 
 export interface VisitsListParams {

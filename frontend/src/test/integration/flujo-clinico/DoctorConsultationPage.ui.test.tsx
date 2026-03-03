@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
 import { ApiError } from "@api/utils/errors";
+import { toast } from "sonner";
 import DoctorConsultationPage from "@features/consulta-medica/modules/atencion/pages/DoctorConsultationPage";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useCloseVisit } from "@features/consulta-medica/modules/atencion/mutations/useCloseVisit";
@@ -48,6 +49,14 @@ vi.mock(
 
 vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
   usePermissionDependencies: vi.fn(),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
 }));
 
 const createVisit = (
@@ -161,6 +170,16 @@ describe("DoctorConsultationPage UI", () => {
     });
   });
 
+  const expandClinicalRecord = async (
+    user: ReturnType<typeof userEvent.setup>,
+  ) => {
+    await user.click(
+      screen.getByRole("button", {
+        name: /Registro clinico/i,
+      }),
+    );
+  };
+
   it("deshabilita carga de cola cuando no tiene permiso de lectura", () => {
     vi.mocked(usePermissionDependencies).mockReturnValue({
       hasCapability: () => false,
@@ -200,13 +219,26 @@ describe("DoctorConsultationPage UI", () => {
       screen.getByRole("button", { name: "Iniciar consulta" }),
     ).toBeDisabled();
     expect(
+      screen.getByRole("button", { name: "Finalizar consulta" }),
+    ).toBeDisabled();
+  });
+
+  it("muestra controles clinicos deshabilitados cuando falta permiso de escritura", async () => {
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: (capability: string) =>
+        capability === "flow.doctor.queue.read",
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
+
+    const user = userEvent.setup();
+    render(<DoctorConsultationPage />);
+
+    await expandClinicalRecord(user);
+
+    expect(
       screen.getByRole("button", { name: "Guardar borrador" }),
     ).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "Guardar receta" }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: "Finalizar consulta" }),
     ).toBeDisabled();
   });
 
@@ -270,6 +302,7 @@ describe("DoctorConsultationPage UI", () => {
     const user = userEvent.setup();
     render(<DoctorConsultationPage />);
 
+    await expandClinicalRecord(user);
     await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(
       screen.getByLabelText("Diagnostico principal"),
@@ -292,10 +325,7 @@ describe("DoctorConsultationPage UI", () => {
       });
     });
 
-    expect(
-      screen.getByText("Diagnostico guardado correctamente."),
-    ).toBeVisible();
-    expect(screen.getByText("Diagnostico guardado")).toBeVisible();
+    expect(toast.success).toHaveBeenCalledWith("Diagnostico guardado");
   });
 
   it("guarda receta con una indicacion por linea", async () => {
@@ -315,6 +345,7 @@ describe("DoctorConsultationPage UI", () => {
     const user = userEvent.setup();
     render(<DoctorConsultationPage />);
 
+    await expandClinicalRecord(user);
     await user.click(screen.getByRole("tab", { name: "Receta medica" }));
     await user.type(
       screen.getByLabelText("Receta (una indicacion por linea)"),
@@ -335,8 +366,7 @@ describe("DoctorConsultationPage UI", () => {
       });
     });
 
-    expect(screen.getByText("Receta guardada correctamente.")).toBeVisible();
-    expect(screen.getByText("Receta guardada")).toBeVisible();
+    expect(toast.success).toHaveBeenCalledWith("Receta guardada");
   });
 
   it("bloquea cierre hasta iniciar consulta y completar diagnostico + nota final", async () => {
@@ -353,6 +383,7 @@ describe("DoctorConsultationPage UI", () => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
+    await expandClinicalRecord(user);
     await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(screen.getByLabelText("Nota final"), "Nota clinica");
@@ -371,6 +402,7 @@ describe("DoctorConsultationPage UI", () => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
+    await expandClinicalRecord(user);
     await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx final");
     await user.type(
@@ -401,8 +433,7 @@ describe("DoctorConsultationPage UI", () => {
       });
     });
 
-    expect(screen.getByText("Consulta cerrada correctamente.")).toBeVisible();
-    expect(screen.getByText("Consulta cerrada")).toBeVisible();
+    expect(toast.success).toHaveBeenCalledWith("Consulta cerrada");
   });
 
   it("mapea errores de dominio en cierre de consulta", async () => {
@@ -424,6 +455,7 @@ describe("DoctorConsultationPage UI", () => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
+    await expandClinicalRecord(user);
     await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(screen.getByLabelText("Nota final"), "Nota");
@@ -432,11 +464,13 @@ describe("DoctorConsultationPage UI", () => {
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          "La visita ya no esta en un estado valido para cerrar consulta.",
-        ),
-      ).toBeVisible();
+      expect(toast.error).toHaveBeenCalledWith(
+        "No se pudo cerrar la consulta",
+        {
+          description:
+            "La visita ya no esta en un estado valido para cerrar consulta.",
+        },
+      );
     });
   });
 });

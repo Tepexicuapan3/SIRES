@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@/test/utils";
 import { TestProviders } from "@/test/providers";
 import { visitsAPI } from "@api/resources/visits.api";
 import { VISIT_STATUS } from "@api/types";
+import { resetRealtimeClientSingletonsForTests } from "@/realtime/client";
 import {
   SOCKET_CONNECTION_STATUS,
   type WebSocketLike,
@@ -64,6 +65,14 @@ const buildEnvelope = (
 });
 
 describe("useVisitRealtimeSync", () => {
+  beforeEach(() => {
+    resetRealtimeClientSingletonsForTests();
+  });
+
+  afterEach(() => {
+    resetRealtimeClientSingletonsForTests();
+  });
+
   const createListResponse = () => ({
     items: [],
     page: 1,

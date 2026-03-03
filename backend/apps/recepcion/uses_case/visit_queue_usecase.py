@@ -9,25 +9,42 @@ from apps.recepcion.uses_case.visit_state_machine_usecase import (
     transition_visit_state,
 )
 
+RECEPCION_WRITE_PERMISSIONS = [
+    "recepcion:fichas:medicina_general:create",
+    "recepcion:fichas:especialidad:create",
+    "recepcion:fichas:urgencias:create",
+]
+
+RECEPCION_WRITE_PERMISSION_REQUIREMENT = {
+    "anyOf": RECEPCION_WRITE_PERMISSIONS,
+}
+
 VISIT_QUEUE_PERMISSION_REQUIREMENT = {
     "anyOf": [
-        "recepcion:fichas:medicina_general:create",
-        "recepcion:fichas:especialidad:create",
-        "recepcion:fichas:urgencias:create",
+        *RECEPCION_WRITE_PERMISSIONS,
         "clinico:consultas:read",
         "clinico:somatometria:read",
     ]
 }
 
 
-def ensure_recepcion_role(roles):
+def ensure_recepcion_role(roles, permissions=None):
     normalized_roles = {(role or "").strip().upper() for role in roles}
-    if ROLE_RECEPCION not in normalized_roles:
-        raise VisitDomainError(
-            "ROLE_NOT_ALLOWED",
-            "No tenes permiso para ejecutar esta accion.",
-            403,
-        )
+    if ROLE_RECEPCION in normalized_roles:
+        return
+
+    permission_state = evaluate_permission_requirement(
+        RECEPCION_WRITE_PERMISSION_REQUIREMENT,
+        permissions or [],
+    )
+    if permission_state["granted"]:
+        return
+
+    raise VisitDomainError(
+        "ROLE_NOT_ALLOWED",
+        "No tenes permiso para ejecutar esta accion.",
+        403,
+    )
 
 
 def ensure_visit_queue_access(roles, permissions):

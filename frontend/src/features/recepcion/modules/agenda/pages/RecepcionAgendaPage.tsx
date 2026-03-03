@@ -1,16 +1,14 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  CalendarClock,
-  ClipboardCheck,
-  RefreshCcw,
-  UserRoundSearch,
-  UsersRound,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { CalendarClock, RefreshCcw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,7 +18,7 @@ import {
   type VisitStatus,
 } from "@api/types";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
-import { RecepcionQuickCheckinDialog } from "@features/recepcion/modules/agenda/components/RecepcionQuickCheckinDialog";
+import { RecepcionIntegratedCheckinSection } from "@features/recepcion/modules/agenda/components/RecepcionIntegratedCheckinSection";
 import { useRecepcionAgendaQueue } from "@features/recepcion/modules/agenda/queries/useRecepcionAgendaQueue";
 import {
   RECEPCION_QUEUE_PERMISSION_REQUIREMENT,
@@ -152,6 +150,12 @@ const sortAgendaVisits = (
 };
 
 export const RecepcionAgendaPage = () => {
+  const [searchParams] = useSearchParams();
+  const checkinSectionRef = useRef<HTMLElement | null>(null);
+  const shouldFocusCheckin = searchParams.get("focus") === "checkin";
+  const checkinSeedFromQuery =
+    searchParams.get("folio") ?? searchParams.get("patientId") ?? "";
+
   const { hasCapability } = usePermissionDependencies();
   const canReadAgenda = hasCapability(
     "flow.visits.queue.read",
@@ -173,7 +177,10 @@ export const RecepcionAgendaPage = () => {
   const [serviceFilter, setServiceFilter] = useState<ServiceFilter>(
     SERVICE_FILTER.ALL,
   );
-  const [quickCheckinOpen, setQuickCheckinOpen] = useState(false);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [checkinOpen, setCheckinOpen] = useState(shouldFocusCheckin);
+  const [checkinSearchSeed, setCheckinSearchSeed] =
+    useState(checkinSeedFromQuery);
 
   const visits = queueQuery.data?.items ?? [];
   const openVisits = visits.filter((visit) => isOpenVisitStatus(visit.status));
@@ -186,7 +193,6 @@ export const RecepcionAgendaPage = () => {
   const walkInCount = openVisits.filter(
     (visit) => visit.arrivalType === ARRIVAL_TYPE.WALK_IN,
   ).length;
-
   const serviceCounts = visits.reduce<Record<RecepcionService, number>>(
     (accumulator, visit) => {
       const service = resolveRecepcionService(visit);
@@ -213,8 +219,19 @@ export const RecepcionAgendaPage = () => {
     })
     .sort(sortAgendaVisits);
 
+  useEffect(() => {
+    if (!shouldFocusCheckin) {
+      return;
+    }
+
+    checkinSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [shouldFocusCheckin]);
+
   return (
-    <section className="space-y-6 p-6">
+    <section className="space-y-5 p-6">
       <header className="flex flex-col gap-3 rounded-xl border border-line-struct bg-paper p-5 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 rounded-full border border-line-hairline bg-subtle px-3 py-1 text-xs font-medium text-txt-muted">
@@ -225,8 +242,7 @@ export const RecepcionAgendaPage = () => {
             Agenda operativa
           </h1>
           <p className="max-w-2xl text-sm text-txt-muted">
-            Visualiza estado por servicio y ejecuta check-in rapido sin perder
-            contexto.
+            Priorizacion de agenda y check-in en una sola pantalla.
           </p>
         </div>
 
@@ -237,13 +253,27 @@ export const RecepcionAgendaPage = () => {
           <Button
             type="button"
             variant="outline"
-            disabled={!canWriteRecepcion}
-            onClick={() => setQuickCheckinOpen(true)}
+            className="gap-2"
+            onClick={() => {
+              setCheckinOpen(true);
+              checkinSectionRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }}
           >
-            Check-in rapido
+            Abrir check-in integrado
           </Button>
-          <Button asChild>
-            <Link to="/recepcion/checkin">Ir a check-in</Link>
+          <Button
+            type="button"
+            variant="ghost"
+            className="gap-2"
+            onClick={() => {
+              void queueQuery.refetch?.();
+            }}
+          >
+            <RefreshCcw className="size-4" />
+            Actualizar
           </Button>
         </div>
       </header>
@@ -273,93 +303,33 @@ export const RecepcionAgendaPage = () => {
       {canReadAgenda &&
       !queueQuery.isLoading &&
       !queueQuery.isError &&
-      visits.length === 0 ? (
-        <p className="text-sm text-txt-muted">
-          No hay visitas para mostrar en agenda.
-        </p>
-      ) : null}
-
-      {canReadAgenda &&
-      !queueQuery.isLoading &&
-      !queueQuery.isError &&
       visits.length > 0 ? (
         <>
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="gap-0 py-0">
-              <CardHeader className="gap-1 border-b py-4">
-                <CardTitle className="flex items-center gap-2 text-sm text-txt-muted">
-                  <UsersRound className="size-4" />
-                  Visitas abiertas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="py-4">
-                <p className="text-2xl font-semibold text-txt-body">
-                  {openVisits.length}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="gap-0 py-0">
-              <CardHeader className="gap-1 border-b py-4">
-                <CardTitle className="flex items-center gap-2 text-sm text-txt-muted">
-                  <ClipboardCheck className="size-4" />
-                  En espera
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="py-4">
-                <p className="text-2xl font-semibold text-txt-body">
-                  {waitingCount}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="gap-0 py-0">
-              <CardHeader className="gap-1 border-b py-4">
-                <CardTitle className="text-sm text-txt-muted">
-                  Con cita
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="py-4">
-                <p className="text-2xl font-semibold text-txt-body">
-                  {withAppointmentCount}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="gap-0 py-0">
-              <CardHeader className="gap-1 border-b py-4">
-                <CardTitle className="text-sm text-txt-muted">
-                  Sin cita
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="py-4">
-                <p className="text-2xl font-semibold text-txt-body">
-                  {walkInCount}
-                </p>
-              </CardContent>
-            </Card>
+          <section className="grid gap-3 sm:grid-cols-2">
+            <article className="rounded-xl border border-line-struct bg-paper p-4">
+              <p className="text-sm text-txt-muted">Visitas abiertas</p>
+              <p className="text-2xl font-semibold text-txt-body">
+                {openVisits.length}
+              </p>
+            </article>
+            <article className="rounded-xl border border-line-struct bg-paper p-4">
+              <p className="text-sm text-txt-muted">En espera</p>
+              <p className="text-2xl font-semibold text-txt-body">
+                {waitingCount}
+              </p>
+            </article>
           </section>
 
-          <section className="grid gap-3 sm:grid-cols-3">
-            {RECEPCION_SERVICE_LIST.map((service) => (
-              <Card key={service} className="gap-0 py-0">
-                <CardHeader className="gap-1 border-b py-4">
-                  <CardTitle className="text-sm text-txt-muted">
-                    {RECEPCION_SERVICE_PROFILES[service].label}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="py-4">
-                  <p className="text-2xl font-semibold text-txt-body">
-                    {serviceCounts[service]}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+          <section className="rounded-xl border border-line-struct bg-subtle p-3">
+            <p className="text-sm text-txt-muted" role="status">
+              Resumen: {withAppointmentCount} con cita, {walkInCount} sin cita,{" "}
+              {serviceCounts[RECEPCION_SERVICE.URGENCIAS]} en urgencias.
+            </p>
           </section>
 
           <section className="space-y-4 rounded-xl border border-line-struct bg-paper p-4">
-            <div className="grid gap-3 md:grid-cols-4">
-              <div className="space-y-2">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="agenda-search">
                   Buscar por folio, paciente o cita
                 </Label>
@@ -396,60 +366,81 @@ export const RecepcionAgendaPage = () => {
                   <option value={STATUS_FILTER.NO_SHOW}>No show</option>
                 </select>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="agenda-arrival-filter">Tipo de llegada</Label>
-                <select
-                  id="agenda-arrival-filter"
-                  className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-                  value={arrivalTypeFilter}
-                  onChange={(event) => {
-                    setArrivalTypeFilter(
-                      event.target.value as ArrivalTypeFilter,
-                    );
-                  }}
-                >
-                  <option value={ARRIVAL_TYPE_FILTER.ALL}>Todos</option>
-                  <option value={ARRIVAL_TYPE_FILTER.APPOINTMENT}>
-                    Con cita
-                  </option>
-                  <option value={ARRIVAL_TYPE_FILTER.WALK_IN}>Sin cita</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="agenda-service-filter">Servicio</Label>
-                <select
-                  id="agenda-service-filter"
-                  className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-                  value={serviceFilter}
-                  onChange={(event) => {
-                    setServiceFilter(event.target.value as ServiceFilter);
-                  }}
-                >
-                  <option value={SERVICE_FILTER.ALL}>Todos</option>
-                  {RECEPCION_SERVICE_LIST.map((service) => (
-                    <option key={service} value={service}>
-                      {RECEPCION_SERVICE_PROFILES[service].label}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
+
+            <Collapsible
+              open={advancedFiltersOpen}
+              onOpenChange={setAdvancedFiltersOpen}
+            >
+              <CollapsibleTrigger asChild>
+                <Button type="button" variant="ghost" className="px-0">
+                  {advancedFiltersOpen
+                    ? "Ocultar filtros avanzados"
+                    : "Mostrar filtros avanzados"}
+                </Button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="agenda-arrival-filter">
+                      Tipo de llegada
+                    </Label>
+                    <select
+                      id="agenda-arrival-filter"
+                      className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                      value={arrivalTypeFilter}
+                      onChange={(event) => {
+                        setArrivalTypeFilter(
+                          event.target.value as ArrivalTypeFilter,
+                        );
+                      }}
+                    >
+                      <option value={ARRIVAL_TYPE_FILTER.ALL}>Todos</option>
+                      <option value={ARRIVAL_TYPE_FILTER.APPOINTMENT}>
+                        Con cita
+                      </option>
+                      <option value={ARRIVAL_TYPE_FILTER.WALK_IN}>
+                        Sin cita
+                      </option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="agenda-service-filter">Servicio</Label>
+                    <select
+                      id="agenda-service-filter"
+                      className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                      value={serviceFilter}
+                      onChange={(event) => {
+                        setServiceFilter(event.target.value as ServiceFilter);
+                      }}
+                    >
+                      <option value={SERVICE_FILTER.ALL}>Todos</option>
+                      {RECEPCION_SERVICE_LIST.map((service) => (
+                        <option key={service} value={service}>
+                          {RECEPCION_SERVICE_PROFILES[service].label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {filteredVisits.length === 0 ? (
               <p className="text-sm text-txt-muted">
                 No hay resultados para los filtros aplicados.
               </p>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredVisits.map((visit) => {
                   const visitService = resolveRecepcionService(visit);
 
                   return (
                     <article
                       key={visit.id}
-                      className="flex flex-col gap-4 rounded-xl border border-line-struct bg-paper p-4 shadow-soft"
+                      className="flex flex-col gap-3 rounded-xl border border-line-struct bg-paper p-4"
                     >
                       <header className="flex items-start justify-between gap-3">
                         <div>
@@ -478,23 +469,7 @@ export const RecepcionAgendaPage = () => {
                         </div>
                         <div className="flex items-center justify-between gap-3">
                           <dt className="text-txt-muted">Tipo</dt>
-                          <dd>
-                            <Badge variant="secondary">
-                              {formatArrivalTypeLabel(visit.arrivalType)}
-                            </Badge>
-                          </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <dt className="text-txt-muted">Cita</dt>
-                          <dd className="font-medium text-txt-body">
-                            {visit.appointmentId ?? "Sin cita registrada"}
-                          </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <dt className="text-txt-muted">Doctor</dt>
-                          <dd className="font-medium text-txt-body">
-                            {visit.doctorId ?? "Por asignar"}
-                          </dd>
+                          <dd>{formatArrivalTypeLabel(visit.arrivalType)}</dd>
                         </div>
                       </dl>
 
@@ -502,12 +477,19 @@ export const RecepcionAgendaPage = () => {
                         <span className="text-xs text-txt-muted">
                           {formatVisitStatusLabel(visit.status)}
                         </span>
-                        <Button size="sm" variant="outline" asChild>
-                          <Link
-                            to={`/recepcion/checkin?folio=${encodeURIComponent(visit.folio)}`}
-                          >
-                            Abrir check-in
-                          </Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setCheckinSearchSeed(visit.folio);
+                            setCheckinOpen(true);
+                            checkinSectionRef.current?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                          }}
+                        >
+                          Ir al check-in
                         </Button>
                       </footer>
                     </article>
@@ -519,38 +501,28 @@ export const RecepcionAgendaPage = () => {
         </>
       ) : null}
 
-      <section className="rounded-xl border border-line-struct bg-subtle p-4">
-        <p
-          className="flex items-start gap-2 text-sm text-txt-muted"
-          role="status"
-        >
-          <UserRoundSearch className="mt-0.5 size-4 shrink-0" />
-          Tip operativo: filtra por servicio en hora pico y usa check-in rapido
-          para ingresos nuevos.
+      {canReadAgenda &&
+      !queueQuery.isLoading &&
+      !queueQuery.isError &&
+      visits.length === 0 ? (
+        <p className="text-sm text-txt-muted">
+          No hay visitas para mostrar en agenda.
         </p>
-      </section>
-
-      <RecepcionQuickCheckinDialog
-        open={quickCheckinOpen}
-        onOpenChange={setQuickCheckinOpen}
-        canWrite={canWriteRecepcion}
-      />
-
-      {canReadAgenda && !queueQuery.isLoading ? (
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            className="gap-2"
-            onClick={() => {
-              void queueQuery.refetch?.();
-            }}
-          >
-            <RefreshCcw className="size-4" />
-            Actualizar agenda
-          </Button>
-        </div>
       ) : null}
+
+      <section ref={checkinSectionRef}>
+        <RecepcionIntegratedCheckinSection
+          canReadQueue={canReadAgenda}
+          canWrite={canWriteRecepcion}
+          visits={visits}
+          open={checkinOpen}
+          onOpenChange={setCheckinOpen}
+          initialSearchTerm={checkinSearchSeed}
+          onRequestRefresh={() => {
+            void queueQuery.refetch?.();
+          }}
+        />
+      </section>
     </section>
   );
 };

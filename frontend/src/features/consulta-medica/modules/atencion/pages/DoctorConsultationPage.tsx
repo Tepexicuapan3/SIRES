@@ -1,22 +1,42 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ApiError } from "@api/utils/errors";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ChevronDownIcon } from "lucide-react";
 import { VISIT_SERVICE, VISIT_STATUS, type VisitStatus } from "@api/types";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import {
   VisitTimelinePanel,
   type VisitTimelineEntry,
 } from "@features/operativo/shared/components/VisitTimelinePanel";
-import { VisitStageNavigator } from "@features/operativo/shared/components/VisitStageNavigator";
 import {
-  VISIT_STAGE,
   canCloseConsultation,
   canStartConsultation,
 } from "@features/operativo/shared/domain/visit-flow.constants";
@@ -148,11 +168,6 @@ const DEFAULT_PRESCRIPTIONS_FORM_VALUES: SavePrescriptionsFormInput = {
 };
 
 const DEFAULT_EXPLORATION_NOTE = "";
-
-interface FeedbackState {
-  kind: "success" | "error";
-  message: string;
-}
 
 interface VisitStatusOverrideState {
   visitId: number;
@@ -322,7 +337,6 @@ export const DoctorConsultationPage = () => {
   >(null);
   const [selectedVisitStatusOverride, setSelectedVisitStatusOverride] =
     useState<VisitStatusOverrideState | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [timelineEntriesByVisitId, setTimelineEntriesByVisitId] = useState<
     Record<number, VisitTimelineEntry[]>
   >({});
@@ -442,7 +456,6 @@ export const DoctorConsultationPage = () => {
   const handleVisitChange = (nextVisitId: number) => {
     setSelectedVisitIdState(nextVisitId);
     setSelectedVisitStatusOverride(null);
-    setFeedback(null);
     setActiveTab(DOCTOR_TAB.VITALES);
     hydrateDraftsForVisit(nextVisitId);
   };
@@ -451,8 +464,6 @@ export const DoctorConsultationPage = () => {
     if (!selectedVisit || !canStartSelectedVisit) {
       return;
     }
-
-    setFeedback(null);
 
     try {
       const result = await startConsultation.mutateAsync({
@@ -468,11 +479,10 @@ export const DoctorConsultationPage = () => {
         "Consulta iniciada",
         `La visita ${selectedVisit.folio} paso a ${formatStatusLabel(result.status)}.`,
       );
-      setFeedback({ kind: "success", message: "Consulta iniciada." });
+      toast.success("Consulta iniciada");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message: resolveDomainErrorMessage(
+      toast.error("No se pudo iniciar la consulta", {
+        description: resolveDomainErrorMessage(
           error,
           START_CONSULTATION_DOMAIN_ERROR_MESSAGE,
           FALLBACK_START_CONSULTATION_ERROR_MESSAGE,
@@ -485,8 +495,6 @@ export const DoctorConsultationPage = () => {
     if (!selectedVisit || !canSaveClinicalData) {
       return;
     }
-
-    setFeedback(null);
 
     try {
       const result = await saveDiagnosis.mutateAsync({
@@ -510,14 +518,10 @@ export const DoctorConsultationPage = () => {
         "Diagnostico guardado",
         `${result.primaryDiagnosis}.`,
       );
-      setFeedback({
-        kind: "success",
-        message: "Diagnostico guardado correctamente.",
-      });
+      toast.success("Diagnostico guardado");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message: resolveDomainErrorMessage(
+      toast.error("No se pudo guardar el diagnostico", {
+        description: resolveDomainErrorMessage(
           error,
           SAVE_DIAGNOSIS_DOMAIN_ERROR_MESSAGE,
           FALLBACK_SAVE_DIAGNOSIS_ERROR_MESSAGE,
@@ -532,8 +536,6 @@ export const DoctorConsultationPage = () => {
     if (!selectedVisit || !canSaveClinicalData) {
       return;
     }
-
-    setFeedback(null);
 
     const items = toPrescriptionItems(values.itemsText);
 
@@ -552,14 +554,10 @@ export const DoctorConsultationPage = () => {
         "Receta guardada",
         `${result.items.length} indicacion(es) registradas.`,
       );
-      setFeedback({
-        kind: "success",
-        message: "Receta guardada correctamente.",
-      });
+      toast.success("Receta guardada");
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message: resolveDomainErrorMessage(
+      toast.error("No se pudo guardar la receta", {
+        description: resolveDomainErrorMessage(
           error,
           SAVE_PRESCRIPTIONS_DOMAIN_ERROR_MESSAGE,
           FALLBACK_SAVE_PRESCRIPTIONS_ERROR_MESSAGE,
@@ -572,8 +570,6 @@ export const DoctorConsultationPage = () => {
     if (!selectedVisit || !canCloseSelectedVisit) {
       return;
     }
-
-    setFeedback(null);
 
     const diagnosisFingerprint = buildDiagnosisFingerprint(values);
     const hasMatchingSavedDiagnosis =
@@ -622,10 +618,7 @@ export const DoctorConsultationPage = () => {
         "Consulta cerrada",
         `La visita ${selectedVisit.folio} se cerro correctamente.`,
       );
-      setFeedback({
-        kind: "success",
-        message: "Consulta cerrada correctamente.",
-      });
+      toast.success("Consulta cerrada");
       diagnosisForm.reset(DEFAULT_DIAGNOSIS_FORM_VALUES);
       prescriptionsForm.reset(DEFAULT_PRESCRIPTIONS_FORM_VALUES);
       setDiagnosisDraftByVisitId((current) => ({
@@ -638,9 +631,8 @@ export const DoctorConsultationPage = () => {
       }));
       setActiveTab(DOCTOR_TAB.MOTIVO);
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message: resolveDomainErrorMessage(
+      toast.error("No se pudo cerrar la consulta", {
+        description: resolveDomainErrorMessage(
           error,
           CLOSE_CONSULTATION_DOMAIN_ERROR_MESSAGE,
           FALLBACK_CLOSE_CONSULTATION_ERROR_MESSAGE,
@@ -657,7 +649,7 @@ export const DoctorConsultationPage = () => {
       prescriptionsForm.reset(DEFAULT_PRESCRIPTIONS_FORM_VALUES);
     }
 
-    setFeedback(null);
+    toast.info("Borradores restaurados");
   };
 
   const handleSaveDraftClick = () => {
@@ -682,10 +674,6 @@ export const DoctorConsultationPage = () => {
           Visualiza datos del paciente, registra diagnostico y finaliza la
           atencion.
         </p>
-        <VisitStageNavigator
-          currentStatus={selectedVisitStatus}
-          currentStage={VISIT_STAGE.DOCTOR}
-        />
       </header>
 
       {!canReadDoctorQueue ? (
@@ -720,422 +708,470 @@ export const DoctorConsultationPage = () => {
       !queueQuery.isLoading &&
       !queueQuery.isError &&
       visits.length > 0 ? (
-        <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="space-y-4 rounded-xl border border-line-struct bg-paper p-4">
-            <div className="space-y-4 rounded-lg border border-line-hairline bg-subtle/40 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-semibold text-txt-body">
-                    Paciente #{selectedVisit?.patientId}
+        <section className="space-y-4">
+          <article className="rounded-xl border border-line-struct bg-paper p-4">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+              <div className="space-y-2">
+                <Label htmlFor="doctor-visit-selector">Visita activa</Label>
+                <Select
+                  value={selectedVisitId?.toString() ?? ""}
+                  onValueChange={(value) => {
+                    handleVisitChange(Number(value));
+                  }}
+                >
+                  <SelectTrigger id="doctor-visit-selector" className="w-full">
+                    <SelectValue placeholder="Selecciona una visita" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {visits.map((visit) => {
+                      const status =
+                        visit.id === selectedVisit?.id
+                          ? selectedVisitStatus
+                          : visit.status;
+
+                      return (
+                        <SelectItem key={visit.id} value={visit.id.toString()}>
+                          {visit.folio} - {formatStatusLabel(status)}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-line-hairline bg-subtle/30 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-base font-semibold text-txt-body">
+                    Folio {selectedVisit?.folio}
                   </p>
-                  <p className="text-sm text-txt-muted">
-                    Expediente: #{selectedVisit?.folio}
-                  </p>
+                  <Badge variant="outline" className="uppercase">
+                    {formatStatusLabel(selectedVisitStatus)}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="uppercase">
-                  {formatStatusLabel(selectedVisitStatus)}
-                </Badge>
+                <p className="text-sm text-txt-muted">
+                  Paciente #{selectedVisit?.patientId}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      !canStartSelectedVisit ||
+                      startConsultation.isPending ||
+                      saveDiagnosis.isPending ||
+                      closeVisit.isPending
+                    }
+                    onClick={() => {
+                      void handleStartConsultation();
+                    }}
+                  >
+                    Iniciar consulta
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={
+                      !canCloseSelectedVisit ||
+                      !diagnosisForm.formState.isValid ||
+                      closeVisit.isPending ||
+                      saveDiagnosis.isPending
+                    }
+                    onClick={handleCloseConsultationClick}
+                  >
+                    Finalizar consulta
+                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" type="button">
+                        Ver contexto clinico
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Contexto de la visita</DialogTitle>
+                        <DialogDescription>
+                          Informacion complementaria de la atencion en curso.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3 text-sm text-txt-muted">
+                        <p>
+                          <span className="font-medium text-txt-body">
+                            Servicio:
+                          </span>{" "}
+                          {formatServiceTypeLabel(
+                            selectedVisit?.serviceType ?? "",
+                          )}
+                        </p>
+                        <p>
+                          <span className="font-medium text-txt-body">
+                            Modalidad:
+                          </span>{" "}
+                          {formatArrivalTypeLabel(
+                            selectedVisit?.arrivalType ?? "",
+                          )}
+                        </p>
+                        <p>
+                          <span className="font-medium text-txt-body">
+                            Cita:
+                          </span>{" "}
+                          {selectedVisit?.appointmentId ?? "Sin cita"}
+                        </p>
+                        <p>
+                          <span className="font-medium text-txt-body">
+                            Doctor ID:
+                          </span>{" "}
+                          {selectedVisit?.doctorId ?? "Sin asignar"}
+                        </p>
+                        <div className="rounded-lg border border-line-hairline bg-subtle/30 p-3">
+                          <p className="font-medium text-txt-body">
+                            Motivo de consulta
+                          </p>
+                          <p className="mt-1">
+                            {selectedVisit?.notes?.trim() ||
+                              "Sin motivo de consulta capturado en recepcion."}
+                          </p>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
-
-              <div className="space-y-2 text-sm text-txt-muted">
-                <p>
-                  <span className="font-medium text-txt-body">Servicio:</span>{" "}
-                  {formatServiceTypeLabel(selectedVisit?.serviceType ?? "")}
-                </p>
-                <p>
-                  <span className="font-medium text-txt-body">Modalidad:</span>{" "}
-                  {formatArrivalTypeLabel(selectedVisit?.arrivalType ?? "")}
-                </p>
-                <p>
-                  <span className="font-medium text-txt-body">Cita:</span>{" "}
-                  {selectedVisit?.appointmentId ?? "Sin cita"}
-                </p>
-                <p>
-                  <span className="font-medium text-txt-body">Doctor ID:</span>{" "}
-                  {selectedVisit?.doctorId ?? "Sin asignar"}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="doctor-visit-selector">Visita activa</Label>
-              <select
-                id="doctor-visit-selector"
-                className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-                value={selectedVisitId?.toString() ?? ""}
-                onChange={(event) => {
-                  handleVisitChange(Number(event.target.value));
-                }}
-              >
-                {visits.map((visit) => {
-                  const status =
-                    visit.id === selectedVisit?.id
-                      ? selectedVisitStatus
-                      : visit.status;
-
-                  return (
-                    <option key={visit.id} value={visit.id}>
-                      {visit.folio} - {formatStatusLabel(status)}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <div className="space-y-2 rounded-lg border border-line-hairline p-3">
-              <p className="text-sm font-semibold text-txt-body">
-                Contexto clinico
-              </p>
-              <p className="text-sm text-txt-muted">
-                {selectedVisit?.notes?.trim() ||
-                  "Sin motivo de consulta capturado en recepcion."}
-              </p>
             </div>
 
             {!canWriteDoctorConsultation ? (
-              <p className="text-sm text-txt-muted" role="status">
+              <p className="mt-3 text-sm text-txt-muted" role="status">
                 No tenes permisos completos para registrar diagnostico, receta o
                 cierre de consulta.
               </p>
             ) : null}
-          </aside>
+          </article>
 
-          <div className="space-y-4 rounded-xl border border-line-struct bg-paper p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-hairline pb-4">
+          <Collapsible className="group/collapsible rounded-xl border border-line-struct bg-paper p-4">
+            <CollapsibleTrigger className="flex w-full items-center justify-between text-left">
               <div>
-                <p className="text-base font-semibold text-txt-body">
-                  Folio activo: {selectedVisit?.folio}
+                <p className="text-sm font-semibold text-txt-body">
+                  Registro clinico
                 </p>
                 <p className="text-sm text-txt-muted">
-                  Estado actual: {formatStatusLabel(selectedVisitStatus)}
+                  Motivo, signos vitales, exploracion, diagnostico y receta.
                 </p>
               </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                disabled={
-                  !canStartSelectedVisit ||
-                  startConsultation.isPending ||
-                  saveDiagnosis.isPending ||
-                  closeVisit.isPending
-                }
-                onClick={() => {
-                  void handleStartConsultation();
-                }}
+              <ChevronDownIcon className="size-4 text-txt-muted transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => setActiveTab(value as DoctorTab)}
               >
-                Iniciar consulta
-              </Button>
-            </div>
+                <TabsList className="grid h-auto w-full grid-cols-2 rounded-md border border-line-struct bg-subtle p-1 md:grid-cols-5">
+                  <TabsTrigger
+                    value={DOCTOR_TAB.MOTIVO}
+                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
+                  >
+                    Motivo
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value={DOCTOR_TAB.VITALES}
+                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
+                  >
+                    Signos vitales
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value={DOCTOR_TAB.EXPLORACION}
+                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
+                  >
+                    Exploracion
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value={DOCTOR_TAB.DIAGNOSTICO}
+                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
+                  >
+                    Diagnostico
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value={DOCTOR_TAB.RECETA}
+                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
+                  >
+                    Receta medica
+                  </TabsTrigger>
+                </TabsList>
 
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => setActiveTab(value as DoctorTab)}
-            >
-              <TabsList className="grid h-auto w-full grid-cols-2 rounded-md border border-line-struct bg-subtle p-1 md:grid-cols-5">
-                <TabsTrigger
+                <TabsContent
                   value={DOCTOR_TAB.MOTIVO}
-                  className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
+                  className="space-y-4 pt-4"
                 >
-                  Motivo
-                </TabsTrigger>
-                <TabsTrigger
-                  value={DOCTOR_TAB.VITALES}
-                  className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                >
-                  Signos vitales
-                </TabsTrigger>
-                <TabsTrigger
-                  value={DOCTOR_TAB.EXPLORACION}
-                  className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                >
-                  Exploracion
-                </TabsTrigger>
-                <TabsTrigger
-                  value={DOCTOR_TAB.DIAGNOSTICO}
-                  className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                >
-                  Diagnostico
-                </TabsTrigger>
-                <TabsTrigger
-                  value={DOCTOR_TAB.RECETA}
-                  className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                >
-                  Receta medica
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value={DOCTOR_TAB.MOTIVO} className="space-y-4 pt-4">
-                <div className="rounded-xl border border-line-struct bg-subtle/40 p-4">
-                  <p className="text-sm font-semibold text-txt-body">
-                    Motivo de consulta
-                  </p>
-                  <p className="mt-2 text-sm text-txt-muted">
-                    {selectedVisit?.notes?.trim() ||
-                      "Recepcion no capturo observaciones para esta visita."}
-                  </p>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-xl border border-line-struct p-4">
-                    <p className="text-sm text-txt-muted">
-                      Servicio solicitado
+                  <div className="rounded-xl border border-line-struct bg-subtle/40 p-4">
+                    <p className="text-sm font-semibold text-txt-body">
+                      Motivo de consulta
                     </p>
-                    <p className="mt-1 text-lg font-semibold text-txt-body">
-                      {formatServiceTypeLabel(selectedVisit?.serviceType ?? "")}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-line-struct p-4">
-                    <p className="text-sm text-txt-muted">
-                      Modalidad de ingreso
-                    </p>
-                    <p className="mt-1 text-lg font-semibold text-txt-body">
-                      {formatArrivalTypeLabel(selectedVisit?.arrivalType ?? "")}
-                    </p>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent
-                value={DOCTOR_TAB.VITALES}
-                className="space-y-4 pt-4"
-              >
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <VitalMetricCard
-                    label="Presion arterial"
-                    value={formatBloodPressure(
-                      selectedVitals?.bloodPressureSystolic,
-                      selectedVitals?.bloodPressureDiastolic,
-                    )}
-                    unit="mmHg"
-                  />
-                  <VitalMetricCard
-                    label="Frecuencia cardiaca"
-                    value={formatOptionalMetric(selectedVitals?.heartRateBpm)}
-                    unit="lpm"
-                  />
-                  <VitalMetricCard
-                    label="Temperatura"
-                    value={formatOptionalMetric(selectedVitals?.temperatureC, {
-                      digits: 1,
-                    })}
-                    unit="C"
-                  />
-                  <VitalMetricCard
-                    label="Peso"
-                    value={formatOptionalMetric(selectedVitals?.weightKg, {
-                      digits: 1,
-                    })}
-                    unit="kg"
-                  />
-                  <VitalMetricCard
-                    label="Talla"
-                    value={formatHeightMeters(selectedVitals?.heightCm)}
-                    unit="m"
-                  />
-                  <VitalMetricCard
-                    label="IMC"
-                    value={formatOptionalMetric(selectedVitals?.bmi, {
-                      digits: 1,
-                    })}
-                    helper={resolveBmiCategory(selectedVitals?.bmi)}
-                  />
-                  <VitalMetricCard
-                    label="Saturacion de oxigeno"
-                    value={formatOptionalMetric(
-                      selectedVitals?.oxygenSaturationPct,
-                    )}
-                    unit="%"
-                  />
-                  <VitalMetricCard
-                    label="Frecuencia respiratoria"
-                    value={formatOptionalMetric(
-                      selectedVitals?.respiratoryRateBpm,
-                    )}
-                    unit="resp/min"
-                  />
-                </div>
-
-                <div className="rounded-xl border border-line-struct bg-subtle/30 p-4">
-                  <p className="text-sm font-semibold text-txt-body">
-                    Diagnostico actual
-                  </p>
-                  <p className="mt-1 text-sm text-txt-muted">
-                    {selectedSavedDiagnosis?.primaryDiagnosis?.trim() ||
-                      "Aun no se guarda diagnostico para esta visita."}
-                  </p>
-                </div>
-              </TabsContent>
-
-              <TabsContent
-                value={DOCTOR_TAB.EXPLORACION}
-                className="space-y-2 pt-4"
-              >
-                <Label htmlFor="explorationNotes">
-                  Exploracion fisica (borrador local)
-                </Label>
-                <Textarea
-                  id="explorationNotes"
-                  rows={5}
-                  disabled={!canSaveClinicalData}
-                  value={selectedExplorationNote}
-                  onChange={(event) => {
-                    if (!selectedVisit) {
-                      return;
-                    }
-
-                    const nextValue = event.target.value;
-                    setExplorationNotesByVisitId((current) => ({
-                      ...current,
-                      [selectedVisit.id]: nextValue,
-                    }));
-                  }}
-                  placeholder="Describe hallazgos de exploracion fisica relevantes para la consulta."
-                />
-                <p className="text-sm text-txt-muted">
-                  Esta seccion queda como borrador local en esta fase del
-                  refactor.
-                </p>
-              </TabsContent>
-
-              <TabsContent
-                value={DOCTOR_TAB.DIAGNOSTICO}
-                className="space-y-4 pt-4"
-              >
-                <div className="space-y-2">
-                  <Label htmlFor="primaryDiagnosis">
-                    Diagnostico principal
-                  </Label>
-                  <Textarea
-                    id="primaryDiagnosis"
-                    rows={3}
-                    disabled={!canSaveClinicalData || saveDiagnosis.isPending}
-                    {...diagnosisForm.register("primaryDiagnosis")}
-                  />
-                  {diagnosisForm.formState.errors.primaryDiagnosis?.message ? (
-                    <p className="text-sm text-status-critical" role="alert">
-                      {diagnosisForm.formState.errors.primaryDiagnosis.message}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="finalNote">Nota final</Label>
-                  <Textarea
-                    id="finalNote"
-                    rows={5}
-                    disabled={!canSaveClinicalData || saveDiagnosis.isPending}
-                    {...diagnosisForm.register("finalNote")}
-                  />
-                  {diagnosisForm.formState.errors.finalNote?.message ? (
-                    <p className="text-sm text-status-critical" role="alert">
-                      {diagnosisForm.formState.errors.finalNote.message}
-                    </p>
-                  ) : null}
-                </div>
-              </TabsContent>
-
-              <TabsContent value={DOCTOR_TAB.RECETA} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="prescriptions">
-                    Receta (una indicacion por linea)
-                  </Label>
-                  <Textarea
-                    id="prescriptions"
-                    rows={6}
-                    disabled={
-                      !canSaveClinicalData || savePrescriptions.isPending
-                    }
-                    {...prescriptionsForm.register("itemsText")}
-                  />
-                  {prescriptionsForm.formState.errors.itemsText?.message ? (
-                    <p className="text-sm text-status-critical" role="alert">
-                      {prescriptionsForm.formState.errors.itemsText.message}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="rounded-xl border border-line-struct bg-subtle/30 p-4">
-                  <p className="text-sm font-semibold text-txt-body">
-                    Indicaciones guardadas
-                  </p>
-                  {selectedSavedPrescriptions.length > 0 ? (
-                    <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-txt-muted">
-                      {selectedSavedPrescriptions.map((item, index) => (
-                        <li key={`${selectedVisit?.id}-rx-${index}-${item}`}>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
                     <p className="mt-2 text-sm text-txt-muted">
-                      Aun no hay receta registrada para esta visita.
+                      {selectedVisit?.notes?.trim() ||
+                        "Recepcion no capturo observaciones para esta visita."}
                     </p>
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
+                  </div>
 
-            <div className="flex flex-wrap gap-2 border-t border-line-hairline pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={
-                  !canSaveClinicalData ||
-                  !diagnosisForm.formState.isValid ||
-                  saveDiagnosis.isPending ||
-                  closeVisit.isPending
-                }
-                onClick={handleSaveDraftClick}
-              >
-                Guardar borrador
-              </Button>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-xl border border-line-struct p-4">
+                      <p className="text-sm text-txt-muted">
+                        Servicio solicitado
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-txt-body">
+                        {formatServiceTypeLabel(
+                          selectedVisit?.serviceType ?? "",
+                        )}
+                      </p>
+                    </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                disabled={
-                  !canSaveClinicalData ||
-                  !prescriptionsForm.formState.isValid ||
-                  savePrescriptions.isPending
-                }
-                onClick={handleSavePrescriptionClick}
-              >
-                Guardar receta
-              </Button>
+                    <div className="rounded-xl border border-line-struct p-4">
+                      <p className="text-sm text-txt-muted">
+                        Modalidad de ingreso
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-txt-body">
+                        {formatArrivalTypeLabel(
+                          selectedVisit?.arrivalType ?? "",
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
 
-              <Button
-                type="button"
-                disabled={
-                  !canCloseSelectedVisit ||
-                  !diagnosisForm.formState.isValid ||
-                  closeVisit.isPending ||
-                  saveDiagnosis.isPending
-                }
-                onClick={handleCloseConsultationClick}
-              >
-                Finalizar consulta
-              </Button>
+                <TabsContent
+                  value={DOCTOR_TAB.VITALES}
+                  className="space-y-4 pt-4"
+                >
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <VitalMetricCard
+                      label="Presion arterial"
+                      value={formatBloodPressure(
+                        selectedVitals?.bloodPressureSystolic,
+                        selectedVitals?.bloodPressureDiastolic,
+                      )}
+                      unit="mmHg"
+                    />
+                    <VitalMetricCard
+                      label="Frecuencia cardiaca"
+                      value={formatOptionalMetric(selectedVitals?.heartRateBpm)}
+                      unit="lpm"
+                    />
+                    <VitalMetricCard
+                      label="Temperatura"
+                      value={formatOptionalMetric(
+                        selectedVitals?.temperatureC,
+                        {
+                          digits: 1,
+                        },
+                      )}
+                      unit="C"
+                    />
+                    <VitalMetricCard
+                      label="Peso"
+                      value={formatOptionalMetric(selectedVitals?.weightKg, {
+                        digits: 1,
+                      })}
+                      unit="kg"
+                    />
+                    <VitalMetricCard
+                      label="Talla"
+                      value={formatHeightMeters(selectedVitals?.heightCm)}
+                      unit="m"
+                    />
+                    <VitalMetricCard
+                      label="IMC"
+                      value={formatOptionalMetric(selectedVitals?.bmi, {
+                        digits: 1,
+                      })}
+                      helper={resolveBmiCategory(selectedVitals?.bmi)}
+                    />
+                    <VitalMetricCard
+                      label="Saturacion de oxigeno"
+                      value={formatOptionalMetric(
+                        selectedVitals?.oxygenSaturationPct,
+                      )}
+                      unit="%"
+                    />
+                    <VitalMetricCard
+                      label="Frecuencia respiratoria"
+                      value={formatOptionalMetric(
+                        selectedVitals?.respiratoryRateBpm,
+                      )}
+                      unit="resp/min"
+                    />
+                  </div>
 
-              <Button type="button" variant="ghost" onClick={handleResetDrafts}>
-                Cancelar
-              </Button>
-            </div>
+                  <div className="rounded-xl border border-line-struct bg-subtle/30 p-4">
+                    <p className="text-sm font-semibold text-txt-body">
+                      Diagnostico actual
+                    </p>
+                    <p className="mt-1 text-sm text-txt-muted">
+                      {selectedSavedDiagnosis?.primaryDiagnosis?.trim() ||
+                        "Aun no se guarda diagnostico para esta visita."}
+                    </p>
+                  </div>
+                </TabsContent>
 
-            {feedback ? (
-              <Alert
-                variant={feedback.kind === "error" ? "warning" : "success"}
-              >
-                <AlertTitle>
-                  {feedback.kind === "error" ? "No se pudo completar" : "Listo"}
-                </AlertTitle>
-                <AlertDescription>{feedback.message}</AlertDescription>
-              </Alert>
-            ) : null}
+                <TabsContent
+                  value={DOCTOR_TAB.EXPLORACION}
+                  className="space-y-2 pt-4"
+                >
+                  <Label htmlFor="explorationNotes">
+                    Exploracion fisica (borrador local)
+                  </Label>
+                  <Textarea
+                    id="explorationNotes"
+                    rows={5}
+                    disabled={!canSaveClinicalData}
+                    value={selectedExplorationNote}
+                    onChange={(event) => {
+                      if (!selectedVisit) {
+                        return;
+                      }
 
-            <VisitTimelinePanel entries={selectedTimelineEntries} />
-          </div>
+                      const nextValue = event.target.value;
+                      setExplorationNotesByVisitId((current) => ({
+                        ...current,
+                        [selectedVisit.id]: nextValue,
+                      }));
+                    }}
+                    placeholder="Describe hallazgos de exploracion fisica relevantes para la consulta."
+                  />
+                  <p className="text-sm text-txt-muted">
+                    Esta seccion queda como borrador local en esta fase del
+                    refactor.
+                  </p>
+                </TabsContent>
+
+                <TabsContent
+                  value={DOCTOR_TAB.DIAGNOSTICO}
+                  className="space-y-4 pt-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="primaryDiagnosis">
+                      Diagnostico principal
+                    </Label>
+                    <Textarea
+                      id="primaryDiagnosis"
+                      rows={3}
+                      disabled={!canSaveClinicalData || saveDiagnosis.isPending}
+                      {...diagnosisForm.register("primaryDiagnosis")}
+                    />
+                    {diagnosisForm.formState.errors.primaryDiagnosis
+                      ?.message ? (
+                      <p className="text-sm text-status-critical" role="alert">
+                        {
+                          diagnosisForm.formState.errors.primaryDiagnosis
+                            .message
+                        }
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="finalNote">Nota final</Label>
+                    <Textarea
+                      id="finalNote"
+                      rows={5}
+                      disabled={!canSaveClinicalData || saveDiagnosis.isPending}
+                      {...diagnosisForm.register("finalNote")}
+                    />
+                    {diagnosisForm.formState.errors.finalNote?.message ? (
+                      <p className="text-sm text-status-critical" role="alert">
+                        {diagnosisForm.formState.errors.finalNote.message}
+                      </p>
+                    ) : null}
+                  </div>
+                </TabsContent>
+
+                <TabsContent
+                  value={DOCTOR_TAB.RECETA}
+                  className="space-y-4 pt-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="prescriptions">
+                      Receta (una indicacion por linea)
+                    </Label>
+                    <Textarea
+                      id="prescriptions"
+                      rows={6}
+                      disabled={
+                        !canSaveClinicalData || savePrescriptions.isPending
+                      }
+                      {...prescriptionsForm.register("itemsText")}
+                    />
+                    {prescriptionsForm.formState.errors.itemsText?.message ? (
+                      <p className="text-sm text-status-critical" role="alert">
+                        {prescriptionsForm.formState.errors.itemsText.message}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-xl border border-line-struct bg-subtle/30 p-4">
+                    <p className="text-sm font-semibold text-txt-body">
+                      Indicaciones guardadas
+                    </p>
+                    {selectedSavedPrescriptions.length > 0 ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-txt-muted">
+                        {selectedSavedPrescriptions.map((item, index) => (
+                          <li key={`${selectedVisit?.id}-rx-${index}-${item}`}>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-sm text-txt-muted">
+                        Aun no hay receta registrada para esta visita.
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-line-hairline pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={
+                    !canSaveClinicalData ||
+                    !diagnosisForm.formState.isValid ||
+                    saveDiagnosis.isPending ||
+                    closeVisit.isPending
+                  }
+                  onClick={handleSaveDraftClick}
+                >
+                  Guardar borrador
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={
+                    !canSaveClinicalData ||
+                    !prescriptionsForm.formState.isValid ||
+                    savePrescriptions.isPending
+                  }
+                  onClick={handleSavePrescriptionClick}
+                >
+                  Guardar receta
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleResetDrafts}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible className="group/collapsible rounded-lg border border-line-hairline bg-subtle/20 p-3">
+            <CollapsibleTrigger className="flex w-full items-center justify-between text-left text-sm font-medium text-txt-body">
+              Historial de la visita
+              <ChevronDownIcon className="size-4 text-txt-muted transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <VisitTimelinePanel entries={selectedTimelineEntries} />
+            </CollapsibleContent>
+          </Collapsible>
         </section>
       ) : null}
     </section>
