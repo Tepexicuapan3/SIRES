@@ -60,11 +60,13 @@ services:
       CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS-http://localhost:5173,http://127.0.0.1:5173}
       WS_ALLOW_ALL_ORIGINS: ${WS_ALLOW_ALL_ORIGINS-false}
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS-}
-      DB_HOST: ${DB_HOST-mysql}
-      DB_PORT: ${DB_PORT-3306}
-      DB_NAME: ${DB_NAME-sires}
-      DB_USER: ${DB_USER-sires}
-      DB_PASSWORD: ${DB_PASSWORD-112233}
+      # Backend DB vars (scoped for containers to avoid conflicts
+      # with host/local .env values used outside Docker).
+      DB_HOST: ${BACKEND_DB_HOST-mysql}
+      DB_PORT: ${BACKEND_DB_PORT-3306}
+      DB_NAME: ${BACKEND_DB_NAME-sires}
+      DB_USER: ${BACKEND_DB_USER-sires}
+      DB_PASSWORD: ${BACKEND_DB_PASSWORD-112233}
       CHANNEL_REDIS_URL: ${CHANNEL_REDIS_URL-redis://redis:6379/1}
       SIRES_HOST: ${SIRES_HOST-localhost}
     env_file:
