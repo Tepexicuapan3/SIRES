@@ -26,9 +26,7 @@ RUN apt-get update \
 
 COPY requirements.txt ./requirements.txt
 
-# requirements.txt esta en UTF-16 en este repo; pip espera UTF-8.
-RUN python -c "import pathlib; p=pathlib.Path('requirements.txt'); t=p.read_text(encoding='utf-16', errors='strict'); pathlib.Path('requirements.utf8.txt').write_text(t, encoding='utf-8')" \
-  && pip install --no-cache-dir -r requirements.utf8.txt \
+RUN pip install --no-cache-dir -r requirements.txt \
   && pip install --no-cache-dir mysqlclient \
   && pip install --no-cache-dir django-cors-headers
 
