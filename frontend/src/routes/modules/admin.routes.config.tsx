@@ -5,6 +5,7 @@ import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
 import AreasPage from "@features/admin/modules/catalogos/areas/pages/AreasPage";
 import CentrosAtencionPage from "@features/admin/modules/catalogos/centros-atencion/pages/CentrosAtencionPage";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
+import CiesPage from "@/features/catalogos/pages/CiesPage";
 
 // Administracion
 
@@ -56,6 +57,14 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
             <CentrosAtencionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "cies",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:cies:upload">
+            <CiesPage />
           </ProtectedRoute>
         ),
       },

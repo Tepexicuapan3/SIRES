@@ -82,6 +82,11 @@ export const NAV_CONFIG: NavSection[] = [
             url: "/admin/catalogos/centros-atencion",
             permissions: ["admin:catalogos:centros_atencion:read"],
           },
+          { 
+            title: "Catálogo CIES",
+            url: "/admin/catalogos/cies",
+            permissions: ["admin:catalogos:cies:upload"],
+          },
         ],
       },
       {
