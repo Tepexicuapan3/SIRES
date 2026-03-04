@@ -17,7 +17,6 @@ REQUIRED_TABLES = {
     "cat_roles",
     "cat_permisos",
     "cat_centros_atencion",
-    "cat_areas",
     "rel_usuario_roles",
     "rel_rol_permisos",
     "rel_usuario_overrides",
@@ -731,6 +730,13 @@ def _assert_required_tables():
         )
 
 
+def _ensure_seed_tables():
+    existing_tables = set(connection.introspection.table_names())
+
+    if "cat_areas" not in existing_tables:
+        print("[SEED] cat_areas no existe; se omite carga de areas demo")
+
+
 def _table_exists(table_name):
     return table_name in set(connection.introspection.table_names())
 
@@ -787,6 +793,10 @@ def _seed_area_types(admin_user):
 
 
 def _seed_areas(admin_user, area_types):
+    if not _table_exists("cat_areas"):
+        print("[SEED] cat_areas no existe; no se insertan areas demo")
+        return
+
     total = 0
 
     for area_def in AREA_DEFS:
@@ -1092,6 +1102,7 @@ def _seed_demo_visits():
 
 @transaction.atomic
 def run():
+    _ensure_seed_tables()
     _assert_required_tables()
 
     admin_user = _get_or_create_user(
