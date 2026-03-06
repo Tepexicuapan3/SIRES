@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
 import RecepcionAgendaPage from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
+import RecepcionCheckinPage from "@features/recepcion/modules/checkin/pages/RecepcionCheckinPage";
 import { RECEPCION_QUEUE_READ_PERMISSIONS } from "@features/recepcion/shared/domain/recepcion.permissions";
 
 const agendaElement = (
@@ -11,10 +12,6 @@ const agendaElement = (
   >
     <RecepcionAgendaPage />
   </ProtectedRoute>
-);
-
-const recepcionCheckinRedirect = (
-  <Navigate to="/recepcion/agenda?focus=checkin" replace />
 );
 
 export const recepcionRoutes: RouteObject[] = [
@@ -27,24 +24,16 @@ export const recepcionRoutes: RouteObject[] = [
     element: agendaElement,
   },
   {
+    path: "agendar-cita",
+    element: <RecepcionCheckinPage />,
+  },
+  {
     path: "checkin",
-    element: recepcionCheckinRedirect,
+    element: <RecepcionCheckinPage />,
   },
   {
-    path: "fichas",
-    element: recepcionCheckinRedirect,
-  },
-  {
-    path: "fichas/medicina-general",
-    element: recepcionCheckinRedirect,
-  },
-  {
-    path: "fichas/especialidad",
-    element: recepcionCheckinRedirect,
-  },
-  {
-    path: "fichas/urgencias",
-    element: recepcionCheckinRedirect,
+    path: "fichas/*",
+    element: <RecepcionCheckinPage />,
   },
   {
     path: "incapacidad",

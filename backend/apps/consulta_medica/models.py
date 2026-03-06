@@ -11,6 +11,12 @@ class VisitConsultation(models.Model):
     )
     doctor_id = models.BigIntegerField(db_column="id_doctor", db_index=True)
     primary_diagnosis = models.CharField(max_length=255, db_column="diagnostico_primario")
+    cie_code = models.CharField(
+        max_length=8,
+        db_column="clave_cie",
+        null=True,
+        blank=True,
+    )
     final_note = models.TextField(db_column="nota_final")
     is_active = models.BooleanField(db_column="est_activo", default=True)
     created_at = models.DateTimeField(db_column="fch_alta", auto_now_add=True)

@@ -3,6 +3,7 @@ from django.db import transaction
 from apps.authentication.services.permission_dependencies import (
     evaluate_permission_requirement,
 )
+from apps.consulta_medica.repositories.cies_repository import CiesRepository
 from apps.consulta_medica.repositories.consultation_repository import ConsultationRepository
 from apps.consulta_medica.repositories.prescription_repository import PrescriptionRepository
 from apps.recepcion.repositories.visit_repository import VisitRepository
@@ -15,6 +16,8 @@ from apps.recepcion.uses_case.visit_state_machine_usecase import (
 DOCTOR_CONSULTATION_PERMISSION_REQUIREMENT = {
     "allOf": ["clinico:consultas:read"]
 }
+
+CIE_SEARCH_MIN_LENGTH = 2
 
 
 def ensure_doctor_role(roles, permissions=None):
@@ -65,6 +68,28 @@ def _normalize_prescription_items(items):
     return normalized_items
 
 
+def _normalize_cie_code(cie_code):
+    normalized = (cie_code or "").strip().upper()
+    return normalized or None
+
+
+def _resolve_cie_code_or_error(cie_code):
+    normalized_code = _normalize_cie_code(cie_code)
+    if not normalized_code:
+        return None
+
+    cie_match = CiesRepository.get_active_by_code(normalized_code)
+    if cie_match is None:
+        raise VisitDomainError(
+            "VALIDATION_ERROR",
+            "Hay errores en el formulario",
+            422,
+            details={"cieCode": ["La clave CIE no existe o no esta activa."]},
+        )
+
+    return normalized_code
+
+
 def start_consultation(visit_id, roles, permissions=None):
     ensure_doctor_role(roles, permissions)
     visit = _get_visit_or_error(visit_id)
@@ -85,6 +110,7 @@ def save_diagnosis(
     final_note,
     doctor_id,
     permissions=None,
+    cie_code=None,
 ):
     ensure_doctor_role(roles, permissions)
 
@@ -93,6 +119,7 @@ def save_diagnosis(
 
     normalized_primary_diagnosis = (primary_diagnosis or "").strip()
     normalized_final_note = (final_note or "").strip()
+    normalized_cie_code = _resolve_cie_code_or_error(cie_code)
     if not normalized_primary_diagnosis or not normalized_final_note:
         raise VisitDomainError(
             "VISIT_STATE_INVALID",
@@ -105,6 +132,7 @@ def save_diagnosis(
             visit,
             doctor_id=doctor_id,
             primary_diagnosis=normalized_primary_diagnosis,
+            cie_code=normalized_cie_code,
             final_note=normalized_final_note,
             created_by_id=doctor_id,
             updated_by_id=doctor_id,
@@ -114,6 +142,7 @@ def save_diagnosis(
         "visitId": visit.id_visit,
         "status": visit.status,
         "primaryDiagnosis": consultation.primary_diagnosis,
+        "cieCode": consultation.cie_code,
         "finalNote": consultation.final_note,
     }
 
@@ -161,10 +190,12 @@ def close_consultation(
     final_note,
     doctor_id,
     permissions=None,
+    cie_code=None,
 ):
     ensure_doctor_role(roles, permissions)
     normalized_primary_diagnosis = (primary_diagnosis or "").strip()
     normalized_final_note = (final_note or "").strip()
+    normalized_cie_code = _resolve_cie_code_or_error(cie_code)
 
     visit = _get_visit_or_error(visit_id)
 
@@ -173,6 +204,7 @@ def close_consultation(
         if (
             existing_consultation is not None
             and existing_consultation.primary_diagnosis == normalized_primary_diagnosis
+            and existing_consultation.cie_code == normalized_cie_code
             and existing_consultation.final_note == normalized_final_note
         ):
             return {
@@ -192,6 +224,7 @@ def close_consultation(
                 visit,
                 doctor_id=doctor_id,
                 primary_diagnosis=normalized_primary_diagnosis,
+                cie_code=normalized_cie_code,
                 final_note=normalized_final_note,
                 created_by_id=doctor_id,
                 updated_by_id=doctor_id,
@@ -215,6 +248,7 @@ def close_consultation(
             visit,
             doctor_id=doctor_id,
             primary_diagnosis=normalized_primary_diagnosis,
+            cie_code=normalized_cie_code,
             final_note=normalized_final_note,
             created_by_id=doctor_id,
             updated_by_id=doctor_id,
@@ -224,4 +258,34 @@ def close_consultation(
     return {
         "visit": VisitRepository.to_contract(visit),
         "consultation": ConsultationRepository.to_contract(consultation),
+    }
+
+
+def search_cies(search, roles, permissions=None, *, limit=10):
+    ensure_doctor_role(roles, permissions)
+
+    normalized_search = (search or "").strip()
+    if len(normalized_search) < CIE_SEARCH_MIN_LENGTH:
+        raise VisitDomainError(
+            "VALIDATION_ERROR",
+            "Hay errores en el formulario",
+            422,
+            details={
+                "search": [
+                    "Debes ingresar al menos 2 caracteres para buscar CIE.",
+                ]
+            },
+        )
+
+    results = CiesRepository.search_active(normalized_search, limit=limit)
+    return {
+        "items": [
+            {
+                "code": item.code,
+                "description": item.description,
+                "version": item.version,
+            }
+            for item in results
+        ],
+        "total": len(results),
     }

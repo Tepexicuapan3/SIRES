@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,11 +35,6 @@ interface RecepcionQuickCheckinDialogProps {
   onOpenChange: (open: boolean) => void;
   canWrite: boolean;
   initialValues?: Partial<CheckinFormInput>;
-}
-
-interface FeedbackState {
-  kind: "success" | "error";
-  message: string;
 }
 
 const CREATE_VISIT_DOMAIN_ERROR_MESSAGE: Record<
@@ -82,7 +77,6 @@ export const RecepcionQuickCheckinDialog = ({
   initialValues,
 }: RecepcionQuickCheckinDialogProps) => {
   const createVisit = useCreateVisit();
-  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
   const form = useForm<CheckinFormInput, unknown, CheckinFormValues>({
     resolver: zodResolver(createCheckinFormSchema),
@@ -98,10 +92,6 @@ export const RecepcionQuickCheckinDialog = ({
   const arrivalTypeField = form.register("arrivalType");
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      setFeedback(null);
-    }
-
     onOpenChange(nextOpen);
   };
 
@@ -121,19 +111,14 @@ export const RecepcionQuickCheckinDialog = ({
       return;
     }
 
-    setFeedback(null);
-
     try {
       await createVisit.mutateAsync(mapCheckinFormToCreateVisitRequest(values));
-      setFeedback({
-        kind: "success",
-        message: "Llegada registrada correctamente.",
-      });
+      toast.success("Ficha de consulta generada.");
       form.reset(DEFAULT_CHECKIN_FORM_VALUES);
+      onOpenChange(false);
     } catch (error) {
-      setFeedback({
-        kind: "error",
-        message: resolveDomainErrorMessage(
+      toast.error("No se pudo generar la ficha", {
+        description: resolveDomainErrorMessage(
           error,
           CREATE_VISIT_DOMAIN_ERROR_MESSAGE,
           FALLBACK_CREATE_VISIT_ERROR_MESSAGE,
@@ -146,9 +131,9 @@ export const RecepcionQuickCheckinDialog = ({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Check-in rapido</DialogTitle>
+          <DialogTitle>Generar ficha de consulta</DialogTitle>
           <DialogDescription>
-            Registra llegadas sin salir de agenda.
+            Registra una llegada con cita o walk-in sin salir de agenda.
           </DialogDescription>
         </DialogHeader>
 
@@ -253,7 +238,7 @@ export const RecepcionQuickCheckinDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="quick-notes">Notas</Label>
+            <Label htmlFor="quick-notes">Motivo de consulta</Label>
             <Textarea
               id="quick-notes"
               rows={3}
@@ -261,15 +246,6 @@ export const RecepcionQuickCheckinDialog = ({
               {...form.register("notes")}
             />
           </div>
-
-          {feedback ? (
-            <Alert variant={feedback.kind === "error" ? "warning" : "success"}>
-              <AlertTitle>
-                {feedback.kind === "error" ? "No se pudo completar" : "Listo"}
-              </AlertTitle>
-              <AlertDescription>{feedback.message}</AlertDescription>
-            </Alert>
-          ) : null}
 
           {!canWrite ? (
             <p className="text-sm text-txt-muted" role="status">
@@ -286,7 +262,7 @@ export const RecepcionQuickCheckinDialog = ({
               Cerrar
             </Button>
             <Button type="submit" disabled={!canWrite || createVisit.isPending}>
-              Registrar llegada
+              Generar ficha de consulta
             </Button>
           </DialogFooter>
         </form>

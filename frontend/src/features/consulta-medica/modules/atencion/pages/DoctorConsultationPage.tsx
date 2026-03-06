@@ -1,41 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { useNavigate, useParams } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ApiError } from "@api/utils/errors";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDownIcon } from "lucide-react";
-import { VISIT_SERVICE, VISIT_STATUS, type VisitStatus } from "@api/types";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import {
-  VisitTimelinePanel,
-  type VisitTimelineEntry,
-} from "@features/operativo/shared/components/VisitTimelinePanel";
+  VISIT_SERVICE,
+  VISIT_STATUS,
+  type CieSearchItem,
+  type VisitStatus,
+} from "@api/types";
+import { useDebounce } from "@/hooks/useDebounce";
+import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import {
   canCloseConsultation,
   canStartConsultation,
@@ -52,6 +41,7 @@ import { useCloseVisit } from "@features/consulta-medica/modules/atencion/mutati
 import { useSaveDiagnosis } from "@features/consulta-medica/modules/atencion/mutations/useSaveDiagnosis";
 import { useSavePrescriptions } from "@features/consulta-medica/modules/atencion/mutations/useSavePrescriptions";
 import { useStartConsultation } from "@features/consulta-medica/modules/atencion/mutations/useStartConsultation";
+import { useCieSearch } from "@features/consulta-medica/modules/atencion/queries/useCieSearch";
 import { useDoctorQueue } from "@features/consulta-medica/modules/atencion/queries/useDoctorQueue";
 
 const DOCTOR_QUEUE_PERMISSION_REQUIREMENT = {
@@ -148,57 +138,40 @@ const ARRIVAL_LABEL: Record<string, string> = {
   walk_in: "Sin cita",
 };
 
-const DOCTOR_TAB = {
-  MOTIVO: "motivo",
-  VITALES: "vitales",
-  EXPLORACION: "exploracion",
-  DIAGNOSTICO: "diagnostico",
-  RECETA: "receta",
-} as const;
+const OPEN_VISIT_STATUSES = new Set<VisitStatus>([
+  VISIT_STATUS.LISTA_PARA_DOCTOR,
+  VISIT_STATUS.EN_CONSULTA,
+]);
 
-type DoctorTab = (typeof DOCTOR_TAB)[keyof typeof DOCTOR_TAB];
+const MISSING_VITAL_VALUE = "No registrado";
 
 const DEFAULT_DIAGNOSIS_FORM_VALUES: SaveDiagnosisFormInput = {
   primaryDiagnosis: "",
   finalNote: "",
+  cieCode: "",
 };
 
 const DEFAULT_PRESCRIPTIONS_FORM_VALUES: SavePrescriptionsFormInput = {
   itemsText: "",
 };
 
-const DEFAULT_EXPLORATION_NOTE = "";
-
 interface VisitStatusOverrideState {
   visitId: number;
   status: VisitStatus;
 }
 
-interface VitalMetricCardProps {
+interface VitalMetricProps {
   label: string;
   value: string;
-  unit?: string;
-  helper?: string;
 }
 
-const VitalMetricCard = ({
-  label,
-  value,
-  unit,
-  helper,
-}: VitalMetricCardProps) => {
+const VitalMetric = ({ label, value }: VitalMetricProps) => {
   return (
-    <article className="rounded-xl border border-line-struct bg-paper p-4">
-      <p className="text-sm font-medium text-txt-muted">{label}</p>
-      <div className="mt-2 flex items-end gap-2">
-        <p className="text-3xl font-semibold tracking-tight text-txt-body">
-          {value}
-        </p>
-        {unit ? (
-          <span className="pb-1 text-sm text-txt-muted">{unit}</span>
-        ) : null}
-      </div>
-      {helper ? <p className="mt-1 text-sm text-txt-muted">{helper}</p> : null}
+    <article className="rounded-lg border border-line-hairline bg-subtle/20 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
+        {label}
+      </p>
+      <p className="mt-1 text-base font-semibold text-txt-body">{value}</p>
     </article>
   );
 };
@@ -222,27 +195,26 @@ const formatOptionalMetric = (
   } = {},
 ): string => {
   if (value === null || value === undefined) {
-    return "--";
+    return MISSING_VITAL_VALUE;
   }
 
   const digits = options.digits ?? 0;
   return digits > 0 ? value.toFixed(digits) : value.toString();
 };
 
-const formatHeightMeters = (heightCm: number | null | undefined): string => {
-  if (heightCm === null || heightCm === undefined) {
-    return "--";
-  }
-
-  return (heightCm / 100).toFixed(2);
-};
-
 const formatBloodPressure = (
   systolic: number | null | undefined,
   diastolic: number | null | undefined,
 ): string => {
+  const hasSystolic = systolic !== null && systolic !== undefined;
+  const hasDiastolic = diastolic !== null && diastolic !== undefined;
+
+  if (!hasSystolic && !hasDiastolic) {
+    return MISSING_VITAL_VALUE;
+  }
+
   if (systolic === null || systolic === undefined) {
-    return "-- / --";
+    return `-- / ${diastolic}`;
   }
 
   if (diastolic === null || diastolic === undefined) {
@@ -252,15 +224,32 @@ const formatBloodPressure = (
   return `${systolic} / ${diastolic}`;
 };
 
-const resolveBmiCategory = (bmi: number | null | undefined): string => {
-  if (bmi === null || bmi === undefined) {
-    return "Sin clasificacion";
+const formatMetricWithUnit = (
+  value: number | null | undefined,
+  unit: string,
+  options: {
+    digits?: number;
+  } = {},
+): string => {
+  const formatted = formatOptionalMetric(value, options);
+  if (formatted === MISSING_VITAL_VALUE) {
+    return formatted;
   }
 
-  if (bmi < 18.5) return "Bajo peso";
-  if (bmi < 25) return "Normal";
-  if (bmi < 30) return "Sobrepeso";
-  return "Obesidad";
+  return `${formatted} ${unit}`;
+};
+
+const formatSomatometriaNotes = (value: string | null | undefined): string => {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return "Sin observaciones de somatometria registradas.";
+  }
+
+  return normalized;
+};
+
+const hasVitalValue = (value: number | null | undefined): boolean => {
+  return value !== null && value !== undefined;
 };
 
 const resolveDomainErrorMessage = <TDomainCode extends string>(
@@ -290,25 +279,24 @@ const toPrescriptionItems = (itemsText: string): string[] => {
 const buildDiagnosisFingerprint = ({
   primaryDiagnosis,
   finalNote,
+  cieCode,
 }: SaveDiagnosisFormValues): string => {
-  return `${primaryDiagnosis.trim()}::${finalNote.trim()}`;
+  return `${primaryDiagnosis.trim()}::${finalNote.trim()}::${cieCode.trim().toUpperCase()}`;
 };
 
-const createTimelineEntry = (
-  title: string,
-  description?: string,
-): VisitTimelineEntry => {
-  const createdAt = new Date().toISOString();
+const normalizeCieCode = (value: string): string | undefined => {
+  const normalized = value.trim().toUpperCase();
+  return normalized.length > 0 ? normalized : undefined;
+};
 
-  return {
-    id: `${createdAt}-${Math.random().toString(36).slice(2)}`,
-    title,
-    description,
-    createdAt,
-  };
+const formatCieLabel = (cie: CieSearchItem): string => {
+  return `${cie.code} - ${cie.description}`;
 };
 
 export const DoctorConsultationPage = () => {
+  const navigate = useNavigate();
+  const params = useParams<{ visitId?: string }>();
+
   const { hasCapability } = usePermissionDependencies();
   const canReadDoctorQueue = hasCapability(
     "flow.doctor.queue.read",
@@ -331,15 +319,8 @@ export const DoctorConsultationPage = () => {
   const savePrescriptions = useSavePrescriptions();
   const closeVisit = useCloseVisit();
 
-  const [activeTab, setActiveTab] = useState<DoctorTab>(DOCTOR_TAB.VITALES);
-  const [selectedVisitIdState, setSelectedVisitIdState] = useState<
-    number | null
-  >(null);
   const [selectedVisitStatusOverride, setSelectedVisitStatusOverride] =
     useState<VisitStatusOverrideState | null>(null);
-  const [timelineEntriesByVisitId, setTimelineEntriesByVisitId] = useState<
-    Record<number, VisitTimelineEntry[]>
-  >({});
   const [diagnosisDraftByVisitId, setDiagnosisDraftByVisitId] = useState<
     Record<number, SaveDiagnosisFormValues>
   >({});
@@ -349,8 +330,9 @@ export const DoctorConsultationPage = () => {
     savedDiagnosisFingerprintByVisitId,
     setSavedDiagnosisFingerprintByVisitId,
   ] = useState<Record<number, string>>({});
-  const [explorationNotesByVisitId, setExplorationNotesByVisitId] = useState<
-    Record<number, string>
+  const [cieSearchTerm, setCieSearchTerm] = useState("");
+  const [selectedCieByVisitId, setSelectedCieByVisitId] = useState<
+    Record<number, CieSearchItem>
   >({});
 
   const diagnosisForm = useForm<
@@ -373,16 +355,46 @@ export const DoctorConsultationPage = () => {
     defaultValues: DEFAULT_PRESCRIPTIONS_FORM_VALUES,
   });
 
-  const visits = queueQuery.data?.items ?? [];
+  const visits = (queueQuery.data?.items ?? []).filter((visit) => {
+    return OPEN_VISIT_STATUSES.has(visit.status);
+  });
 
-  const selectedVisitId =
-    selectedVisitIdState !== null &&
-    visits.some((visit) => visit.id === selectedVisitIdState)
-      ? selectedVisitIdState
-      : (visits[0]?.id ?? null);
+  const parsedVisitId = Number.parseInt(params.visitId ?? "", 10);
+  const selectedVisitId = Number.isNaN(parsedVisitId) ? null : parsedVisitId;
+  const isDetailRoute = params.visitId !== undefined;
 
   const selectedVisit =
     visits.find((visit) => visit.id === selectedVisitId) ?? null;
+
+  const selectedCieCode = diagnosisForm.watch("cieCode").trim().toUpperCase();
+  const debouncedCieSearchTerm = useDebounce(cieSearchTerm, 300);
+  const normalizedCieSearchTerm = debouncedCieSearchTerm.trim();
+  const shouldSearchCies =
+    Boolean(selectedVisit) &&
+    canWriteDoctorConsultation &&
+    normalizedCieSearchTerm.length >= 2 &&
+    selectedCieCode.length === 0;
+
+  const ciesSearchQuery = useCieSearch(
+    {
+      search: normalizedCieSearchTerm,
+      limit: 8,
+    },
+    {
+      enabled: shouldSearchCies,
+    },
+  );
+
+  const selectedCie = selectedVisit
+    ? selectedCieByVisitId[selectedVisit.id]
+    : undefined;
+  const selectedCieLabel = selectedCie
+    ? formatCieLabel(selectedCie)
+    : selectedCieCode;
+  const ciesSearchItems = ciesSearchQuery.data?.items ?? [];
+
+  const hasStaleSelectedVisit =
+    isDetailRoute && selectedVisitId !== null && selectedVisit === null;
 
   const selectedVisitStatusOverrideValue =
     selectedVisit &&
@@ -410,55 +422,73 @@ export const DoctorConsultationPage = () => {
     canCloseDoctorConsultation &&
     canCloseConsultation(selectedVisitStatus);
 
-  const selectedTimelineEntries = selectedVisit
-    ? (timelineEntriesByVisitId[selectedVisit.id] ?? [])
-    : [];
-
-  const selectedExplorationNote = selectedVisit
-    ? (explorationNotesByVisitId[selectedVisit.id] ?? DEFAULT_EXPLORATION_NOTE)
-    : DEFAULT_EXPLORATION_NOTE;
-
-  const selectedSavedDiagnosis = selectedVisit
-    ? diagnosisDraftByVisitId[selectedVisit.id]
-    : undefined;
   const selectedSavedPrescriptions = selectedVisit
     ? (prescriptionsDraftByVisitId[selectedVisit.id] ?? [])
     : [];
 
   const selectedVitals = selectedVisit?.vitals ?? null;
-
-  const appendTimelineEntry = (
-    visitId: number,
-    title: string,
-    description?: string,
-  ) => {
-    setTimelineEntriesByVisitId((current) => {
-      const currentEntries = current[visitId] ?? [];
-      const entry = createTimelineEntry(title, description);
-
-      return {
-        ...current,
-        [visitId]: [entry, ...currentEntries].slice(0, 20),
-      };
-    });
-  };
+  const hasOptionalVitals =
+    hasVitalValue(selectedVitals?.heartRateBpm) ||
+    hasVitalValue(selectedVitals?.respiratoryRateBpm) ||
+    hasVitalValue(selectedVitals?.bloodPressureSystolic) ||
+    hasVitalValue(selectedVitals?.bloodPressureDiastolic);
 
   const hydrateDraftsForVisit = (visitId: number) => {
     const diagnosisDraft = diagnosisDraftByVisitId[visitId];
     const prescriptionsDraft = prescriptionsDraftByVisitId[visitId];
+    const normalizedCieCode = (diagnosisDraft?.cieCode ?? "")
+      .trim()
+      .toUpperCase();
+    const selectedCieForVisit = selectedCieByVisitId[visitId];
 
     diagnosisForm.reset(diagnosisDraft ?? DEFAULT_DIAGNOSIS_FORM_VALUES);
     prescriptionsForm.reset({
       itemsText: prescriptionsDraft ? prescriptionsDraft.join("\n") : "",
     });
+
+    if (selectedCieForVisit && selectedCieForVisit.code === normalizedCieCode) {
+      setCieSearchTerm(formatCieLabel(selectedCieForVisit));
+      return;
+    }
+
+    setCieSearchTerm(normalizedCieCode);
   };
 
   const handleVisitChange = (nextVisitId: number) => {
-    setSelectedVisitIdState(nextVisitId);
-    setSelectedVisitStatusOverride(null);
-    setActiveTab(DOCTOR_TAB.VITALES);
-    hydrateDraftsForVisit(nextVisitId);
+    navigate(`/clinico/consultas/doctor/${nextVisitId}`);
   };
+
+  const handleConsultationModalOpenChange = (open: boolean) => {
+    if (!open) {
+      navigate("/clinico/consultas/doctor");
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedVisit || !isDetailRoute) {
+      return;
+    }
+
+    const diagnosisDraft = diagnosisDraftByVisitId[selectedVisit.id];
+    const prescriptionsDraft = prescriptionsDraftByVisitId[selectedVisit.id];
+    const normalizedCieCode = (diagnosisDraft?.cieCode ?? "")
+      .trim()
+      .toUpperCase();
+
+    diagnosisForm.reset(diagnosisDraft ?? DEFAULT_DIAGNOSIS_FORM_VALUES);
+    prescriptionsForm.reset({
+      itemsText: prescriptionsDraft ? prescriptionsDraft.join("\n") : "",
+    });
+
+    setCieSearchTerm(normalizedCieCode);
+  }, [
+    diagnosisDraftByVisitId,
+    diagnosisForm,
+    isDetailRoute,
+    prescriptionsDraftByVisitId,
+    prescriptionsForm,
+    selectedVisit,
+  ]);
 
   const handleStartConsultation = async () => {
     if (!selectedVisit || !canStartSelectedVisit) {
@@ -474,11 +504,6 @@ export const DoctorConsultationPage = () => {
         visitId: selectedVisit.id,
         status: result.status,
       });
-      appendTimelineEntry(
-        selectedVisit.id,
-        "Consulta iniciada",
-        `La visita ${selectedVisit.folio} paso a ${formatStatusLabel(result.status)}.`,
-      );
       toast.success("Consulta iniciada");
     } catch (error) {
       toast.error("No se pudo iniciar la consulta", {
@@ -491,18 +516,63 @@ export const DoctorConsultationPage = () => {
     }
   };
 
+  const handleSelectCie = (cie: CieSearchItem) => {
+    if (!selectedVisit) {
+      return;
+    }
+
+    setSelectedCieByVisitId((current) => ({
+      ...current,
+      [selectedVisit.id]: cie,
+    }));
+    diagnosisForm.setValue("cieCode", cie.code, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    const currentDiagnosis = diagnosisForm.getValues("primaryDiagnosis").trim();
+    if (!currentDiagnosis) {
+      diagnosisForm.setValue("primaryDiagnosis", cie.description, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+
+    setCieSearchTerm(formatCieLabel(cie));
+  };
+
+  const handleClearCieSelection = () => {
+    if (selectedVisit) {
+      setSelectedCieByVisitId((current) => {
+        const next = { ...current };
+        delete next[selectedVisit.id];
+        return next;
+      });
+    }
+
+    diagnosisForm.setValue("cieCode", "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setCieSearchTerm("");
+  };
+
   const handleSaveDiagnosis = async (values: SaveDiagnosisFormValues) => {
     if (!selectedVisit || !canSaveClinicalData) {
       return;
     }
 
+    const normalizedCieCode = normalizeCieCode(values.cieCode);
+    const diagnosisPayload = {
+      primaryDiagnosis: values.primaryDiagnosis,
+      finalNote: values.finalNote,
+      ...(normalizedCieCode ? { cieCode: normalizedCieCode } : {}),
+    };
+
     try {
-      const result = await saveDiagnosis.mutateAsync({
+      await saveDiagnosis.mutateAsync({
         visitId: selectedVisit.id,
-        data: {
-          primaryDiagnosis: values.primaryDiagnosis,
-          finalNote: values.finalNote,
-        },
+        data: diagnosisPayload,
       });
 
       setDiagnosisDraftByVisitId((current) => ({
@@ -513,11 +583,6 @@ export const DoctorConsultationPage = () => {
         ...current,
         [selectedVisit.id]: buildDiagnosisFingerprint(values),
       }));
-      appendTimelineEntry(
-        selectedVisit.id,
-        "Diagnostico guardado",
-        `${result.primaryDiagnosis}.`,
-      );
       toast.success("Diagnostico guardado");
     } catch (error) {
       toast.error("No se pudo guardar el diagnostico", {
@@ -549,11 +614,6 @@ export const DoctorConsultationPage = () => {
         ...current,
         [selectedVisit.id]: result.items,
       }));
-      appendTimelineEntry(
-        selectedVisit.id,
-        "Receta guardada",
-        `${result.items.length} indicacion(es) registradas.`,
-      );
       toast.success("Receta guardada");
     } catch (error) {
       toast.error("No se pudo guardar la receta", {
@@ -571,6 +631,13 @@ export const DoctorConsultationPage = () => {
       return;
     }
 
+    const normalizedCieCode = normalizeCieCode(values.cieCode);
+    const diagnosisPayload = {
+      primaryDiagnosis: values.primaryDiagnosis,
+      finalNote: values.finalNote,
+      ...(normalizedCieCode ? { cieCode: normalizedCieCode } : {}),
+    };
+
     const diagnosisFingerprint = buildDiagnosisFingerprint(values);
     const hasMatchingSavedDiagnosis =
       savedDiagnosisFingerprintByVisitId[selectedVisit.id] ===
@@ -580,10 +647,7 @@ export const DoctorConsultationPage = () => {
       if (!hasMatchingSavedDiagnosis) {
         await saveDiagnosis.mutateAsync({
           visitId: selectedVisit.id,
-          data: {
-            primaryDiagnosis: values.primaryDiagnosis,
-            finalNote: values.finalNote,
-          },
+          data: diagnosisPayload,
         });
 
         setDiagnosisDraftByVisitId((current) => ({
@@ -594,31 +658,19 @@ export const DoctorConsultationPage = () => {
           ...current,
           [selectedVisit.id]: diagnosisFingerprint,
         }));
-        appendTimelineEntry(
-          selectedVisit.id,
-          "Diagnostico sincronizado",
-          "Se guardo diagnostico antes del cierre clinico.",
-        );
       }
 
       await closeVisit.mutateAsync({
         visitId: selectedVisit.id,
-        data: {
-          primaryDiagnosis: values.primaryDiagnosis,
-          finalNote: values.finalNote,
-        },
+        data: diagnosisPayload,
       });
 
       setSelectedVisitStatusOverride({
         visitId: selectedVisit.id,
         status: VISIT_STATUS.CERRADA,
       });
-      appendTimelineEntry(
-        selectedVisit.id,
-        "Consulta cerrada",
-        `La visita ${selectedVisit.folio} se cerro correctamente.`,
-      );
       toast.success("Consulta cerrada");
+      navigate("/clinico/consultas/doctor");
       diagnosisForm.reset(DEFAULT_DIAGNOSIS_FORM_VALUES);
       prescriptionsForm.reset(DEFAULT_PRESCRIPTIONS_FORM_VALUES);
       setDiagnosisDraftByVisitId((current) => ({
@@ -629,7 +681,12 @@ export const DoctorConsultationPage = () => {
         ...current,
         [selectedVisit.id]: [],
       }));
-      setActiveTab(DOCTOR_TAB.MOTIVO);
+      setSelectedCieByVisitId((current) => {
+        const next = { ...current };
+        delete next[selectedVisit.id];
+        return next;
+      });
+      setCieSearchTerm("");
     } catch (error) {
       toast.error("No se pudo cerrar la consulta", {
         description: resolveDomainErrorMessage(
@@ -647,6 +704,7 @@ export const DoctorConsultationPage = () => {
     } else {
       diagnosisForm.reset(DEFAULT_DIAGNOSIS_FORM_VALUES);
       prescriptionsForm.reset(DEFAULT_PRESCRIPTIONS_FORM_VALUES);
+      setCieSearchTerm("");
     }
 
     toast.info("Borradores restaurados");
@@ -671,8 +729,8 @@ export const DoctorConsultationPage = () => {
           Consulta medica
         </h1>
         <p className="text-sm text-txt-muted">
-          Visualiza datos del paciente, registra diagnostico y finaliza la
-          atencion.
+          Flujo clinico lineal: inicia consulta, registra diagnostico y finaliza
+          la atencion.
         </p>
       </header>
 
@@ -707,51 +765,210 @@ export const DoctorConsultationPage = () => {
       {canReadDoctorQueue &&
       !queueQuery.isLoading &&
       !queueQuery.isError &&
-      visits.length > 0 ? (
+      (visits.length > 0 || isDetailRoute) ? (
         <section className="space-y-4">
-          <article className="rounded-xl border border-line-struct bg-paper p-4">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+          {visits.length > 0 ? (
+            <article className="rounded-xl border border-line-struct bg-paper p-4">
               <div className="space-y-2">
-                <Label htmlFor="doctor-visit-selector">Visita activa</Label>
-                <Select
-                  value={selectedVisitId?.toString() ?? ""}
-                  onValueChange={(value) => {
-                    handleVisitChange(Number(value));
-                  }}
-                >
-                  <SelectTrigger id="doctor-visit-selector" className="w-full">
-                    <SelectValue placeholder="Selecciona una visita" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {visits.map((visit) => {
-                      const status =
-                        visit.id === selectedVisit?.id
-                          ? selectedVisitStatus
-                          : visit.status;
-
-                      return (
-                        <SelectItem key={visit.id} value={visit.id.toString()}>
-                          {visit.folio} - {formatStatusLabel(status)}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <p className="text-sm font-medium text-txt-body">
+                  Consultas abiertas ({visits.length})
+                </p>
+                <p className="text-sm text-txt-muted">
+                  Selecciona una card para abrir el detalle de atencion clinica.
+                </p>
               </div>
 
-              <div className="space-y-3 rounded-lg border border-line-hairline bg-subtle/30 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-base font-semibold text-txt-body">
-                    Folio {selectedVisit?.folio}
-                  </p>
-                  <Badge variant="outline" className="uppercase">
-                    {formatStatusLabel(selectedVisitStatus)}
-                  </Badge>
-                </div>
-                <p className="text-sm text-txt-muted">
-                  Paciente #{selectedVisit?.patientId}
-                </p>
-                <div className="flex flex-wrap gap-2">
+              <div
+                className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                data-testid="doctor-open-consultations-grid"
+              >
+                {visits.map((visit) => {
+                  return (
+                    <button
+                      key={visit.id}
+                      type="button"
+                      className="rounded-lg border border-line-hairline bg-paper p-3 text-left transition hover:border-brand/50"
+                      data-testid={`doctor-visit-card-${visit.id}`}
+                      data-visit-folio={visit.folio}
+                      onClick={() => {
+                        handleVisitChange(visit.id);
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-txt-body">
+                          {visit.folio}
+                        </p>
+                        <Badge variant="outline" className="uppercase">
+                          {formatStatusLabel(visit.status)}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-txt-muted">
+                        Paciente #{visit.patientId}
+                      </p>
+                      <p className="mt-1 text-xs text-txt-muted">
+                        {formatServiceTypeLabel(visit.serviceType)} -{" "}
+                        {formatArrivalTypeLabel(visit.arrivalType)}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </article>
+          ) : null}
+
+          <Dialog
+            open={isDetailRoute}
+            onOpenChange={handleConsultationModalOpenChange}
+          >
+            <DialogContent
+              className="max-h-[90vh] overflow-y-auto sm:max-w-4xl"
+              data-testid="doctor-consultation-modal"
+            >
+              <DialogHeader>
+                <DialogTitle>Detalle de consulta medica</DialogTitle>
+                <DialogDescription>
+                  Inicia la consulta, registra diagnostico, receta y finaliza la
+                  atencion clinica.
+                </DialogDescription>
+              </DialogHeader>
+
+              {selectedVisit ? (
+                <div className="space-y-4">
+                  <div className="space-y-4 rounded-lg border border-line-hairline bg-subtle/30 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-base font-semibold text-txt-body">
+                        Folio {selectedVisit.folio}
+                      </p>
+                      <Badge variant="outline" className="uppercase">
+                        {formatStatusLabel(selectedVisitStatus)}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-txt-muted">
+                      Paciente #{selectedVisit.patientId}
+                    </p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <p className="text-sm text-txt-muted">
+                        <span className="font-medium text-txt-body">
+                          Servicio:
+                        </span>{" "}
+                        {formatServiceTypeLabel(selectedVisit.serviceType)}
+                      </p>
+                      <p className="text-sm text-txt-muted">
+                        <span className="font-medium text-txt-body">
+                          Modalidad:
+                        </span>{" "}
+                        {formatArrivalTypeLabel(selectedVisit.arrivalType)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-line-hairline bg-paper p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
+                        Motivo de consulta
+                      </p>
+                      <p className="mt-1 text-sm text-txt-body">
+                        {selectedVisit.notes?.trim() ||
+                          "Sin motivo de consulta capturado en recepcion."}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
+                        Signos vitales
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                        <VitalMetric
+                          label="Peso"
+                          value={formatMetricWithUnit(
+                            selectedVitals?.weightKg,
+                            "kg",
+                          )}
+                        />
+                        <VitalMetric
+                          label="Talla"
+                          value={formatMetricWithUnit(
+                            selectedVitals?.heightCm,
+                            "cm",
+                          )}
+                        />
+                        <VitalMetric
+                          label="Temperatura"
+                          value={formatMetricWithUnit(
+                            selectedVitals?.temperatureC,
+                            "C",
+                            {
+                              digits: 1,
+                            },
+                          )}
+                        />
+                        <VitalMetric
+                          label="Saturacion de oxigeno"
+                          value={formatMetricWithUnit(
+                            selectedVitals?.oxygenSaturationPct,
+                            "%",
+                          )}
+                        />
+                        <VitalMetric
+                          label="IMC"
+                          value={formatOptionalMetric(selectedVitals?.bmi, {
+                            digits: 1,
+                          })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-line-hairline bg-paper p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
+                        Observaciones de somatometria
+                      </p>
+                      <p className="mt-1 text-sm text-txt-body">
+                        {formatSomatometriaNotes(selectedVitals?.notes)}
+                      </p>
+                    </div>
+
+                    {hasOptionalVitals ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
+                          Vitals adicionales
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                          {hasVitalValue(
+                            selectedVitals?.bloodPressureSystolic,
+                          ) ||
+                          hasVitalValue(
+                            selectedVitals?.bloodPressureDiastolic,
+                          ) ? (
+                            <VitalMetric
+                              label="Presion arterial"
+                              value={`${formatBloodPressure(
+                                selectedVitals?.bloodPressureSystolic,
+                                selectedVitals?.bloodPressureDiastolic,
+                              )} mmHg`}
+                            />
+                          ) : null}
+
+                          {hasVitalValue(selectedVitals?.heartRateBpm) ? (
+                            <VitalMetric
+                              label="Frecuencia cardiaca"
+                              value={formatMetricWithUnit(
+                                selectedVitals.heartRateBpm,
+                                "lpm",
+                              )}
+                            />
+                          ) : null}
+
+                          {hasVitalValue(selectedVitals?.respiratoryRateBpm) ? (
+                            <VitalMetric
+                              label="Frecuencia respiratoria"
+                              value={formatMetricWithUnit(
+                                selectedVitals.respiratoryRateBpm,
+                                "rpm",
+                              )}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
                   <Button
                     type="button"
                     variant="outline"
@@ -767,282 +984,115 @@ export const DoctorConsultationPage = () => {
                   >
                     Iniciar consulta
                   </Button>
-                  <Button
-                    type="button"
-                    disabled={
-                      !canCloseSelectedVisit ||
-                      !diagnosisForm.formState.isValid ||
-                      closeVisit.isPending ||
-                      saveDiagnosis.isPending
-                    }
-                    onClick={handleCloseConsultationClick}
-                  >
-                    Finalizar consulta
-                  </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" type="button">
-                        Ver contexto clinico
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Contexto de la visita</DialogTitle>
-                        <DialogDescription>
-                          Informacion complementaria de la atencion en curso.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-3 text-sm text-txt-muted">
-                        <p>
-                          <span className="font-medium text-txt-body">
-                            Servicio:
-                          </span>{" "}
-                          {formatServiceTypeLabel(
-                            selectedVisit?.serviceType ?? "",
-                          )}
+
+                  {!canWriteDoctorConsultation ? (
+                    <p className="text-sm text-txt-muted" role="status">
+                      No tenes permisos completos para registrar diagnostico,
+                      receta o cierre de consulta.
+                    </p>
+                  ) : null}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cieSearch">Buscar CIE (opcional)</Label>
+                    <Input
+                      id="cieSearch"
+                      value={cieSearchTerm}
+                      placeholder="Ej. A090 o gastroenteritis"
+                      disabled={!canSaveClinicalData || saveDiagnosis.isPending}
+                      onChange={(event) => {
+                        const nextSearch = event.target.value;
+                        setCieSearchTerm(nextSearch);
+
+                        if (selectedCieCode) {
+                          diagnosisForm.setValue("cieCode", "", {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                        }
+
+                        if (
+                          selectedVisit &&
+                          selectedCieByVisitId[selectedVisit.id]
+                        ) {
+                          setSelectedCieByVisitId((current) => {
+                            const next = { ...current };
+                            delete next[selectedVisit.id];
+                            return next;
+                          });
+                        }
+                      }}
+                    />
+                    <input
+                      type="hidden"
+                      {...diagnosisForm.register("cieCode")}
+                    />
+
+                    {selectedCieCode ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm text-txt-muted">
+                          CIE seleccionado: <strong>{selectedCieLabel}</strong>
                         </p>
-                        <p>
-                          <span className="font-medium text-txt-body">
-                            Modalidad:
-                          </span>{" "}
-                          {formatArrivalTypeLabel(
-                            selectedVisit?.arrivalType ?? "",
-                          )}
-                        </p>
-                        <p>
-                          <span className="font-medium text-txt-body">
-                            Cita:
-                          </span>{" "}
-                          {selectedVisit?.appointmentId ?? "Sin cita"}
-                        </p>
-                        <p>
-                          <span className="font-medium text-txt-body">
-                            Doctor ID:
-                          </span>{" "}
-                          {selectedVisit?.doctorId ?? "Sin asignar"}
-                        </p>
-                        <div className="rounded-lg border border-line-hairline bg-subtle/30 p-3">
-                          <p className="font-medium text-txt-body">
-                            Motivo de consulta
-                          </p>
-                          <p className="mt-1">
-                            {selectedVisit?.notes?.trim() ||
-                              "Sin motivo de consulta capturado en recepcion."}
-                          </p>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={
+                            !canSaveClinicalData || saveDiagnosis.isPending
+                          }
+                          onClick={handleClearCieSelection}
+                        >
+                          Quitar CIE
+                        </Button>
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </div>
-
-            {!canWriteDoctorConsultation ? (
-              <p className="mt-3 text-sm text-txt-muted" role="status">
-                No tenes permisos completos para registrar diagnostico, receta o
-                cierre de consulta.
-              </p>
-            ) : null}
-          </article>
-
-          <Collapsible className="group/collapsible rounded-xl border border-line-struct bg-paper p-4">
-            <CollapsibleTrigger className="flex w-full items-center justify-between text-left">
-              <div>
-                <p className="text-sm font-semibold text-txt-body">
-                  Registro clinico
-                </p>
-                <p className="text-sm text-txt-muted">
-                  Motivo, signos vitales, exploracion, diagnostico y receta.
-                </p>
-              </div>
-              <ChevronDownIcon className="size-4 text-txt-muted transition-transform group-data-[state=open]/collapsible:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4">
-              <Tabs
-                value={activeTab}
-                onValueChange={(value) => setActiveTab(value as DoctorTab)}
-              >
-                <TabsList className="grid h-auto w-full grid-cols-2 rounded-md border border-line-struct bg-subtle p-1 md:grid-cols-5">
-                  <TabsTrigger
-                    value={DOCTOR_TAB.MOTIVO}
-                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                  >
-                    Motivo
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value={DOCTOR_TAB.VITALES}
-                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                  >
-                    Signos vitales
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value={DOCTOR_TAB.EXPLORACION}
-                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                  >
-                    Exploracion
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value={DOCTOR_TAB.DIAGNOSTICO}
-                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                  >
-                    Diagnostico
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value={DOCTOR_TAB.RECETA}
-                    className="h-10 data-[state=active]:bg-brand data-[state=active]:text-txt-inverse"
-                  >
-                    Receta medica
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent
-                  value={DOCTOR_TAB.MOTIVO}
-                  className="space-y-4 pt-4"
-                >
-                  <div className="rounded-xl border border-line-struct bg-subtle/40 p-4">
-                    <p className="text-sm font-semibold text-txt-body">
-                      Motivo de consulta
-                    </p>
-                    <p className="mt-2 text-sm text-txt-muted">
-                      {selectedVisit?.notes?.trim() ||
-                        "Recepcion no capturo observaciones para esta visita."}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-xl border border-line-struct p-4">
+                    ) : (
                       <p className="text-sm text-txt-muted">
-                        Servicio solicitado
+                        Escribe al menos 2 caracteres para buscar por clave o
+                        descripcion.
                       </p>
-                      <p className="mt-1 text-lg font-semibold text-txt-body">
-                        {formatServiceTypeLabel(
-                          selectedVisit?.serviceType ?? "",
-                        )}
-                      </p>
-                    </div>
+                    )}
 
-                    <div className="rounded-xl border border-line-struct p-4">
+                    {shouldSearchCies && ciesSearchQuery.isFetching ? (
+                      <p className="text-sm text-txt-muted">Buscando CIE...</p>
+                    ) : null}
+
+                    {shouldSearchCies && ciesSearchQuery.isError ? (
+                      <p className="text-sm text-status-critical" role="alert">
+                        No se pudo cargar resultados CIE.
+                      </p>
+                    ) : null}
+
+                    {shouldSearchCies &&
+                    !ciesSearchQuery.isFetching &&
+                    !ciesSearchQuery.isError &&
+                    ciesSearchItems.length === 0 ? (
                       <p className="text-sm text-txt-muted">
-                        Modalidad de ingreso
+                        Sin coincidencias para esa busqueda.
                       </p>
-                      <p className="mt-1 text-lg font-semibold text-txt-body">
-                        {formatArrivalTypeLabel(
-                          selectedVisit?.arrivalType ?? "",
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </TabsContent>
+                    ) : null}
 
-                <TabsContent
-                  value={DOCTOR_TAB.VITALES}
-                  className="space-y-4 pt-4"
-                >
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <VitalMetricCard
-                      label="Presion arterial"
-                      value={formatBloodPressure(
-                        selectedVitals?.bloodPressureSystolic,
-                        selectedVitals?.bloodPressureDiastolic,
-                      )}
-                      unit="mmHg"
-                    />
-                    <VitalMetricCard
-                      label="Frecuencia cardiaca"
-                      value={formatOptionalMetric(selectedVitals?.heartRateBpm)}
-                      unit="lpm"
-                    />
-                    <VitalMetricCard
-                      label="Temperatura"
-                      value={formatOptionalMetric(
-                        selectedVitals?.temperatureC,
-                        {
-                          digits: 1,
-                        },
-                      )}
-                      unit="C"
-                    />
-                    <VitalMetricCard
-                      label="Peso"
-                      value={formatOptionalMetric(selectedVitals?.weightKg, {
-                        digits: 1,
-                      })}
-                      unit="kg"
-                    />
-                    <VitalMetricCard
-                      label="Talla"
-                      value={formatHeightMeters(selectedVitals?.heightCm)}
-                      unit="m"
-                    />
-                    <VitalMetricCard
-                      label="IMC"
-                      value={formatOptionalMetric(selectedVitals?.bmi, {
-                        digits: 1,
-                      })}
-                      helper={resolveBmiCategory(selectedVitals?.bmi)}
-                    />
-                    <VitalMetricCard
-                      label="Saturacion de oxigeno"
-                      value={formatOptionalMetric(
-                        selectedVitals?.oxygenSaturationPct,
-                      )}
-                      unit="%"
-                    />
-                    <VitalMetricCard
-                      label="Frecuencia respiratoria"
-                      value={formatOptionalMetric(
-                        selectedVitals?.respiratoryRateBpm,
-                      )}
-                      unit="resp/min"
-                    />
+                    {shouldSearchCies &&
+                    !ciesSearchQuery.isError &&
+                    ciesSearchItems.length > 0 ? (
+                      <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-line-hairline bg-paper p-2">
+                        {ciesSearchItems.map((item) => (
+                          <button
+                            key={`${selectedVisit.id}-cie-${item.code}`}
+                            type="button"
+                            className="w-full rounded-md border border-transparent px-3 py-2 text-left text-sm text-txt-body transition hover:border-brand/40 hover:bg-subtle/30"
+                            onClick={() => {
+                              handleSelectCie(item);
+                            }}
+                          >
+                            <p className="font-medium">{item.code}</p>
+                            <p className="text-xs text-txt-muted">
+                              {item.description}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div className="rounded-xl border border-line-struct bg-subtle/30 p-4">
-                    <p className="text-sm font-semibold text-txt-body">
-                      Diagnostico actual
-                    </p>
-                    <p className="mt-1 text-sm text-txt-muted">
-                      {selectedSavedDiagnosis?.primaryDiagnosis?.trim() ||
-                        "Aun no se guarda diagnostico para esta visita."}
-                    </p>
-                  </div>
-                </TabsContent>
-
-                <TabsContent
-                  value={DOCTOR_TAB.EXPLORACION}
-                  className="space-y-2 pt-4"
-                >
-                  <Label htmlFor="explorationNotes">
-                    Exploracion fisica (borrador local)
-                  </Label>
-                  <Textarea
-                    id="explorationNotes"
-                    rows={5}
-                    disabled={!canSaveClinicalData}
-                    value={selectedExplorationNote}
-                    onChange={(event) => {
-                      if (!selectedVisit) {
-                        return;
-                      }
-
-                      const nextValue = event.target.value;
-                      setExplorationNotesByVisitId((current) => ({
-                        ...current,
-                        [selectedVisit.id]: nextValue,
-                      }));
-                    }}
-                    placeholder="Describe hallazgos de exploracion fisica relevantes para la consulta."
-                  />
-                  <p className="text-sm text-txt-muted">
-                    Esta seccion queda como borrador local en esta fase del
-                    refactor.
-                  </p>
-                </TabsContent>
-
-                <TabsContent
-                  value={DOCTOR_TAB.DIAGNOSTICO}
-                  className="space-y-4 pt-4"
-                >
                   <div className="space-y-2">
                     <Label htmlFor="primaryDiagnosis">
                       Diagnostico principal
@@ -1078,12 +1128,7 @@ export const DoctorConsultationPage = () => {
                       </p>
                     ) : null}
                   </div>
-                </TabsContent>
 
-                <TabsContent
-                  value={DOCTOR_TAB.RECETA}
-                  className="space-y-4 pt-4"
-                >
                   <div className="space-y-2">
                     <Label htmlFor="prescriptions">
                       Receta (una indicacion por linea)
@@ -1095,6 +1140,7 @@ export const DoctorConsultationPage = () => {
                         !canSaveClinicalData || savePrescriptions.isPending
                       }
                       {...prescriptionsForm.register("itemsText")}
+                      placeholder="Opcional"
                     />
                     {prescriptionsForm.formState.errors.itemsText?.message ? (
                       <p className="text-sm text-status-critical" role="alert">
@@ -1103,75 +1149,99 @@ export const DoctorConsultationPage = () => {
                     ) : null}
                   </div>
 
-                  <div className="rounded-xl border border-line-struct bg-subtle/30 p-4">
+                  <div className="rounded-lg border border-line-hairline bg-subtle/20 p-3">
                     <p className="text-sm font-semibold text-txt-body">
                       Indicaciones guardadas
                     </p>
                     {selectedSavedPrescriptions.length > 0 ? (
                       <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-txt-muted">
                         {selectedSavedPrescriptions.map((item, index) => (
-                          <li key={`${selectedVisit?.id}-rx-${index}-${item}`}>
+                          <li key={`${selectedVisit.id}-rx-${index}-${item}`}>
                             {item}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="mt-2 text-sm text-txt-muted">
+                      <p className="mt-1 text-sm text-txt-muted">
                         Aun no hay receta registrada para esta visita.
                       </p>
                     )}
                   </div>
-                </TabsContent>
-              </Tabs>
 
-              <div className="mt-4 flex flex-wrap gap-2 border-t border-line-hairline pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={
-                    !canSaveClinicalData ||
-                    !diagnosisForm.formState.isValid ||
-                    saveDiagnosis.isPending ||
-                    closeVisit.isPending
-                  }
-                  onClick={handleSaveDraftClick}
-                >
-                  Guardar borrador
-                </Button>
+                  <div className="flex flex-wrap gap-2 border-t border-line-hairline pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={
+                        !canSaveClinicalData ||
+                        !diagnosisForm.formState.isValid ||
+                        saveDiagnosis.isPending ||
+                        closeVisit.isPending
+                      }
+                      onClick={handleSaveDraftClick}
+                    >
+                      Guardar diagnostico
+                    </Button>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={
-                    !canSaveClinicalData ||
-                    !prescriptionsForm.formState.isValid ||
-                    savePrescriptions.isPending
-                  }
-                  onClick={handleSavePrescriptionClick}
-                >
-                  Guardar receta
-                </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={
+                        !canSaveClinicalData ||
+                        !prescriptionsForm.formState.isValid ||
+                        savePrescriptions.isPending
+                      }
+                      onClick={handleSavePrescriptionClick}
+                    >
+                      Guardar receta
+                    </Button>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleResetDrafts}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={
+                        saveDiagnosis.isPending ||
+                        savePrescriptions.isPending ||
+                        closeVisit.isPending
+                      }
+                      onClick={handleResetDrafts}
+                    >
+                      Restaurar borradores
+                    </Button>
 
-          <Collapsible className="group/collapsible rounded-lg border border-line-hairline bg-subtle/20 p-3">
-            <CollapsibleTrigger className="flex w-full items-center justify-between text-left text-sm font-medium text-txt-body">
-              Historial de la visita
-              <ChevronDownIcon className="size-4 text-txt-muted transition-transform group-data-[state=open]/collapsible:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              <VisitTimelinePanel entries={selectedTimelineEntries} />
-            </CollapsibleContent>
-          </Collapsible>
+                    <Button
+                      type="button"
+                      disabled={
+                        !canCloseSelectedVisit ||
+                        !diagnosisForm.formState.isValid ||
+                        closeVisit.isPending ||
+                        saveDiagnosis.isPending
+                      }
+                      onClick={handleCloseConsultationClick}
+                    >
+                      Finalizar consulta
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        navigate("/clinico/consultas/doctor");
+                      }}
+                    >
+                      Volver a bandeja
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-txt-muted" role="status">
+                  {hasStaleSelectedVisit
+                    ? "La consulta seleccionada ya no esta disponible. Elige otra consulta abierta."
+                    : "Selecciona una consulta abierta para iniciar la atencion clinica."}
+                </p>
+              )}
+            </DialogContent>
+          </Dialog>
         </section>
       ) : null}
     </section>

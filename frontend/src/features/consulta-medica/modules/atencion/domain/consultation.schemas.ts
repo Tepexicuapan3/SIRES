@@ -6,6 +6,10 @@ const diagnosisFieldsSchema = z.object({
     .trim()
     .min(1, { error: "Ingresa el diagnostico principal." }),
   finalNote: z.string().trim().min(1, { error: "Ingresa la nota final." }),
+  cieCode: z
+    .string()
+    .trim()
+    .max(8, { error: "La clave CIE debe tener maximo 8 caracteres." }),
 });
 
 export const saveDiagnosisFormSchema = diagnosisFieldsSchema;

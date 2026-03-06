@@ -25,7 +25,8 @@ export const useDoctorQueue = (options: UseDoctorQueueOptions = {}) => {
   const shouldUsePollingFallback =
     enabled &&
     import.meta.env.MODE !== "test" &&
-    realtime.connectionStatus !== SOCKET_CONNECTION_STATUS.CONNECTED;
+    (realtime.connectionStatus === SOCKET_CONNECTION_STATUS.DISCONNECTED ||
+      realtime.connectionStatus === SOCKET_CONNECTION_STATUS.ERROR);
 
   const queryOptions = {
     ...options,

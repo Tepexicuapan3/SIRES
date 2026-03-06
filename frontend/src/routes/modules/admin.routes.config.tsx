@@ -4,8 +4,8 @@ import UsersPage from "@features/admin/modules/rbac/users/pages/UsersPage";
 import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
 import AreasPage from "@features/admin/modules/catalogos/areas/pages/AreasPage";
 import CentrosAtencionPage from "@features/admin/modules/catalogos/centros-atencion/pages/CentrosAtencionPage";
+import CiesPage from "@features/admin/modules/catalogos/cies/pages/CiesPage";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
-import CiesPage from "@/features/catalogos/pages/CiesPage";
 
 // Administracion
 

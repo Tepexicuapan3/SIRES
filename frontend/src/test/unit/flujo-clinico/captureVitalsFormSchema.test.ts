@@ -44,22 +44,21 @@ describe("captureVitalsFormSchema temperatureC validation", () => {
   });
 });
 
-describe("captureVitalsFormSchema waistCircumferenceCm validation", () => {
-  it("acepta circunferencia abdominal valida", () => {
+describe("captureVitalsFormSchema oxygenSaturationPct validation", () => {
+  it("acepta saturacion valida", () => {
     const result = captureVitalsFormSchema.safeParse({
       ...baseVitals,
       temperatureC: 36.6,
-      waistCircumferenceCm: 95,
     });
 
     expect(result.success).toBe(true);
   });
 
-  it("rechaza circunferencia abdominal fuera de rango", () => {
+  it("rechaza saturacion fuera de rango", () => {
     const result = captureVitalsFormSchema.safeParse({
       ...baseVitals,
       temperatureC: 36.6,
-      waistCircumferenceCm: 10,
+      oxygenSaturationPct: 40,
     });
 
     expect(result.success).toBe(false);
@@ -67,6 +66,38 @@ describe("captureVitalsFormSchema waistCircumferenceCm validation", () => {
       return;
     }
 
-    expect(result.error.issues[0]?.path).toEqual(["waistCircumferenceCm"]);
+    expect(result.error.issues[0]?.path).toEqual(["oxygenSaturationPct"]);
+  });
+});
+
+describe("captureVitalsFormSchema observations validation", () => {
+  it("normaliza observaciones vacias a undefined", () => {
+    const result = captureVitalsFormSchema.safeParse({
+      ...baseVitals,
+      temperatureC: 36.6,
+      observations: "   ",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    expect(result.data.observations).toBeUndefined();
+  });
+
+  it("rechaza observaciones mayores a 500 caracteres", () => {
+    const result = captureVitalsFormSchema.safeParse({
+      ...baseVitals,
+      temperatureC: 36.6,
+      observations: "a".repeat(501),
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) {
+      return;
+    }
+
+    expect(result.error.issues[0]?.path).toEqual(["observations"]);
   });
 });

@@ -111,6 +111,14 @@ export const clinicoRoutes: RouteObject[] = [
     ),
   },
   {
+    path: "consultas/doctor/:visitId",
+    element: (
+      <ProtectedRoute requiredPermission="clinico:consultas:read">
+        <DoctorConsultationPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
     index: true,
     element: <Navigate to="consultas" replace />,
   },

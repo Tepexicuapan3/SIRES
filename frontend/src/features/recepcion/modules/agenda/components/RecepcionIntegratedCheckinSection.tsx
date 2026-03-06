@@ -684,7 +684,7 @@ export const RecepcionIntegratedCheckinSection = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notas</Label>
+                <Label htmlFor="notes">Motivo de consulta</Label>
                 <Textarea
                   id="notes"
                   rows={3}

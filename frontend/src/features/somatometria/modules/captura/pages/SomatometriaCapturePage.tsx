@@ -5,13 +5,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ApiError } from "@api/utils/errors";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -19,10 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { ChevronDownIcon } from "lucide-react";
 import { toast } from "sonner";
-import { VISIT_STATUS } from "@api/types";
+import { VISIT_STATUS, type VisitVitalsPayload } from "@api/types";
 import { canCaptureVitals } from "@features/operativo/shared/domain/visit-flow.constants";
 import {
   captureVitalsFormSchema,
@@ -51,16 +45,11 @@ const FALLBACK_CAPTURE_VITALS_ERROR_MESSAGE =
   "No se pudieron guardar los vitales. Intenta nuevamente.";
 
 const DEFAULT_FORM_VALUES: CaptureVitalsFormInput = {
-  weightKg: undefined,
-  heightCm: undefined,
-  temperatureC: undefined,
-  oxygenSaturationPct: undefined,
-  heartRateBpm: undefined,
-  respiratoryRateBpm: undefined,
-  bloodPressureSystolic: undefined,
-  bloodPressureDiastolic: undefined,
-  waistCircumferenceCm: undefined,
-  notes: "",
+  weightKg: "",
+  heightCm: "",
+  temperatureC: "",
+  oxygenSaturationPct: "",
+  observations: "",
 };
 
 const SOMATOMETRIA_QUEUE_PERMISSION_REQUIREMENT = {
@@ -94,6 +83,24 @@ const formatBmi = (value: number): string => {
 
 const formatStatusLabel = (status: string): string => {
   return status.replace(/_/g, " ");
+};
+
+const buildCaptureVitalsPayload = (
+  values: CaptureVitalsFormValues,
+  previousVitals?: VisitVitalsPayload | null,
+) => {
+  return {
+    weightKg: values.weightKg,
+    heightCm: values.heightCm,
+    temperatureC: values.temperatureC,
+    oxygenSaturationPct: values.oxygenSaturationPct,
+    heartRateBpm: previousVitals?.heartRateBpm,
+    respiratoryRateBpm: previousVitals?.respiratoryRateBpm,
+    bloodPressureSystolic: previousVitals?.bloodPressureSystolic,
+    bloodPressureDiastolic: previousVitals?.bloodPressureDiastolic,
+    waistCircumferenceCm: previousVitals?.waistCircumferenceCm,
+    notes: values.observations ?? previousVitals?.notes,
+  };
 };
 
 const resolveCaptureVitalsErrorMessage = (error: unknown): string => {
@@ -134,6 +141,7 @@ const MetricField = ({
       <div className="flex overflow-hidden rounded-2xl border border-line-struct bg-paper">
         <Input
           id={fieldId}
+          data-testid={`somato-${fieldId}-input`}
           type="number"
           step={step}
           disabled={disabled}
@@ -212,15 +220,14 @@ export const SomatometriaCapturePage = () => {
       : null;
   const visibleBmi = bmiPreview ?? capturedBmi;
 
-  const handleVisitChange = (nextVisitId: number) => {
-    setSelectedVisitIdState(nextVisitId);
-    setCapturedBmi(null);
+  const resetCaptureForm = () => {
     form.reset(DEFAULT_FORM_VALUES);
+    setCapturedBmi(null);
   };
 
-  const handleCancel = () => {
-    form.reset(DEFAULT_FORM_VALUES);
-    setCapturedBmi(null);
+  const handleVisitChange = (nextVisitId: number) => {
+    setSelectedVisitIdState(nextVisitId);
+    resetCaptureForm();
   };
 
   const handleCaptureVitals = async (values: CaptureVitalsFormValues) => {
@@ -235,25 +242,14 @@ export const SomatometriaCapturePage = () => {
     try {
       const result = await captureVitals.mutateAsync({
         visitId: selectedVisit.id,
-        data: {
-          weightKg: values.weightKg,
-          heightCm: values.heightCm,
-          temperatureC: values.temperatureC,
-          oxygenSaturationPct: values.oxygenSaturationPct,
-          heartRateBpm: values.heartRateBpm,
-          respiratoryRateBpm: values.respiratoryRateBpm,
-          bloodPressureSystolic: values.bloodPressureSystolic,
-          bloodPressureDiastolic: values.bloodPressureDiastolic,
-          waistCircumferenceCm: values.waistCircumferenceCm,
-          notes: values.notes,
-        },
+        data: buildCaptureVitalsPayload(values, selectedVisit.vitals),
       });
 
       setCapturedBmi(result.vitals.bmi);
       toast.success("Signos vitales guardados correctamente.", {
         description: `Visita ${selectedVisit.folio} actualizada.`,
       });
-      form.reset(DEFAULT_FORM_VALUES);
+      resetCaptureForm();
     } catch (error) {
       setCapturedBmi(null);
       toast.error("No se pudo guardar", {
@@ -271,7 +267,7 @@ export const SomatometriaCapturePage = () => {
           Somatometria
         </h1>
         <p className="text-sm text-txt-muted">
-          Captura vitales criticos y guarda la visita activa.
+          Captura los signos vitales esenciales de la visita activa.
         </p>
       </header>
 
@@ -319,7 +315,11 @@ export const SomatometriaCapturePage = () => {
                   handleVisitChange(Number(value));
                 }}
               >
-                <SelectTrigger id="visit-selector" className="w-full">
+                <SelectTrigger
+                  id="visit-selector"
+                  className="w-full"
+                  data-testid="somato-visit-selector"
+                >
                   <SelectValue placeholder="Selecciona una visita" />
                 </SelectTrigger>
                 <SelectContent>
@@ -332,7 +332,7 @@ export const SomatometriaCapturePage = () => {
               </Select>
             </div>
             <div>
-              <p className="text-xs text-txt-muted">Ficha</p>
+              <p className="text-xs text-txt-muted">Folio</p>
               <p className="text-sm font-medium text-txt-body">
                 {selectedVisit?.folio}
               </p>
@@ -377,6 +377,7 @@ export const SomatometriaCapturePage = () => {
                 <div className="flex overflow-hidden rounded-2xl border border-line-struct bg-paper">
                   <Input
                     id="bmi"
+                    data-testid="somato-bmi-input"
                     readOnly
                     value={visibleBmi !== null ? formatBmi(visibleBmi) : "--"}
                     className="rounded-none border-0 focus-visible:ring-0"
@@ -407,143 +408,33 @@ export const SomatometriaCapturePage = () => {
                 error={form.formState.errors.oxygenSaturationPct?.message}
                 registration={form.register("oxygenSaturationPct")}
               />
-              <div className="space-y-2 rounded-xl border border-line-hairline bg-subtle/50 px-3 py-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
-                  Guardado
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="observations">Observaciones</Label>
+              <Textarea
+                id="observations"
+                data-testid="somato-observations-input"
+                rows={3}
+                disabled={!canCaptureSelectedVisit || captureVitals.isPending}
+                placeholder="Opcional"
+                {...form.register("observations")}
+              />
+              {form.formState.errors.observations?.message ? (
+                <p className="text-sm text-status-critical" role="alert">
+                  {form.formState.errors.observations.message}
                 </p>
-                <p className="text-sm text-txt-body">
-                  {canCaptureSelectedVisit
-                    ? "La visita quedara lista para Doctor al guardar."
-                    : "Selecciona una visita en somatometria para habilitar guardado."}
-                </p>
-              </div>
+              ) : null}
             </div>
 
             <div className="border-t border-line-hairline pt-4">
               <Button
                 type="submit"
+                data-testid="somato-save-button"
                 className="w-full md:w-auto"
                 disabled={!canCaptureSelectedVisit || captureVitals.isPending}
               >
                 Guardar
-              </Button>
-            </div>
-
-            <Collapsible
-              defaultOpen={false}
-              className="space-y-3 border-t border-line-hairline pt-4"
-            >
-              <CollapsibleTrigger className="group/collapsible flex w-full items-center justify-between rounded-lg border border-line-struct px-3 py-2 text-left text-sm font-medium text-txt-body">
-                Campos opcionales y tips
-                <ChevronDownIcon className="size-4 text-txt-muted transition-transform group-data-[state=open]/collapsible:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4">
-                <p className="rounded-xl border border-line-hairline bg-subtle/40 px-3 py-2 text-sm text-txt-muted">
-                  Completa estos datos solo cuando aporten contexto clinico
-                  adicional.
-                </p>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bloodPressureSystolic">
-                    Presion arterial
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="bloodPressureSystolic"
-                      type="number"
-                      disabled={
-                        !canCaptureSelectedVisit || captureVitals.isPending
-                      }
-                      placeholder="---"
-                      {...form.register("bloodPressureSystolic")}
-                    />
-                    <span className="text-sm text-txt-muted">/</span>
-                    <Input
-                      id="bloodPressureDiastolic"
-                      type="number"
-                      disabled={
-                        !canCaptureSelectedVisit || captureVitals.isPending
-                      }
-                      placeholder="---"
-                      {...form.register("bloodPressureDiastolic")}
-                    />
-                    <span className="text-sm text-txt-muted">mmHg</span>
-                  </div>
-                  {form.formState.errors.bloodPressureSystolic?.message ? (
-                    <p className="text-sm text-status-critical" role="alert">
-                      {form.formState.errors.bloodPressureSystolic.message}
-                    </p>
-                  ) : null}
-                  {form.formState.errors.bloodPressureDiastolic?.message ? (
-                    <p className="text-sm text-status-critical" role="alert">
-                      {form.formState.errors.bloodPressureDiastolic.message}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <MetricField
-                    fieldId="heartRateBpm"
-                    label="Frecuencia cardiaca"
-                    unit="lat/min"
-                    disabled={
-                      !canCaptureSelectedVisit || captureVitals.isPending
-                    }
-                    error={form.formState.errors.heartRateBpm?.message}
-                    registration={form.register("heartRateBpm")}
-                  />
-                  <MetricField
-                    fieldId="respiratoryRateBpm"
-                    label="Frecuencia respiratoria"
-                    unit="resp/min"
-                    disabled={
-                      !canCaptureSelectedVisit || captureVitals.isPending
-                    }
-                    error={form.formState.errors.respiratoryRateBpm?.message}
-                    registration={form.register("respiratoryRateBpm")}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <MetricField
-                    fieldId="waistCircumferenceCm"
-                    label="Circunferencia abdominal"
-                    unit="cm"
-                    disabled={
-                      !canCaptureSelectedVisit || captureVitals.isPending
-                    }
-                    error={form.formState.errors.waistCircumferenceCm?.message}
-                    registration={form.register("waistCircumferenceCm")}
-                  />
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Observaciones</Label>
-                    <Textarea
-                      id="notes"
-                      rows={4}
-                      disabled={
-                        !canCaptureSelectedVisit || captureVitals.isPending
-                      }
-                      placeholder="Notas clinicas breves"
-                      {...form.register("notes")}
-                    />
-                    {form.formState.errors.notes?.message ? (
-                      <p className="text-sm text-status-critical" role="alert">
-                        {form.formState.errors.notes.message}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            <div className="flex justify-end border-t border-line-hairline pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={captureVitals.isPending}
-              >
-                Limpiar formulario
               </Button>
             </div>
 

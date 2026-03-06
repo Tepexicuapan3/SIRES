@@ -56,17 +56,8 @@ test.describe("Flujo clinico smoke", () => {
           await clinicoPage.login(FLUJO_CLINICO_USERS.clinico);
 
           await clinicoPage.captureVitals(createdVisit.folio);
+          await clinicoPage.assertVisitReadyForDoctor(createdVisit.folio);
           await clinicoPage.startConsultation(createdVisit.folio);
-          await clinicoPage.saveDiagnosis({
-            primaryDiagnosis: "Dolor lumbar inespecifico",
-            finalNote: "Paciente estable, egreso con indicaciones generales.",
-          });
-          await clinicoPage.savePrescription({
-            items: [
-              "Paracetamol 500mg cada 8h por 3 dias",
-              "Reposo relativo y ejercicios de estiramiento lumbar",
-            ],
-          });
           await clinicoPage.closeConsultation({
             primaryDiagnosis: "Dolor lumbar inespecifico",
             finalNote: "Paciente estable, egreso con indicaciones generales.",
@@ -74,12 +65,7 @@ test.describe("Flujo clinico smoke", () => {
 
           await expect
             .poll(
-              async () => {
-                return clinicoPage.isVisitVisible(
-                  "#doctor-visit-selector",
-                  createdVisit.folio,
-                );
-              },
+              async () => clinicoPage.isDoctorVisitVisible(createdVisit.folio),
               {
                 timeout: 10_000,
                 intervals: [200, 350, 500],
@@ -163,12 +149,9 @@ test.describe("Flujo clinico smoke", () => {
 
         const doctorRealtimeStartAt = Date.now();
         await actorB.captureVitals(createdVisit.folio);
+        await actorC.assertVisitReadyForDoctor(createdVisit.folio);
 
-        await actorC.waitForVisitOption(
-          "#doctor-visit-selector",
-          createdVisit.folio,
-          5_000,
-        );
+        await actorC.waitForDoctorVisitOption(createdVisit.folio, 5_000);
 
         const doctorRealtimeLatencyMs = Date.now() - doctorRealtimeStartAt;
         expect(doctorRealtimeLatencyMs).toBeLessThanOrEqual(5_000);

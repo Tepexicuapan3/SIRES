@@ -17,5 +17,5 @@ Modulo clinico para captura de signos vitales y liberacion de visita.
 
 ## UI objetivo
 
-- Formulario operacional de "Registro de Somatometria" con layout por filas, unidades visibles e IMC calculado.
-- Incluye campo de `circunferencia abdominal` alineado al contrato backend/frontend.
+- Formulario minimalista para captura segura con campos esenciales: `weightKg`, `heightCm`, `temperatureC`, `oxygenSaturationPct`.
+- Mantiene selector de visita (folio/estado) e IMC calculado dentro del flujo principal.

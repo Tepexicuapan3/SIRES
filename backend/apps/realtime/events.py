@@ -181,18 +181,23 @@ def publish_visit_diagnosis_saved(
     status,
     primary_diagnosis,
     final_note,
+    cie_code=None,
     request_id,
     correlation_id=None,
     publisher=None,
 ):
+    payload = {
+        "status": status,
+        "primaryDiagnosis": primary_diagnosis,
+        "finalNote": final_note,
+    }
+    if cie_code:
+        payload["cieCode"] = cie_code
+
     return _publish_visit_event(
         event_type=VISIT_EVENT_DIAGNOSIS_SAVED,
         visit_id=visit_id,
-        payload={
-            "status": status,
-            "primaryDiagnosis": primary_diagnosis,
-            "finalNote": final_note,
-        },
+        payload=payload,
         request_id=request_id,
         correlation_id=correlation_id,
         publisher=publisher,

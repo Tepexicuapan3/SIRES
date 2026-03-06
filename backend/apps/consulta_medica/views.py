@@ -22,6 +22,7 @@ from apps.recepcion.services.errors import VisitDomainError
 
 from .serializers import (
     CloseConsultationSerializer,
+    SearchCieSerializer,
     SaveDiagnosisSerializer,
     SavePrescriptionsSerializer,
     StartConsultationSerializer,
@@ -30,6 +31,7 @@ from .uses_case.consultation_usecase import (
     close_consultation,
     save_diagnosis,
     save_prescriptions,
+    search_cies,
     start_consultation,
 )
 
@@ -119,6 +121,7 @@ def _emit_visit_diagnosis_saved_event(
     status,
     primary_diagnosis,
     final_note,
+    cie_code,
 ):
     request_id = get_request_id(request)
 
@@ -128,6 +131,7 @@ def _emit_visit_diagnosis_saved_event(
             status=status,
             primary_diagnosis=primary_diagnosis,
             final_note=final_note,
+            cie_code=cie_code,
             request_id=request_id,
             correlation_id=request_id,
         )
@@ -249,6 +253,7 @@ class VisitDiagnosisSaveView(APIView):
                 serializer.validated_data["finalNote"],
                 actor_id,
                 permissions,
+                serializer.validated_data.get("cieCode"),
             )
         except VisitDomainError as exc:
             return _domain_error_response(request, exc)
@@ -272,7 +277,43 @@ class VisitDiagnosisSaveView(APIView):
             status=payload.get("status"),
             primary_diagnosis=payload.get("primaryDiagnosis"),
             final_note=payload.get("finalNote"),
+            cie_code=payload.get("cieCode"),
         )
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VisitCieSearchView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        serializer = SearchCieSerializer(data=request.query_params)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = search_cies(
+                serializer.validated_data["search"],
+                roles,
+                permissions,
+                limit=serializer.validated_data["limit"],
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
 
         return Response(payload, status=status.HTTP_200_OK)
 
@@ -374,6 +415,7 @@ class VisitConsultationCloseView(APIView):
                 final_note,
                 actor_id,
                 permissions,
+                validated_data.get("cieCode"),
             )
         except VisitDomainError as exc:
             return _domain_error_response(request, exc)

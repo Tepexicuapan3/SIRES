@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor } from "@/test/utils";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ApiError } from "@api/utils/errors";
 import { toast } from "sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import DoctorConsultationPage from "@features/consulta-medica/modules/atencion/pages/DoctorConsultationPage";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useCloseVisit } from "@features/consulta-medica/modules/atencion/mutations/useCloseVisit";
 import { useSaveDiagnosis } from "@features/consulta-medica/modules/atencion/mutations/useSaveDiagnosis";
 import { useSavePrescriptions } from "@features/consulta-medica/modules/atencion/mutations/useSavePrescriptions";
 import { useStartConsultation } from "@features/consulta-medica/modules/atencion/mutations/useStartConsultation";
+import { useCieSearch } from "@features/consulta-medica/modules/atencion/queries/useCieSearch";
 import { useDoctorQueue } from "@features/consulta-medica/modules/atencion/queries/useDoctorQueue";
 import type { VisitQueueItem } from "@api/types";
 
@@ -16,6 +20,13 @@ vi.mock(
   "@features/consulta-medica/modules/atencion/queries/useDoctorQueue",
   () => ({
     useDoctorQueue: vi.fn(),
+  }),
+);
+
+vi.mock(
+  "@features/consulta-medica/modules/atencion/queries/useCieSearch",
+  () => ({
+    useCieSearch: vi.fn(),
   }),
 );
 
@@ -74,6 +85,36 @@ const createVisit = (
   ...overrides,
 });
 
+const renderDoctorPage = (initialEntry = "/clinico/consultas/doctor") => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <TooltipProvider>
+          <Routes>
+            <Route
+              path="/clinico/consultas/doctor"
+              element={<DoctorConsultationPage />}
+            />
+            <Route
+              path="/clinico/consultas/doctor/:visitId"
+              element={<DoctorConsultationPage />}
+            />
+          </Routes>
+        </TooltipProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+};
+
 describe("DoctorConsultationPage UI", () => {
   const startMutateAsync = vi.fn();
   const saveDiagnosisMutateAsync = vi.fn();
@@ -99,6 +140,17 @@ describe("DoctorConsultationPage UI", () => {
       isError: false,
       error: null,
     } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    vi.mocked(useCieSearch).mockReturnValue({
+      data: {
+        items: [],
+        total: 0,
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useCieSearch>);
 
     vi.mocked(useStartConsultation).mockReturnValue({
       mutateAsync: startMutateAsync,
@@ -162,6 +214,7 @@ describe("DoctorConsultationPage UI", () => {
         visitId: 1,
         doctorId: 77,
         primaryDiagnosis: "Infeccion respiratoria",
+        cieCode: null,
         finalNote: "Paciente estable al egreso.",
         isActive: true,
         createdAt: "2026-02-20T12:00:00Z",
@@ -169,16 +222,6 @@ describe("DoctorConsultationPage UI", () => {
       },
     });
   });
-
-  const expandClinicalRecord = async (
-    user: ReturnType<typeof userEvent.setup>,
-  ) => {
-    await user.click(
-      screen.getByRole("button", {
-        name: /Registro clinico/i,
-      }),
-    );
-  };
 
   it("deshabilita carga de cola cuando no tiene permiso de lectura", () => {
     vi.mocked(usePermissionDependencies).mockReturnValue({
@@ -192,7 +235,7 @@ describe("DoctorConsultationPage UI", () => {
       error: null,
     } as unknown as ReturnType<typeof useDoctorQueue>);
 
-    render(<DoctorConsultationPage />);
+    renderDoctorPage();
 
     expect(useDoctorQueue).toHaveBeenCalledWith({ enabled: false });
     expect(
@@ -208,7 +251,7 @@ describe("DoctorConsultationPage UI", () => {
         capability === "flow.doctor.queue.read",
     } as unknown as ReturnType<typeof usePermissionDependencies>);
 
-    render(<DoctorConsultationPage />);
+    renderDoctorPage("/clinico/consultas/doctor/1");
 
     expect(
       screen.getByText(
@@ -229,17 +272,99 @@ describe("DoctorConsultationPage UI", () => {
         capability === "flow.doctor.queue.read",
     } as unknown as ReturnType<typeof usePermissionDependencies>);
 
-    const user = userEvent.setup();
-    render(<DoctorConsultationPage />);
-
-    await expandClinicalRecord(user);
+    renderDoctorPage("/clinico/consultas/doctor/1");
 
     expect(
-      screen.getByRole("button", { name: "Guardar borrador" }),
+      screen.getByRole("button", { name: "Guardar diagnostico" }),
     ).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "Guardar receta" }),
     ).toBeDisabled();
+  });
+
+  it("abre modal al seleccionar una card", async () => {
+    vi.mocked(useDoctorQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit(),
+          createVisit({
+            id: 2,
+            folio: "VST-2002",
+            patientId: 2002,
+            appointmentId: "APP-2002",
+            notes: "Paciente con control de seguimiento",
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 2,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    startMutateAsync.mockResolvedValueOnce({
+      ...createVisit({
+        id: 2,
+        folio: "VST-2002",
+        patientId: 2002,
+        appointmentId: "APP-2002",
+      }),
+      status: "en_consulta",
+    });
+
+    const user = userEvent.setup();
+    renderDoctorPage();
+
+    await user.click(screen.getByTestId("doctor-visit-card-2"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("doctor-consultation-modal")).toHaveTextContent(
+        "Folio VST-2002",
+      );
+    });
+  });
+
+  it("permite cerrar modal y volver a bandeja", async () => {
+    const user = userEvent.setup();
+    renderDoctorPage("/clinico/consultas/doctor/1");
+
+    expect(screen.getByTestId("doctor-consultation-modal")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Volver a bandeja" }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("doctor-consultation-modal"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("muestra solo consultas abiertas en la bandeja", () => {
+    vi.mocked(useDoctorQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({ id: 1, status: "lista_para_doctor" }),
+          createVisit({ id: 2, folio: "VST-2002", status: "en_consulta" }),
+          createVisit({ id: 3, folio: "VST-2003", status: "cerrada" }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 3,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    renderDoctorPage();
+
+    expect(screen.getByTestId("doctor-visit-card-1")).toBeVisible();
+    expect(screen.getByTestId("doctor-visit-card-2")).toBeVisible();
+    expect(screen.queryByTestId("doctor-visit-card-3")).not.toBeInTheDocument();
   });
 
   it("renderiza estado loading", () => {
@@ -250,7 +375,7 @@ describe("DoctorConsultationPage UI", () => {
       error: null,
     } as unknown as ReturnType<typeof useDoctorQueue>);
 
-    render(<DoctorConsultationPage />);
+    renderDoctorPage();
 
     expect(screen.getByText("Cargando bandeja del doctor...")).toBeVisible();
   });
@@ -263,7 +388,7 @@ describe("DoctorConsultationPage UI", () => {
       error: null,
     } as unknown as ReturnType<typeof useDoctorQueue>);
 
-    render(<DoctorConsultationPage />);
+    renderDoctorPage();
 
     expect(
       screen.getByText("No hay pacientes listos para doctor."),
@@ -278,7 +403,7 @@ describe("DoctorConsultationPage UI", () => {
       error: new Error("request failed"),
     } as unknown as ReturnType<typeof useDoctorQueue>);
 
-    render(<DoctorConsultationPage />);
+    renderDoctorPage();
 
     expect(
       screen.getByText("No se pudo cargar la bandeja del doctor."),
@@ -300,10 +425,8 @@ describe("DoctorConsultationPage UI", () => {
     } as unknown as ReturnType<typeof useDoctorQueue>);
 
     const user = userEvent.setup();
-    render(<DoctorConsultationPage />);
+    renderDoctorPage("/clinico/consultas/doctor/1");
 
-    await expandClinicalRecord(user);
-    await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(
       screen.getByLabelText("Diagnostico principal"),
       "Gastroenteritis aguda",
@@ -313,7 +436,9 @@ describe("DoctorConsultationPage UI", () => {
       "Paciente estable y con manejo ambulatorio.",
     );
 
-    await user.click(screen.getByRole("button", { name: "Guardar borrador" }));
+    await user.click(
+      screen.getByRole("button", { name: "Guardar diagnostico" }),
+    );
 
     await waitFor(() => {
       expect(saveDiagnosisMutateAsync).toHaveBeenCalledWith({
@@ -326,6 +451,70 @@ describe("DoctorConsultationPage UI", () => {
     });
 
     expect(toast.success).toHaveBeenCalledWith("Diagnostico guardado");
+  });
+
+  it("permite buscar CIE y lo envia al guardar diagnostico", async () => {
+    vi.mocked(useDoctorQueue).mockReturnValue({
+      data: {
+        items: [createVisit({ status: "en_consulta" })],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    vi.mocked(useCieSearch).mockReturnValue({
+      data: {
+        items: [
+          {
+            code: "A090",
+            description: "GASTROENTERITIS",
+            version: "CIE-10",
+          },
+        ],
+        total: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useCieSearch>);
+
+    const user = userEvent.setup();
+    renderDoctorPage("/clinico/consultas/doctor/1");
+
+    await user.type(screen.getByLabelText("Buscar CIE (opcional)"), "A0");
+    await user.click(await screen.findByRole("button", { name: /A090/i }));
+
+    await user.clear(screen.getByLabelText("Diagnostico principal"));
+
+    await user.type(
+      screen.getByLabelText("Diagnostico principal"),
+      "Gastroenteritis aguda",
+    );
+    await user.type(
+      screen.getByLabelText("Nota final"),
+      "Paciente estable y con manejo ambulatorio.",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Guardar diagnostico" }),
+    );
+
+    await waitFor(() => {
+      expect(saveDiagnosisMutateAsync).toHaveBeenCalledWith({
+        visitId: 1,
+        data: {
+          primaryDiagnosis: "Gastroenteritis aguda",
+          finalNote: "Paciente estable y con manejo ambulatorio.",
+          cieCode: "A090",
+        },
+      });
+    });
   });
 
   it("guarda receta con una indicacion por linea", async () => {
@@ -343,10 +532,8 @@ describe("DoctorConsultationPage UI", () => {
     } as unknown as ReturnType<typeof useDoctorQueue>);
 
     const user = userEvent.setup();
-    render(<DoctorConsultationPage />);
+    renderDoctorPage("/clinico/consultas/doctor/1");
 
-    await expandClinicalRecord(user);
-    await user.click(screen.getByRole("tab", { name: "Receta medica" }));
     await user.type(
       screen.getByLabelText("Receta (una indicacion por linea)"),
       "Paracetamol 500mg cada 8h por 3 dias\nHidratacion oral libre",
@@ -371,7 +558,7 @@ describe("DoctorConsultationPage UI", () => {
 
   it("bloquea cierre hasta iniciar consulta y completar diagnostico + nota final", async () => {
     const user = userEvent.setup();
-    render(<DoctorConsultationPage />);
+    renderDoctorPage("/clinico/consultas/doctor/1");
 
     const closeButton = screen.getByRole("button", {
       name: "Finalizar consulta",
@@ -383,8 +570,6 @@ describe("DoctorConsultationPage UI", () => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
-    await expandClinicalRecord(user);
-    await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(screen.getByLabelText("Nota final"), "Nota clinica");
 
@@ -395,15 +580,13 @@ describe("DoctorConsultationPage UI", () => {
 
   it("sincroniza diagnostico antes de cierre y luego cierra consulta", async () => {
     const user = userEvent.setup();
-    render(<DoctorConsultationPage />);
+    renderDoctorPage("/clinico/consultas/doctor/1");
 
     await user.click(screen.getByRole("button", { name: "Iniciar consulta" }));
     await waitFor(() => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
-    await expandClinicalRecord(user);
-    await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx final");
     await user.type(
       screen.getByLabelText("Nota final"),
@@ -448,15 +631,13 @@ describe("DoctorConsultationPage UI", () => {
     );
 
     const user = userEvent.setup();
-    render(<DoctorConsultationPage />);
+    renderDoctorPage("/clinico/consultas/doctor/1");
 
     await user.click(screen.getByRole("button", { name: "Iniciar consulta" }));
     await waitFor(() => {
       expect(startMutateAsync).toHaveBeenCalledWith({ visitId: 1 });
     });
 
-    await expandClinicalRecord(user);
-    await user.click(screen.getByRole("tab", { name: "Diagnostico" }));
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(screen.getByLabelText("Nota final"), "Nota");
     await user.click(
@@ -472,5 +653,70 @@ describe("DoctorConsultationPage UI", () => {
         },
       );
     });
+  });
+
+  it("muestra signos vitales de somatometria capturados", () => {
+    vi.mocked(useDoctorQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            status: "en_consulta",
+            vitals: {
+              weightKg: 70,
+              heightCm: 172,
+              temperatureC: 36.6,
+              oxygenSaturationPct: 98,
+              notes: "Paciente con ayuno de 8 horas.",
+              bmi: 23.7,
+            },
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    renderDoctorPage("/clinico/consultas/doctor/1");
+
+    expect(screen.getByText("70 kg")).toBeVisible();
+    expect(screen.getByText("172 cm")).toBeVisible();
+    expect(screen.getByText("36.6 C")).toBeVisible();
+    expect(screen.getByText("98 %")).toBeVisible();
+    expect(screen.getByText("23.7")).toBeVisible();
+    expect(screen.getByText("Paciente con ayuno de 8 horas.")).toBeVisible();
+  });
+
+  it("muestra fallback claro cuando faltan signos vitales", () => {
+    vi.mocked(useDoctorQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            status: "en_consulta",
+            vitals: null,
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    renderDoctorPage("/clinico/consultas/doctor/1");
+
+    expect(screen.getAllByText("No registrado").length).toBeGreaterThanOrEqual(
+      5,
+    );
+    expect(
+      screen.getByText("Sin observaciones de somatometria registradas."),
+    ).toBeVisible();
   });
 });

@@ -64,7 +64,6 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Roles",
             url: "/admin/roles",
             permissions: ["admin:gestion:roles:read"],
-            badge: "New",
           },
         ],
       },
@@ -194,7 +193,6 @@ export const NAV_CONFIG: NavSection[] = [
         url: "/clinico/somatometria",
         icon: Activity,
         permissions: ["clinico:somatometria:read"],
-        badge: PLACEHOLDER_BADGE,
       },
     ],
   },
@@ -202,7 +200,7 @@ export const NAV_CONFIG: NavSection[] = [
     title: "Recepcion",
     items: [
       {
-        title: "Agenda + Check-in",
+        title: "Citas y check-in",
         url: "/recepcion/agenda",
         icon: CalendarClock,
         permissions: [

@@ -5,8 +5,14 @@ export const RecepcionCheckinPage = () => {
 
   const nextParams = new URLSearchParams(searchParams);
   nextParams.set("focus", "checkin");
+  const nextSearch = nextParams.toString();
 
-  return <Navigate replace to={`/recepcion/agenda?${nextParams.toString()}`} />;
+  return (
+    <Navigate
+      replace
+      to={`/recepcion/agenda${nextSearch ? `?${nextSearch}` : ""}`}
+    />
+  );
 };
 
 export default RecepcionCheckinPage;

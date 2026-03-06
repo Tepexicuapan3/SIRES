@@ -1,22 +1,5 @@
 import * as z from "zod";
 
-const parseOptionalNumber = (value: unknown): unknown => {
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-};
-
-const parseOptionalText = (value: unknown): unknown => {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-};
-
 const parseLocalizedDecimal = (value: unknown): unknown => {
   if (typeof value === "string") {
     const normalized = value.trim().replace(",", ".");
@@ -52,27 +35,17 @@ export const captureVitalsFormSchema = z.object({
     .int()
     .min(50, { error: "Ingresa la saturacion de O2." })
     .max(100, { error: "La saturacion no es valida." }),
-  heartRateBpm: z.preprocess(
-    parseOptionalNumber,
-    z.coerce.number().int().min(20).max(250).optional(),
-  ),
-  respiratoryRateBpm: z.preprocess(
-    parseOptionalNumber,
-    z.coerce.number().int().min(5).max(80).optional(),
-  ),
-  bloodPressureSystolic: z.preprocess(
-    parseOptionalNumber,
-    z.coerce.number().int().min(50).max(260).optional(),
-  ),
-  bloodPressureDiastolic: z.preprocess(
-    parseOptionalNumber,
-    z.coerce.number().int().min(30).max(180).optional(),
-  ),
-  waistCircumferenceCm: z.preprocess(
-    parseOptionalNumber,
-    z.coerce.number().int().min(30).max(250).optional(),
-  ),
-  notes: z.preprocess(parseOptionalText, z.string().max(255).optional()),
+  observations: z
+    .string()
+    .trim()
+    .max(500, {
+      error: "Las observaciones deben tener maximo 500 caracteres.",
+    })
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => {
+      return value === "" ? undefined : value;
+    }),
 });
 
 export type CaptureVitalsFormValues = z.infer<typeof captureVitalsFormSchema>;

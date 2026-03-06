@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.consulta_medica.views import (
+    VisitCieSearchView,
     VisitConsultationCloseView,
     VisitConsultationStartView,
     VisitDiagnosisSaveView,
@@ -9,6 +10,11 @@ from apps.consulta_medica.views import (
 
 
 urlpatterns = [
+    path(
+        "visits/cies/search",
+        VisitCieSearchView.as_view(),
+        name="visit-cies-search",
+    ),
     path(
         "visits/<int:visit_id>/diagnosis",
         VisitDiagnosisSaveView.as_view(),

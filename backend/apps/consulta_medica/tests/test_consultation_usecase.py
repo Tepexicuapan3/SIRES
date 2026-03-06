@@ -1,10 +1,12 @@
 from django.test import TestCase
 
+from apps.catalogos.models import CatCies
 from apps.consulta_medica.models import VisitConsultation
 from apps.consulta_medica.uses_case.consultation_usecase import (
     close_consultation,
     save_diagnosis,
     save_prescriptions,
+    search_cies,
     start_consultation,
 )
 from apps.recepcion.models import Visit
@@ -151,6 +153,7 @@ class ConsultationUseCaseTests(TestCase):
         self.assertEqual(payload["visitId"], visit.id_visit)
         self.assertEqual(payload["status"], "en_consulta")
         self.assertEqual(payload["primaryDiagnosis"], "Faringitis aguda")
+        self.assertIsNone(payload["cieCode"])
 
         visit.refresh_from_db()
         self.assertEqual(visit.status, "en_consulta")
@@ -158,6 +161,57 @@ class ConsultationUseCaseTests(TestCase):
         consultation = VisitConsultation.objects.get(id_visit=visit)
         self.assertEqual(consultation.primary_diagnosis, "Faringitis aguda")
         self.assertEqual(consultation.final_note, "Paciente estable.")
+
+    def test_save_diagnosis_with_cie_code_persists_selection(self):
+        visit = self._visit("en_consulta")
+        CatCies.objects.create(
+            code="A090",
+            description="GASTROENTERITIS",
+            version="CIE-10",
+            is_active=True,
+        )
+
+        payload = save_diagnosis(
+            visit_id=visit.id_visit,
+            roles=["DOCTOR"],
+            primary_diagnosis="Gastroenteritis aguda",
+            final_note="Paciente estable.",
+            doctor_id=101,
+            cie_code="a090",
+        )
+
+        self.assertEqual(payload["cieCode"], "A090")
+
+        consultation = VisitConsultation.objects.get(id_visit=visit)
+        self.assertEqual(consultation.cie_code, "A090")
+
+    def test_save_diagnosis_invalid_cie_code_raises_validation_error(self):
+        visit = self._visit("en_consulta")
+
+        with self.assertRaises(VisitDomainError) as raised:
+            save_diagnosis(
+                visit_id=visit.id_visit,
+                roles=["DOCTOR"],
+                primary_diagnosis="Dx",
+                final_note="Nota",
+                doctor_id=101,
+                cie_code="ZZ999",
+            )
+
+        self.assertEqual(raised.exception.code, "VALIDATION_ERROR")
+        self.assertEqual(raised.exception.status_code, 422)
+
+    def test_search_cies_matches_code_without_special_characters(self):
+        CatCies.objects.create(
+            code="1A33.0",
+            description="CISTOISOSPORIASIS DEL INTESTINO DELGADO",
+            version="CIE-10",
+            is_active=True,
+        )
+
+        payload = search_cies("1A330", roles=["DOCTOR"])
+        self.assertEqual(payload["total"], 1)
+        self.assertEqual(payload["items"][0]["code"], "1A33.0")
 
     def test_save_diagnosis_invalid_state_raises_visit_state_invalid(self):
         visit = self._visit("lista_para_doctor")

@@ -12,6 +12,7 @@ class ConsultationRepository:
         *,
         doctor_id,
         primary_diagnosis,
+        cie_code,
         final_note,
         created_by_id=None,
         updated_by_id=None,
@@ -21,6 +22,7 @@ class ConsultationRepository:
             defaults={
                 "doctor_id": doctor_id,
                 "primary_diagnosis": primary_diagnosis,
+                "cie_code": cie_code,
                 "final_note": final_note,
                 "is_active": True,
                 "deleted_at": None,
@@ -38,6 +40,7 @@ class ConsultationRepository:
             "visitId": consultation.id_visit_id,
             "doctorId": consultation.doctor_id,
             "primaryDiagnosis": consultation.primary_diagnosis,
+            "cieCode": consultation.cie_code,
             "finalNote": consultation.final_note,
             "isActive": consultation.is_active,
             "createdAt": consultation.created_at,

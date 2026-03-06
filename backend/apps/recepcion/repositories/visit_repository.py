@@ -1,7 +1,10 @@
 import math
 import uuid
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from apps.recepcion.models import Visit
+from apps.somatometria.repositories.vitals_repository import VitalsRepository
 
 
 class VisitRepository:
@@ -52,7 +55,7 @@ class VisitRepository:
         doctor_id=None,
         service_type=None,
     ):
-        queryset = Visit.objects.order_by("-id_visit")
+        queryset = Visit.objects.select_related("vital_signs").order_by("-id_visit")
 
         if status_filter:
             queryset = queryset.filter(status=status_filter)
@@ -73,6 +76,11 @@ class VisitRepository:
 
     @staticmethod
     def to_contract(visit):
+        try:
+            vital_signs = visit.vital_signs
+        except ObjectDoesNotExist:
+            vital_signs = None
+
         return {
             "id": visit.id_visit,
             "folio": visit.folio,
@@ -83,6 +91,11 @@ class VisitRepository:
             "doctorId": visit.doctor_id,
             "notes": visit.notes,
             "status": visit.status,
+            "vitals": (
+                VitalsRepository.to_contract(vital_signs)
+                if vital_signs is not None
+                else None
+            ),
         }
 
     @staticmethod

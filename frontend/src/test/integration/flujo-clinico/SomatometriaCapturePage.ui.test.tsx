@@ -51,6 +51,18 @@ const createVisit = (
 
 describe("SomatometriaCapturePage UI", () => {
   const captureMutateAsync = vi.fn();
+  const getVitalsInput = (fieldId: string) => {
+    return screen.getByTestId(`somato-${fieldId}-input`);
+  };
+  const expectVitalsFormReset = () => {
+    expect(getVitalsInput("weightKg")).toHaveValue(null);
+    expect(getVitalsInput("heightCm")).toHaveValue(null);
+    expect(getVitalsInput("temperatureC")).toHaveValue(null);
+    expect(getVitalsInput("oxygenSaturationPct")).toHaveValue(null);
+    expect(screen.getByTestId("somato-bmi-input")).toHaveValue("--");
+    expect(screen.getByTestId("somato-observations-input")).toHaveValue("");
+    expect(screen.queryByText(/IMC calculado:/)).not.toBeInTheDocument();
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -123,7 +135,7 @@ describe("SomatometriaCapturePage UI", () => {
     expect(
       screen.getByText("No tenes permisos completos para guardar vitales."),
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Guardar" })).toBeDisabled();
+    expect(screen.getByTestId("somato-save-button")).toBeDisabled();
   });
 
   it("renderiza estado loading", () => {
@@ -173,7 +185,7 @@ describe("SomatometriaCapturePage UI", () => {
     const user = userEvent.setup();
     render(<SomatometriaCapturePage />);
 
-    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    await user.click(screen.getByTestId("somato-save-button"));
 
     expect(screen.getByText("Ingresa el peso en kg.")).toBeVisible();
     expect(screen.getByText("Ingresa la talla en cm.")).toBeVisible();
@@ -182,16 +194,20 @@ describe("SomatometriaCapturePage UI", () => {
     expect(captureMutateAsync).not.toHaveBeenCalled();
   });
 
-  it("guarda vitales cuando formulario es valido", async () => {
+  it("guarda vitales cuando formulario es valido y resetea formulario", async () => {
     const user = userEvent.setup();
     render(<SomatometriaCapturePage />);
 
-    await user.type(screen.getByLabelText("Peso"), "70");
-    await user.type(screen.getByLabelText("Estatura"), "175");
-    await user.type(screen.getByLabelText("Temperatura"), "36.6");
-    await user.type(screen.getByLabelText("Saturacion de oxigeno"), "98");
+    await user.type(getVitalsInput("weightKg"), "70");
+    await user.type(getVitalsInput("heightCm"), "175");
+    await user.type(getVitalsInput("temperatureC"), "36.6");
+    await user.type(getVitalsInput("oxygenSaturationPct"), "98");
+    await user.type(
+      screen.getByTestId("somato-observations-input"),
+      "Paciente hidratado.",
+    );
 
-    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    await user.click(screen.getByTestId("somato-save-button"));
 
     await waitFor(() => {
       expect(captureMutateAsync).toHaveBeenCalledWith({
@@ -201,12 +217,7 @@ describe("SomatometriaCapturePage UI", () => {
           heightCm: 175,
           temperatureC: 36.6,
           oxygenSaturationPct: 98,
-          heartRateBpm: undefined,
-          respiratoryRateBpm: undefined,
-          bloodPressureSystolic: undefined,
-          bloodPressureDiastolic: undefined,
-          waistCircumferenceCm: undefined,
-          notes: undefined,
+          notes: "Paciente hidratado.",
         },
       });
     });
@@ -217,17 +228,130 @@ describe("SomatometriaCapturePage UI", () => {
         description: "Visita VST-1001 actualizada.",
       },
     );
-    expect(screen.getByText("IMC calculado: 22.86")).toBeVisible();
+
+    await waitFor(() => {
+      expectVitalsFormReset();
+    });
   });
 
   it("muestra IMC estimado en tiempo real con peso y talla", async () => {
     const user = userEvent.setup();
     render(<SomatometriaCapturePage />);
 
-    await user.type(screen.getByLabelText("Peso"), "70");
-    await user.type(screen.getByLabelText("Estatura"), "175");
+    await user.type(getVitalsInput("weightKg"), "70");
+    await user.type(getVitalsInput("heightCm"), "175");
 
     expect(screen.getByText("IMC calculado: 22.86")).toBeVisible();
+  });
+
+  it("conserva vitales opcionales previos para evitar perdida de datos", async () => {
+    vi.mocked(useSomatometriaQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            vitals: {
+              weightKg: 69,
+              heightCm: 175,
+              temperatureC: 36.5,
+              oxygenSaturationPct: 99,
+              heartRateBpm: 68,
+              respiratoryRateBpm: 14,
+              bloodPressureSystolic: 118,
+              bloodPressureDiastolic: 76,
+              waistCircumferenceCm: 89,
+              notes: "historial previo",
+              bmi: 22.53,
+            },
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useSomatometriaQueue>);
+
+    const user = userEvent.setup();
+    render(<SomatometriaCapturePage />);
+
+    await user.type(getVitalsInput("weightKg"), "70");
+    await user.type(getVitalsInput("heightCm"), "175");
+    await user.type(getVitalsInput("temperatureC"), "36.6");
+    await user.type(getVitalsInput("oxygenSaturationPct"), "98");
+    await user.click(screen.getByTestId("somato-save-button"));
+
+    await waitFor(() => {
+      expect(captureMutateAsync).toHaveBeenCalledWith({
+        visitId: 1,
+        data: {
+          weightKg: 70,
+          heightCm: 175,
+          temperatureC: 36.6,
+          oxygenSaturationPct: 98,
+          heartRateBpm: 68,
+          respiratoryRateBpm: 14,
+          bloodPressureSystolic: 118,
+          bloodPressureDiastolic: 76,
+          waistCircumferenceCm: 89,
+          notes: "historial previo",
+        },
+      });
+    });
+  });
+
+  it("sobrescribe notes cuando se capturan observaciones en somatometria", async () => {
+    vi.mocked(useSomatometriaQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            vitals: {
+              weightKg: 69,
+              heightCm: 175,
+              temperatureC: 36.5,
+              oxygenSaturationPct: 99,
+              notes: "historial previo",
+              bmi: 22.53,
+            },
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useSomatometriaQueue>);
+
+    const user = userEvent.setup();
+    render(<SomatometriaCapturePage />);
+
+    await user.type(getVitalsInput("weightKg"), "70");
+    await user.type(getVitalsInput("heightCm"), "175");
+    await user.type(getVitalsInput("temperatureC"), "36.6");
+    await user.type(getVitalsInput("oxygenSaturationPct"), "98");
+    await user.type(
+      screen.getByTestId("somato-observations-input"),
+      "Nueva observacion",
+    );
+    await user.click(screen.getByTestId("somato-save-button"));
+
+    await waitFor(() => {
+      expect(captureMutateAsync).toHaveBeenCalledWith({
+        visitId: 1,
+        data: {
+          weightKg: 70,
+          heightCm: 175,
+          temperatureC: 36.6,
+          oxygenSaturationPct: 98,
+          notes: "Nueva observacion",
+        },
+      });
+    });
   });
 
   const domainErrors = [
@@ -257,11 +381,11 @@ describe("SomatometriaCapturePage UI", () => {
       const user = userEvent.setup();
       render(<SomatometriaCapturePage />);
 
-      await user.type(screen.getByLabelText("Peso"), "70");
-      await user.type(screen.getByLabelText("Estatura"), "175");
-      await user.type(screen.getByLabelText("Temperatura"), "36.6");
-      await user.type(screen.getByLabelText("Saturacion de oxigeno"), "98");
-      await user.click(screen.getByRole("button", { name: "Guardar" }));
+      await user.type(getVitalsInput("weightKg"), "70");
+      await user.type(getVitalsInput("heightCm"), "175");
+      await user.type(getVitalsInput("temperatureC"), "36.6");
+      await user.type(getVitalsInput("oxygenSaturationPct"), "98");
+      await user.click(screen.getByTestId("somato-save-button"));
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("No se pudo guardar", {
@@ -292,6 +416,6 @@ describe("SomatometriaCapturePage UI", () => {
         "Selecciona una visita en somatometria para capturar vitales.",
       ),
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Guardar" })).toBeDisabled();
+    expect(screen.getByTestId("somato-save-button")).toBeDisabled();
   });
 });

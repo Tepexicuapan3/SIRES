@@ -37,7 +37,7 @@ export interface VisitQueueItem {
   doctorId: number | null;
   notes: string | null;
   status: VisitStatus;
-  vitals?: VisitVitalsPayload | null;
+  vitals: VisitVitalsPayload | null;
 }
 
 export interface VisitsListParams {
@@ -106,6 +106,7 @@ export interface CaptureVitalsResponse {
 export interface SaveDiagnosisRequest {
   primaryDiagnosis: string;
   finalNote: string;
+  cieCode?: string;
 }
 
 export interface SaveDiagnosisResponse {
@@ -113,6 +114,23 @@ export interface SaveDiagnosisResponse {
   status: VisitStatus;
   primaryDiagnosis: string;
   finalNote: string;
+  cieCode?: string | null;
+}
+
+export interface CieSearchParams {
+  search: string;
+  limit?: number;
+}
+
+export interface CieSearchItem {
+  code: string;
+  description: string;
+  version: string;
+}
+
+export interface CieSearchResponse {
+  items: CieSearchItem[];
+  total: number;
 }
 
 export interface SavePrescriptionRequest {
@@ -130,6 +148,7 @@ export type StartConsultationResponse = VisitQueueItem;
 export interface CloseVisitRequest {
   primaryDiagnosis: string;
   finalNote: string;
+  cieCode?: string;
 }
 
 export interface VisitConsultationSummary {
@@ -137,6 +156,7 @@ export interface VisitConsultationSummary {
   visitId: number;
   doctorId: number;
   primaryDiagnosis: string;
+  cieCode: string | null;
   finalNote: string;
   isActive: boolean;
   createdAt: string;

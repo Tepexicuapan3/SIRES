@@ -1,25 +1,36 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { CalendarClock, RefreshCcw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ARRIVAL_TYPE,
+  RECEPCION_STATUS_ACTION,
   VISIT_STATUS,
   type VisitQueueItem,
   type VisitStatus,
 } from "@api/types";
+import { ApiError } from "@api/utils/errors";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
-import { RecepcionIntegratedCheckinSection } from "@features/recepcion/modules/agenda/components/RecepcionIntegratedCheckinSection";
+import { useVisitStatusAction } from "@features/recepcion/modules/checkin/mutations/useVisitStatusAction";
 import { useRecepcionAgendaQueue } from "@features/recepcion/modules/agenda/queries/useRecepcionAgendaQueue";
+import { RecepcionQuickCheckinDialog } from "@features/recepcion/modules/agenda/components/RecepcionQuickCheckinDialog";
+import { mapVisitToCheckinDefaults } from "@features/recepcion/modules/checkin/domain/checkin.mappers";
+import type { CheckinFormInput } from "@features/recepcion/modules/checkin/domain/checkin.schemas";
+import { canRunRecepcionStatusAction } from "@features/operativo/shared/domain/visit-flow.constants";
 import {
   RECEPCION_QUEUE_PERMISSION_REQUIREMENT,
   RECEPCION_WRITE_PERMISSION_REQUIREMENT,
@@ -38,6 +49,76 @@ import {
   formatVisitStatusLabel,
   isOpenVisitStatus,
 } from "@features/recepcion/shared/utils/recepcion-format";
+
+const RECEPCION_ACTION = {
+  EN_SOMATOMETRIA: RECEPCION_STATUS_ACTION.EN_SOMATOMETRIA,
+  CANCELADA: RECEPCION_STATUS_ACTION.CANCELADA,
+  NO_SHOW: RECEPCION_STATUS_ACTION.NO_SHOW,
+} as const;
+
+type RecepcionAction = (typeof RECEPCION_ACTION)[keyof typeof RECEPCION_ACTION];
+
+interface PendingStatusAction {
+  visitId: number;
+  folio: string;
+  targetStatus: RecepcionAction;
+}
+
+const RECEPCION_ACTION_COPY: Record<
+  RecepcionAction,
+  {
+    label: string;
+    confirmLabel: string;
+    successMessage: string;
+    getDescription: (folio: string) => string;
+  }
+> = {
+  [RECEPCION_ACTION.EN_SOMATOMETRIA]: {
+    label: "Llego",
+    confirmLabel: "Enviar a somatometria",
+    successMessage: "Paciente enviado a somatometria.",
+    getDescription: (folio) =>
+      `Vas a marcar la visita ${folio} como llegada y enviarla a somatometria.`,
+  },
+  [RECEPCION_ACTION.CANCELADA]: {
+    label: "Cancelada",
+    confirmLabel: "Marcar cancelada",
+    successMessage: "Visita marcada como cancelada.",
+    getDescription: (folio) =>
+      `Vas a marcar la visita ${folio} como cancelada. Esta accion no se puede deshacer.`,
+  },
+  [RECEPCION_ACTION.NO_SHOW]: {
+    label: "No llego",
+    confirmLabel: "Marcar no llego",
+    successMessage: "Visita marcada como no show.",
+    getDescription: (folio) =>
+      `Vas a marcar la visita ${folio} como no llegada. Esta accion no se puede deshacer.`,
+  },
+};
+
+const VISIT_STATUS_DOMAIN_ERROR_MESSAGE: Record<
+  | "ROLE_NOT_ALLOWED"
+  | "VISIT_STATE_INVALID"
+  | "VISIT_NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "PERMISSION_DENIED",
+  string
+> = {
+  ROLE_NOT_ALLOWED: "No tenes permiso para actualizar estados en recepcion.",
+  VISIT_STATE_INVALID:
+    "La visita ya no esta en un estado valido para esta accion. Actualiza la cola.",
+  VISIT_NOT_FOUND: "La visita ya no existe o fue cerrada por otro usuario.",
+  VALIDATION_ERROR: "No se pudo procesar la accion solicitada.",
+  PERMISSION_DENIED: "No tenes permiso para ejecutar esta accion.",
+};
+
+const FALLBACK_VISIT_STATUS_ERROR_MESSAGE =
+  "No se pudo actualizar el estado de la visita. Intenta nuevamente.";
+
+const RETRYABLE_STATUS_ACTION_ERRORS = [
+  "VISIT_STATE_INVALID",
+  "VISIT_NOT_FOUND",
+] as const;
 
 const STATUS_FILTER = {
   ALL: "all",
@@ -71,15 +152,14 @@ const SERVICE_FILTER = {
 
 type ServiceFilter = (typeof SERVICE_FILTER)[keyof typeof SERVICE_FILTER];
 
-const STATUS_PRIORITY: Record<VisitStatus, number> = {
-  [VISIT_STATUS.EN_ESPERA]: 0,
-  [VISIT_STATUS.EN_SOMATOMETRIA]: 1,
-  [VISIT_STATUS.LISTA_PARA_DOCTOR]: 2,
-  [VISIT_STATUS.EN_CONSULTA]: 3,
-  [VISIT_STATUS.CERRADA]: 4,
-  [VISIT_STATUS.CANCELADA]: 5,
-  [VISIT_STATUS.NO_SHOW]: 6,
-};
+const getOpenPriority = (visitStatus: VisitStatus): number =>
+  isOpenVisitStatus(visitStatus) ? 0 : 1;
+
+const getUrgenciasPriority = (visit: VisitQueueItem): number =>
+  resolveRecepcionService(visit) === RECEPCION_SERVICE.URGENCIAS ? 0 : 1;
+
+const getArrivalTypePriority = (visit: VisitQueueItem): number =>
+  visit.arrivalType === ARRIVAL_TYPE.APPOINTMENT ? 0 : 1;
 
 const matchesStatus = (
   visit: VisitQueueItem,
@@ -139,22 +219,66 @@ const sortAgendaVisits = (
   firstVisit: VisitQueueItem,
   secondVisit: VisitQueueItem,
 ) => {
-  const statusDifference =
-    STATUS_PRIORITY[firstVisit.status] - STATUS_PRIORITY[secondVisit.status];
+  const openPriorityDifference =
+    getOpenPriority(firstVisit.status) - getOpenPriority(secondVisit.status);
 
-  if (statusDifference !== 0) {
-    return statusDifference;
+  if (openPriorityDifference !== 0) {
+    return openPriorityDifference;
+  }
+
+  if (
+    isOpenVisitStatus(firstVisit.status) &&
+    isOpenVisitStatus(secondVisit.status)
+  ) {
+    const urgenciasPriorityDifference =
+      getUrgenciasPriority(firstVisit) - getUrgenciasPriority(secondVisit);
+
+    if (urgenciasPriorityDifference !== 0) {
+      return urgenciasPriorityDifference;
+    }
+
+    const arrivalTypePriorityDifference =
+      getArrivalTypePriority(firstVisit) - getArrivalTypePriority(secondVisit);
+
+    if (arrivalTypePriorityDifference !== 0) {
+      return arrivalTypePriorityDifference;
+    }
   }
 
   return firstVisit.folio.localeCompare(secondVisit.folio, "es");
 };
 
+const resolveDomainErrorMessage = <TDomainCode extends string>(
+  error: unknown,
+  domainErrors: Record<TDomainCode, string>,
+  fallback: string,
+): string => {
+  if (!(error instanceof ApiError)) {
+    return fallback;
+  }
+
+  const domainCode = error.code as TDomainCode;
+  if (Object.prototype.hasOwnProperty.call(domainErrors, domainCode)) {
+    return domainErrors[domainCode];
+  }
+
+  return error.message || fallback;
+};
+
+const shouldRefreshQueueAfterError = (error: unknown): boolean => {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  return RETRYABLE_STATUS_ACTION_ERRORS.includes(
+    error.code as (typeof RETRYABLE_STATUS_ACTION_ERRORS)[number],
+  );
+};
+
 export const RecepcionAgendaPage = () => {
   const [searchParams] = useSearchParams();
-  const checkinSectionRef = useRef<HTMLElement | null>(null);
   const shouldFocusCheckin = searchParams.get("focus") === "checkin";
-  const checkinSeedFromQuery =
-    searchParams.get("folio") ?? searchParams.get("patientId") ?? "";
+  const focusFolio = searchParams.get("folio");
 
   const { hasCapability } = usePermissionDependencies();
   const canReadAgenda = hasCapability(
@@ -166,6 +290,7 @@ export const RecepcionAgendaPage = () => {
     RECEPCION_WRITE_PERMISSION_REQUIREMENT,
   );
   const queueQuery = useRecepcionAgendaQueue({ enabled: canReadAgenda });
+  const visitStatusAction = useVisitStatusAction();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
@@ -177,10 +302,14 @@ export const RecepcionAgendaPage = () => {
   const [serviceFilter, setServiceFilter] = useState<ServiceFilter>(
     SERVICE_FILTER.ALL,
   );
-  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
-  const [checkinOpen, setCheckinOpen] = useState(shouldFocusCheckin);
-  const [checkinSearchSeed, setCheckinSearchSeed] =
-    useState(checkinSeedFromQuery);
+  const [quickCheckinOpen, setQuickCheckinOpen] = useState(
+    () => shouldFocusCheckin,
+  );
+  const [quickCheckinDefaults, setQuickCheckinDefaults] = useState<
+    Partial<CheckinFormInput> | undefined
+  >(undefined);
+  const [pendingStatusAction, setPendingStatusAction] =
+    useState<PendingStatusAction | null>(null);
 
   const visits = queueQuery.data?.items ?? [];
   const openVisits = visits.filter((visit) => isOpenVisitStatus(visit.status));
@@ -193,7 +322,7 @@ export const RecepcionAgendaPage = () => {
   const walkInCount = openVisits.filter(
     (visit) => visit.arrivalType === ARRIVAL_TYPE.WALK_IN,
   ).length;
-  const serviceCounts = visits.reduce<Record<RecepcionService, number>>(
+  const serviceCounts = openVisits.reduce<Record<RecepcionService, number>>(
     (accumulator, visit) => {
       const service = resolveRecepcionService(visit);
       return {
@@ -208,6 +337,14 @@ export const RecepcionAgendaPage = () => {
       [RECEPCION_SERVICE.SIN_CLASIFICAR]: 0,
     },
   );
+  const activeDoctorCount = new Set(
+    openVisits
+      .map((visit) => visit.doctorId)
+      .filter((doctorId): doctorId is number => typeof doctorId === "number"),
+  ).size;
+  const openVisitsWithoutDoctorCount = openVisits.filter(
+    (visit) => visit.doctorId == null,
+  ).length;
 
   const filteredVisits = visits
     .filter((visit) => matchesStatus(visit, statusFilter))
@@ -218,17 +355,65 @@ export const RecepcionAgendaPage = () => {
       return matchesService(service, serviceFilter);
     })
     .sort(sortAgendaVisits);
+  const legacyFocusedVisit = focusFolio
+    ? visits.find((visit) => visit.folio === focusFolio)
+    : undefined;
+  const resolvedQuickCheckinDefaults =
+    quickCheckinDefaults ||
+    (shouldFocusCheckin && legacyFocusedVisit
+      ? mapVisitToCheckinDefaults(legacyFocusedVisit)
+      : undefined);
+  const pendingActionCopy = pendingStatusAction
+    ? RECEPCION_ACTION_COPY[pendingStatusAction.targetStatus]
+    : null;
 
-  useEffect(() => {
-    if (!shouldFocusCheckin) {
+  const handleOpenQuickCheckin = (defaults?: Partial<CheckinFormInput>) => {
+    setQuickCheckinDefaults(defaults);
+    setQuickCheckinOpen(true);
+  };
+
+  const openStatusActionConfirmation = (
+    visitId: number,
+    folio: string,
+    targetStatus: RecepcionAction,
+  ) => {
+    if (!canWriteRecepcion || visitStatusAction.isPending) {
       return;
     }
 
-    checkinSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, [shouldFocusCheckin]);
+    setPendingStatusAction({ visitId, folio, targetStatus });
+  };
+
+  const handleConfirmStatusAction = async () => {
+    if (!pendingStatusAction) {
+      return;
+    }
+
+    try {
+      await visitStatusAction.mutateAsync({
+        visitId: pendingStatusAction.visitId,
+        targetStatus: pendingStatusAction.targetStatus,
+      });
+
+      toast.success(
+        RECEPCION_ACTION_COPY[pendingStatusAction.targetStatus].successMessage,
+      );
+    } catch (error) {
+      if (shouldRefreshQueueAfterError(error)) {
+        void queueQuery.refetch?.();
+      }
+
+      toast.error("No se pudo actualizar el estado", {
+        description: resolveDomainErrorMessage(
+          error,
+          VISIT_STATUS_DOMAIN_ERROR_MESSAGE,
+          FALLBACK_VISIT_STATUS_ERROR_MESSAGE,
+        ),
+      });
+    } finally {
+      setPendingStatusAction(null);
+    }
+  };
 
   return (
     <section className="space-y-5 p-6">
@@ -239,30 +424,24 @@ export const RecepcionAgendaPage = () => {
             Centro de recepcion
           </div>
           <h1 className="text-2xl font-semibold text-txt-body">
-            Agenda operativa
+            Citas y check-in operativo
           </h1>
           <p className="max-w-2xl text-sm text-txt-muted">
-            Priorizacion de agenda y check-in en una sola pantalla.
+            Gestiona check-in de pacientes y agenda de citas con contexto
+            operativo en tiempo real.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">
+          <span className="rounded-full border border-line-hairline bg-subtle px-3 py-1 text-xs font-medium text-txt-muted">
             Sync: {queueQuery.connectionStatus ?? "idle"}
-          </Badge>
+          </span>
           <Button
             type="button"
-            variant="outline"
-            className="gap-2"
-            onClick={() => {
-              setCheckinOpen(true);
-              checkinSectionRef.current?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              });
-            }}
+            onClick={() => handleOpenQuickCheckin()}
+            disabled={!canWriteRecepcion}
           >
-            Abrir check-in integrado
+            Generar ficha de consulta
           </Button>
           <Button
             type="button"
@@ -305,7 +484,7 @@ export const RecepcionAgendaPage = () => {
       !queueQuery.isError &&
       visits.length > 0 ? (
         <>
-          <section className="grid gap-3 sm:grid-cols-2">
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <article className="rounded-xl border border-line-struct bg-paper p-4">
               <p className="text-sm text-txt-muted">Visitas abiertas</p>
               <p className="text-2xl font-semibold text-txt-body">
@@ -318,17 +497,33 @@ export const RecepcionAgendaPage = () => {
                 {waitingCount}
               </p>
             </article>
+            <article className="rounded-xl border border-line-struct bg-paper p-4">
+              <p className="text-sm text-txt-muted">Doctores con carga</p>
+              <p className="text-2xl font-semibold text-txt-body">
+                {activeDoctorCount}
+              </p>
+            </article>
+            <article className="rounded-xl border border-line-struct bg-paper p-4">
+              <p className="text-sm text-txt-muted">Pendientes de asignacion</p>
+              <p className="text-2xl font-semibold text-txt-body">
+                {openVisitsWithoutDoctorCount}
+              </p>
+            </article>
           </section>
 
           <section className="rounded-xl border border-line-struct bg-subtle p-3">
             <p className="text-sm text-txt-muted" role="status">
-              Resumen: {withAppointmentCount} con cita, {walkInCount} sin cita,{" "}
-              {serviceCounts[RECEPCION_SERVICE.URGENCIAS]} en urgencias.
+              Resumen operativo: {withAppointmentCount} con cita, {walkInCount}{" "}
+              sin cita, medicina general{" "}
+              {serviceCounts[RECEPCION_SERVICE.MEDICINA_GENERAL]}, especialidad{" "}
+              {serviceCounts[RECEPCION_SERVICE.ESPECIALIDAD]}, urgencias{" "}
+              {serviceCounts[RECEPCION_SERVICE.URGENCIAS]}, {activeDoctorCount}{" "}
+              doctores con carga.
             </p>
           </section>
 
           <section className="space-y-4 rounded-xl border border-line-struct bg-paper p-4">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="agenda-search">
                   Buscar por folio, paciente o cita
@@ -366,67 +561,45 @@ export const RecepcionAgendaPage = () => {
                   <option value={STATUS_FILTER.NO_SHOW}>No show</option>
                 </select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="agenda-arrival-filter">Tipo de llegada</Label>
+                <select
+                  id="agenda-arrival-filter"
+                  className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                  value={arrivalTypeFilter}
+                  onChange={(event) => {
+                    setArrivalTypeFilter(
+                      event.target.value as ArrivalTypeFilter,
+                    );
+                  }}
+                >
+                  <option value={ARRIVAL_TYPE_FILTER.ALL}>Todos</option>
+                  <option value={ARRIVAL_TYPE_FILTER.APPOINTMENT}>
+                    Con cita
+                  </option>
+                  <option value={ARRIVAL_TYPE_FILTER.WALK_IN}>Sin cita</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="agenda-service-filter">Servicio</Label>
+                <select
+                  id="agenda-service-filter"
+                  className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                  value={serviceFilter}
+                  onChange={(event) => {
+                    setServiceFilter(event.target.value as ServiceFilter);
+                  }}
+                >
+                  <option value={SERVICE_FILTER.ALL}>Todos</option>
+                  {RECEPCION_SERVICE_LIST.map((service) => (
+                    <option key={service} value={service}>
+                      {RECEPCION_SERVICE_PROFILES[service].label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-
-            <Collapsible
-              open={advancedFiltersOpen}
-              onOpenChange={setAdvancedFiltersOpen}
-            >
-              <CollapsibleTrigger asChild>
-                <Button type="button" variant="ghost" className="px-0">
-                  {advancedFiltersOpen
-                    ? "Ocultar filtros avanzados"
-                    : "Mostrar filtros avanzados"}
-                </Button>
-              </CollapsibleTrigger>
-
-              <CollapsibleContent>
-                <div className="mt-2 grid gap-3 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="agenda-arrival-filter">
-                      Tipo de llegada
-                    </Label>
-                    <select
-                      id="agenda-arrival-filter"
-                      className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-                      value={arrivalTypeFilter}
-                      onChange={(event) => {
-                        setArrivalTypeFilter(
-                          event.target.value as ArrivalTypeFilter,
-                        );
-                      }}
-                    >
-                      <option value={ARRIVAL_TYPE_FILTER.ALL}>Todos</option>
-                      <option value={ARRIVAL_TYPE_FILTER.APPOINTMENT}>
-                        Con cita
-                      </option>
-                      <option value={ARRIVAL_TYPE_FILTER.WALK_IN}>
-                        Sin cita
-                      </option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="agenda-service-filter">Servicio</Label>
-                    <select
-                      id="agenda-service-filter"
-                      className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-                      value={serviceFilter}
-                      onChange={(event) => {
-                        setServiceFilter(event.target.value as ServiceFilter);
-                      }}
-                    >
-                      <option value={SERVICE_FILTER.ALL}>Todos</option>
-                      {RECEPCION_SERVICE_LIST.map((service) => (
-                        <option key={service} value={service}>
-                          {RECEPCION_SERVICE_PROFILES[service].label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
 
             {filteredVisits.length === 0 ? (
               <p className="text-sm text-txt-muted">
@@ -436,6 +609,15 @@ export const RecepcionAgendaPage = () => {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredVisits.map((visit) => {
                   const visitService = resolveRecepcionService(visit);
+                  const canRunAction = canRunRecepcionStatusAction(
+                    visit.status,
+                  );
+                  const canMarkNoShow =
+                    visit.arrivalType === ARRIVAL_TYPE.APPOINTMENT;
+                  const actionDisabled =
+                    !canRunAction ||
+                    !canWriteRecepcion ||
+                    visitStatusAction.isPending;
 
                   return (
                     <article
@@ -473,24 +655,68 @@ export const RecepcionAgendaPage = () => {
                         </div>
                       </dl>
 
-                      <footer className="mt-auto flex items-center justify-between gap-2 border-t border-line-hairline pt-3">
+                      <footer className="mt-auto space-y-2 border-t border-line-hairline pt-3">
                         <span className="text-xs text-txt-muted">
                           {formatVisitStatusLabel(visit.status)}
                         </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setCheckinSearchSeed(visit.folio);
-                            setCheckinOpen(true);
-                            checkinSectionRef.current?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "start",
-                            });
-                          }}
-                        >
-                          Ir al check-in
-                        </Button>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={actionDisabled}
+                            onClick={() => {
+                              openStatusActionConfirmation(
+                                visit.id,
+                                visit.folio,
+                                RECEPCION_ACTION.EN_SOMATOMETRIA,
+                              );
+                            }}
+                          >
+                            {
+                              RECEPCION_ACTION_COPY[
+                                RECEPCION_ACTION.EN_SOMATOMETRIA
+                              ].label
+                            }
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={actionDisabled}
+                            onClick={() => {
+                              openStatusActionConfirmation(
+                                visit.id,
+                                visit.folio,
+                                RECEPCION_ACTION.CANCELADA,
+                              );
+                            }}
+                          >
+                            {
+                              RECEPCION_ACTION_COPY[RECEPCION_ACTION.CANCELADA]
+                                .label
+                            }
+                          </Button>
+                          {canMarkNoShow ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={actionDisabled}
+                              onClick={() => {
+                                openStatusActionConfirmation(
+                                  visit.id,
+                                  visit.folio,
+                                  RECEPCION_ACTION.NO_SHOW,
+                                );
+                              }}
+                            >
+                              {
+                                RECEPCION_ACTION_COPY[RECEPCION_ACTION.NO_SHOW]
+                                  .label
+                              }
+                            </Button>
+                          ) : null}
+                        </div>
                       </footer>
                     </article>
                   );
@@ -510,19 +736,51 @@ export const RecepcionAgendaPage = () => {
         </p>
       ) : null}
 
-      <section ref={checkinSectionRef}>
-        <RecepcionIntegratedCheckinSection
-          canReadQueue={canReadAgenda}
-          canWrite={canWriteRecepcion}
-          visits={visits}
-          open={checkinOpen}
-          onOpenChange={setCheckinOpen}
-          initialSearchTerm={checkinSearchSeed}
-          onRequestRefresh={() => {
-            void queueQuery.refetch?.();
-          }}
-        />
-      </section>
+      <AlertDialog
+        open={pendingStatusAction !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setPendingStatusAction(null);
+          }
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar accion de recepcion</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingStatusAction && pendingActionCopy
+                ? pendingActionCopy.getDescription(pendingStatusAction.folio)
+                : "Confirma la accion seleccionada para continuar."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={visitStatusAction.isPending}
+              onClick={() => {
+                void handleConfirmStatusAction();
+              }}
+            >
+              {pendingActionCopy?.confirmLabel ?? "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <RecepcionQuickCheckinDialog
+        open={quickCheckinOpen}
+        onOpenChange={(nextOpen) => {
+          setQuickCheckinOpen(nextOpen);
+
+          if (!nextOpen) {
+            setQuickCheckinDefaults(undefined);
+          }
+        }}
+        canWrite={canWriteRecepcion}
+        initialValues={resolvedQuickCheckinDefaults}
+      />
     </section>
   );
 };

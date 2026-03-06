@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Permisos, Roles
+from apps.catalogos.models import CatCies, Permisos, Roles
 from apps.recepcion.models import Visit
 from apps.realtime.consumers.visits import VISITS_STREAM_GROUP
 from apps.realtime.events import (
@@ -79,6 +79,13 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id="APP-WS-0003",
             status="en_consulta",
+        )
+
+        CatCies.objects.create(
+            code="A090",
+            description="GASTROENTERITIS",
+            version="CIE-10",
+            is_active=True,
         )
 
     def _create_user_with_role(
@@ -443,6 +450,7 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
             {
                 "primaryDiagnosis": "Lumbalgia mecanica",
                 "finalNote": "Manejo sintomatico ambulatorio.",
+                "cieCode": "A090",
             },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
@@ -464,6 +472,7 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
             event.get("payload", {}).get("primaryDiagnosis"),
             "Lumbalgia mecanica",
         )
+        self.assertEqual(event.get("payload", {}).get("cieCode"), "A090")
 
     def test_save_prescriptions_publishes_prescriptions_saved_event(self):
         self._login_as("doctor_ws", self.doctor_password)

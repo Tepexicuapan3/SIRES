@@ -22,7 +22,8 @@ export const useRecepcionAgendaQueue = (
   const shouldUsePollingFallback =
     enabled &&
     import.meta.env.MODE !== "test" &&
-    realtime.connectionStatus !== SOCKET_CONNECTION_STATUS.CONNECTED;
+    (realtime.connectionStatus === SOCKET_CONNECTION_STATUS.DISCONNECTED ||
+      realtime.connectionStatus === SOCKET_CONNECTION_STATUS.ERROR);
 
   const queueQuery = useVisitQueueByStatus(undefined, {
     ...options,

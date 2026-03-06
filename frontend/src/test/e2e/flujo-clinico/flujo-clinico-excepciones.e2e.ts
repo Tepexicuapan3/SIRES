@@ -77,8 +77,7 @@ test.describe("Flujo clinico excepciones", () => {
         await clinicoPage.gotoDoctorQueue();
         await expect
           .poll(
-            async () =>
-              clinicoPage.isVisitVisible("#doctor-visit-selector", visit.folio),
+            async () => clinicoPage.isDoctorVisitVisible(visit.folio),
             VISIBILITY_TIMEOUT,
           )
           .toBe(false);
@@ -147,8 +146,7 @@ test.describe("Flujo clinico excepciones", () => {
         await clinicoPage.gotoDoctorQueue();
         await expect
           .poll(
-            async () =>
-              clinicoPage.isVisitVisible("#doctor-visit-selector", visit.folio),
+            async () => clinicoPage.isDoctorVisitVisible(visit.folio),
             VISIBILITY_TIMEOUT,
           )
           .toBe(false);

@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Permisos, Roles
+from apps.somatometria.models import VisitVitalSigns
 
 
 class VisitContractsApiTests(APITestCase):
@@ -227,11 +228,19 @@ class VisitContractsApiTests(APITestCase):
 
     def test_list_visits_happy_path_contract(self):
         self._login_as("recepcion_user", self.recepcion_password)
-        self._create_visit(patient_id=2001)
-        self._create_visit(
+        visit_without_vitals = self._create_visit(patient_id=2001)
+        visit_with_vitals = self._create_visit(
             patient_id=2002,
             arrival_type="walk_in",
             serviceType="urgencias",
+        )
+        VisitVitalSigns.objects.create(
+            id_visit_id=visit_with_vitals["id"],
+            weight_kg=70,
+            height_cm=175,
+            temperature_c=36.6,
+            oxygen_saturation_pct=98,
+            bmi=22.86,
         )
 
         response = self.client.get(
@@ -257,6 +266,14 @@ class VisitContractsApiTests(APITestCase):
         self.assertIn("doctorId", first_item)
         self.assertIn("notes", first_item)
         self.assertIn("status", first_item)
+        self.assertIn("vitals", first_item)
+
+        items_by_patient = {item["patientId"]: item for item in response.data["items"]}
+        self.assertIsNone(items_by_patient[visit_without_vitals["patientId"]]["vitals"])
+        self.assertEqual(
+            items_by_patient[visit_with_vitals["patientId"]]["vitals"]["weightKg"],
+            70.0,
+        )
 
     def test_list_visits_filters_by_service_type(self):
         self._login_as("recepcion_user", self.recepcion_password)

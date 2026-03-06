@@ -46,6 +46,12 @@ describe("Capture vitals API integration (KAN-18)", () => {
     expect(receivedVisitId).toBe("3001");
     expect(response.visitId).toBe(3001);
     expect(response.status).toBe("lista_para_doctor");
+    expect(response.vitals.weightKg).toBe(validPayload.weightKg);
+    expect(response.vitals.heightCm).toBe(validPayload.heightCm);
+    expect(response.vitals.temperatureC).toBe(validPayload.temperatureC);
+    expect(response.vitals.oxygenSaturationPct).toBe(
+      validPayload.oxygenSaturationPct,
+    );
     expect(response.vitals.bmi).toBe(22.86);
   });
 

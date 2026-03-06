@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 
 from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Permisos, Roles
+from apps.catalogos.models import CatCies, Permisos, Roles
 from apps.consulta_medica.models import VisitConsultation
 from apps.recepcion.models import Visit
 
@@ -51,6 +51,25 @@ class ConsultationContractsApiTests(APITestCase):
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id="APP-7002",
             status="en_consulta",
+        )
+
+        CatCies.objects.create(
+            code="A090",
+            description="GASTROENTERITIS",
+            version="CIE-10",
+            is_active=True,
+        )
+        CatCies.objects.create(
+            code="J110",
+            description="INFLUENZA",
+            version="CIE-10",
+            is_active=True,
+        )
+        CatCies.objects.create(
+            code="1A33.0",
+            description="CISTOISOSPORIASIS DEL INTESTINO DELGADO",
+            version="CIE-10",
+            is_active=True,
         )
 
     def _create_user_with_role(
@@ -231,6 +250,52 @@ class ConsultationContractsApiTests(APITestCase):
             request_id=self.request_id,
         )
         self.assertEqual(audit_event.resultado, "SUCCESS")
+
+    def test_save_diagnosis_with_cie_code_contract(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_consultation.id_visit}/diagnosis",
+            {
+                "primaryDiagnosis": "Gastroenteritis aguda",
+                "finalNote": "Paciente hidratado y estable.",
+                "cieCode": "a090",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["cieCode"], "A090")
+
+        consultation = VisitConsultation.objects.get(id_visit=self.visit_in_consultation)
+        self.assertEqual(consultation.cie_code, "A090")
+
+    def test_search_cies_contract(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        response = self.client.get(
+            "/api/v1/visits/cies/search?search=gastro&limit=5",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total"], 1)
+        self.assertEqual(response.data["items"][0]["code"], "A090")
+        self.assertEqual(response.data["items"][0]["description"], "GASTROENTERITIS")
+
+    def test_search_cies_contract_matches_code_without_dot(self):
+        self._login_as("doctor_user", self.doctor_password)
+
+        response = self.client.get(
+            "/api/v1/visits/cies/search?search=1A330&limit=5",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total"], 1)
+        self.assertEqual(response.data["items"][0]["code"], "1A33.0")
 
     def test_save_diagnosis_invalid_state_returns_visit_state_invalid(self):
         self._login_as("doctor_user", self.doctor_password)

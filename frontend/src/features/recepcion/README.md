@@ -4,8 +4,8 @@ Feature dedicada para operacion de recepcion.
 
 ## Modulos
 
-- `modules/agenda/`: vista operativa para monitoreo de llegadas y estado de atencion.
-- `modules/checkin/`: registro de llegada y acciones de recepcion (`cancelada`, `no_show`).
+- `modules/agenda/`: panel operativo para monitoreo de llegadas y estado de atencion.
+- `modules/checkin/`: adaptadores de compatibilidad legacy y mutaciones del flujo.
 
 ## Estructura
 
@@ -23,17 +23,18 @@ utils/
 ## Notas de migracion
 
 - Compatibilidad legacy removida: usar imports directos de `features/recepcion/modules/*`.
-- Las rutas legacy `/recepcion/fichas/*` redirigen a `checkin`.
+- La ruta legacy `/recepcion/checkin` redirige a `/recepcion/agenda?focus=checkin`.
+- Las rutas legacy `/recepcion/agendar-cita` y `/recepcion/fichas/*` redirigen a `/recepcion/agenda?focus=checkin`.
 
 ## Modelo operativo
 
-- `agenda`: vista principal para priorizar y monitorear estados por servicio.
-- `checkin`: ejecucion de registro de llegada y acciones de estado (`cancelada`, `no_show`).
-- `checkin rapido`: disponible desde agenda para registrar llegadas sin cambio de contexto.
+- `agenda`: experiencia unica de recepcion con dashboard, filtros, cola y generacion de fichas.
+- `checkin`: alias legacy que redirige a `agenda` con foco de check-in.
 
 ## Definition of Done
 
 - Recepcion opera con filtros por estado, tipo de llegada y servicio.
 - Permisos de lectura/escritura bloquean consultas/acciones no autorizadas sin UX ruidosa.
 - Errores de dominio tienen mensajes accionables y fallback consistente.
-- Las rutas nuevas (`/recepcion/agenda`, `/recepcion/checkin`) quedan como entrypoint oficial.
+- La ruta oficial es `/recepcion/agenda`.
+- Legacy soportado: `/recepcion/checkin`, `/recepcion/agendar-cita` y `/recepcion/fichas/*` redirigen a `/recepcion/agenda?focus=checkin`.

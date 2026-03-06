@@ -1,5 +1,7 @@
 import apiClient from "@api/client";
 import type {
+  CieSearchParams,
+  CieSearchResponse,
   CaptureVitalsRequest,
   CaptureVitalsResponse,
   CloseVisitRequest,
@@ -59,6 +61,16 @@ export const visitsAPI = {
     const response = await apiClient.post<SaveDiagnosisResponse>(
       `/visits/${visitId}/diagnosis`,
       data,
+    );
+    return response.data;
+  },
+
+  searchCies: async (params: CieSearchParams): Promise<CieSearchResponse> => {
+    const response = await apiClient.get<CieSearchResponse>(
+      "/visits/cies/search",
+      {
+        params,
+      },
     );
     return response.data;
   },
