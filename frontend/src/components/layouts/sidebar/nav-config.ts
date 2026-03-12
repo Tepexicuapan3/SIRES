@@ -81,6 +81,111 @@ export const NAV_CONFIG: NavSection[] = [
             url: "/admin/catalogos/centros-atencion",
             permissions: ["admin:catalogos:centros_atencion:read"],
           },
+          {
+            title: "Autorizadores",
+            url: "/admin/catalogos/autorizadores",
+            permissions: ["admin:catalogos:autorizadores:read"],
+          },
+          {
+            title: "Bajas",
+            url: "/admin/catalogos/bajas",
+            permissions: ["admin:catalogos:bajas:read"],
+          },
+          {
+            title: "Calidad laboral",
+            url: "/admin/catalogos/calidad-laboral",
+            permissions: ["admin:catalogos:calidad_laboral:read"],
+          },
+          {
+            title: "Consultorios",
+            url: "/admin/catalogos/consultorios",
+            permissions: ["admin:catalogos:consultorios:read"],
+          },
+          {
+            title: "Estado civil",
+            url: "/admin/catalogos/edo-civil",
+            permissions: ["admin:catalogos:edo_civil:read"],
+          },
+          {
+            title: "Enfermedades",
+            url: "/admin/catalogos/enfermedades",
+            permissions: ["admin:catalogos:enfermedades:read"],
+          },
+          {
+            title: "Escolaridad",
+            url: "/admin/catalogos/escolaridad",
+            permissions: ["admin:catalogos:escolaridad:read"],
+          },
+          {
+            title: "Escuelas",
+            url: "/admin/catalogos/escuelas",
+            permissions: ["admin:catalogos:escuelas:read"],
+          },
+          {
+            title: "Especialidades",
+            url: "/admin/catalogos/especialidades",
+            permissions: ["admin:catalogos:especialidades:read"],
+          },
+          {
+            title: "Estudios medicos",
+            url: "/admin/catalogos/estudios-medicos",
+            permissions: ["admin:catalogos:estudios_med:read"],
+          },
+          {
+            title: "Grupos de medicamentos",
+            url: "/admin/catalogos/grupos-medicamentos",
+            permissions: ["admin:catalogos:grupos_medicamentos:read"],
+          },
+          {
+            title: "Ocupaciones",
+            url: "/admin/catalogos/ocupaciones",
+            permissions: ["admin:catalogos:ocupaciones:read"],
+          },
+          {
+            title: "Origen de consulta",
+            url: "/admin/catalogos/origen-consulta",
+            permissions: ["admin:catalogos:origen_cons:read"],
+          },
+          {
+            title: "Parentescos",
+            url: "/admin/catalogos/parentescos",
+            permissions: ["admin:catalogos:parentescos:read"],
+          },
+          {
+            title: "Pases",
+            url: "/admin/catalogos/pases",
+            permissions: ["admin:catalogos:pases:read"],
+          },
+          {
+            title: "Tipos de areas",
+            url: "/admin/catalogos/tipos-areas",
+            permissions: ["admin:catalogos:tipos_areas:read"],
+          },
+          {
+            title: "Tipos de autorizacion",
+            url: "/admin/catalogos/tipos-autorizacion",
+            permissions: ["admin:catalogos:tp_autorizacion:read"],
+          },
+          {
+            title: "Tipos de citas",
+            url: "/admin/catalogos/tipos-citas",
+            permissions: ["admin:catalogos:tipo_citas:read"],
+          },
+          {
+            title: "Licencias",
+            url: "/admin/catalogos/licencias",
+            permissions: ["admin:catalogos:licencias:read"],
+          },
+          {
+            title: "Tipos sanguineos",
+            url: "/admin/catalogos/tipos-sanguineo",
+            permissions: ["admin:catalogos:tipos_sanguineo:read"],
+          },
+          {
+            title: "Turnos",
+            url: "/admin/catalogos/turnos",
+            permissions: ["admin:catalogos:turnos:read"],
+          },
           { 
             title: "Catálogo CIES",
             url: "/admin/catalogos/cies",

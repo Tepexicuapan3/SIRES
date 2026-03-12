@@ -5,6 +5,27 @@ import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
 import AreasPage from "@features/admin/modules/catalogos/areas/pages/AreasPage";
 import CentrosAtencionPage from "@features/admin/modules/catalogos/centros-atencion/pages/CentrosAtencionPage";
 import CiesPage from "@features/admin/modules/catalogos/cies/pages/CiesPage";
+import AutorizadoresPage from "@features/admin/modules/catalogos/autorizadores/pages/AutorizadoresPage";
+import BajasPage from "@features/admin/modules/catalogos/bajas/pages/BajasPage";
+import CalidadLaboralPage from "@features/admin/modules/catalogos/calidad-laboral/pages/CalidadLaboralPage";
+import ConsultoriosPage from "@features/admin/modules/catalogos/consultorios/pages/ConsultoriosPage";
+import EdoCivilPage from "@features/admin/modules/catalogos/edo-civil/pages/EdoCivilPage";
+import EnfermedadesPage from "@features/admin/modules/catalogos/enfermedades/pages/EnfermedadesPage";
+import EscolaridadPage from "@features/admin/modules/catalogos/escolaridad/pages/EscolaridadPage";
+import EscuelasPage from "@features/admin/modules/catalogos/escuelas/pages/EscuelasPage";
+import EspecialidadesPage from "@features/admin/modules/catalogos/especialidades/pages/EspecialidadesPage";
+import EstudiosMedicosPage from "@features/admin/modules/catalogos/estudios-medicos/pages/EstudiosMedicosPage";
+import GruposMedicamentosPage from "@features/admin/modules/catalogos/grupos-medicamentos/pages/GruposMedicamentosPage";
+import OcupacionesPage from "@features/admin/modules/catalogos/ocupaciones/pages/OcupacionesPage";
+import OrigenConsultaPage from "@features/admin/modules/catalogos/origen-consulta/pages/OrigenConsultaPage";
+import ParentescosPage from "@features/admin/modules/catalogos/parentescos/pages/ParentescosPage";
+import PasesPage from "@features/admin/modules/catalogos/pases/pages/PasesPage";
+import TiposAreasPage from "@features/admin/modules/catalogos/tipos-areas/pages/TiposAreasPage";
+import TiposAutorizacionPage from "@features/admin/modules/catalogos/tipos-autorizacion/pages/TiposAutorizacionPage";
+import TiposCitasPage from "@features/admin/modules/catalogos/tipos-citas/pages/TiposCitasPage";
+import LicenciasPage from "@features/admin/modules/catalogos/licencias/pages/LicenciasPage";
+import TiposSanguineoPage from "@features/admin/modules/catalogos/tipos-sanguineo/pages/TiposSanguineoPage";
+import TurnosPage from "@features/admin/modules/catalogos/turnos/pages/TurnosPage";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
 
 // Administracion
@@ -57,6 +78,174 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
             <CentrosAtencionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "autorizadores",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:autorizadores:read">
+            <AutorizadoresPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "bajas",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:bajas:read">
+            <BajasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "calidad-laboral",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:calidad_laboral:read">
+            <CalidadLaboralPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "consultorios",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:consultorios:read">
+            <ConsultoriosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "edo-civil",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:edo_civil:read">
+            <EdoCivilPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "enfermedades",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:enfermedades:read">
+            <EnfermedadesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "escolaridad",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:escolaridad:read">
+            <EscolaridadPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "escuelas",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:escuelas:read">
+            <EscuelasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "especialidades",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:especialidades:read">
+            <EspecialidadesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "estudios-medicos",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:estudios_med:read">
+            <EstudiosMedicosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "grupos-medicamentos",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:grupos_medicamentos:read">
+            <GruposMedicamentosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "ocupaciones",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:ocupaciones:read">
+            <OcupacionesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "origen-consulta",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:origen_cons:read">
+            <OrigenConsultaPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "parentescos",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:parentescos:read">
+            <ParentescosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "pases",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:pases:read">
+            <PasesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "tipos-areas",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:tipos_areas:read">
+            <TiposAreasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "tipos-autorizacion",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:tp_autorizacion:read">
+            <TiposAutorizacionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "tipos-citas",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:tipo_citas:read">
+            <TiposCitasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "licencias",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:licencias:read">
+            <LicenciasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "tipos-sanguineo",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:tipos_sanguineo:read">
+            <TiposSanguineoPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "turnos",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:turnos:read">
+            <TurnosPage />
           </ProtectedRoute>
         ),
       },
