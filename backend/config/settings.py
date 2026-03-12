@@ -118,16 +118,16 @@ ASGI_APPLICATION = 'config.asgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME', default='sires'),
-        'USER': config('DB_USER', default='mysql'),
-        'PASSWORD': config('DB_PASSWORD', default='mysql'),
-        'HOST': config('DB_HOST', default='sires'),
-        'PORT': config('DB_PORT', default='3306'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='admin'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
-# Tests: usar SQLite para evitar depender de privilegios MySQL (crear test DB).
+# Tests: usar SQLite para evitar depender de privilegios de BD (crear test DB).
 if 'test' in sys.argv:
     DATABASES = {
         'default': {
@@ -278,3 +278,8 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)
+ALLOW_USER_CREATE_WITHOUT_EMAIL = config(
+    'ALLOW_USER_CREATE_WITHOUT_EMAIL',
+    default=False,
+    cast=bool,
+)

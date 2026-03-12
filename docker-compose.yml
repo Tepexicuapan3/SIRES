@@ -49,8 +49,7 @@ services:
       - "${BACKEND_PORT-5000}:5000"
     volumes:
       - ./backend:/app
-    # Evita que el autoreloader deje el container "up" pero sin responder
-    command: sh -lc "unset http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY && python -c \"import os,time,MySQLdb; host=os.getenv('DB_HOST','mysql'); port=int(os.getenv('DB_PORT','3306')); user=os.getenv('DB_USER','sires'); password=os.getenv('DB_PASSWORD','112233'); db=os.getenv('DB_NAME','sires'); code='''for _ in range(60):\\n    try:\\n        conn=MySQLdb.connect(host=host,user=user,passwd=password,db=db,port=port); conn.close(); break\\n    except Exception:\\n        time.sleep(2)\\nelse:\\n    raise SystemExit('DB not ready')\\n'''; exec(code)\" && python manage.py migrate && python manage.py shell -c \"import seed_e2e; seed_e2e.run()\" && (python -c \"import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('daphne') else 1)\" || pip install --no-cache-dir daphne==4.1.2) && DJANGO_SETTINGS_MODULE=config.settings daphne -b 0.0.0.0 -p 5000 config.asgi:application"
+    command: sh /app/start-docker.sh
     restart: unless-stopped
     environment:
       TZ: "America/Mexico_City"
@@ -60,13 +59,9 @@ services:
       CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS-http://localhost:5173,http://127.0.0.1:5173}
       WS_ALLOW_ALL_ORIGINS: ${WS_ALLOW_ALL_ORIGINS-false}
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS-}
-      # Backend DB vars (scoped for containers to avoid conflicts
-      # with host/local .env values used outside Docker).
-      DB_HOST: ${BACKEND_DB_HOST-mysql}
-      DB_PORT: ${BACKEND_DB_PORT-3306}
-      DB_NAME: ${BACKEND_DB_NAME-sires}
-      DB_USER: ${BACKEND_DB_USER-sires}
-      DB_PASSWORD: ${BACKEND_DB_PASSWORD-112233}
+      EMAIL_BACKEND: ${EMAIL_BACKEND-django.core.mail.backends.console.EmailBackend}
+      ALLOW_USER_CREATE_WITHOUT_EMAIL: ${ALLOW_USER_CREATE_WITHOUT_EMAIL-true}
+      AUTO_RUN_SEED: ${AUTO_RUN_SEED-false}
       CHANNEL_REDIS_URL: ${CHANNEL_REDIS_URL-redis://redis:6379/1}
       SIRES_HOST: ${SIRES_HOST-localhost}
     env_file:
@@ -77,33 +72,8 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_started
-    networks:
-      - sires-network
-
-  mysql:
-    image: mysql:8.4
-    container_name: sires-mysql
-    restart: unless-stopped
-    environment:
-      TZ: "America/Mexico_City"
-      MYSQL_DATABASE: ${DB_NAME-sires}
-      MYSQL_USER: ${DB_USER-sires}
-      MYSQL_PASSWORD: ${DB_PASSWORD-112233}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD-root}
-    ports:
-      - "${DB_PORT-3306}:3306"
-    volumes:
-      - mysql-data-sires:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
     networks:
       - sires-network
 
@@ -120,6 +90,3 @@ services:
 networks:
   sires-network:
     driver: bridge
-
-volumes:
-  mysql-data-sires:

@@ -4,6 +4,7 @@ import uuid
 import re
 from datetime import datetime, time, timezone as dt_timezone
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.db.models import Q
@@ -1159,12 +1160,20 @@ class UsersListCreateView(APIView):
         elif status_filter == "pending":
             queryset = queryset.filter(Q(terminos_acept=False) | Q(cambiar_clave=True))
 
-        queryset = queryset.order_by("usuario").distinct()
+        user_ids_queryset = queryset.order_by("usuario", "id_usuario").values_list("id_usuario", flat=True).distinct()
 
-        total = queryset.count()
+        total = user_ids_queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
-        items = [_serialize_user_list_item(user) for user in queryset[start:end]]
+        page_user_ids = list(user_ids_queryset[start:end])
+        users_by_id = {
+            user.id_usuario: user
+            for user in SyUsuario.objects.select_related("detalle", "detalle__id_centro_atencion").filter(
+                id_usuario__in=page_user_ids
+            )
+        }
+        ordered_users = [users_by_id[user_id] for user_id in page_user_ids if user_id in users_by_id]
+        items = [_serialize_user_list_item(user) for user in ordered_users]
         payload = {
             "items": items,
             "page": page,
@@ -1268,12 +1277,14 @@ class UsersListCreateView(APIView):
             usr_asignacion=actor,
         )
 
-        if not send_user_credentials_email(
+        credentials_email_sent = send_user_credentials_email(
             recipient_email=user.correo,
             username=user.usuario,
             temporary_password=temporary_password,
             user_name=full_name or user.usuario,
-        ):
+        )
+
+        if not credentials_email_sent and not settings.ALLOW_USER_CREATE_WITHOUT_EMAIL:
             transaction.set_rollback(True)
             _audit(
                 request,
@@ -1294,14 +1305,16 @@ class UsersListCreateView(APIView):
         payload = {
             "id": user.id_usuario,
             "username": user.usuario,
+            "credentialsEmailSent": credentials_email_sent,
         }
+        audit_after = {"username": user.usuario, "credentialsEmailSent": credentials_email_sent}
         _audit(
             request,
             "RBAC_USER_CREATE",
             "user",
             resource_id=user.id_usuario,
             result="SUCCESS",
-            after={"username": user.usuario},
+            after=audit_after,
             target_user=user,
         )
         return Response(payload, status=status.HTTP_201_CREATED)
