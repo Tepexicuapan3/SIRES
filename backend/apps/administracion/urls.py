@@ -15,7 +15,11 @@ from .views.rbac_views import (
     UserRoleRevokeView,
     UserRolesView,
     UsersListCreateView,
+    
 )
+
+from .views.expediente_view import ExpedienteView, ActualizarExpedienteView
+
 
 urlpatterns = [
     path("roles", RolesListCreateView.as_view(), name="rbac-roles-list-create"),
@@ -36,4 +40,6 @@ urlpatterns = [
     path("users/<int:user_id>/roles/<int:role_id>", UserRoleRevokeView.as_view(), name="rbac-user-role-revoke"),
     path("users/<int:user_id>/overrides", UserOverridesView.as_view(), name="rbac-user-overrides-upsert"),
     path("users/<int:user_id>/overrides/<str:code>", UserOverrideRemoveView.as_view(), name="rbac-user-override-remove"),
+    path('expedientes/', ExpedienteView.as_view(), name='buscar'),
+    path('expedientes/actualizar/', ActualizarExpedienteView.as_view(), name='actualizar'),
 ]

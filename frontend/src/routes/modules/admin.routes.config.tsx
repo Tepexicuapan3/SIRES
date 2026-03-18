@@ -27,9 +27,12 @@ import LicenciasPage from "@features/admin/modules/catalogos/licencias/pages/Lic
 import TiposSanguineoPage from "@features/admin/modules/catalogos/tipos-sanguineo/pages/TiposSanguineoPage";
 import TurnosPage from "@features/admin/modules/catalogos/turnos/pages/TurnosPage";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
+import { lazy, Suspense } from "react";
 
 // Administracion
-
+const ExpedientesAdminPage = lazy(
+  () => import('@/features/admin/modules/expedientes/pages/ExpedientesAdminPage'),
+);
 /**
  * Rutas del grupo Administracion.
  *
@@ -260,17 +263,15 @@ export const adminRoutes: RouteObject[] = [
     ],
   },
   {
-    path: "expedientes",
+    path: 'expedientes',
     element: (
-      <ProtectedRoute requiredPermission="admin:gestion:expedientes:read">
-        <PlaceholderPage
-          title="Expedientes"
-          description="Configuracion y administracion de expedientes"
-          moduleName="Administracion"
-        />
+      <ProtectedRoute requiredPermission="admin:expedientes:read">
+        <Suspense fallback={<div>Cargando...</div>}>
+          <ExpedientesAdminPage />
+        </Suspense>
       </ProtectedRoute>
-    ),
-  },
+      ),
+    },
   {
     path: "reportes",
     element: (

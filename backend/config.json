@@ -1,0 +1,7 @@
+{
+    "oracle": {
+        "user": "SERMED",
+        "password_encrypted": "52c6af7a137f0612af68fa08b666151a09a6ec9f8ce73660ca4083423453b68a",
+        "iv": "1030a583cd920e2fd4e06826d22f67fb"
+    }
+}
