@@ -56,3 +56,52 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
 
         self.assertEqual(context["effectivePermissions"], ["*"])
         self.assertTrue(context["capabilities"]["admin.users.editFull"]["granted"])
+
+    def test_flow_somatometria_capabilities_resolve_from_clinico_permission(self):
+        context = build_permission_context(["clinico:somatometria:read"])
+
+        self.assertTrue(context["capabilities"]["flow.somatometria.queue.read"]["granted"])
+        self.assertTrue(context["capabilities"]["flow.somatometria.capture"]["granted"])
+        self.assertTrue(context["capabilities"]["flow.visits.queue.read"]["granted"])
+
+    def test_flow_doctor_capabilities_resolve_from_consultas_permission(self):
+        context = build_permission_context(["clinico:consultas:read"])
+
+        self.assertTrue(context["capabilities"]["flow.doctor.queue.read"]["granted"])
+        self.assertTrue(
+            context["capabilities"]["flow.doctor.consultation.start"]["granted"]
+        )
+        self.assertTrue(
+            context["capabilities"]["flow.doctor.consultation.close"]["granted"]
+        )
+
+    def test_flow_visits_queue_capability_requires_dependency_complete(self):
+        context = build_permission_context(["recepcion:fichas:medicina_general:create"])
+
+        self.assertFalse(context["capabilities"]["flow.visits.queue.read"]["granted"])
+        self.assertFalse(context["capabilities"]["flow.somatometria.capture"]["granted"])
+
+        complete_context = build_permission_context(
+            [
+                "recepcion:fichas:medicina_general:create",
+                "recepcion:fichas:medicina_general:read",
+            ]
+        )
+
+        self.assertTrue(complete_context["capabilities"]["flow.visits.queue.read"]["granted"])
+
+    def test_flow_recepcion_write_capability_requires_dependency_complete(self):
+        context = build_permission_context(["recepcion:fichas:especialidad:create"])
+
+        self.assertFalse(context["capabilities"]["flow.recepcion.queue.write"]["granted"])
+
+        complete_context = build_permission_context(
+            [
+                "recepcion:fichas:especialidad:create",
+                "recepcion:fichas:especialidad:read",
+            ]
+        )
+
+        self.assertTrue(
+            complete_context["capabilities"]["flow.recepcion.queue.write"]["granted"]
+        )

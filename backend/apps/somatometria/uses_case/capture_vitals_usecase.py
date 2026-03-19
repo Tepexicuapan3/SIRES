@@ -1,5 +1,10 @@
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.db import transaction
+
+from apps.authentication.services.permission_dependencies import (
+    evaluate_permission_requirement,
+)
 from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.services.errors import VisitDomainError
 from apps.recepcion.uses_case.visit_state_machine_usecase import (
@@ -8,15 +13,28 @@ from apps.recepcion.uses_case.visit_state_machine_usecase import (
 )
 from apps.somatometria.repositories.vitals_repository import VitalsRepository
 
+SOMATOMETRIA_CAPTURE_PERMISSION_REQUIREMENT = {
+    "allOf": ["clinico:somatometria:read"]
+}
 
-def ensure_somatometria_role(roles):
+
+def ensure_somatometria_role(roles, permissions=None):
     normalized_roles = {(role or "").strip().upper() for role in roles}
-    if ROLE_SOMATOMETRIA not in normalized_roles:
-        raise VisitDomainError(
-            "ROLE_NOT_ALLOWED",
-            "No tenes permiso para ejecutar esta accion.",
-            403,
-        )
+    if ROLE_SOMATOMETRIA in normalized_roles:
+        return
+
+    permission_state = evaluate_permission_requirement(
+        SOMATOMETRIA_CAPTURE_PERMISSION_REQUIREMENT,
+        permissions or [],
+    )
+    if permission_state["granted"]:
+        return
+
+    raise VisitDomainError(
+        "ROLE_NOT_ALLOWED",
+        "No tenes permiso para ejecutar esta accion.",
+        403,
+    )
 
 
 def capture_vitals(visit_id, vitals_payload):
@@ -38,8 +56,9 @@ def capture_vitals(visit_id, vitals_payload):
     payload = dict(vitals_payload)
     payload["bmi"] = _calculate_bmi(payload["weightKg"], payload["heightCm"])
 
-    vital_signs = VitalsRepository.upsert_for_visit(visit, payload)
-    VisitRepository.update_status(visit, next_state)
+    with transaction.atomic():
+        vital_signs = VitalsRepository.upsert_for_visit(visit, payload)
+        VisitRepository.update_status(visit, next_state)
 
     return {
         "visitId": visit.id_visit,

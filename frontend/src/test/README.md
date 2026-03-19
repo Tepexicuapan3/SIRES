@@ -44,7 +44,34 @@ bun run test:coverage
 
 # E2E
 bunx playwright test
+
+# Smoke E2E KAN-27
+bun run test:e2e:smoke
+
+# Suite E2E KAN-4 (smoke + excepciones)
+bun run test:e2e:kan4
+
+# Quality gate KAN-4 smoke (critical UI + API + E2E)
+bun run quality:kan4:smoke
+
+# Quality gate KAN-4 release (suite completa)
+bun run quality:kan4:release
 ```
+
+## Integracion CI reproducible (agnostica)
+
+Si el repo aun no define pipeline versionado, integra este gate en tu runner CI:
+
+```bash
+cd frontend
+bun install
+bun run quality:kan4:smoke
+```
+
+Artefactos que deben conservarse por corrida:
+
+- `frontend/playwright-report/`
+- `frontend/test-results/`
 
 ## Mocks en Desarrollo (Offline)
 
@@ -64,7 +91,7 @@ Con eso MSW intercepta requests en navegador y permite desarrollar sin backend a
 | --- | --- |
 | `admin` | `/admin/roles` |
 | `clinico` o `medico` | `/clinico/consultas` |
-| `recepcion` | `/recepcion/fichas` |
+| `recepcion` | `/recepcion/agenda` |
 | `farmacia` | `/farmacia/recetas` |
 | `urgencias` | `/urgencias/triage` |
 | `hospital` | `/hospital` |

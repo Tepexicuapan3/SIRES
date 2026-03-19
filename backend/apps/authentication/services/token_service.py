@@ -7,6 +7,8 @@ from rest_framework_simplejwt.exceptions import TokenBackendError, TokenError
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
+from apps.authentication.repositories.user_repository import UserRepository
+
 ACCESS_COOKIE = "access_token_cookie"
 REFRESH_COOKIE = "refresh_token_cookie"
 CSRF_COOKIE = "csrf_token"
@@ -33,8 +35,17 @@ def generate_csrf_token():
 
 def create_access_refresh_tokens(user):
     # Genera access y refresh para el usuario.
+    auth_user = UserRepository.build_auth_user(user)
+    roles = auth_user.get("roles", [])
+    permissions = auth_user.get("permissions", [])
+
     refresh = RefreshToken.for_user(user)
+    refresh["roles"] = roles
+    refresh["permissions"] = permissions
+
     access = refresh.access_token
+    access["roles"] = roles
+    access["permissions"] = permissions
     return str(access), str(refresh)
 
 
@@ -88,7 +99,7 @@ def set_auth_cookies(response, access_token, refresh_token, csrf_token):
         httponly=True,
         secure=secure,
         samesite="Lax",
-        path="/api",
+        path="/",
     )
     response.set_cookie(
         REFRESH_COOKIE,
@@ -132,7 +143,7 @@ def clear_auth_cookies(response):
         httponly=True,
         secure=secure,
         samesite="Strict",
-        path="/api",
+        path="/",
     )
     response.set_cookie(
         REFRESH_COOKIE,

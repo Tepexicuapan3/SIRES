@@ -10,7 +10,7 @@ from apps.authentication.services.token_service import (ACCESS_COOKIE,
                                                         RESET_COOKIE,
                                                         create_reset_token,
                                                         generate_csrf_token)
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import Permisos, Roles
 from django.contrib.auth.hashers import make_password
 from django.core.cache import cache
 from django.test import override_settings
@@ -44,7 +44,7 @@ class AuthApiTests(APITestCase):
             materno="Velazco",
             nombre_completo="Abel Buendia Velazco",
         )
-        self.role = CatRol.objects.create(
+        self.role = Roles.objects.create(
             rol="MEDICO",
             desc_rol="Medico",
             landing_route="/expedientes",
@@ -54,7 +54,7 @@ class AuthApiTests(APITestCase):
             id_rol=self.role,
             is_primary=True,
         )
-        self.perm = CatPermiso.objects.create(
+        self.perm = Permisos.objects.create(
             codigo="expedientes:read",
             descripcion="Leer expedientes",
         )
@@ -78,6 +78,7 @@ class AuthApiTests(APITestCase):
         self.assertIn(REFRESH_COOKIE, response.cookies)
         self.assertIn(CSRF_COOKIE, response.cookies)
         self.assertEqual(response.cookies[ACCESS_COOKIE]["samesite"], "Lax")
+        self.assertEqual(response.cookies[ACCESS_COOKIE]["path"], "/")
         self.assertEqual(response.cookies[REFRESH_COOKIE]["samesite"], "Strict")
         self.assertIn("user", response.data)
         self.assertTrue(response.data["requiresOnboarding"])

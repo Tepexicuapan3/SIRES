@@ -1,3 +1,5 @@
+import logging
+
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
@@ -10,6 +12,13 @@ from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
+from apps.realtime.events import (
+    publish_visit_cancelled,
+    publish_visit_created,
+    publish_visit_no_show,
+    publish_visit_status_changed,
+)
+from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.serializers import (
     CreateVisitSerializer,
     ListVisitsQuerySerializer,
@@ -20,8 +29,11 @@ from apps.recepcion.uses_case.visit_queue_usecase import (
     change_visit_status,
     create_visit,
     ensure_recepcion_role,
+    ensure_visit_queue_access,
     list_visits,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _auth_or_error(request):
@@ -39,7 +51,18 @@ def _auth_or_error(request):
 
 def _require_recepcion_role(user):
     auth_user = UserRepository.build_auth_user(user)
-    ensure_recepcion_role(auth_user.get("roles", []))
+    ensure_recepcion_role(
+        auth_user.get("roles", []),
+        auth_user.get("permissions", []),
+    )
+
+
+def _require_visit_queue_access(user):
+    auth_user = UserRepository.build_auth_user(user)
+    ensure_visit_queue_access(
+        auth_user.get("roles", []),
+        auth_user.get("permissions", []),
+    )
 
 
 def _csrf_or_error(request):
@@ -52,6 +75,77 @@ def _csrf_or_error(request):
         status.HTTP_403_FORBIDDEN,
         request_id=get_request_id(request),
     )
+
+
+def _emit_visit_status_changed_event(request, *, visit_id, status, previous_status=None):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_status_changed(
+            visit_id=visit_id,
+            status=status,
+            previous_status=previous_status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de visita",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
+
+
+def _emit_visit_created_event(request, *, visit_id, status):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_created(
+            visit_id=visit_id,
+            status=status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de creacion de visita",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
+
+
+def _emit_visit_cancelled_event(request, *, visit_id, status, previous_status=None):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_cancelled(
+            visit_id=visit_id,
+            status=status,
+            previous_status=previous_status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de cancelacion de visita",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
+
+
+def _emit_visit_no_show_event(request, *, visit_id, status, previous_status=None):
+    request_id = get_request_id(request)
+
+    try:
+        publish_visit_no_show(
+            visit_id=visit_id,
+            status=status,
+            previous_status=previous_status,
+            request_id=request_id,
+            correlation_id=request_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de no show de visita",
+            extra={"visit_id": visit_id, "status": status, "request_id": request_id},
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -87,6 +181,7 @@ class VisitsView(APIView):
             visit = create_visit(
                 patient_id=serializer.validated_data["patientId"],
                 arrival_type=serializer.validated_data["arrivalType"],
+                service_type=serializer.validated_data.get("serviceType"),
                 appointment_id=serializer.validated_data.get("appointmentId"),
                 doctor_id=serializer.validated_data.get("doctorId"),
                 notes=serializer.validated_data.get("notes"),
@@ -100,6 +195,16 @@ class VisitsView(APIView):
             actor_user=user,
             meta={"module": "recepcion", "endpoint": request.path, "visitId": visit.get("id")},
         )
+        _emit_visit_status_changed_event(
+            request,
+            visit_id=visit.get("id"),
+            status=visit.get("status"),
+        )
+        _emit_visit_created_event(
+            request,
+            visit_id=visit.get("id"),
+            status=visit.get("status"),
+        )
         return Response(visit, status=status.HTTP_201_CREATED)
 
     def get(self, request):
@@ -108,7 +213,7 @@ class VisitsView(APIView):
             return error
 
         try:
-            _require_recepcion_role(user)
+            _require_visit_queue_access(user)
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)
 
@@ -128,6 +233,7 @@ class VisitsView(APIView):
             status_filter=serializer.validated_data.get("status"),
             date_filter=serializer.validated_data.get("date"),
             doctor_id=serializer.validated_data.get("doctorId"),
+            service_type=serializer.validated_data.get("serviceType"),
         )
         return Response(payload, status=status.HTTP_200_OK)
 
@@ -163,6 +269,10 @@ class VisitStatusView(APIView):
 
         try:
             target_status = serializer.validated_data["targetStatus"]
+            previous_status = None
+            current_visit = VisitRepository.get_by_id(visit_id)
+            if current_visit is not None:
+                previous_status = current_visit.status
             visit = change_visit_status(visit_id, target_status)
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)
@@ -187,6 +297,12 @@ class VisitStatusView(APIView):
                 actor_user=user,
                 meta={"module": "recepcion", "endpoint": request.path, "visitId": visit.get("id")},
             )
+            _emit_visit_cancelled_event(
+                request,
+                visit_id=visit.get("id"),
+                status=visit.get("status"),
+                previous_status=previous_status,
+            )
         if target_status == "no_show":
             log_event(
                 request,
@@ -195,6 +311,19 @@ class VisitStatusView(APIView):
                 actor_user=user,
                 meta={"module": "recepcion", "endpoint": request.path, "visitId": visit.get("id")},
             )
+            _emit_visit_no_show_event(
+                request,
+                visit_id=visit.get("id"),
+                status=visit.get("status"),
+                previous_status=previous_status,
+            )
+
+        _emit_visit_status_changed_event(
+            request,
+            visit_id=visit.get("id"),
+            status=visit.get("status"),
+            previous_status=previous_status,
+        )
 
         return Response(visit, status=status.HTTP_200_OK)
 
@@ -207,4 +336,3 @@ def _visit_error_response(request, exc):
         details=exc.details,
         request_id=get_request_id(request),
     )
-

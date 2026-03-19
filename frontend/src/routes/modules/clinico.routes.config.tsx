@@ -6,6 +6,8 @@ import NuevaConsultaPage from "@features/consultas/pages/NuevaConsultaPage";
 import HistorialPage from "@features/consultas/pages/HistorialPage";
 import ExpedientesListPage from "@features/expedientes/pages/ExpedientesListPage";
 import ExpedienteDetailPage from "@features/expedientes/pages/ExpedienteDetailPage";
+import DoctorConsultationPage from "@features/consulta-medica/modules/atencion/pages/DoctorConsultationPage";
+import SomatometriaCapturePage from "@features/somatometria/modules/captura/pages/SomatometriaCapturePage";
 import PlaceholderPage from "@/components/shared/PlaceholderPage";
 
 // Clinico
@@ -96,11 +98,23 @@ export const clinicoRoutes: RouteObject[] = [
     path: "somatometria",
     element: (
       <ProtectedRoute requiredPermission="clinico:somatometria:read">
-        <PlaceholderPage
-          title="Somatometria"
-          description="Registro de medidas y evaluacion antropometrica"
-          moduleName="Clinico"
-        />
+        <SomatometriaCapturePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "consultas/doctor",
+    element: (
+      <ProtectedRoute requiredPermission="clinico:consultas:read">
+        <DoctorConsultationPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "consultas/doctor/:visitId",
+    element: (
+      <ProtectedRoute requiredPermission="clinico:consultas:read">
+        <DoctorConsultationPage />
       </ProtectedRoute>
     ),
   },

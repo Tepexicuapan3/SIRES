@@ -11,7 +11,7 @@ from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.token_service import (CSRF_COOKIE,
                                                         REFRESH_COOKIE,
                                                         generate_csrf_token)
-from apps.catalogos.models import CatRol
+from apps.catalogos.models import Roles
 
 
 @override_settings(
@@ -39,7 +39,7 @@ class AuthContractEdgeTests(APITestCase):
             nombre_completo="Edge User",
         )
 
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="EDGE_ROLE",
             desc_rol="Rol edge",
             landing_route="/edge",

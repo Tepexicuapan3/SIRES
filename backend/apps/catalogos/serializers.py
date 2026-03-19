@@ -2,6 +2,8 @@
 from rest_framework import serializers
 from apps.authentication.repositories.user_repository import UserRepository
 from datetime import timezone as dt_timezone
+#from apps.catalogos.models import *
+from apps.catalogos.models.cies import CatCies
 
 # importar el modelo
 from .models import (
@@ -30,6 +32,7 @@ from .models import (
     Licencias,
     TiposSanguineo,
     Turnos,
+    CatCies,
 )
 
 
@@ -480,10 +483,10 @@ class PermisosDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_createdBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, obj.created_by_id)
+        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "created_by_id", None))
 
     def get_updatedBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, obj.updated_by_id)
+        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "updated_by_id", None))
 
 
 class PermisosWriteSerializer(serializers.ModelSerializer):
@@ -541,10 +544,10 @@ class RolesDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_createdBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, obj.created_by_id)
+        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "created_by_id", None))
 
     def get_updatedBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, obj.updated_by_id)
+        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "updated_by_id", None))
 
 
 class RolesWriteSerializer(serializers.ModelSerializer):
@@ -644,3 +647,8 @@ class TurnosWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = Turnos
 
+class CatCiesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CatCies
+        fields = "__all__"
+        read_only_fields = ["code"]

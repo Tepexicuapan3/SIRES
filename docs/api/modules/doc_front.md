@@ -1,15 +1,16 @@
 # Catalogos - Contrato Frontend (React + TypeScript)
 
-Este documento describe el contrato que recibe el frontend para todos los catalogos (`/api/v1/*`), alineado con `standards.md` y `catalogos (1).md`.
+Este documento describe el contrato que recibe el frontend para catalogos (`/api/v1/*`), alineado con `docs/api/standards.md` y `docs/api/modules/catalogos.md`.
 
 ## Resumen
 
 - Base URL: `http://localhost:5000/api/v1`
 - Recurso base: `/<recurso-catalogo>`
 - Estructura comun CRUD para todos los catalogos
-- `wrapper_key` de detalle/update definido por catalogo (`area`, `careCenter`, `role`, etc.)
+- `wrapper_key` de detalle/update definido por catalogo (`area`, `careCenter`, `authorizer`, etc.)
 - Fechas: ISO 8601 en UTC con sufijo `Z`
 - Codigos custom por catalogo (`exists` / `not_found`)
+- Scope: catalogos de dominio; contratos RBAC/Auth se mantienen en modulos separados
 
 ## Endpoints y permisos
 
@@ -20,6 +21,8 @@ Este documento describe el contrato que recibe el frontend para todos los catalo
 | POST | `/<recurso-catalogo>` | `admin:catalogos:<catalog>:create` |
 | PUT | `/<recurso-catalogo>/:id` | `admin:catalogos:<catalog>:update` |
 | DELETE | `/<recurso-catalogo>/:id` | `admin:catalogos:<catalog>:delete` |
+
+Nota: permisos `admin:gestion:*` (RBAC/usuarios/roles/permisos) no forman parte de este modulo.
 
 ## Ejemplo concreto: Areas
 
@@ -335,8 +338,6 @@ Todas las respuestas de error siguen `ApiError`:
 | `origen_cons` | `/consultation-origins` | `consultationOrigin` | `CONSULTATION_ORIGIN_EXISTS` | `CONSULTATION_ORIGIN_NOT_FOUND` |
 | `parentescos` | `/kinship` | `kinship` | `KINSHIP_EXISTS` | `KINSHIP_NOT_FOUND` |
 | `pases` | `/passes` | `pass` | `PASS_EXISTS` | `PASS_NOT_FOUND` |
-| `permisos` | `/permissions` | `permission` | `PERMISSIONS_EXISTS` | `PERMISSIONS_NOT_FOUND` |
-| `roles` | `/roles` | `role` | `ROLE_EXISTS` | `ROLE_NOT_FOUND` |
 | `tipos_areas` | `/area-types` | `areaType` | `AREA_TYPE_EXISTS` | `AREA_TYPE_NOT_FOUND` |
 | `tp_autorizacion` | `/auth-types` | `authorizationType` | `AUTH_TYPE_STUDIES_EXISTS` | `AUTH_TYPE_NOT_FOUND` |
 | `tipo_citas` | `/appointment-types` | `appointmentType` | `APPOINTMENT_TYPE_EXISTS` | `APPOINTMENT_TYPE_NOT_FOUND` |
@@ -372,8 +373,6 @@ Notas de tipos para frontend:
 | `/consultation-origins` | `id, name, isActive` | `id, name, isActive, createdAt, createdBy, updatedAt, updatedBy` (`consultationOrigin`) | `id, name, isActive` |
 | `/kinship` | `id, name, isActive` | `id, name, isActive, createdAt, createdBy, updatedAt, updatedBy` (`kinship`) | `id, name, isActive` |
 | `/passes` | `id, name, isActive` | `id, name, isActive, createdAt, createdBy, updatedAt, updatedBy` (`pass`) | `name, isActive` |
-| `/permissions` | `id, name, isActive, code` | `id, name, isActive, createdAt, createdBy, updatedAt, updatedBy, code, isSystem` (`permission`) | `name, isActive, code, isSystem` |
-| `/roles` | `id, name, isActive` | `id, name, isActive, createdAt, createdBy, updatedAt, updatedBy, description, landingRoute, isAdmin, isSystem` (`role`) | `name, isActive, description, landingRoute, isAdmin, isSystem` |
 | `/area-types` | `id, name, isActive` | `id, name, isActive, createdAt, createdBy, updatedAt, updatedBy` (`areaType`) | `name, isActive` |
 | `/auth-types` | `id, name, isActive, code` | `id, name, isActive, createdAt, createdBy, updatedAt, updatedBy, code` (`authorizationType`) | `name, isActive, code` |
 | `/appointment-types` | `id, name, isActive` | `id, name, isActive, createdAt, createdBy, updatedAt, updatedBy` (`appointmentType`) | `name, isActive` |
@@ -401,3 +400,13 @@ export interface CatalogDetailResponse<TWrapperKey extends string, TDetail> {
   [K in TWrapperKey]: TDetail;
 }
 ```
+
+## Referencias
+
+- `docs/api/standards.md`
+- `docs/api/modules/catalogos.md`
+- `docs/api/modules/rbac.md`
+- `docs/architecture/domain-map.md`
+- `docs/architecture/dependency-rules.md`
+- `docs/architecture/db-ownership-migration-policy.md`
+- `docs/getting-started/ai-team-workflow.md`

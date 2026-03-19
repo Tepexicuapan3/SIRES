@@ -204,7 +204,7 @@ const buildLoginScenario = (username: string): LoginScenario => {
       user: createMockAuthUser({
         username: "recepcion",
         fullName: "Recepcion Central",
-        landingRoute: "/recepcion/fichas",
+        landingRoute: "/recepcion/agenda",
         roles: ["Recepcion"],
         avatarUrl: "https://i.pravatar.cc/96?img=21",
         permissions: [

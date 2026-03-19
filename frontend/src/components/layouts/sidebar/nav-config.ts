@@ -2,7 +2,7 @@ import {
   Activity,
   Ambulance,
   BookOpen,
-  ClipboardList,
+  CalendarClock,
   Database,
   FileText,
   FolderOpen,
@@ -64,7 +64,6 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Roles",
             url: "/admin/roles",
             permissions: ["admin:gestion:roles:read"],
-            badge: "New",
           },
         ],
       },
@@ -81,6 +80,116 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Centros de atencion",
             url: "/admin/catalogos/centros-atencion",
             permissions: ["admin:catalogos:centros_atencion:read"],
+          },
+          {
+            title: "Autorizadores",
+            url: "/admin/catalogos/autorizadores",
+            permissions: ["admin:catalogos:autorizadores:read"],
+          },
+          {
+            title: "Bajas",
+            url: "/admin/catalogos/bajas",
+            permissions: ["admin:catalogos:bajas:read"],
+          },
+          {
+            title: "Calidad laboral",
+            url: "/admin/catalogos/calidad-laboral",
+            permissions: ["admin:catalogos:calidad_laboral:read"],
+          },
+          {
+            title: "Consultorios",
+            url: "/admin/catalogos/consultorios",
+            permissions: ["admin:catalogos:consultorios:read"],
+          },
+          {
+            title: "Estado civil",
+            url: "/admin/catalogos/edo-civil",
+            permissions: ["admin:catalogos:edo_civil:read"],
+          },
+          {
+            title: "Enfermedades",
+            url: "/admin/catalogos/enfermedades",
+            permissions: ["admin:catalogos:enfermedades:read"],
+          },
+          {
+            title: "Escolaridad",
+            url: "/admin/catalogos/escolaridad",
+            permissions: ["admin:catalogos:escolaridad:read"],
+          },
+          {
+            title: "Escuelas",
+            url: "/admin/catalogos/escuelas",
+            permissions: ["admin:catalogos:escuelas:read"],
+          },
+          {
+            title: "Especialidades",
+            url: "/admin/catalogos/especialidades",
+            permissions: ["admin:catalogos:especialidades:read"],
+          },
+          {
+            title: "Estudios medicos",
+            url: "/admin/catalogos/estudios-medicos",
+            permissions: ["admin:catalogos:estudios_med:read"],
+          },
+          {
+            title: "Grupos de medicamentos",
+            url: "/admin/catalogos/grupos-medicamentos",
+            permissions: ["admin:catalogos:grupos_medicamentos:read"],
+          },
+          {
+            title: "Ocupaciones",
+            url: "/admin/catalogos/ocupaciones",
+            permissions: ["admin:catalogos:ocupaciones:read"],
+          },
+          {
+            title: "Origen de consulta",
+            url: "/admin/catalogos/origen-consulta",
+            permissions: ["admin:catalogos:origen_cons:read"],
+          },
+          {
+            title: "Parentescos",
+            url: "/admin/catalogos/parentescos",
+            permissions: ["admin:catalogos:parentescos:read"],
+          },
+          {
+            title: "Pases",
+            url: "/admin/catalogos/pases",
+            permissions: ["admin:catalogos:pases:read"],
+          },
+          {
+            title: "Tipos de areas",
+            url: "/admin/catalogos/tipos-areas",
+            permissions: ["admin:catalogos:tipos_areas:read"],
+          },
+          {
+            title: "Tipos de autorizacion",
+            url: "/admin/catalogos/tipos-autorizacion",
+            permissions: ["admin:catalogos:tp_autorizacion:read"],
+          },
+          {
+            title: "Tipos de citas",
+            url: "/admin/catalogos/tipos-citas",
+            permissions: ["admin:catalogos:tipo_citas:read"],
+          },
+          {
+            title: "Licencias",
+            url: "/admin/catalogos/licencias",
+            permissions: ["admin:catalogos:licencias:read"],
+          },
+          {
+            title: "Tipos sanguineos",
+            url: "/admin/catalogos/tipos-sanguineo",
+            permissions: ["admin:catalogos:tipos_sanguineo:read"],
+          },
+          {
+            title: "Turnos",
+            url: "/admin/catalogos/turnos",
+            permissions: ["admin:catalogos:turnos:read"],
+          },
+          { 
+            title: "Catálogo CIES",
+            url: "/admin/catalogos/cies",
+            permissions: ["admin:catalogos:cies:upload"],
           },
         ],
       },
@@ -136,13 +245,11 @@ export const NAV_CONFIG: NavSection[] = [
     title: "Clinico",
     items: [
       {
-        title:
-          "Consultas Clinicas, Seguimiento Integral y Control Continuo de Pacientes",
+        title: "Consultas",
         icon: Stethoscope,
         items: [
           {
-            title:
-              "Listado Completo y Detallado de Consultas Programadas, Realizadas y Pendientes",
+            title: "Panel",
             url: "/clinico/consultas",
             permissions: ["clinico:consultas:read"],
           },
@@ -157,10 +264,14 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["clinico:consultas:create"],
           },
           {
-            title:
-              "Historial Clinico Extenso y Detallado de Consultas Previas y Evolucion del Paciente",
+            title: "Historial",
             url: "/clinico/consultas/historial",
             permissions: ["clinico:consultas:historial:read"],
+          },
+          {
+            title: "Bandeja",
+            url: "/clinico/consultas/doctor",
+            permissions: ["clinico:consultas:read"],
           },
         ],
       },
@@ -187,7 +298,6 @@ export const NAV_CONFIG: NavSection[] = [
         url: "/clinico/somatometria",
         icon: Activity,
         permissions: ["clinico:somatometria:read"],
-        badge: PLACEHOLDER_BADGE,
       },
     ],
   },
@@ -195,35 +305,16 @@ export const NAV_CONFIG: NavSection[] = [
     title: "Recepcion",
     items: [
       {
-        title: "Fichas",
-        icon: ClipboardList,
-        items: [
-          {
-            title: "Medicina general",
-            url: "/recepcion/fichas/medicina-general",
-            permissions: ["recepcion:fichas:medicina_general:create"],
-            badge: PLACEHOLDER_BADGE,
-          },
-          {
-            title: "Especialidad",
-            url: "/recepcion/fichas/especialidad",
-            permissions: ["recepcion:fichas:especialidad:create"],
-            badge: PLACEHOLDER_BADGE,
-          },
-          {
-            title: "Urgencias",
-            url: "/recepcion/fichas/urgencias",
-            permissions: ["recepcion:fichas:urgencias:create"],
-            badge: PLACEHOLDER_BADGE,
-          },
+        title: "Citas y check-in",
+        url: "/recepcion/agenda",
+        icon: CalendarClock,
+        permissions: [
+          "recepcion:fichas:medicina_general:create",
+          "recepcion:fichas:especialidad:create",
+          "recepcion:fichas:urgencias:create",
+          "clinico:consultas:read",
+          "clinico:somatometria:read",
         ],
-      },
-      {
-        title: "Incapacidad",
-        url: "/recepcion/incapacidad",
-        icon: FileText,
-        permissions: ["recepcion:incapacidad:create"],
-        badge: PLACEHOLDER_BADGE,
       },
     ],
   },

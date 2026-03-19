@@ -4,6 +4,11 @@ from rest_framework import serializers
 class CreateVisitSerializer(serializers.Serializer):
     patientId = serializers.IntegerField(min_value=1)
     arrivalType = serializers.ChoiceField(choices=("appointment", "walk_in"))
+    serviceType = serializers.ChoiceField(
+        choices=("medicina_general", "especialidad", "urgencias"),
+        required=False,
+        default="medicina_general",
+    )
     appointmentId = serializers.CharField(required=False, allow_blank=True, max_length=64)
     doctorId = serializers.IntegerField(min_value=1, required=False)
     notes = serializers.CharField(required=False, allow_blank=True, max_length=255)
@@ -20,6 +25,11 @@ class CreateVisitSerializer(serializers.Serializer):
         if arrival_type == "walk_in" and appointment_id:
             raise serializers.ValidationError(
                 {"appointmentId": "appointmentId debe ir vacio para arrivalType=walk_in."}
+            )
+
+        if attrs.get("serviceType") == "urgencias" and arrival_type != "walk_in":
+            raise serializers.ValidationError(
+                {"arrivalType": "Urgencias solo permite registro de llegada sin cita."}
             )
 
         attrs["appointmentId"] = appointment_id or None
@@ -43,7 +53,13 @@ class ListVisitsQuerySerializer(serializers.Serializer):
     )
     date = serializers.DateField(required=False, input_formats=["%Y-%m-%d"])
     doctorId = serializers.IntegerField(min_value=1, required=False)
+    serviceType = serializers.ChoiceField(
+        choices=("medicina_general", "especialidad", "urgencias"),
+        required=False,
+    )
 
 
 class UpdateVisitStatusSerializer(serializers.Serializer):
-    targetStatus = serializers.ChoiceField(choices=("cancelada", "no_show"))
+    targetStatus = serializers.ChoiceField(
+        choices=("en_somatometria", "cancelada", "no_show")
+    )

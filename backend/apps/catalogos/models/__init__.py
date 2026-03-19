@@ -5,6 +5,7 @@ from .autorizadores import Autorizadores
 from .bajas import Bajas
 from .calidad_laboral import CalidadLaboral
 from .centros_atencion import CatCentroAtencion
+from .cies import CatCies
 from .consultorios import Consultorios
 from .edo_civil import EdoCivil
 from .enfermedades import Enfermedades
@@ -39,6 +40,7 @@ __all__ = [
     "Bajas",
     "CalidadLaboral",
     "CatCentroAtencion",
+    "CatCies",
     "Consultorios",
     "EdoCivil",
     "Enfermedades",
@@ -53,12 +55,13 @@ __all__ = [
     "Pases",
     "Roles",
     "Permisos",
-    "CatRol",        # alias
-    "CatPermiso",    # alias
+    "CatRol",
+    "CatPermiso",
     "TiposAreas",
     "TpAutorizacion",
     "TipoDeCitas",
     "Licencias",
     "TiposSanguineo",
     "Turnos",
+    "CatCies"
 ]

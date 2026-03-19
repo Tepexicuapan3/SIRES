@@ -10,7 +10,12 @@ import "@/styles/nprogress.css";
  */
 export const NavigationProgressBar = () => {
   const navigation = useNavigation();
-  const isFetching = useIsFetching();
+  // Exclude realtime queue background refetches to avoid noisy flicker.
+  const isFetching = useIsFetching({
+    predicate: (query) => {
+      return query.queryKey[0] !== "visit-flow";
+    },
+  });
   const startTimeoutRef = useRef<number | null>(null);
   const doneTimeoutRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);

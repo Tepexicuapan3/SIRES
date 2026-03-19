@@ -4,19 +4,19 @@ from django.contrib.auth.hashers import make_password
 from django.test import RequestFactory, TestCase
 
 from apps.authentication.models import SyUsuario
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import Permisos, Roles
 from apps.catalogos.permissions import CatalogApiException, HasCatalogPermission
 
 
 class CatalogModelsAndPermissionsUnitTests(TestCase):
     def test_roles_and_permissions_property_aliases(self):
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="PROP_ROLE",
             desc_rol="Role props",
             landing_route="/props",
             is_active=True,
         )
-        permission = CatPermiso.objects.create(
+        permission = Permisos.objects.create(
             codigo="props:read",
             descripcion="Permiso props",
             is_active=True,

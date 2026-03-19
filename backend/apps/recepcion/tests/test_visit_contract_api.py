@@ -3,9 +3,10 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelUsuarioRol
+from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import CatRol
+from apps.catalogos.models import Permisos, Roles
+from apps.somatometria.models import VisitVitalSigns
 
 
 class VisitContractsApiTests(APITestCase):
@@ -13,6 +14,7 @@ class VisitContractsApiTests(APITestCase):
         self.request_id = "11111111-1111-1111-1111-111111111111"
         self.recepcion_password = "Recep_123456"
         self.medico_password = "Medico_123456"
+        self.admin_password = "Admin_123456"
 
         self._create_user_with_role(
             username="recepcion_user",
@@ -26,8 +28,32 @@ class VisitContractsApiTests(APITestCase):
             password=self.medico_password,
             role_code="MEDICO",
         )
+        self._create_user_with_role(
+            username="clinico_user",
+            email="clinico@example.com",
+            password="Clinico_123456",
+            role_code="CLINICO",
+            permissions=["clinico:somatometria:read"],
+        )
+        self._create_user_with_role(
+            username="admin_user",
+            email="admin@example.com",
+            password=self.admin_password,
+            role_code="ADMIN",
+            landing_route="/admin",
+            is_admin=True,
+        )
 
-    def _create_user_with_role(self, username, email, password, role_code):
+    def _create_user_with_role(
+        self,
+        username,
+        email,
+        password,
+        role_code,
+        permissions=None,
+        landing_route=None,
+        is_admin=False,
+    ):
         user = SyUsuario.objects.create(
             usuario=username,
             correo=email,
@@ -43,16 +69,33 @@ class VisitContractsApiTests(APITestCase):
             materno="User",
             nombre_completo=f"{username} Test User",
         )
-        role = CatRol.objects.create(
+        resolved_landing_route = landing_route or (
+            "/recepcion" if role_code == "RECEPCION" else "/consultas"
+        )
+        role = Roles.objects.create(
             rol=role_code,
             desc_rol=f"Rol {role_code}",
-            landing_route="/recepcion" if role_code == "RECEPCION" else "/consultas",
+            landing_route=resolved_landing_route,
+            is_admin=is_admin,
         )
         RelUsuarioRol.objects.create(
             id_usuario=user,
             id_rol=role,
             is_primary=True,
         )
+
+        for permission_code in permissions or []:
+            permission, _ = Permisos.objects.get_or_create(
+                codigo=permission_code,
+                defaults={
+                    "descripcion": permission_code,
+                    "is_active": True,
+                },
+            )
+            RelRolPermiso.objects.get_or_create(
+                id_rol=role,
+                id_permiso=permission,
+            )
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
@@ -71,7 +114,11 @@ class VisitContractsApiTests(APITestCase):
         return {"HTTP_X_CSRF_TOKEN": csrf_token}
 
     def _create_visit(self, patient_id=1001, arrival_type="appointment", **kwargs):
-        payload = {"patientId": patient_id, "arrivalType": arrival_type}
+        payload = {
+            "patientId": patient_id,
+            "arrivalType": arrival_type,
+            "serviceType": kwargs.get("serviceType", "medicina_general"),
+        }
 
         appointment_id = kwargs.get("appointmentId")
         if appointment_id is None and arrival_type == "appointment":
@@ -101,6 +148,7 @@ class VisitContractsApiTests(APITestCase):
             {
                 "patientId": 1234,
                 "arrivalType": "appointment",
+                "serviceType": "especialidad",
                 "appointmentId": "APP-456",
                 "doctorId": 120,
                 "notes": "Paciente puntual",
@@ -115,6 +163,7 @@ class VisitContractsApiTests(APITestCase):
         self.assertIn("folio", response.data)
         self.assertEqual(response.data["patientId"], 1234)
         self.assertEqual(response.data["arrivalType"], "appointment")
+        self.assertEqual(response.data["serviceType"], "especialidad")
         self.assertEqual(response.data["appointmentId"], "APP-456")
         self.assertEqual(response.data["doctorId"], 120)
         self.assertEqual(response.data["notes"], "Paciente puntual")
@@ -158,10 +207,41 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.data["status"], 403)
         self.assertEqual(response.data["requestId"], self.request_id)
 
+    def test_create_visit_allows_admin_with_wildcard_permissions(self):
+        self._login_as("admin_user", self.admin_password)
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "patientId": 1235,
+                "arrivalType": "appointment",
+                "appointmentId": "APP-ADMIN-001",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["patientId"], 1235)
+        self.assertEqual(response.data["status"], "en_espera")
+
     def test_list_visits_happy_path_contract(self):
         self._login_as("recepcion_user", self.recepcion_password)
-        self._create_visit(patient_id=2001)
-        self._create_visit(patient_id=2002, arrival_type="walk_in")
+        visit_without_vitals = self._create_visit(patient_id=2001)
+        visit_with_vitals = self._create_visit(
+            patient_id=2002,
+            arrival_type="walk_in",
+            serviceType="urgencias",
+        )
+        VisitVitalSigns.objects.create(
+            id_visit_id=visit_with_vitals["id"],
+            weight_kg=70,
+            height_cm=175,
+            temperature_c=36.6,
+            oxygen_saturation_pct=98,
+            bmi=22.86,
+        )
 
         response = self.client.get(
             "/api/v1/visits?page=1&pageSize=20",
@@ -181,10 +261,72 @@ class VisitContractsApiTests(APITestCase):
         self.assertIn("folio", first_item)
         self.assertIn("patientId", first_item)
         self.assertIn("arrivalType", first_item)
+        self.assertIn("serviceType", first_item)
         self.assertIn("appointmentId", first_item)
         self.assertIn("doctorId", first_item)
         self.assertIn("notes", first_item)
         self.assertIn("status", first_item)
+        self.assertIn("vitals", first_item)
+
+        items_by_patient = {item["patientId"]: item for item in response.data["items"]}
+        self.assertIsNone(items_by_patient[visit_without_vitals["patientId"]]["vitals"])
+        self.assertEqual(
+            items_by_patient[visit_with_vitals["patientId"]]["vitals"]["weightKg"],
+            70.0,
+        )
+
+    def test_list_visits_filters_by_service_type(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        self._create_visit(patient_id=2401, serviceType="medicina_general")
+        self._create_visit(
+            patient_id=2402,
+            arrival_type="walk_in",
+            serviceType="urgencias",
+        )
+
+        response = self.client.get(
+            "/api/v1/visits?page=1&pageSize=20&serviceType=urgencias",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(response.data["total"], 1)
+        for item in response.data["items"]:
+            self.assertEqual(item["serviceType"], "urgencias")
+
+    def test_create_visit_urgencias_requires_walk_in(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "patientId": 2233,
+                "arrivalType": "appointment",
+                "serviceType": "urgencias",
+                "appointmentId": "APP-URG-01",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+        self.assertIn("details", response.data)
+        self.assertIn("arrivalType", response.data["details"])
+
+    def test_list_visits_allows_clinico_with_somatometria_permission(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        self._create_visit(patient_id=2301)
+
+        self._login_as("clinico_user", "Clinico_123456")
+        response = self.client.get(
+            "/api/v1/visits?page=1&pageSize=20&status=en_espera",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("items", response.data)
 
     def test_list_visits_filters_by_status_and_doctor(self):
         self._login_as("recepcion_user", self.recepcion_password)
@@ -260,6 +402,22 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.data["id"], visit["id"])
         self.assertEqual(response.data["status"], "no_show")
 
+    def test_patch_visit_status_en_somatometria_happy_path(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit = self._create_visit(patient_id=3006)
+
+        response = self.client.patch(
+            f"/api/v1/visits/{visit['id']}/status",
+            {"targetStatus": "en_somatometria"},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], visit["id"])
+        self.assertEqual(response.data["status"], "en_somatometria")
+
     def test_patch_visit_status_invalid_payload_returns_validation_error(self):
         self._login_as("recepcion_user", self.recepcion_password)
         visit = self._create_visit(patient_id=3003)
@@ -296,6 +454,23 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.data["code"], "ROLE_NOT_ALLOWED")
         self.assertEqual(response.data["status"], 403)
         self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_patch_visit_status_allows_admin_with_wildcard_permissions(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit = self._create_visit(patient_id=3007)
+
+        self._login_as("admin_user", self.admin_password)
+        response = self.client.patch(
+            f"/api/v1/visits/{visit['id']}/status",
+            {"targetStatus": "cancelada"},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], visit["id"])
+        self.assertEqual(response.data["status"], "cancelada")
 
     def test_patch_visit_status_invalid_transition_returns_visit_state_invalid(self):
         self._login_as("recepcion_user", self.recepcion_password)

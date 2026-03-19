@@ -105,9 +105,9 @@ export default defineConfig({
   /* Run local dev server before starting the tests */
   webServer: {
     command:
-      "docker-compose -f ../docker-compose.yml ps | rg -q sires-frontend || docker-compose -f ../docker-compose.yml up -d",
+      'docker-compose -f ../docker-compose.yml up -d backend mysql redis && until [ "$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:5000/api/v1/auth/login)" != "000" ]; do sleep 1; done && docker-compose -f ../docker-compose.yml stop frontend && npm run dev -- --host 0.0.0.0 --port 5173',
     url: "http://localhost:5173",
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 30000,
   },
 });

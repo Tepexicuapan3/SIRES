@@ -29,6 +29,14 @@ const getEnvNumber = (key: string, defaultValue: number): number => {
 };
 
 const getApiUrl = (): string => {
+  const configuredApiUrl = import.meta.env.VITE_API_URL;
+  if (
+    typeof configuredApiUrl === "string" &&
+    configuredApiUrl.trim().length > 0
+  ) {
+    return configuredApiUrl;
+  }
+
   if (import.meta.env.DEV) {
     return "/api/v1";
   }

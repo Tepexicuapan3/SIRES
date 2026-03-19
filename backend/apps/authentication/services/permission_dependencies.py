@@ -91,6 +91,37 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "admin.catalogs.centers.delete": {
         "allOf": ["admin:catalogos:centros_atencion:delete"]
     },
+    "flow.visits.queue.read": {
+        "anyOf": [
+            "recepcion:fichas:medicina_general:create",
+            "recepcion:fichas:especialidad:create",
+            "recepcion:fichas:urgencias:create",
+            "clinico:consultas:read",
+            "clinico:somatometria:read",
+        ]
+    },
+    "flow.recepcion.queue.write": {
+        "anyOf": [
+            "recepcion:fichas:medicina_general:create",
+            "recepcion:fichas:especialidad:create",
+            "recepcion:fichas:urgencias:create",
+        ]
+    },
+    "flow.somatometria.queue.read": {
+        "allOf": ["clinico:somatometria:read"]
+    },
+    "flow.somatometria.capture": {
+        "allOf": ["clinico:somatometria:read"]
+    },
+    "flow.doctor.queue.read": {
+        "allOf": ["clinico:consultas:read"]
+    },
+    "flow.doctor.consultation.start": {
+        "allOf": ["clinico:consultas:read"]
+    },
+    "flow.doctor.consultation.close": {
+        "allOf": ["clinico:consultas:read"]
+    },
 }
 
 

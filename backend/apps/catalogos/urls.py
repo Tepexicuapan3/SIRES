@@ -32,3 +32,12 @@ urlpatterns = []
 for base, list_view, detail_view, pk_type in routes:
     urlpatterns.append(path(base, list_view.as_view(), name=f"{base}-list-create"))
     urlpatterns.append(path(f"{base}/<{pk_type}:pk>", detail_view.as_view(), name=f"{base}-detail"))
+
+
+# RUTAS ESPECIALES CIES
+urlpatterns += [
+    path("cies/upload/",     CatCiesUploadAPIView.as_view(),  name="cies-upload"),   # POST paso 1: preview
+    path("cies/confirm/",    CatCiesConfirmAPIView.as_view(), name="cies-confirm"),  # POST paso 2: guardar
+    path("cies/",            CatCiesListCreateView.as_view(), name="cies-list"),
+    path("cies/<str:pk>/",   CatCiesDetailView.as_view(),     name="cies-detail"),
+]

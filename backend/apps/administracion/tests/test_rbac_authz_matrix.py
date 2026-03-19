@@ -5,7 +5,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import Permisos, Roles
 
 
 class RbacAuthzMatrixTests(APITestCase):
@@ -26,7 +26,7 @@ class RbacAuthzMatrixTests(APITestCase):
             nombre_completo="NoPriv User",
         )
 
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol="BASIC_NO_PRIV",
             desc_rol="Rol sin permisos",
             landing_route="/home",
@@ -34,13 +34,13 @@ class RbacAuthzMatrixTests(APITestCase):
         )
         RelUsuarioRol.objects.create(id_usuario=self.user, id_rol=role, is_primary=True)
 
-        self.target_role = CatRol.objects.create(
+        self.target_role = Roles.objects.create(
             rol="TARGET_ROLE_NO_PRIV",
             desc_rol="Target role",
             landing_route="/target",
             is_active=True,
         )
-        self.target_permission = CatPermiso.objects.create(
+        self.target_permission = Permisos.objects.create(
             codigo="target:read",
             descripcion="Target read",
             is_active=True,

@@ -1,3 +1,7 @@
+from apps.authentication.services.permission_dependencies import (
+    evaluate_permission_requirement,
+)
+from apps.recepcion.models import Visit
 from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.services.errors import VisitDomainError
 from apps.recepcion.uses_case.visit_state_machine_usecase import (
@@ -5,20 +9,67 @@ from apps.recepcion.uses_case.visit_state_machine_usecase import (
     transition_visit_state,
 )
 
+RECEPCION_WRITE_PERMISSIONS = [
+    "recepcion:fichas:medicina_general:create",
+    "recepcion:fichas:especialidad:create",
+    "recepcion:fichas:urgencias:create",
+]
 
-def ensure_recepcion_role(roles):
+RECEPCION_WRITE_PERMISSION_REQUIREMENT = {
+    "anyOf": RECEPCION_WRITE_PERMISSIONS,
+}
+
+VISIT_QUEUE_PERMISSION_REQUIREMENT = {
+    "anyOf": [
+        *RECEPCION_WRITE_PERMISSIONS,
+        "clinico:consultas:read",
+        "clinico:somatometria:read",
+    ]
+}
+
+
+def ensure_recepcion_role(roles, permissions=None):
     normalized_roles = {(role or "").strip().upper() for role in roles}
-    if ROLE_RECEPCION not in normalized_roles:
-        raise VisitDomainError(
-            "ROLE_NOT_ALLOWED",
-            "No tenes permiso para ejecutar esta accion.",
-            403,
-        )
+    if ROLE_RECEPCION in normalized_roles:
+        return
+
+    permission_state = evaluate_permission_requirement(
+        RECEPCION_WRITE_PERMISSION_REQUIREMENT,
+        permissions or [],
+    )
+    if permission_state["granted"]:
+        return
+
+    raise VisitDomainError(
+        "ROLE_NOT_ALLOWED",
+        "No tenes permiso para ejecutar esta accion.",
+        403,
+    )
+
+
+def ensure_visit_queue_access(roles, permissions):
+    normalized_roles = {(role or "").strip().upper() for role in roles}
+    if ROLE_RECEPCION in normalized_roles:
+        return
+
+    state = evaluate_permission_requirement(
+        VISIT_QUEUE_PERMISSION_REQUIREMENT,
+        permissions,
+    )
+    if state["granted"]:
+        return
+
+    raise VisitDomainError(
+        "ROLE_NOT_ALLOWED",
+        "No tenes permiso para ejecutar esta accion.",
+        403,
+    )
 
 
 def create_visit(
     patient_id,
     arrival_type,
+    service_type=Visit.ServiceType.MEDICINA_GENERAL,
     appointment_id=None,
     doctor_id=None,
     notes=None,
@@ -33,6 +84,7 @@ def create_visit(
     visit = VisitRepository.create(
         patient_id=patient_id,
         arrival_type=arrival_type,
+        service_type=service_type,
         appointment_id=appointment_id,
         doctor_id=doctor_id,
         notes=notes,
@@ -46,6 +98,7 @@ def list_visits(
     status_filter=None,
     date_filter=None,
     doctor_id=None,
+    service_type=None,
 ):
     visits, total, total_pages = VisitRepository.list_paginated(
         page=page,
@@ -53,6 +106,7 @@ def list_visits(
         status_filter=status_filter,
         date_filter=date_filter,
         doctor_id=doctor_id,
+        service_type=service_type,
     )
     return {
         "items": [VisitRepository.to_contract(visit) for visit in visits],

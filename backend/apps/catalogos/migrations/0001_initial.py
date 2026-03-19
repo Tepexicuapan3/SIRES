@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
             options={"db_table": "cat_centros_atencion"},
         ),
         migrations.CreateModel(
-            name="CatRol",
+            name="Roles",
             fields=[
                 (
                     "id_rol",
@@ -115,7 +115,7 @@ class Migration(migrations.Migration):
             options={"db_table": "cat_roles"},
         ),
         migrations.CreateModel(
-            name="CatPermiso",
+            name="Permisos",
             fields=[
                 (
                     "id_permiso",

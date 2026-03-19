@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.catalogos.models import CatRol
+from apps.catalogos.models import Roles
 
 
 class RoleDetailSerializer(serializers.ModelSerializer):
@@ -16,7 +16,7 @@ class RoleDetailSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = CatRol
+        model = Roles
         fields = [
             "id",
             "name",

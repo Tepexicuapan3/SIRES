@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.repositories.user_repository import UserRepository
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import Permisos, Roles
 
 
 class UserRepositoryTests(TestCase):
@@ -27,7 +27,7 @@ class UserRepositoryTests(TestCase):
             materno="",
             nombre_completo="Repo User",
         )
-        self.role = CatRol.objects.create(
+        self.role = Roles.objects.create(
             rol="REPO_ROLE",
             desc_rol="Role repo",
             landing_route="/repo",
@@ -38,7 +38,7 @@ class UserRepositoryTests(TestCase):
             id_rol=self.role,
             is_primary=True,
         )
-        self.permission = CatPermiso.objects.create(
+        self.permission = Permisos.objects.create(
             codigo="repo:read",
             descripcion="Repo read",
             is_active=True,
@@ -74,7 +74,7 @@ class UserRepositoryTests(TestCase):
         self.assertEqual(payload["landingRoute"], "/repo")
 
     def test_build_auth_user_skips_inactive_override_permission(self):
-        inactive_permission = CatPermiso.objects.create(
+        inactive_permission = Permisos.objects.create(
             codigo="repo:inactive",
             descripcion="Repo inactive",
             is_active=False,

@@ -32,6 +32,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/ws": {
+        target: devProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
     },
   },
   build: {

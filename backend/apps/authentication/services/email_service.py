@@ -144,6 +144,9 @@ def send_user_credentials_email(recipient_email, username, temporary_password, u
 
 
 def _smtp_is_configured():
+    if settings.EMAIL_BACKEND != "django.core.mail.backends.smtp.EmailBackend":
+        return True
+
     return bool(
         settings.EMAIL_HOST
         and settings.EMAIL_HOST_USER

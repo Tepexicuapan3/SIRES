@@ -10,12 +10,21 @@
 SIRES is a clinical system with React 19 + Vite on frontend and Django 5 + DRF on backend.
 All new backend functionality must be built for Django/DRF.
 
+## Operating Baseline (Phase 1)
+
+- Official strategy: evolutionary modular monolith + `DB por dominio` with PostgreSQL as target engine.
+- Mandatory delivery flow: Jira ticketing + SDD phases + Engram persistence + GGA pre-commit gate.
+- Runtime remains on current routes/modules until each domain reaches DoD (no big-bang cutover).
+- Auth functional refactor starts only after planning artifacts and Jira acceptance criteria are ready.
+
 ## Scoped Guides (Load Narrow Context First)
 
 - `backend/AGENTS.md` - backend-wide rules
+- `backend/domains/AGENTS.md` - domain scaffolding backend (target structure)
 - `backend/apps/AGENTS.md` - endpoint/use-case/repository implementation
 - `backend/tests/AGENTS.md` - backend testing workflow
 - `frontend/AGENTS.md` - frontend-wide rules
+- `frontend/src/domains/AGENTS.md` - domain scaffolding frontend (target structure)
 - `frontend/src/api/AGENTS.md` - API client/contracts in frontend
 - `frontend/src/components/AGENTS.md` - shared UI/component rules
 - `frontend/src/features/AGENTS.md` - feature-module rules
@@ -24,6 +33,28 @@ All new backend functionality must be built for Django/DRF.
 - `frontend/src/test/AGENTS.md` - frontend testing workflow
 - `docs/AGENTS.md` - docs-wide rules
 - `docs/api/AGENTS.md` - API documentation contracts
+
+## Domain-First Operating Model (Phase 1 + base Phase 2)
+
+- Delivery se organiza por dominios con ownership explicito (backend + frontend + DB + docs por dominio).
+- No hacer big-bang moves: coexistencia `old` y `new` hasta cerrar dominios piloto.
+- Rutas/runtime actuales son la fuente operativa; nuevas estructuras se introducen como scaffolding gradual.
+- Estrategia de datos obligatoria: `DB por dominio` con PostgreSQL como tecnologia objetivo por escalabilidad.
+- Aislamiento de datos por dominio: primero logico (schema/namespace ownership), luego fisico (DB dedicada) segun criterios documentados.
+- Prohibido el acceso directo cross-domain a tablas o schemas de otro dominio; usar contratos (API/eventos/read-models).
+- Cambios cross-domain requieren RFC corto y PR con checklist de impacto.
+
+### Canonical domain docs
+
+- `docs/architecture/domain-map.md`
+- `docs/architecture/context-map.md`
+- `docs/architecture/dependency-rules.md`
+- `docs/architecture/repo-navigation-map.md`
+- `docs/architecture/db-ownership-migration-policy.md`
+- `docs/guides/pr-merge-governance.md`
+- `docs/guides/domain-dor-dod.md`
+- `docs/guides/incremental-domain-migration.md`
+- `docs/templates/rfc-cross-domain-template.md`
 
 ## Active Skills (SIRES)
 
@@ -69,11 +100,69 @@ All new backend functionality must be built for Django/DRF.
 | Create tasks/bugs | `jira-task` |
 | User asks to discover/install skills | `find-skills` |
 
+## Engram Protocol (Mandatory Repo Baseline)
+
+This is the minimum required Engram protocol at repository level and applies even if local/global agent setup is missing or different.
+
+### Session Start (before coding, when applicable)
+
+- Review prior context before starting work on an existing topic/feature/bug.
+- Use `mem_context` and/or `mem_search` on `project: SIRES_SHARED` before starting when prior team context may exist.
+- Use `project: SIRES_LOCAL` only when you need your own local continuity.
+- If `mem_search` returns a match, call `mem_get_observation` before acting on it (search results may be truncated).
+
+### During Work (mandatory saves)
+
+- Use `mem_save` immediately after high-signal events that matter to the team:
+  - architecture/design decisions with cross-team impact
+  - bug fixes with root cause and prevention notes
+  - shared conventions/patterns that others must follow
+  - config/environment changes that affect other developers
+- Save shared items with `project: SIRES_SHARED` (this project is exported to `.engram/`).
+- Save temporary/local notes with `project: SIRES_LOCAL` and `scope: personal`.
+- Do not save routine low-value progress updates to `SIRES_SHARED`.
+
+### Session Close (mandatory)
+
+- Before ending the session, call `mem_session_summary` with goal, discoveries, accomplished work, next steps, and relevant files.
+
+### Non-SDD `topic_key` Convention (mandatory)
+
+- Reuse stable keys (upsert behavior) for ongoing work on the same topic to avoid duplicated observations.
+- Create new keys only when the topic actually changes.
+- Required key patterns:
+  - `feature/{slug}/decision`
+  - `feature/{slug}/progress`
+  - `bug/{id-or-slug}/fix`
+  - `ops/{area}/config`
+  - `docs/{topic}/note`
+
+### Operational Checklist
+
+- Start: `mem_context`/`mem_search` on `SIRES_SHARED`; check `SIRES_LOCAL` only if needed.
+- During: `mem_save` to `SIRES_SHARED` only for high-signal team decisions; keep local noise in `SIRES_LOCAL`.
+- Search safety: after `mem_search`, use `mem_get_observation` for full content.
+- Close: `mem_session_summary` before handing off or ending the session.
+
+### Team Sync Automation
+
+- One-time per clone: run `./.engram/scripts/install-hooks.sh`.
+- `commit-msg` hook auto-exports shared memory via `engram sync --project SIRES_SHARED` and stages `.engram/` updates.
+- `post-merge`, `post-checkout`, and `post-rewrite` hooks auto-import with `engram sync --import`.
+
+### GGA Code Review Automation
+
+- The project includes repo-local GGA config in `.gga/gga/config` and rules in `.gga/rules.md`.
+- `pre-commit` hook runs `./.gga/scripts/gga.sh run` through `.githooks/pre-commit` on every commit.
+- Each developer must install GGA globally once (`brew install gentleman-programming/tap/gga` or manual install) so the hook can execute.
+
 ## Backend Guardrails
 
 - Keep clean architecture: presentation (views/serializers), use_cases, infrastructure, domain.
 - JWT must stay in HttpOnly cookies.
 - CSRF must be enforced via `X-CSRF-TOKEN` for mutating requests.
+- Data ownership rule: each domain owns its PostgreSQL data model and migrations.
+- Data access rule: no direct cross-domain table/schema reads or writes from application code.
 
 ## Development Commands
 
@@ -94,7 +183,8 @@ python manage.py test
 
 ### Docker (recommended)
 ```bash
-docker-compose up --build
-docker-compose down -v
-docker-compose logs -f
+docker compose up --build
+docker compose down
+# usar down -v solo para reset explicito de datos
+docker compose logs -f
 ```

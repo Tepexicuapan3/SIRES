@@ -2,9 +2,9 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelUsuarioRol
+from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import CatRol
+from apps.catalogos.models import Permisos, Roles
 from apps.recepcion.models import Visit
 
 
@@ -26,6 +26,13 @@ class VitalsContractsApiTests(APITestCase):
             password=self.recepcion_password,
             role_code="RECEPCION",
         )
+        self._create_user_with_role(
+            username="clinico_user",
+            email="clinico2@example.com",
+            password="Clinico_123456",
+            role_code="CLINICO",
+            permissions=["clinico:somatometria:read"],
+        )
 
         self.visit_in_somato = Visit.objects.create(
             folio="SMT-9001",
@@ -41,7 +48,7 @@ class VitalsContractsApiTests(APITestCase):
             status="en_espera",
         )
 
-    def _create_user_with_role(self, username, email, password, role_code):
+    def _create_user_with_role(self, username, email, password, role_code, permissions=None):
         user = SyUsuario.objects.create(
             usuario=username,
             correo=email,
@@ -57,7 +64,7 @@ class VitalsContractsApiTests(APITestCase):
             materno="User",
             nombre_completo=f"{username} Test User",
         )
-        role, _ = CatRol.objects.get_or_create(
+        role, _ = Roles.objects.get_or_create(
             rol=role_code,
             defaults={
                 "desc_rol": f"Rol {role_code}",
@@ -70,6 +77,19 @@ class VitalsContractsApiTests(APITestCase):
             is_primary=True,
         )
 
+        for permission_code in permissions or []:
+            permission, _ = Permisos.objects.get_or_create(
+                codigo=permission_code,
+                defaults={
+                    "descripcion": permission_code,
+                    "is_active": True,
+                },
+            )
+            RelRolPermiso.objects.get_or_create(
+                id_rol=role,
+                id_permiso=permission,
+            )
+
     def _login_as(self, username, password):
         self.client.cookies.clear()
         response = self.client.post(
@@ -81,6 +101,11 @@ class VitalsContractsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.client.cookies = response.cookies
 
+    def _csrf_headers(self):
+        csrf_token = "csrf-token-test"
+        self.client.cookies["csrf_token"] = csrf_token
+        return {"HTTP_X_CSRF_TOKEN": csrf_token}
+
     def _valid_payload(self):
         return {
             "weightKg": 70,
@@ -88,6 +113,11 @@ class VitalsContractsApiTests(APITestCase):
             "temperatureC": 36.6,
             "oxygenSaturationPct": 98,
         }
+
+    def _csrf_headers(self):
+        csrf_token = "csrf-token-test"
+        self.client.cookies["csrf_token"] = csrf_token
+        return {"HTTP_X_CSRF_TOKEN": csrf_token}
 
     def test_capture_vitals_happy_path_contract(self):
         self._login_as("somato_user", self.somato_password)
@@ -97,16 +127,56 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["visitId"], self.visit_in_somato.id_visit)
         self.assertEqual(response.data["status"], "lista_para_doctor")
         self.assertIn("vitals", response.data)
+        self.assertIn("waistCircumferenceCm", response.data["vitals"])
+        self.assertIsNone(response.data["vitals"]["waistCircumferenceCm"])
         self.assertAlmostEqual(response.data["vitals"]["bmi"], 22.86, places=2)
 
         self.visit_in_somato.refresh_from_db()
         self.assertEqual(self.visit_in_somato.status, "lista_para_doctor")
+
+        audit_event = AuditoriaEvento.objects.get(
+            accion="VitalsCompleted",
+            request_id=self.request_id,
+        )
+        self.assertEqual(audit_event.resultado, "SUCCESS")
+        self.assertEqual(audit_event.meta.get("module"), "somatometria")
+        self.assertEqual(audit_event.meta.get("visitId"), self.visit_in_somato.id_visit)
+
+    def test_capture_vitals_missing_csrf_returns_permission_denied(self):
+        self._login_as("somato_user", self.somato_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_DENIED")
+        self.assertEqual(response.data["status"], 403)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_capture_vitals_allows_clinico_with_somatometria_permission(self):
+        self._login_as("clinico_user", "Clinico_123456")
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "lista_para_doctor")
 
     def test_capture_vitals_missing_required_field_returns_validation_error(self):
         self._login_as("somato_user", self.somato_password)
@@ -118,6 +188,7 @@ class VitalsContractsApiTests(APITestCase):
             payload,
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -137,6 +208,7 @@ class VitalsContractsApiTests(APITestCase):
             payload,
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -145,6 +217,26 @@ class VitalsContractsApiTests(APITestCase):
         self.assertEqual(response.data["requestId"], self.request_id)
         self.assertIn("details", response.data)
         self.assertIn("temperatureC", response.data["details"])
+
+    def test_capture_vitals_invalid_waist_circumference_returns_validation_error(self):
+        self._login_as("somato_user", self.somato_password)
+
+        payload = self._valid_payload()
+        payload["waistCircumferenceCm"] = 10
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            payload,
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+        self.assertEqual(response.data["status"], 422)
+        self.assertEqual(response.data["requestId"], self.request_id)
+        self.assertIn("details", response.data)
+        self.assertIn("waistCircumferenceCm", response.data["details"])
 
     def test_capture_vitals_incomplete_minimum_data_returns_vitals_incomplete(self):
         self._login_as("somato_user", self.somato_password)
@@ -158,6 +250,7 @@ class VitalsContractsApiTests(APITestCase):
             },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -176,6 +269,7 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
@@ -191,6 +285,7 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -206,6 +301,7 @@ class VitalsContractsApiTests(APITestCase):
             self._valid_payload(),
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -223,6 +319,7 @@ class VitalsContractsApiTests(APITestCase):
                 "respiratoryRateBpm": 16,
                 "bloodPressureSystolic": 118,
                 "bloodPressureDiastolic": 76,
+                "waistCircumferenceCm": 95,
                 "notes": "Paciente cooperador durante la toma.",
             }
         )
@@ -232,6 +329,7 @@ class VitalsContractsApiTests(APITestCase):
             payload,
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -240,3 +338,19 @@ class VitalsContractsApiTests(APITestCase):
         self.assertEqual(response.data["vitals"]["respiratoryRateBpm"], 16)
         self.assertEqual(response.data["vitals"]["bloodPressureSystolic"], 118)
         self.assertEqual(response.data["vitals"]["bloodPressureDiastolic"], 76)
+        self.assertEqual(response.data["vitals"]["waistCircumferenceCm"], 95)
+
+    def test_capture_vitals_without_csrf_returns_permission_denied(self):
+        self._login_as("somato_user", self.somato_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_DENIED")
+        self.assertEqual(response.data["status"], 403)
+        self.assertEqual(response.data["requestId"], self.request_id)

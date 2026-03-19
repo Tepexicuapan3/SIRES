@@ -156,3 +156,41 @@ export type {
   // Detalle
   AreaDetailResponse,
 } from "@api/types/catalogos/areas.types";
+
+// =============================================================================
+// CLINICAL FLOW TYPES (visits, vitals, doctor flow)
+// =============================================================================
+export type {
+  ArrivalType,
+  VisitService,
+  VisitStatus,
+  VisitQueueItem,
+  VisitsListParams,
+  VisitsListResponse,
+  CreateVisitRequest,
+  CreateVisitResponse,
+  RecepcionStatusAction,
+  UpdateVisitStatusRequest,
+  UpdateVisitStatusResponse,
+  CaptureVitalsRequest,
+  CaptureVitalsResponse,
+  VisitVitalsPayload,
+  SaveDiagnosisRequest,
+  SaveDiagnosisResponse,
+  CieSearchParams,
+  CieSearchItem,
+  CieSearchResponse,
+  SavePrescriptionRequest,
+  SavePrescriptionResponse,
+  StartConsultationResponse,
+  VisitConsultationSummary,
+  CloseVisitRequest,
+  CloseVisitResponse,
+} from "@api/types/visits.types";
+
+export {
+  ARRIVAL_TYPE,
+  VISIT_SERVICE,
+  VISIT_STATUS,
+  RECEPCION_STATUS_ACTION,
+} from "@api/types/visits.types";

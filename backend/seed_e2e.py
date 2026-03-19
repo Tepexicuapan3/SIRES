@@ -6,7 +6,8 @@ from django.utils import timezone
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Areas, CatCentroAtencion, CatPermiso, CatRol, TiposAreas
+from apps.catalogos.models import Areas, CatCentroAtencion, Permisos, Roles, TiposAreas
+from apps.recepcion.models import Visit
 
 DEFAULT_PASSWORD = "Sires_123456"
 
@@ -16,7 +17,6 @@ REQUIRED_TABLES = {
     "cat_roles",
     "cat_permisos",
     "cat_centros_atencion",
-    "cat_areas",
     "rel_usuario_roles",
     "rel_rol_permisos",
     "rel_usuario_overrides",
@@ -83,13 +83,22 @@ PERMISSIONS = [
     ("clinico:expedientes:create", "Clinico - Crear expediente"),
     ("clinico:somatometria:read", "Clinico - Ver somatometria"),
     (
+        "recepcion:fichas:medicina_general:read",
+        "Recepcion - Ver ficha medicina general",
+    ),
+    (
         "recepcion:fichas:medicina_general:create",
         "Recepcion - Ficha medicina general",
+    ),
+    (
+        "recepcion:fichas:especialidad:read",
+        "Recepcion - Ver ficha especialidad",
     ),
     (
         "recepcion:fichas:especialidad:create",
         "Recepcion - Ficha especialidad",
     ),
+    ("recepcion:fichas:urgencias:read", "Recepcion - Ver ficha urgencias"),
     ("recepcion:fichas:urgencias:create", "Recepcion - Ficha urgencias"),
     ("recepcion:incapacidad:create", "Recepcion - Incapacidad"),
     ("farmacia:recetas:dispensar", "Farmacia - Dispensar recetas"),
@@ -236,8 +245,11 @@ ROLE_DEFS = [
         "desc": "Recepcion",
         "landing": "/recepcion/fichas/medicina-general",
         "perms": [
+            "recepcion:fichas:medicina_general:read",
             "recepcion:fichas:medicina_general:create",
+            "recepcion:fichas:especialidad:read",
             "recepcion:fichas:especialidad:create",
+            "recepcion:fichas:urgencias:read",
             "recepcion:fichas:urgencias:create",
             "recepcion:incapacidad:create",
         ],
@@ -267,7 +279,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": True,
         "address": "Av. Demo 123, CDMX",
-        "schedule": _build_schedule("07:00", "14:00", "14:00", "20:00", "20:00", "23:00"),
+        "schedule": _build_schedule(
+            "07:00", "14:00", "14:00", "20:00", "20:00", "23:00"
+        ),
     },
     {
         "code": "HGR-002",
@@ -275,7 +289,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": True,
         "address": "Av. Reforma 240, CDMX",
-        "schedule": _build_schedule("06:00", "13:00", "13:00", "19:00", "19:00", "23:00"),
+        "schedule": _build_schedule(
+            "06:00", "13:00", "13:00", "19:00", "19:00", "23:00"
+        ),
     },
     {
         "code": "CLI-003",
@@ -283,7 +299,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": True,
         "address": "Calle Cedro 55, CDMX",
-        "schedule": _build_schedule("08:00", "15:00", "15:00", "21:00", "21:00", "23:30"),
+        "schedule": _build_schedule(
+            "08:00", "15:00", "15:00", "21:00", "21:00", "23:30"
+        ),
     },
     {
         "code": "SAN-004",
@@ -291,7 +309,9 @@ CENTER_DEFS = [
         "is_external": True,
         "is_active": True,
         "address": "Av. Division del Norte 1200, CDMX",
-        "schedule": _build_schedule("07:00", "13:00", "13:00", "19:00", "19:00", "22:00"),
+        "schedule": _build_schedule(
+            "07:00", "13:00", "13:00", "19:00", "19:00", "22:00"
+        ),
     },
     {
         "code": "UMO-005",
@@ -299,7 +319,9 @@ CENTER_DEFS = [
         "is_external": True,
         "is_active": True,
         "address": "Calz. Zaragoza 3500, CDMX",
-        "schedule": _build_schedule("09:00", "14:00", "14:00", "18:00", "18:00", "21:00"),
+        "schedule": _build_schedule(
+            "09:00", "14:00", "14:00", "18:00", "18:00", "21:00"
+        ),
     },
     {
         "code": "URG-006",
@@ -307,7 +329,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": True,
         "address": "Eje Central 900, CDMX",
-        "schedule": _build_schedule("00:00", "07:59", "08:00", "15:59", "16:00", "23:59"),
+        "schedule": _build_schedule(
+            "00:00", "07:59", "08:00", "15:59", "16:00", "23:59"
+        ),
     },
     {
         "code": "ARC-007",
@@ -315,7 +339,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": False,
         "address": "Av. Constituyentes 1500, CDMX",
-        "schedule": _build_schedule("07:00", "14:00", "14:00", "20:00", "20:00", "23:00"),
+        "schedule": _build_schedule(
+            "07:00", "14:00", "14:00", "20:00", "20:00", "23:00"
+        ),
     },
 ]
 
@@ -623,6 +649,91 @@ USER_OVERRIDE_DEFS = [
 ]
 
 
+DEMO_VISITS = [
+    {
+        "folio": "RCP-DEMO-0001",
+        "patient_id": 81001,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0001",
+        "doctor_id": 120,
+        "notes": "Paciente de ejemplo en recepcion.",
+        "status": "en_espera",
+    },
+    {
+        "folio": "RCP-DEMO-0002",
+        "patient_id": 81002,
+        "arrival_type": Visit.ArrivalType.WALK_IN,
+        "appointment_id": None,
+        "doctor_id": None,
+        "notes": "Ingreso espontaneo para validar cola.",
+        "status": "en_espera",
+    },
+    {
+        "folio": "SMT-DEMO-0001",
+        "patient_id": 82001,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0101",
+        "doctor_id": 121,
+        "notes": "Paciente listo para captura de vitales.",
+        "status": "en_somatometria",
+    },
+    {
+        "folio": "SMT-DEMO-0002",
+        "patient_id": 82002,
+        "arrival_type": Visit.ArrivalType.WALK_IN,
+        "appointment_id": None,
+        "doctor_id": 121,
+        "notes": "Caso demo para validar captura repetida de signos vitales.",
+        "status": "en_somatometria",
+    },
+    {
+        "folio": "SMT-DEMO-0003",
+        "patient_id": 82003,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0103",
+        "doctor_id": 123,
+        "notes": "Caso demo con doctor alterno para validar cola mixta.",
+        "status": "en_somatometria",
+    },
+    {
+        "folio": "SMT-DEMO-0004",
+        "patient_id": 82004,
+        "arrival_type": Visit.ArrivalType.WALK_IN,
+        "appointment_id": None,
+        "doctor_id": None,
+        "notes": "Paciente sin doctor asignado para validar flujo operativo.",
+        "status": "en_somatometria",
+    },
+    {
+        "folio": "DOC-DEMO-0001",
+        "patient_id": 83001,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0201",
+        "doctor_id": 122,
+        "notes": "Paciente listo para doctor.",
+        "status": "lista_para_doctor",
+    },
+    {
+        "folio": "DOC-DEMO-0002",
+        "patient_id": 83002,
+        "arrival_type": Visit.ArrivalType.WALK_IN,
+        "appointment_id": None,
+        "doctor_id": 122,
+        "notes": "Consulta en curso para validar cierre.",
+        "status": "en_consulta",
+    },
+    {
+        "folio": "DOC-DEMO-0003",
+        "patient_id": 83003,
+        "arrival_type": Visit.ArrivalType.APPOINTMENT,
+        "appointment_id": "APP-DEMO-0203",
+        "doctor_id": 123,
+        "notes": "Paciente demo adicional listo para iniciar consulta.",
+        "status": "lista_para_doctor",
+    },
+]
+
+
 def _assert_required_tables():
     existing_tables = set(connection.introspection.table_names())
     missing_tables = sorted(REQUIRED_TABLES - existing_tables)
@@ -631,6 +742,13 @@ def _assert_required_tables():
             "Estructura incompleta para seed_e2e. "
             f"Faltan tablas: {', '.join(missing_tables)}"
         )
+
+
+def _ensure_seed_tables():
+    existing_tables = set(connection.introspection.table_names())
+
+    if "cat_areas" not in existing_tables:
+        print("[SEED] cat_areas no existe; se omite carga de areas demo")
 
 
 def _table_exists(table_name):
@@ -665,10 +783,7 @@ def _seed_area_types(admin_user):
             area_type_def["key"]: {"id": area_type_def["fallback_code"]}
             for area_type_def in AREA_TYPE_DEFS
         }
-        print(
-            "[SEED] cat_tpareas no existe; "
-            "se usan codigos fallback para cat_areas"
-        )
+        print("[SEED] cat_tpareas no existe; se usan codigos fallback para cat_areas")
         return fallback_types
 
     area_types = {}
@@ -689,6 +804,10 @@ def _seed_area_types(admin_user):
 
 
 def _seed_areas(admin_user, area_types):
+    if not _table_exists("cat_areas"):
+        print("[SEED] cat_areas no existe; no se insertan areas demo")
+        return
+
     total = 0
 
     for area_def in AREA_DEFS:
@@ -794,7 +913,9 @@ def _get_or_create_user(username, email, full_name, center, admin_user=None, **f
         user.terminos_acept = desired_terms_accepted
         updated_fields.append("terminos_acept")
 
-    desired_terms_date = None if requires_onboarding else (user.fch_terminos or timezone.now())
+    desired_terms_date = (
+        None if requires_onboarding else (user.fch_terminos or timezone.now())
+    )
     if user.fch_terminos != desired_terms_date:
         user.fch_terminos = desired_terms_date
         updated_fields.append("fch_terminos")
@@ -806,7 +927,9 @@ def _get_or_create_user(username, email, full_name, center, admin_user=None, **f
             user.usr_modf = admin_user
             updated_fields.append("usr_modf")
         user.save(update_fields=sorted(set(updated_fields)))
-        print(f"[SEED] Actualizado {username}: {', '.join(sorted(set(updated_fields)))}")
+        print(
+            f"[SEED] Actualizado {username}: {', '.join(sorted(set(updated_fields)))}"
+        )
     else:
         print(f"[SEED] Verificado {username}: OK")
 
@@ -948,28 +1071,86 @@ def _seed_user_overrides(users_by_username, permissions_map, admin_user):
             continue
 
         expires_in_days = override_def.get("expires_in_days")
-        expires_at = None
-        if expires_in_days is not None:
-            expires_at = timezone.now() + timedelta(days=expires_in_days)
 
-        RelUsuarioOverride.objects.update_or_create(
+        override, created = RelUsuarioOverride.objects.get_or_create(
             id_usuario=user,
             id_permiso=permission,
             defaults={
                 "efecto": override_def["effect"],
-                "fch_expira": expires_at,
+                "fch_expira": (
+                    timezone.now() + timedelta(days=expires_in_days)
+                    if expires_in_days is not None
+                    else None
+                ),
                 "fch_baja": None,
                 "usr_asignacion": admin_user,
                 "usr_baja": None,
             },
         )
+
+        update_fields = []
+
+        if override.efecto != override_def["effect"]:
+            override.efecto = override_def["effect"]
+            update_fields.append("efecto")
+
+        expected_expiry = None
+        if expires_in_days is not None:
+            expected_expiry = override.fch_expira
+            if created or expected_expiry is None:
+                expected_expiry = timezone.now() + timedelta(days=expires_in_days)
+
+        if override.fch_expira != expected_expiry:
+            override.fch_expira = expected_expiry
+            update_fields.append("fch_expira")
+
+        if override.fch_baja is not None:
+            override.fch_baja = None
+            update_fields.append("fch_baja")
+
+        if override.usr_baja_id is not None:
+            override.usr_baja = None
+            update_fields.append("usr_baja")
+
+        if override.usr_asignacion_id != admin_user.id_usuario:
+            override.usr_asignacion = admin_user
+            update_fields.append("usr_asignacion")
+
+        if update_fields:
+            override.save(update_fields=sorted(set(update_fields)))
+
         total += 1
 
     print(f"[SEED] Overrides asegurados: {total}")
 
 
+def _seed_demo_visits():
+    if not _table_exists("rcp_visits"):
+        print("[SEED] rcp_visits no existe; se omite carga de visitas demo")
+        return
+
+    total = 0
+    for visit_def in DEMO_VISITS:
+        Visit.objects.update_or_create(
+            folio=visit_def["folio"],
+            defaults={
+                "patient_id": visit_def["patient_id"],
+                "arrival_type": visit_def["arrival_type"],
+                "appointment_id": visit_def["appointment_id"],
+                "doctor_id": visit_def["doctor_id"],
+                "notes": visit_def["notes"],
+                "status": visit_def["status"],
+                "fch_baja": None,
+            },
+        )
+        total += 1
+
+    print(f"[SEED] Visitas demo aseguradas: {total}")
+
+
 @transaction.atomic
 def run():
+    _ensure_seed_tables()
     _assert_required_tables()
 
     admin_user = _get_or_create_user(
@@ -982,7 +1163,7 @@ def run():
 
     permissions_map = {}
     for code, description in PERMISSIONS:
-        permission, _ = CatPermiso.objects.update_or_create(
+        permission, _ = Permisos.objects.update_or_create(
             codigo=code,
             defaults={
                 "descripcion": description,
@@ -996,19 +1177,24 @@ def run():
 
     print(f"[SEED] Permisos asegurados: {len(permissions_map)}")
 
+    role_field_names = {field.name for field in Roles._meta.get_fields()}
     role_map = {}
     for role_def in ROLE_DEFS:
-        role, _ = CatRol.objects.update_or_create(
+        role_defaults = {
+            "desc_rol": role_def["desc"],
+            "landing_route": role_def["landing"],
+            "is_admin": role_def.get("is_admin", False),
+            "es_sistema": role_def.get("is_system", False),
+            "is_active": role_def.get("is_active", True),
+        }
+        if "created_by_id" in role_field_names:
+            role_defaults["created_by_id"] = admin_user.id_usuario
+        if "updated_by_id" in role_field_names:
+            role_defaults["updated_by_id"] = admin_user.id_usuario
+
+        role, _ = Roles.objects.update_or_create(
             rol=role_def["code"],
-            defaults={
-                "desc_rol": role_def["desc"],
-                "landing_route": role_def["landing"],
-                "is_admin": role_def.get("is_admin", False),
-                "es_sistema": role_def.get("is_system", False),
-                "is_active": role_def.get("is_active", True),
-                "created_by_id": admin_user.id_usuario,
-                "updated_by_id": admin_user.id_usuario,
-            },
+            defaults=role_defaults,
         )
 
         role_map[role_def["code"]] = role
@@ -1072,6 +1258,7 @@ def run():
     print(f"[SEED] Usuarios asegurados: {len(users_by_username)}")
 
     _seed_user_overrides(users_by_username, permissions_map, admin_user)
+    _seed_demo_visits()
 
 
 if __name__ == "__main__":

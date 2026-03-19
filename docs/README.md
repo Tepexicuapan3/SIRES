@@ -1,421 +1,75 @@
-# Documentación SIRES
-
-Guías técnicas para desarrollo del Sistema de Información de Registros Electrónicos de Salud (Metro CDMX).
-
----
-
-## 🚀 Quick Start (< 10 minutos)
-
-### Primera vez en el proyecto
-
-1. **Setup:** [`docs/getting-started/setup.md`](./getting-started/setup.md)
-   - Docker + MySQL en 5 minutos
-   - Variables de entorno
-   - Health checks
-
-2. **Arquitectura:** [`docs/architecture/overview.md`](./architecture/overview.md)
-   - Stack completo (Django + React)
-   - Capas backend (Clean-ish Architecture)
-   - Flujo end-to-end
-
-3. **Tu primera feature:** [`docs/guides/adding-feature.md`](./guides/adding-feature.md)
-   - Checklist backend + frontend
-   - Ejemplos copy/paste
-   - Testing manual
-
----
-
-## 📚 Navegación por Tema
-
-### ¿Necesitás...?
-
-| Tarea | Doc | Tiempo |
-|-------|-----|--------|
-| **Levantar el proyecto** | [Setup](./getting-started/setup.md) | 5 min |
-| **Entender la arquitectura** | [Overview](./architecture/overview.md) | 15 min |
-| **Configurar permisos** | [RBAC 2.0](./architecture/rbac.md) | 20 min |
-| **Implementar login/auth** | [Autenticación](./architecture/authentication.md) | 20 min |
-| **Configurar rate limiting** | [Rate Limiting](./architecture/rate-limiting.md) | 25 min |
-| **Implementar OTP/Recovery** | [OTP con Redis](./architecture/otp-redis.md) | 20 min |
-| **Agregar una feature nueva** | [Adding Feature](./guides/adding-feature.md) | 30 min |
-| **Ejecutar KAN-4 con IA (sin supuestos)** | [KAN-4 Playbook](./guides/kan4-implementacion-overview.md) | 25 min |
-| **Implementar tiempo real con WebSocket** | [WebSocket Reusable](./guides/websocket-arquitectura-reusable.md) | 20 min |
-| **Auth queries/mutations** | [Auth Queries](./guides/auth-queries-mutations.md) | 15 min |
-| **Implementar CRUD RBAC completo** | [RBAC CRUD Implementation](./guides/rbac-crud-implementation.md) | Plan detallado |
-| **Usar sistema RBAC CRUD** | [RBAC CRUD User Guide](./guides/rbac-crud-user-guide.md) | Guía completa |
-| **Crear componentes UI** | [UI Components](./guides/ui-components.md) | 15 min |
-| **Testear código** | [Testing](./guides/testing.md) | 20 min |
-| **Implementar RBAC frontend** | [RBAC Frontend](./guides/rbac-frontend.md) | 25 min |
-| **Contratos API** | [API Docs](./api/README.md) | Referencia |
-
-### 🧭 Playbook Feature KAN-4 (Flujo Consulta Medica v1)
-
-- [KAN-4 Implementacion Overview](./guides/kan4-implementacion-overview.md)
-- [KAN-4 Fase 0 Baseline de Planeacion](./guides/kan4-fase-0-baseline-planeacion.md)
-- [KAN-4 Fase 1 TDD y Fundaciones](./guides/kan4-fase-1-tdd-fundaciones.md)
-- [KAN-4 Fase 2 Recepcion y Somatometria](./guides/kan4-fase-2-implementacion-recepcion-somatometria.md)
-- [KAN-4 Fase 3 Consulta y Tiempo Real](./guides/kan4-fase-3-consulta-y-tiempo-real.md)
-- [KAN-4 Fase 4 QA y Release](./guides/kan4-fase-4-qa-y-release.md)
-- [KAN-4 Matriz de Tickets y Dependencias](./guides/kan4-matriz-tickets-y-dependencias.md)
-- [KAN-4 Remediacion Pivot WebSocket](./guides/kan4-remediacion-pivot-websocket.md)
-
-### ⚡ Realtime WebSocket
-
-- [WebSocket Arquitectura Reusable](./guides/websocket-arquitectura-reusable.md)
-
----
-
-## 📁 Estructura de la Documentación
-
-```
-docs/
-├── getting-started/
-│   └── setup.md                    # Docker + env vars + troubleshooting
-│
-├── architecture/
-│   ├── overview.md                 # Capas, stack, flujo general
-│   ├── rbac.md                     # Roles, permisos, guards
-│   ├── authentication.md           # JWT, cookies, CSRF, refresh
-│   ├── rate-limiting.md            # Rate limiting 3 niveles + Redis
-│   └── otp-redis.md                # Sistema OTP para password recovery
-│
-├── guides/
-│   ├── adding-feature.md           # Checklist backend → frontend
-│   ├── auth-queries-mutations.md   # Guia de auth con TanStack Query
-│   ├── rbac-crud-implementation.md # 🆕 Plan implementación RBAC CRUD completo
-│   ├── rbac-crud-user-guide.md     # 🆕 Guía de uso sistema RBAC CRUD
-│   ├── ui-components.md            # shadcn + Metro CDMX
-│   ├── rbac-frontend.md            # Ejemplos RBAC en componentes
-│   ├── testing.md                  # Mocks + estrategias
-│   ├── kan4-implementacion-overview.md              # Playbook KAN-4
-│   ├── kan4-fase-0-baseline-planeacion.md           # Baseline cerrado de planeacion
-│   ├── kan4-fase-1-tdd-fundaciones.md               # Fase TDD + base dominio
-│   ├── kan4-fase-2-implementacion-recepcion-somatometria.md # Vertical recepcion/somato
-│   ├── kan4-fase-3-consulta-y-tiempo-real.md        # Vertical doctor + WebSocket
-│   ├── kan4-fase-4-qa-y-release.md                  # Gate final de calidad
-│   ├── kan4-matriz-tickets-y-dependencias.md        # Mapa operativo de tickets
-│   ├── kan4-remediacion-pivot-websocket.md          # Backlog de ajustes post-pivot
-│   └── websocket-arquitectura-reusable.md           # Base WebSocket reusable
-│
-├── adr/                            # Architecture Decision Records
-│   ├── 001-jwt-cookies-httponly.md # JWT en cookies HttpOnly (no localStorage)
-│   ├── 002-wizard-onboarding.md    # Wizard 2 pasos (terms → password)
-│   └── 003-rbac-2-migration.md     # 🆕 Migración a RBAC 2.0 (permisos granulares)
-│
-├── api/
-│   ├── standards.md                # Contrato global de API
-│   ├── README.md                   # Indice de API
-│   └── modules/
-│       ├── auth.md                 # Contratos auth
-│       └── rbac.md                 # Contratos RBAC
-│
-└── templates/                      # Templates para crear docs nuevos
-    ├── guide-template.md           # Template guías
-    ├── adr-template.md             # Template ADRs
-    └── README.md                   # Cómo usar templates
-```
-
----
-
-## 🎯 Por Rol
-
-### Eres Backend Developer
-
-1. [Setup](./getting-started/setup.md) → Levantar MySQL + backend
-2. [Architecture](./architecture/overview.md) → Entender capas (use_cases / repos / routes)
-3. [Adding Feature](./guides/adding-feature.md) → Crear endpoint con RBAC
-4. [RBAC](./architecture/rbac.md) → Decoradores `@requires_permission()`
-
-**Stack que vas a usar:**
-- Django + DRF + MySQL + Redis
-- Clean Architecture (use cases / infrastructure / presentation)
-- JWT en cookies HttpOnly + CSRF header
-
-### Eres Frontend Developer
-
-1. [Setup](./getting-started/setup.md) → Levantar frontend
-2. [Architecture](./architecture/overview.md) → Entender flujo (TanStack Query + Zustand)
-3. [UI Components](./guides/ui-components.md) → shadcn + tokens Metro
-4. [Adding Feature](./guides/adding-feature.md) → Crear página con hooks
-
-**Stack que vas a usar:**
-- React 19 + TypeScript + Vite
-- TanStack Query (server state) + Zustand (UI state)
-- Zod + React Hook Form (forms)
-- shadcn/ui + Tailwind 4
-
-### Eres Full-Stack
-
-Seguí el orden:
-1. Setup → Architecture → Adding Feature → RBAC → UI Components
-
-Bonus: Leé [Authentication](./architecture/authentication.md) para entender el flujo completo de cookies + CSRF.
-
----
-
-## 🔥 Conceptos Clave (TL;DR)
-
-### Backend
-
-**Clean-ish Architecture:**
-```
-HTTP Request → Blueprint → UseCase → Repository → MySQL
-```
-
-- **Blueprint:** Mapea HTTP (status codes, cookies)
-- **UseCase:** Lógica de negocio, retorna `(result, error_code)`
-- **Repository:** Solo queries SQL (parametrizadas)
-
-**Seguridad:**
-- JWT en cookies **HttpOnly** (XSS no puede leer)
-- CSRF token en header `X-CSRF-TOKEN`
-- RBAC 2.0 con decoradores (`@requires_permission()`)
-
-### Frontend
-
-**Capas:**
-```
-UI Component → Hook (TanStack Query) → API Resource → Backend
-```
-
-- **Component:** Solo renderiza, consume hooks
-- **Hook:** Orquesta queries/mutations, maneja errors
-- **API Resource:** Adapta axios, tipa requests/responses
-- **Zustand:** Estado UI/auth (NO guarda tokens)
-
-**Seguridad:**
-- Tokens en cookies (auto-enviadas por navegador)
-- Interceptor lee CSRF de cookie y lo manda en header
-- Refresh automático en 401
-
----
-
-## 🛠️ Stack Técnico Completo
-
-### Backend
-| Tech | Uso |
-|------|-----|
-| Flask | Framework web |
-| MySQL 8 | Base de datos |
-| Redis | Cache (permisos, OTP) |
-| Flask-JWT-Extended | Auth con cookies |
-| werkzeug | Hashing de contraseñas |
-
-### Frontend
-| Tech | Uso |
-|------|-----|
-| Bun | Runtime + package manager |
-| React 19 | UI framework |
-| TypeScript | Tipado estático |
-| Vite | Build tool |
-| React Router 7 | Routing |
-| TanStack Query | Server state |
-| Zustand | UI state |
-| React Hook Form | Forms |
-| Zod | Validación |
-| shadcn/ui | Componentes primitivos |
-| Tailwind 4 | CSS utility-first |
-| sonner | Toasts |
-| lucide-react | Iconos |
-
-### DevOps
-| Tech | Uso |
-|------|-----|
-| Docker Compose | Orquestación local |
-| Nginx (prod) | Reverse proxy |
-| GitHub Actions (futuro) | CI/CD |
-
----
-
-## 📖 Convenciones del Proyecto
-
-### Nomenclatura
-
-**Backend (Python):**
-- Archivos: `snake_case.py`
-- Clases: `PascalCase` (ej: `LoginUseCase`)
-- Métodos/vars: `snake_case`
+# SIRES Docs
 
-**Frontend (TypeScript):**
-- Componentes: `PascalCase.tsx` (ej: `LoginForm.tsx`)
-- Hooks: `useXxx.ts`
-- Types: `PascalCase`
+Indice canonico de documentacion para operar SIRES con el modelo actual: monolito modular evolutivo, trabajo por dominios y flujo Jira + SDD-Orchestrator + Engram + GGA.
 
-### Commits (Conventional Commits)
+## Start Here
 
-```
-feat(frontend): add expedientes list page
-fix(backend): resolve CSRF token validation
-refactor(frontend): extract form validation to hook
-docs(backend): update RBAC architecture
-chore: update dependencies
-```
+1. `docs/getting-started/setup.md`
+2. `docs/getting-started/ai-team-workflow.md`
+3. `docs/getting-started/onboarding-day-1-checklist.md`
 
-**Scopes:**
-- `frontend`, `backend`, `docs`, `docker`, `config`
+## Flujo Operativo (canonico)
 
-### Permisos (formato)
+- Estrategia de arquitectura: monolito modular evolutivo (sin migracion a microservicios full en esta fase).
+- Estrategia de datos: DB por dominio con PostgreSQL como target estrategico.
+- Flujo de entrega obligatorio: Jira -> SDD-Orchestrator -> Engram -> GGA -> PR/Merge.
+- Entrega por dominios completos con ownership explicito (backend + frontend + DB + docs).
 
-```
-{grupo}{modulo}{submodulo}:{action}
-```
+## Arquitectura
 
-Ejemplos:
-- `medico:gestion:expedientes:create`
-- `admin:gestion:usuarios:delete`
-- `medico:consultas:read`
-- `*` (admin wildcard)
+- `docs/architecture/overview.md` - baseline tecnico vigente del sistema.
+- `docs/architecture/domain-map.md` - ownership por dominio y estado de migracion.
+- `docs/architecture/context-map.md` - limites de contexto y relaciones.
+- `docs/architecture/dependency-rules.md` - reglas de dependencias y anti-acoplamiento.
+- `docs/architecture/db-ownership-migration-policy.md` - politica de ownership DB y migracion.
+- `docs/architecture/repo-navigation-map.md` - donde tocar segun tipo de cambio.
 
-### Tokens Metro CDMX
+## Guides
 
-**✅ Usar:**
-- `bg-brand`, `text-brand`, `bg-brand-hover`
-- `status-critical`, `status-alert`, `status-stable`, `status-info`
-- `txt-body`, `txt-muted`, `txt-hint`, `txt-inverse`
-- `bg-paper`, `bg-paper-lift`, `bg-subtle`
+- `docs/guides/pr-merge-governance.md` - governance de PR y gates de merge.
+- `docs/guides/domain-dor-dod.md` - Definition of Ready / Definition of Done por dominio.
+- `docs/guides/incremental-domain-migration.md` - coexistencia old/new y plan incremental.
+- `docs/guides/ai-skills-matrix.md` - matriz activa de skills y auto-invoke.
 
-**❌ NO usar:**
-- `bg-orange-500`, `text-gray-600` (colores directos Tailwind)
-- `#fe5000` inline (hex hardcodeado)
+## API
 
----
+- `docs/api/README.md` - indice de contratos API.
+- `docs/api/standards.md` - estandares transversales de contrato.
+- `docs/api/modules/auth.md`
+- `docs/api/modules/rbac.md`
+- `docs/api/modules/catalogos.md`
+- `docs/api/modules/doc_front.md`
 
-## ⚡ Comandos Útiles
+## Getting Started
 
-### Docker
+- `docs/getting-started/setup.md` - setup local y por Docker.
+- `docs/getting-started/ai-team-workflow.md` - runbook diario de trabajo con IA.
+- `docs/getting-started/onboarding-day-1-checklist.md` - checklist day-1.
+- `docs/getting-started/engram-team-sync.md` - hooks y sincronizacion de memoria compartida.
 
-```bash
-# Levantar todo
-docker-compose up -d
+## Templates
 
-# Ver logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
+- `docs/templates/README.md`
+- `docs/templates/guide-template.md`
+- `docs/templates/adr-template.md`
+- `docs/templates/rfc-cross-domain-template.md`
 
-# Reconstruir
-docker-compose up -d --build
+## Governance minima para cambios cross-domain
 
-# Bajar
-docker-compose down
-```
+Si un cambio toca mas de un dominio, deben estar alineados estos artefactos:
 
-### Backend
+- `docs/architecture/domain-map.md`
+- `docs/architecture/context-map.md`
+- `docs/architecture/dependency-rules.md`
+- `docs/architecture/db-ownership-migration-policy.md`
+- `docs/architecture/repo-navigation-map.md`
+- `docs/guides/pr-merge-governance.md`
+- `docs/guides/domain-dor-dod.md`
+- `docs/guides/incremental-domain-migration.md`
+- `docs/templates/rfc-cross-domain-template.md`
 
-```bash
-# Acceder al contenedor
-docker-compose exec backend sh
+## Convenciones de mantenimiento
 
-# Ejecutar script
-python run.py
-
-# Instalar dependencia
-pip install <paquete>
-```
-
-### Frontend
-
-```bash
-# Desarrollo local
-cd frontend
-bun dev
-
-# Lint
-bun lint
-
-# Build
-bun build
-
-# Instalar shadcn component
-npx shadcn@latest add button
-```
-
----
-
-## 🔍 Troubleshooting Rápido
-
-### Backend no conecta a MySQL
-
-```bash
-# Verificar que MySQL esté corriendo
-mysql -u root -p -h localhost -P 3306
-
-# En backend/.env
-MYSQL_HOST=host.docker.internal  # Docker → MySQL local
-```
-
-### CORS en navegador
-
-```env
-# backend/.env
-CORS_ORIGINS=http://localhost:5173
-```
-
-### Error 403 aunque tenga permiso
-
-```bash
-# Invalidar cache de permisos (admin only)
-curl -X POST "http://localhost:5000/api/v1/permissions/cache/invalidate" \
-  -H "Cookie: access_token_cookie=<token>"
-```
-
-### Frontend pantalla blanca
-
-```bash
-# Ver logs
-docker-compose logs frontend
-
-# Revisar consola del navegador (F12)
-```
-
----
-
-## 📞 Soporte
-
-### Si algo no está claro
-
-1. **Buscar en docs:** Usá la tabla de navegación arriba
-2. **Revisar ejemplos:** Cada guía tiene código copy/paste
-3. **Leer código existente:** Ver features implementadas
-4. **Preguntar al agente:** Usan prompts educativos (no solo generan código)
-
-### Si encontrás un bug en la documentación
-
-1. Crear issue en GitHub
-2. O hacer PR con la corrección
-
----
-
-## 🗺️ Roadmap de Documentación
-
-### ✅ Completado (Enero 2026)
-
-- Setup inicial
-- Architecture overview
-- RBAC 2.0 (arquitectura + frontend + ADR)
-- **RBAC CRUD completo (backend + frontend + docs)**
-  - Plan de implementación (7 fases)
-  - Guía de uso para administradores
-  - Arquitectura frontend detallada
-- Authentication (JWT + CSRF + contratos API)
-- Rate limiting (3 niveles + Redis)
-- OTP system (password recovery con Redis)
-- Adding feature guide
-- UI components guide (shadcn + Metro CDMX)
-- Testing guide con mocks RBAC 2.0
-
-### 🚧 En Progreso
-
-- Testing suite (completar vitest + pytest)
-
-### 📋 Pendiente
-
-- Deployment guide (producción)
-- Performance optimization
-- Monitoring y logs
-- ADR-004: Decisión de usar Redis para rate limiting
-
----
-
-**Última actualización:** Enero 2026  
-**Versión:** 1.0.0  
-**Proyecto:** SIRES - Metro CDMX
+- Mantener docs accionables y sin duplicidad.
+- Remover contenido obsoleto en lugar de mantener playbooks legacy.
+- Actualizar este indice cada vez que se agrega o elimina documentacion relevante.

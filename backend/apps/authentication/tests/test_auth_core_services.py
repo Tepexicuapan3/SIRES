@@ -137,11 +137,13 @@ class AuthCoreServicesTests(TestCase):
         self.assertIn("refresh_token_cookie", response.cookies)
         self.assertIn("csrf_token", response.cookies)
         self.assertIn(RESET_COOKIE, response.cookies)
+        self.assertEqual(response.cookies["access_token_cookie"]["path"], "/")
 
         clear_auth_cookies(response)
         clear_reset_cookie(response)
 
         self.assertEqual(response.cookies["access_token_cookie"]["max-age"], 0)
+        self.assertEqual(response.cookies["access_token_cookie"]["path"], "/")
         self.assertEqual(response.cookies["refresh_token_cookie"]["max-age"], 0)
         self.assertEqual(response.cookies["csrf_token"]["max-age"], 0)
         self.assertEqual(response.cookies[RESET_COOKIE]["max-age"], 0)

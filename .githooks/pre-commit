@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -eu
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+GGA_RUNNER="$ROOT_DIR/.gga/scripts/gga.sh"
+
+if ! command -v gga >/dev/null 2>&1; then
+  echo "Error: gga no esta instalado. Instalala para ejecutar el gate de pre-commit." >&2
+  exit 1
+fi
+
+if [ ! -x "$GGA_RUNNER" ]; then
+  echo "Error: falta permiso de ejecucion en $GGA_RUNNER" >&2
+  exit 1
+fi
+
+if [ ! -f "$ROOT_DIR/.gga/rules.md" ]; then
+  echo "Error: falta el ruleset $ROOT_DIR/.gga/rules.md" >&2
+  exit 1
+fi
+
+# ======== GGA START ========
+# Gentleman Guardian Angel - Code Review
+"$GGA_RUNNER" run || exit 1
+# ======== GGA END ========

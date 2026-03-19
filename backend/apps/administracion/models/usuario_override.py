@@ -16,7 +16,7 @@ class RelUsuarioOverride(models.Model):
         on_delete=models.CASCADE,
     )
     id_permiso = models.ForeignKey(
-        "catalogos.CatPermiso",
+        "catalogos.Permisos",
         db_column="id_permiso",
         on_delete=models.CASCADE,
     )

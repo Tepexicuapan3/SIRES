@@ -1,67 +1,97 @@
 # API Catalogos - Contratos
 
-Este documento define el contrato de los catalogos del sistema (CRUD).
-La fuente de verdad es `docs/api/standards.md`.
+> TL;DR: Contratos REST del dominio Catalogos para SIRES (backend Django/DRF + frontend React), alineados con `docs/api/standards.md` y el modelo operativo domain-first.
 
-Reglas clave
-- Endpoints y responses siguen `docs/api/standards.md`.
-- Campos en camelCase (ingles).
-- Responses sin `message` en exito (salvo `SuccessResponse`).
+## Scope
 
-Base URL
+- Este modulo cubre catalogos funcionales (por ejemplo `areas`, `care-centers`).
+- RBAC (`roles`, `permissions`, `users`) se documenta en `docs/api/modules/rbac.md`.
+- Auth se documenta en `docs/api/modules/auth.md`.
+
+Base URL:
+
+```txt
+/api/v1
 ```
-http://localhost:5000/api/v1
-```
 
----
+## Convenciones obligatorias
 
-## Estructura comun (todos los catalogos)
+- Recursos REST con sustantivos y metodos HTTP semanticos.
+- Payloads para frontend en `camelCase`.
+- Errores con shape `ApiError`: `code`, `message`, `status`, opcional `details`, opcional `requestId`.
+- Mutaciones (`POST`, `PUT`, `PATCH`, `DELETE`) con `X-CSRF-TOKEN`.
+- Auth por cookies JWT HttpOnly (`credentials: include` en clientes web).
 
-Cada catalogo debe implementar el mismo set de endpoints y contratos:
+## Estructura comun (catalogos CRUD)
 
-| Metodo | Ruta | Request | Response |
-| --- | --- | --- | --- |
-| GET | `/<catalogo>` | `ListParams` | `ListResponse` |
-| GET | `/<catalogo>/:id` | - | `DetailResponse` |
-| POST | `/<catalogo>` | `CreateRequest` | `CreateResponse` |
-| PUT | `/<catalogo>/:id` | `UpdateRequest` | `UpdateResponse` |
-| DELETE | `/<catalogo>/:id` | - | `SuccessResponse` |
+| Metodo | Ruta | Request | Response | Status |
+| --- | --- | --- | --- | --- |
+| GET | `/<catalogo>` | `ListParams` | `ListResponse<T>` | 200 |
+| GET | `/<catalogo>/:id` | - | `DetailResponse` | 200 |
+| POST | `/<catalogo>` | `CreateRequest` | `CreateResponse` | 201 |
+| PUT | `/<catalogo>/:id` | `UpdateRequest` | `UpdateResponse` | 200 |
+| DELETE | `/<catalogo>/:id` | - | `SuccessResponse` | 200 |
 
-**Notas de contrato**
-- `ListResponse` usa `ListResponse<T>` (items, page, pageSize, total, totalPages).
-- `DetailResponse` envuelve la entidad con clave singular (`center`, `area`, etc.).
-- `CreateResponse` devuelve `id` y `name` como minimo.
+Notas:
 
----
+- `ListResponse<T>` usa `{ items, page, pageSize, total, totalPages }`.
+- `DetailResponse` envuelve la entidad en clave singular (`area`, `careCenter`, etc.).
+- `CreateResponse` devuelve al menos `{ id, name }`.
+- `DELETE` es baja logica cuando aplique en backend.
 
 ## Catalogo: Centros de Atencion
 
-Incluye clinicas, hospitales y sanatorios.
+| Metodo | Ruta | Request | Response | Status | Permiso |
+| --- | --- | --- | --- | --- | --- |
+| GET | `/care-centers` | `CentrosAtencionListParams` | `CentrosAtencionListResponse` | 200 | `admin:catalogos:centros_atencion:read` |
+| GET | `/care-centers/:id` | - | `CentroAtencionDetailResponse` | 200 | `admin:catalogos:centros_atencion:read` |
+| POST | `/care-centers` | `CreateCentroAtencionRequest` | `CreateCentroAtencionResponse` | 201 | `admin:catalogos:centros_atencion:create` |
+| PUT | `/care-centers/:id` | `UpdateCentroAtencionRequest` | `UpdateCentroAtencionResponse` | 200 | `admin:catalogos:centros_atencion:update` |
+| DELETE | `/care-centers/:id` | - | `DeleteCentroAtencionResponse` | 200 | `admin:catalogos:centros_atencion:delete` |
 
-Endpoints
-| Metodo | Ruta | Request | Response | Permiso |
-| --- | --- | --- | --- | --- |
-| GET | `/care-centers` | `CentrosAtencionListParams` | `CentrosAtencionListResponse` | `admin:catalogos:centros_atencion:read` |
-| GET | `/care-centers/:id` | - | `CentroAtencionDetailResponse` | `admin:catalogos:centros_atencion:read` |
-| POST | `/care-centers` | `CreateCentroAtencionRequest` | `CreateCentroAtencionResponse` | `admin:catalogos:centros_atencion:create` |
-| PUT | `/care-centers/:id` | `UpdateCentroAtencionRequest` | `UpdateCentroAtencionResponse` | `admin:catalogos:centros_atencion:update` |
-| DELETE | `/care-centers/:id` | - | `DeleteCentroAtencionResponse` | `admin:catalogos:centros_atencion:delete` |
+Tipos frontend relacionados:
 
-Tipos
 - `frontend/src/api/types/catalogos/centros-atencion.types.ts`
-
----
 
 ## Catalogo: Areas
 
-Endpoints
-| Metodo | Ruta | Request | Response | Permiso |
-| --- | --- | --- | --- | --- |
-| GET | `/areas` | `AreasListParams` | `AreasListResponse` | `admin:catalogos:areas:read` |
-| GET | `/areas/:id` | - | `AreaDetailResponse` | `admin:catalogos:areas:read` |
-| POST | `/areas` | `CreateAreaRequest` | `CreateAreaResponse` | `admin:catalogos:areas:create` |
-| PUT | `/areas/:id` | `UpdateAreaRequest` | `UpdateAreaResponse` | `admin:catalogos:areas:update` |
-| DELETE | `/areas/:id` | - | `DeleteAreaResponse` | `admin:catalogos:areas:delete` |
+| Metodo | Ruta | Request | Response | Status | Permiso |
+| --- | --- | --- | --- | --- | --- |
+| GET | `/areas` | `AreasListParams` | `AreasListResponse` | 200 | `admin:catalogos:areas:read` |
+| GET | `/areas/:id` | - | `AreaDetailResponse` | 200 | `admin:catalogos:areas:read` |
+| POST | `/areas` | `CreateAreaRequest` | `CreateAreaResponse` | 201 | `admin:catalogos:areas:create` |
+| PUT | `/areas/:id` | `UpdateAreaRequest` | `UpdateAreaResponse` | 200 | `admin:catalogos:areas:update` |
+| DELETE | `/areas/:id` | - | `DeleteAreaResponse` | 200 | `admin:catalogos:areas:delete` |
 
-Tipos
+Tipos frontend relacionados:
+
 - `frontend/src/api/types/catalogos/areas.types.ts`
+
+## Errores esperados
+
+Ademas de errores globales (`401`, `403`, `500`), catalogos puede responder:
+
+- `400` con `VALIDATION_ERROR`.
+- `404` con codigo `*_NOT_FOUND`.
+- `409` con codigo `*_EXISTS`.
+
+Ejemplo:
+
+```json
+{
+  "code": "AREAS_EXISTS",
+  "message": "Area already exists",
+  "status": 409,
+  "details": { "name": ["Duplicado"] },
+  "requestId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+## Referencias
+
+- `docs/api/standards.md`
+- `docs/api/modules/rbac.md`
+- `docs/api/modules/auth.md`
+- `docs/architecture/domain-map.md`
+- `docs/architecture/dependency-rules.md`
+- `docs/architecture/db-ownership-migration-policy.md`

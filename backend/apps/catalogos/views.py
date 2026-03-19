@@ -35,6 +35,12 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
 
     def get_queryset(self):
         return self.model.objects.all()
+
+    def _model_field_names(self):
+        model_meta = getattr(self.model, "_meta", None)
+        if model_meta is None:
+            return set()
+        return {field.name for field in model_meta.get_fields()}
      
     def get(self, request):
         qs = self.get_queryset()
@@ -153,7 +159,14 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
                 details={"name": ["Duplicado"]},
             )
         actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
-        item = serializer.save(created_at=timezone.now(), created_by_id=actor_id)
+        model_fields = self._model_field_names()
+        save_kwargs = {}
+        if "created_at" in model_fields:
+            save_kwargs["created_at"] = timezone.now()
+        if "created_by_id" in model_fields:
+            save_kwargs["created_by_id"] = actor_id
+
+        item = serializer.save(**save_kwargs)
 
         item_id = getattr(item, "id", None)
         if item_id is None:
@@ -179,6 +192,12 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
     def get_object(self, pk):
         pk_name = self.pk_field or self.model._meta.pk.name
         return self.model.objects.filter(**{pk_name: pk}).first()
+
+    def _model_field_names(self):
+        model_meta = getattr(self.model, "_meta", None)
+        if model_meta is None:
+            return set()
+        return {field.name for field in model_meta.get_fields()}
     
     def get(self, request, pk):
         item = self.get_object(pk)
@@ -222,7 +241,14 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 details={"name": ["Duplicado"]},
             )
         actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
-        item = serializer.save(updated_at=timezone.now(), updated_by_id=actor_id)
+        model_fields = self._model_field_names()
+        save_kwargs = {}
+        if "updated_at" in model_fields:
+            save_kwargs["updated_at"] = timezone.now()
+        if "updated_by_id" in model_fields:
+            save_kwargs["updated_by_id"] = actor_id
+
+        item = serializer.save(**save_kwargs)
         detail = self.detail_serializer(item)
         return Response({self.wrapper_key: detail.data}, status=status.HTTP_200_OK)
     
@@ -235,10 +261,20 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 message="No encontrado",
                 http_status=status.HTTP_404_NOT_FOUND,
             )
-        item.is_active = False
-        item.deleted_at = timezone.now()
-        item.deleted_by_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
-        item.save(update_fields=["is_active", "deleted_at", "deleted_by_id"])
+        model_fields = self._model_field_names()
+        update_fields = []
+
+        if "is_active" in model_fields:
+            item.is_active = False
+            update_fields.append("is_active")
+        if "deleted_at" in model_fields:
+            item.deleted_at = timezone.now()
+            update_fields.append("deleted_at")
+        if "deleted_by_id" in model_fields:
+            item.deleted_by_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+            update_fields.append("deleted_by_id")
+
+        item.save(update_fields=update_fields)
         return Response({"success": True}, status=status.HTTP_200_OK)
 
 
@@ -673,3 +709,115 @@ class TurnosDetailView(CatalogBaseDetailView):
     write_serializer = TurnosWriteSerializer
     wrapper_key = "shift"
     error_codes = {"not_found": "SHIFT_NOT_FOUND", "exists": "SHIFT_EXISTS"}
+
+
+#VIEWS PARA CIES
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.db.models import Q
+from django.utils import timezone
+from types import MappingProxyType
+import traceback
+
+from .models import *
+from .serializers import *
+from .permissions import CatalogPermissionMixin
+
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from apps.catalogos.models.cies import CatCies
+from apps.catalogos.serializers import CatCiesSerializer
+from apps.catalogos.uses_case.upload_cies_use_case import PreviewCiesUseCase
+from apps.catalogos.uses_case.confirm_cies_use_case import ConfirmCiesUseCase
+
+class ErrorMixin:
+    def _error(self, request, *, code, message, http_status, details=None):
+        return Response(
+            {
+                "code": code,
+                "message": message,
+                "status": http_status,
+                "details": details or {},
+                "requestId": request.headers.get("X-Request-ID"),
+                "timestamp": timezone.now().isoformat().replace("+00:00", "Z"),
+            },
+            status=http_status,
+        )
+
+# ... todo tu código existente sin cambios ...
+
+###############cies#######################
+
+# PASO 1 — Preview: valida el Excel, NO guarda nada
+# POST /api/v1/catalogos/cies/upload/
+class CatCiesUploadAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        try:
+            file = request.FILES.get("file")
+            version = request.data.get("version")
+
+            if not file or not version:
+                return self._error(
+                    request,
+                    code="VALIDATION_ERROR",
+                    message="Archivo y versión son requeridos",
+                    http_status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            result = PreviewCiesUseCase().execute(
+                file=file,
+                version=version,
+            )
+
+            return Response(result, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# PASO 2 — Confirm: guarda las filas válidas en la BD
+# POST /api/v1/catalogos/cies/confirm/
+class CatCiesConfirmAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
+
+    def post(self, request):
+        try:
+            rows = request.data.get("rows", [])
+
+            if not rows:
+                return self._error(
+                    request,
+                    code="VALIDATION_ERROR",
+                    message="No se recibieron filas para importar",
+                    http_status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user_id = request.user.id
+            result = ConfirmCiesUseCase().execute(rows=rows, user_id=user_id)
+
+            return Response(result, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# CRUD estándar
+class CatCiesListCreateView(CatalogPermissionMixin, ErrorMixin, ListCreateAPIView):
+    queryset = CatCies.objects.all()
+    serializer_class = CatCiesSerializer
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+class CatCiesDetailView(CatalogPermissionMixin, ErrorMixin, RetrieveUpdateDestroyAPIView):
+    queryset = CatCies.objects.all()
+    serializer_class = CatCiesSerializer
+    lookup_field = "code"
+
+    def perform_update(self, serializer):
+        serializer.save()

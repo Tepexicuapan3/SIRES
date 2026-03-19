@@ -43,6 +43,11 @@ class VisitVitalSigns(models.Model):
         null=True,
         blank=True,
     )
+    waist_circumference_cm = models.PositiveSmallIntegerField(
+        db_column="waist_circumference_cm",
+        null=True,
+        blank=True,
+    )
     bmi = models.DecimalField(max_digits=6, decimal_places=2, db_column="bmi")
     notes = models.CharField(max_length=255, db_column="notes", null=True, blank=True)
     fch_alta = models.DateTimeField(auto_now_add=True, db_column="fch_alta")

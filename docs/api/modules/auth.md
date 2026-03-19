@@ -4,7 +4,7 @@
 
 ## Problem / Context
 
-SIRES es un sistema medico critico. Un mismatch en auth rompe sesiones, permisos y auditoria. Este documento define la forma exacta de los payloads y los errores (con mensajes de toast) para asegurar consistencia.
+SIRES es un sistema medico critico sobre backend Django/DRF y frontend React. Un mismatch en auth rompe sesiones, permisos y auditoria. Este documento define contratos HTTP para mantener consistencia entre clientes y backend.
 
 **Fuente de verdad**
 - `docs/api/standards.md`
@@ -15,11 +15,16 @@ SIRES es un sistema medico critico. Un mismatch en auth rompe sesiones, permisos
 - JWT en cookies HttpOnly (no tokens en body ni storage).
 - CSRF obligatorio en mutaciones.
 - Errores siguen el formato `ApiError` del estandar.
+- El contrato API documenta solo errores HTTP del backend (no errores de red del cliente).
 
 Base URL
 ```
 http://localhost:5000/api/v1
 ```
+
+Headers requeridos
+- Auth via cookies HttpOnly (`credentials: include` en frontend).
+- Mutaciones (`POST`, `PUT`, `PATCH`, `DELETE`) requieren `X-CSRF-TOKEN`.
 
 ## Solution / Implementation
 
@@ -96,8 +101,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `TOKEN_INVALID` | 401 | Token inválido |
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
-| `NETWORK_ERROR` | 0 | No hay conexión a internet |
-| `TIMEOUT_ERROR` | 0 | La solicitud excedió el tiempo de espera |
 
 #### GET `/auth/me`
 
@@ -114,8 +117,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
-| `NETWORK_ERROR` | 0 | No hay conexión a internet |
-| `TIMEOUT_ERROR` | 0 | La solicitud excedió el tiempo de espera |
 
 #### POST `/auth/logout`
 
@@ -132,8 +133,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
-| `NETWORK_ERROR` | 0 | No hay conexión a internet |
-| `TIMEOUT_ERROR` | 0 | La solicitud excedió el tiempo de espera |
 
 #### GET `/auth/verify`
 
@@ -159,8 +158,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `TOKEN_INVALID` | 401 | Token inválido |
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
-| `NETWORK_ERROR` | 0 | No hay conexión a internet |
-| `TIMEOUT_ERROR` | 0 | La solicitud excedió el tiempo de espera |
 
 #### POST `/auth/request-reset-code`
 
@@ -175,8 +172,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `USER_NOT_FOUND` | 404 | Usuario no encontrado |
 | `RATE_LIMIT_EXCEEDED` | 429 | Demasiadas solicitudes, espera un momento |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
-| `NETWORK_ERROR` | 0 | No hay conexión a internet |
-| `TIMEOUT_ERROR` | 0 | La solicitud excedió el tiempo de espera |
 
 #### POST `/auth/verify-reset-code`
 
@@ -192,8 +187,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `INVALID_CODE` | 400 | Código incorrecto |
 | `RATE_LIMIT_EXCEEDED` | 429 | Demasiadas solicitudes, espera un momento |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
-| `NETWORK_ERROR` | 0 | No hay conexión a internet |
-| `TIMEOUT_ERROR` | 0 | La solicitud excedió el tiempo de espera |
 
 #### POST `/auth/reset-password`
 
@@ -214,8 +207,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `PASSWORD_TOO_WEAK` | 400 | La contraseña es demasiado débil |
 | `USER_NOT_FOUND` | 404 | Usuario no encontrado |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
-| `NETWORK_ERROR` | 0 | No hay conexión a internet |
-| `TIMEOUT_ERROR` | 0 | La solicitud excedió el tiempo de espera |
 
 #### POST `/auth/complete-onboarding`
 
@@ -237,8 +228,8 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `ONBOARDING_FAILED` | 500 | No se pudo completar el onboarding |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
-| `NETWORK_ERROR` | 0 | No hay conexión a internet |
-| `TIMEOUT_ERROR` | 0 | La solicitud excedió el tiempo de espera |
+
+Nota: errores de red/timeout (por ejemplo `NETWORK_ERROR` y `TIMEOUT_ERROR`) pertenecen a la capa cliente y no forman parte del contrato HTTP del backend.
 
 ### Backend checklist por endpoint (BD + auditoria)
 

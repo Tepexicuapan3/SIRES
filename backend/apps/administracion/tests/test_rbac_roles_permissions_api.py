@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
-from apps.catalogos.models import CatPermiso, CatRol
+from apps.catalogos.models import CatPermiso, CatRol, Permisos, Roles
 
 
 class RbacRolesPermissionsApiTests(APITestCase):
@@ -29,7 +29,7 @@ class RbacRolesPermissionsApiTests(APITestCase):
             nombre_completo="Admin Roles",
         )
 
-        self.admin_role = CatRol.objects.create(
+        self.admin_role = Roles.objects.create(
             rol="ADMIN_TEST_ROLES",
             desc_rol="Administrador de pruebas",
             landing_route="/admin",
@@ -42,13 +42,13 @@ class RbacRolesPermissionsApiTests(APITestCase):
             is_primary=True,
         )
 
-        self.target_role = CatRol.objects.create(
+        self.target_role = Roles.objects.create(
             rol="MEDICO_TEST_ROLES",
             desc_rol="Rol medico",
             landing_route="/expedientes",
             is_active=True,
         )
-        self.system_role = CatRol.objects.create(
+        self.system_role = Roles.objects.create(
             rol="SYSTEM_LOCKED_ROLE",
             desc_rol="Rol de sistema",
             landing_route="/system",
@@ -56,17 +56,17 @@ class RbacRolesPermissionsApiTests(APITestCase):
             is_active=True,
         )
 
-        self.perm_read = CatPermiso.objects.create(
+        self.perm_read = Permisos.objects.create(
             codigo="pacientes:read",
             descripcion="Leer pacientes",
             is_active=True,
         )
-        self.perm_update = CatPermiso.objects.create(
+        self.perm_update = Permisos.objects.create(
             codigo="pacientes:update",
             descripcion="Actualizar pacientes",
             is_active=True,
         )
-        self.perm_extra = CatPermiso.objects.create(
+        self.perm_extra = Permisos.objects.create(
             codigo="agenda:read",
             descripcion="Leer agenda",
             is_active=True,
@@ -217,7 +217,7 @@ class RbacRolesPermissionsApiTests(APITestCase):
         self.assertEqual(response.data["code"], "ROLE_NOT_FOUND")
 
     def test_update_role_duplicate_name_returns_conflict(self):
-        CatRol.objects.create(
+        Roles.objects.create(
             rol="ROL_DUPLICADO",
             desc_rol="Dup",
             landing_route="/dup",

@@ -1,8 +1,10 @@
 import secrets
 import string
 import uuid
+import re
 from datetime import datetime, time, timezone as dt_timezone
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.db.models import Q
@@ -29,12 +31,16 @@ from apps.authentication.services.email_service import send_user_credentials_ema
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
-from apps.catalogos.models import CatCentroAtencion, CatPermiso, CatRol
+from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
 
 
 TEMP_PASSWORD_LENGTH = 12
 TEMP_PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{}"
 TEMP_PASSWORD_ALPHABET = string.ascii_letters + string.digits + TEMP_PASSWORD_SYMBOLS
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ISO_DATETIME_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?$"
+)
 
 
 def _request_id(request):
@@ -51,9 +57,22 @@ def _parse_expires_at_end_of_day(raw_value):
     if not raw_value:
         return None
 
+    normalized = str(raw_value).strip()
+    if not normalized:
+        return None
+
+    if "T" in normalized:
+        if not ISO_DATETIME_RE.fullmatch(normalized):
+            return "invalid"
+        hour_value = int(normalized.split("T", maxsplit=1)[1][:2])
+        if hour_value > 23:
+            return "invalid"
+    elif not ISO_DATE_RE.fullmatch(normalized):
+        return "invalid"
+
     tz = timezone.get_current_timezone()
     try:
-        parsed_datetime = parse_datetime(raw_value)
+        parsed_datetime = parse_datetime(normalized)
     except (TypeError, ValueError, OverflowError):
         return "invalid"
 
@@ -61,11 +80,14 @@ def _parse_expires_at_end_of_day(raw_value):
         if parsed_datetime:
             base = parsed_datetime
         else:
-            parsed_date = parse_date(raw_value)
+            parsed_date = parse_date(normalized)
             if not parsed_date:
                 return "invalid"
             base = datetime.combine(parsed_date, time.min)
     except (TypeError, ValueError, OverflowError):
+        return "invalid"
+
+    if base.year >= 9999:
         return "invalid"
 
     try:
@@ -341,7 +363,7 @@ def _split_permission_code(code):
 def _ensure_read_dependencies(permission_ids):
     permissions = {
         permission.id_permiso: permission
-        for permission in CatPermiso.objects.filter(id_permiso__in=permission_ids, is_active=True)
+        for permission in Permisos.objects.filter(id_permiso__in=permission_ids, is_active=True)
     }
     expanded = set(permission_ids)
 
@@ -523,7 +545,7 @@ class RolesListCreateView(APIView):
             _audit(request, "RBAC_ROLE_LIST", "role", result="FAIL", error_code="VALIDATION_ERROR")
             return pagination_error
 
-        queryset = CatRol.objects.all()
+        queryset = Roles.objects.all()
 
         search = request.query_params.get("search")
         if search:
@@ -630,7 +652,7 @@ class RolesListCreateView(APIView):
                 request_id=_request_id(request),
             )
 
-        if CatRol.objects.filter(rol=name).exists():
+        if Roles.objects.filter(rol=name).exists():
             _audit(request, "RBAC_ROLE_CREATE", "role", result="FAIL", error_code="ROLE_EXISTS")
             return error_response(
                 "ROLE_EXISTS",
@@ -639,7 +661,7 @@ class RolesListCreateView(APIView):
                 request_id=_request_id(request),
             )
 
-        role = CatRol.objects.create(
+        role = Roles.objects.create(
             rol=name,
             desc_rol=description,
             landing_route=landing_route,
@@ -663,7 +685,7 @@ class RoleDetailView(APIView):
     permission_classes = []
 
     def _get_role(self, role_id):
-        return CatRol.objects.filter(id_rol=role_id).first()
+        return Roles.objects.filter(id_rol=role_id).first()
 
     def get(self, request, role_id):
         _, auth_error = _authorize(request, "admin:gestion:roles:read")
@@ -721,7 +743,7 @@ class RoleDetailView(APIView):
         before = _serialize_role(role)
 
         name = request.data.get("name")
-        if name and CatRol.objects.filter(rol=name).exclude(id_rol=role.id_rol).exists():
+        if name and Roles.objects.filter(rol=name).exclude(id_rol=role.id_rol).exists():
             _audit(request, "RBAC_ROLE_UPDATE", "role", resource_id=role.id_rol, result="FAIL", error_code="ROLE_EXISTS")
             return error_response(
                 "ROLE_EXISTS",
@@ -835,7 +857,7 @@ class PermissionsCatalogView(APIView):
 
         permissions = [
             _serialize_permission(permission)
-            for permission in CatPermiso.objects.filter(is_active=True).order_by("codigo")
+            for permission in Permisos.objects.filter(is_active=True).order_by("codigo")
         ]
         payload = {"items": permissions, "total": len(permissions)}
         _audit(request, "RBAC_PERMISSION_LIST", "permission", result="SUCCESS")
@@ -875,7 +897,7 @@ class AssignRolePermissionsView(APIView):
                 request_id=_request_id(request),
             )
 
-        role = CatRol.objects.filter(id_rol=role_id).first()
+        role = Roles.objects.filter(id_rol=role_id).first()
         if not role:
             _audit(request, "RBAC_ROLE_PERMISSIONS_ASSIGN", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
             return error_response(
@@ -903,7 +925,7 @@ class AssignRolePermissionsView(APIView):
 
         permissions = {
             permission.id_permiso: permission
-            for permission in CatPermiso.objects.filter(id_permiso__in=requested_ids, is_active=True)
+            for permission in Permisos.objects.filter(id_permiso__in=requested_ids, is_active=True)
         }
         missing_ids = sorted(requested_ids - set(permissions.keys()))
         if missing_ids:
@@ -1002,7 +1024,7 @@ class RevokeRolePermissionView(APIView):
             _audit(request, "RBAC_ROLE_PERMISSION_REVOKE", "role", resource_id=role_id, result="FAIL", error_code=auth_error.data.get("code"))
             return auth_error
 
-        role = CatRol.objects.filter(id_rol=role_id).first()
+        role = Roles.objects.filter(id_rol=role_id).first()
         if not role:
             _audit(request, "RBAC_ROLE_PERMISSION_REVOKE", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
             return error_response(
@@ -1138,12 +1160,20 @@ class UsersListCreateView(APIView):
         elif status_filter == "pending":
             queryset = queryset.filter(Q(terminos_acept=False) | Q(cambiar_clave=True))
 
-        queryset = queryset.order_by("usuario").distinct()
+        user_ids_queryset = queryset.order_by("usuario", "id_usuario").values_list("id_usuario", flat=True).distinct()
 
-        total = queryset.count()
+        total = user_ids_queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
-        items = [_serialize_user_list_item(user) for user in queryset[start:end]]
+        page_user_ids = list(user_ids_queryset[start:end])
+        users_by_id = {
+            user.id_usuario: user
+            for user in SyUsuario.objects.select_related("detalle", "detalle__id_centro_atencion").filter(
+                id_usuario__in=page_user_ids
+            )
+        }
+        ordered_users = [users_by_id[user_id] for user_id in page_user_ids if user_id in users_by_id]
+        items = [_serialize_user_list_item(user) for user in ordered_users]
         payload = {
             "items": items,
             "page": page,
@@ -1189,7 +1219,7 @@ class UsersListCreateView(APIView):
                 request_id=_request_id(request),
             )
 
-        role = CatRol.objects.filter(id_rol=request.data.get("primaryRoleId"), is_active=True).first()
+        role = Roles.objects.filter(id_rol=request.data.get("primaryRoleId"), is_active=True).first()
         if not role:
             _audit(request, "RBAC_USER_CREATE", "user", result="FAIL", error_code="ROLE_NOT_FOUND")
             return error_response(
@@ -1247,12 +1277,14 @@ class UsersListCreateView(APIView):
             usr_asignacion=actor,
         )
 
-        if not send_user_credentials_email(
+        credentials_email_sent = send_user_credentials_email(
             recipient_email=user.correo,
             username=user.usuario,
             temporary_password=temporary_password,
             user_name=full_name or user.usuario,
-        ):
+        )
+
+        if not credentials_email_sent and not settings.ALLOW_USER_CREATE_WITHOUT_EMAIL:
             transaction.set_rollback(True)
             _audit(
                 request,
@@ -1273,14 +1305,16 @@ class UsersListCreateView(APIView):
         payload = {
             "id": user.id_usuario,
             "username": user.usuario,
+            "credentialsEmailSent": credentials_email_sent,
         }
+        audit_after = {"username": user.usuario, "credentialsEmailSent": credentials_email_sent}
         _audit(
             request,
             "RBAC_USER_CREATE",
             "user",
             resource_id=user.id_usuario,
             result="SUCCESS",
-            after={"username": user.usuario},
+            after=audit_after,
             target_user=user,
         )
         return Response(payload, status=status.HTTP_201_CREATED)
@@ -1506,7 +1540,7 @@ class UserRolesView(APIView):
                 request_id=_request_id(request),
             )
 
-        roles = {role.id_rol: role for role in CatRol.objects.filter(id_rol__in=role_ids, is_active=True)}
+        roles = {role.id_rol: role for role in Roles.objects.filter(id_rol__in=role_ids, is_active=True)}
         missing = sorted(set(role_ids) - set(roles.keys()))
         if missing:
             _audit(request, "RBAC_USER_ROLES_ASSIGN", "user_role", resource_id=user.id_usuario, result="FAIL", error_code="ROLE_NOT_FOUND", target_user=user)
@@ -1762,7 +1796,7 @@ class UserOverridesView(APIView):
                 request_id=_request_id(request),
             )
 
-        permission = CatPermiso.objects.filter(codigo=permission_code, is_active=True).first()
+        permission = Permisos.objects.filter(codigo=permission_code, is_active=True).first()
         if not permission:
             _audit(request, "RBAC_USER_OVERRIDE_UPSERT", "user_override", resource_id=user.id_usuario, result="FAIL", error_code="PERMISSION_NOT_FOUND", target_user=user)
             return error_response(
