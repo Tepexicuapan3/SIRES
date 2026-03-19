@@ -40,6 +40,14 @@
       "sessions": 0,
       "memories": 0,
       "prompts": 1
+    },
+    {
+      "id": "b3c5fb16",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-19T01:56:28Z",
+      "sessions": 0,
+      "memories": 1,
+      "prompts": 2
     }
   ]
 }
