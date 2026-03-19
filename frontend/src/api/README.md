@@ -44,6 +44,22 @@ frontend/src/api/
 - `resources/` define llamadas y contratos de transporte (sin logica de negocio).
 - `types/` centraliza tipos API para evitar duplicacion.
 - `utils/errors.ts` normaliza errores para consumo consistente en features.
+- La logica de negocio critica no va en esta capa; debe vivir en hooks/casos de uso de dominio.
+
+## Part 2 operativo
+
+- Integracion inter-dominio: esta capa consume contratos API explicitos; no se puentean limites con imports internos entre dominios.
+- Realtime: solo por excepcion y en adapters/modulos dedicados con contrato claro de canal/auth/mensaje.
+- Permisos: exponer capacidades atomicas del backend; no inferir seguridad por role strings en cliente.
+- Auditoria: propagar metadatos de trazabilidad (`X-Request-ID`) cuando el contrato lo requiera.
+
+## Part 3 operativo
+
+- Mantener wording DB consistente: backend opera hoy sobre PostgreSQL unico con ownership por dominio y aislamiento logico; la separacion fisica se evalua despues por criterio.
+- No modelar recursos cliente asumiendo joins/atajos cross-domain de DB; exigir composicion por contrato backend explicito.
+- En endpoints criticos, reflejar en contratos cliente expectativas de idempotencia, concurrencia y manejo transaccional.
+- Si cambia un contrato critico o limite entre dominios, actualizar docs/DoD relacionados en el mismo PR.
+- Testing por riesgo en esta capa: priorizar auth/authz de transporte, `X-Request-ID`, errores normalizados y mutaciones sensibles a concurrencia.
 
 ## Seguridad
 
@@ -74,6 +90,9 @@ Forma esperada:
 - [ ] Normalizar errores en consumo.
 - [ ] Verificar contrato contra `docs/api/`.
 - [ ] Agregar/ajustar tests en `frontend/src/test/`.
+- [ ] Confirmar que no se agrego logica de negocio critica en cliente API.
+- [ ] Cubrir con pruebas los caminos criticos segun riesgo del contrato.
+- [ ] Actualizar docs/DoD si el contrato cambia limites o comportamiento critico.
 
 ## Comandos
 

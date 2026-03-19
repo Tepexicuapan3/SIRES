@@ -54,7 +54,7 @@ vi.stubGlobal("import.meta", {
     VITE_API_URL: "http://localhost:5000/api/v1",
     VITE_APP_NAME: "SIRES Test",
     VITE_APP_VERSION: "1.0.0-test",
-    VITE_USE_MOCKS: "true",
+    VITE_USE_MSW: "true",
     DEV: true,
     PROD: false,
     MODE: "test",

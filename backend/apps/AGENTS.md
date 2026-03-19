@@ -31,9 +31,54 @@
 
 - `views.py` - HTTP transport only (request/response orchestration).
 - `serializers.py` - input/output validation and shaping.
-- `uses_case/` - business use cases (domain orchestration).
+- `use_cases/` or existing `uses_case/` - application/use-case orchestration.
 - `repositories/` - ORM and data access details.
 - `services/` - reusable technical services (token, csrf, otp, email, audit).
+
+## Business Logic Placement (Mandatory)
+
+- Critical business rules belong in `use_cases/` and domain modules, not in views or serializers.
+- Views must delegate to use cases; serializers validate/map data only.
+- Keep authorization/business permissions in dedicated policy functions/modules.
+- Keep transaction boundaries at use-case level, not in view handlers.
+- Hard ban: adding domain decisions inside generic helpers under `utils/`.
+
+## Design Pattern Guidance
+
+- Use Cases / Application Services: mandatory default for operation entrypoints.
+- Repository Pattern: apply when query complexity, consistency guarantees, or multiple sources justify it.
+- Domain Events (internal first): trigger internal events before introducing external integration events.
+- Avoid over-abstraction: do not create repository/event layers without current domain pressure.
+
+## Anti-pattern Bans
+
+- Do not place pricing/permission/eligibility rules directly in DRF transport code.
+- Do not create cross-domain direct SQL reads/writes.
+- Do not introduce microservice boundaries from this subtree.
+- Do not add full CQRS/event-sourcing patterns by default.
+
+## Domain Data Ownership and Migration Guardrails (Explicit)
+
+- Every table/schema/migration touched from `backend/apps/**` must have a single domain owner.
+- Cross-domain direct DB access is prohibited (reads and writes); use API contracts, events, or read-models.
+- Keep migration incremental: no big-bang move from `apps` to `domains`; coexistence is expected until each domain reaches DoD.
+
+## Inter-domain Communication Rules
+
+- Use only:
+  - formal query/service contracts,
+  - application-layer orchestrator use cases,
+  - domain events with explicit subscribers.
+- Do not depend on another domain's internal models/repositories/business rules.
+- Do not implement uncontrolled cross-domain data reads/writes.
+
+## Real-time, Audit, and Permissions
+
+- Real-time is a controlled exception; keep request/response as default transport.
+- If real-time is introduced in this subtree, keep handlers/adapters thin and delegate critical logic to use cases.
+- Every critical operation must emit/record audit data with minimum fields (`actor`, `timestamp`, `action`, `domain`, `resource`, `result`, `contextId/requestId`).
+- Include `ip`/`userAgent` when available and `beforeState`/`afterState` for mutations.
+- Use atomic permissions and centralized policy/authorization modules; do not rely on role-string checks in views/serializers.
 
 ## Endpoint Workflow
 
@@ -73,3 +118,7 @@
 - [ ] Auth and CSRF checks are present when required.
 - [ ] URLs are wired under `api/v1/`.
 - [ ] Tests cover success and failure paths.
+- [ ] Inter-domain calls use contract/orchestrator/event mechanisms only.
+- [ ] Real-time usage (if any) is justified and delegates to use cases.
+- [ ] Critical operations include audit fields and append-only persistence expectations.
+- [ ] Authorization checks use atomic permissions/policies, not ad-hoc roles.

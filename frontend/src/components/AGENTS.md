@@ -75,3 +75,17 @@ Dynamic values -> style prop
 - [ ] No hardcoded colors or `var()` in className
 - [ ] Component placed in the correct folder
 - [ ] Props typed with TypeScript
+
+## Part 2 Checklist Hooks
+
+- [ ] Components do not bypass domain boundaries with direct cross-domain business imports.
+- [ ] Real-time UI bindings (if any) are presentational and delegate decisions to application/domain layers.
+- [ ] Permission rendering is UX-only (no security decisions from role strings).
+
+## Part 3 Checklist Hooks
+
+- [ ] Shared components do not encode assumptions about backend cross-domain data composition.
+- [ ] Critical UI states (authz gating, sensitive action feedback, concurrency-prone loading states) have proportional test coverage.
+- [ ] If component contracts change domain boundaries, related docs/DoD references are updated in the same PR.
+- [ ] Evolution remains incremental (no framework/layout rewrite by hype).
+- [ ] Top risks avoided: business rules in shared UI helpers, untested critical states, and hidden coupling to feature internals.

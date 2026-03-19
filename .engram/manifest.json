@@ -80,6 +80,30 @@
       "sessions": 0,
       "memories": 0,
       "prompts": 2
+    },
+    {
+      "id": "6b605228",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-19T13:26:18Z",
+      "sessions": 2,
+      "memories": 23,
+      "prompts": 7
+    },
+    {
+      "id": "0108bd30",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-19T13:44:22Z",
+      "sessions": 1,
+      "memories": 9,
+      "prompts": 1
+    },
+    {
+      "id": "eeb31576",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-19T14:04:38Z",
+      "sessions": 1,
+      "memories": 7,
+      "prompts": 1
     }
   ]
 }

@@ -33,6 +33,7 @@ which gga
 - [ ] Ejecutar flujo SDD segun alcance:
   - Cambio grande: `/sdd-new <change>` o `/sdd-ff <change>`
   - Implementacion incremental: `/sdd-apply <change>`
+- [ ] Para NEW feature/NEW functionality/LARGE refactor, definir tasking tests-first y ciclo Red -> Green -> Refactor desde el plan inicial.
 
 ### 4) Engram (memoria de equipo)
 
@@ -46,6 +47,7 @@ which gga
 - [ ] Incluir ticket Jira + estado SDD + impacto por dominio.
 - [ ] Si hay impacto cross-domain, adjuntar RFC (`docs/templates/rfc-cross-domain-template.md`).
 - [ ] Validar reglas de dependencia y ownership de datos antes de merge.
+- [ ] Adjuntar evidencia TDD-first (fallo inicial + progresion + verde final) o justificar excepcion con controles compensatorios y aprobacion.
 
 ## No hacer (guardrails)
 

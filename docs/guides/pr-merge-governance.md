@@ -17,16 +17,28 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 5. Si cruza dominios, adjuntar RFC corto usando template.
 6. No mezclar refactor de estructura con cambios funcionales grandes sin justificacion.
 7. Si hay impacto de datos, detallar ownership de dominio, etapa de migracion (`expand/migrate/contract`) y riesgo operativo.
+8. Si cambia boundaries/flujo arquitectonico, actualizar docs impactados en el mismo PR (estandares vivos).
+9. Incluir owners primario/secundario por dominio impactado (backend, frontend, DB, docs) en descripcion o checklist del PR.
+10. Para NEW feature/NEW functionality/LARGE refactor, aplicar TDD-first estricto: tasks de testing primero y ciclo Red -> Green -> Refactor.
 
 ## Gates minimos de merge
 
 - Checklist de seguridad (JWT HttpOnly + CSRF para mutaciones).
 - Validacion de reglas de dependencia (`docs/architecture/dependency-rules.md`).
 - Evidencia de testing relevante (sin necesidad de build completo en docs-only PR).
+- Evidencia de testing proporcional al riesgo para features criticas (unit/integration/API/E2E segun impacto).
+- Evidencia test-first cuando aplique TDD estricto: fallo inicial, progresion de implementacion y estado final en verde.
+- Si hubo excepcion TDD, incluir racional explicito, controles/tests compensatorios y aprobacion registrada en Jira/PR.
 - Confirmacion de actualizacion de docs cuando cambia la operativa.
 - Evidencia de memoria high-signal guardada en Engram (`SIRES_SHARED`) cuando corresponda.
 - Gate de `pre-commit` con GGA ejecutado sin bloqueos pendientes.
 - Checklist de datos completo: ownership por dominio en PostgreSQL, sin SQL cross-domain directo, y plan de rollback en cambios de alto riesgo.
+
+## Collaboration baseline (obligatorio)
+
+- Estandares de arquitectura y governance se tratan como artefactos vivos; no se difieren updates de docs a "PR posterior".
+- DoD de dominio es unico y se evalua con la misma base en todo el repo.
+- Review de arquitectura no es opcional: PRs con impacto de boundaries/flows requieren validacion explicita de compliance (no solo lint/format).
 
 ### Como leer bloqueos de GGA
 

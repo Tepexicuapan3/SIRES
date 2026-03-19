@@ -4,21 +4,21 @@ set -e
 python - <<'PY'
 import os
 import time
-import pymysql
+import psycopg2
 
-host = os.getenv("DB_HOST", "mysql")
-port = int(os.getenv("DB_PORT", "3306"))
-user = os.getenv("DB_USER", "sires")
-password = os.getenv("DB_PASSWORD", "sires_dev_password")
-database = os.getenv("DB_NAME", "sires")
+host = os.getenv("DB_HOST", "auth-db")
+port = int(os.getenv("DB_PORT", "5432"))
+user = os.getenv("DB_USER", "sires_auth")
+password = os.getenv("DB_PASSWORD", "sires_auth_dev_password")
+database = os.getenv("DB_NAME", "sires_auth")
 
 def connect():
-    conn = pymysql.connect(
+    conn = psycopg2.connect(
         host=host,
         port=port,
         user=user,
         password=password,
-        database=database,
+        dbname=database,
         connect_timeout=5,
     )
     conn.close()

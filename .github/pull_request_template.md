@@ -26,6 +26,15 @@
 - RFC cross-domain (required if multi-domain):
 - Engram evidence (topic_key or note):
 
+## TDD-First Evidence (required for NEW feature / NEW functionality / LARGE refactor)
+
+- Scope applies?: `yes` / `no` (if `no`, explain why):
+- Tests-first planning/tasks link or excerpt (prove tests were planned before implementation):
+- RED evidence (initial failing test):
+- GREEN evidence (minimal implementation passing):
+- REFACTOR evidence (cleanup with tests still passing):
+- Exception (if applicable): rationale + compensating controls/tests + approval (Jira/PR reviewer):
+
 ## Checklist
 
 - [ ] Scope is focused and single-purpose
@@ -38,6 +47,8 @@
 - [ ] Docs updated if behavior or operation changed
 - [ ] Engram high-signal decisions/fixes saved to `SIRES_SHARED`
 - [ ] Tests/evidence attached (or N/A explained)
+- [ ] TDD-first evidence included for applicable scope (tests-first plan + Red/Green/Refactor)
+- [ ] Any TDD exception includes rationale, compensating controls/tests, and explicit approval
 
 ## Risks and Rollback
 

@@ -31,6 +31,13 @@ Mover todo de una sola vez rompe rutas, imports y operacion. Ademas, la sobrecar
 
 La transicion a aislamiento fisico no implica romper el monolito modular: el contrato entre dominios sigue siendo API/eventos/read-models.
 
+## Evolucion de arquitectura por etapas (control de cambio)
+
+- **Etapa 1**: consolidar boundaries y ownership de dominio en infraestructura PostgreSQL compartida.
+- **Etapa 2**: endurecer confiabilidad/performance/observabilidad/seguridad por dominio sin romper contratos.
+- **Etapa 3**: evaluar extraccion/separacion fisica solo con evidencia operativa o de compliance.
+- Regla dura: no aprobar cambios de arquitectura por hype/preferencia sin necesidad medible y decision documentada.
+
 ## Controles de sobrecarga por dominio
 
 - Particionado de tablas en dominios de alta escritura/consulta.

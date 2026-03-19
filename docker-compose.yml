@@ -1,23 +1,22 @@
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: sires-mysql
+  auth-db:
+    image: postgres:16-alpine
+    container_name: sires-auth-db
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-sires}
-      MYSQL_USER: ${MYSQL_USER:-sires}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-sires_dev_password}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-sires_root_dev_password}
+      POSTGRES_DB: ${AUTH_DB_NAME:-sires_auth}
+      POSTGRES_USER: ${AUTH_DB_USER:-sires_auth}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-sires_auth_dev_password}
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${AUTH_DB_PORT:-5432}:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - auth_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD:-sires_root_dev_password}"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-sires_auth} -d ${AUTH_DB_NAME:-sires_auth}"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 20s
+      start_period: 15s
 
   redis:
     image: redis:7-alpine
@@ -52,18 +51,27 @@ services:
       CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       WS_ALLOW_ALL_ORIGINS: ${WS_ALLOW_ALL_ORIGINS:-false}
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-}
-      DB_ENGINE: ${DB_ENGINE:-django.db.backends.mysql}
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: ${MYSQL_DATABASE:-sires}
-      DB_USER: ${MYSQL_USER:-sires}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-sires_dev_password}
+      DB_HOST: ${AUTH_DB_HOST:-auth-db}
+      DB_PORT: ${AUTH_DB_PORT:-5432}
+      DB_NAME: ${AUTH_DB_NAME:-sires_auth}
+      DB_USER: ${AUTH_DB_USER:-sires_auth}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-sires_auth_dev_password}
       CHANNEL_REDIS_URL: redis://redis:6379/1
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-no-reply@sires.local}
+      EMAIL_TIMEOUT: ${EMAIL_TIMEOUT:-10}
+      SIRES_LOGIN_URL: ${SIRES_LOGIN_URL:-http://localhost:5173/login}
+      SIRES_SUPPORT_EMAIL: ${SIRES_SUPPORT_EMAIL:-soporte@sires.local}
       ALLOW_USER_CREATE_WITHOUT_EMAIL: ${ALLOW_USER_CREATE_WITHOUT_EMAIL:-true}
       RUN_SEED_ON_BOOT: ${RUN_SEED_ON_BOOT:-true}
     depends_on:
-      mysql:
+      auth-db:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -108,4 +116,4 @@ services:
         condition: service_healthy
 
 volumes:
-  mysql_data:
+  auth_db_data:

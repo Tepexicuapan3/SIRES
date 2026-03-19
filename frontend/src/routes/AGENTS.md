@@ -39,6 +39,21 @@
 - Route modules live in `frontend/src/routes/modules/` (grouped by domain).
 - Lazy loading must be applied per module (not per page).
 
+## Part 2 Guardrails (Operational)
+
+- Route-level cross-domain checks must rely on explicit policy/contracts, not direct internal imports from other domains.
+- Real-time navigation updates are a controlled exception; handlers must stay thin and delegate business/security decisions to application/domain modules.
+- For sensitive route transitions/actions, preserve request correlation metadata for backend audit traceability.
+- Route authz in client is UX gating only; backend atomic permissions are the security source of truth.
+
+## Part 3 Guardrails (Operational)
+
+- Route contracts must not assume cross-domain DB shortcuts; depend on explicit backend contracts aligned with staged PostgreSQL ownership/isolation.
+- Keep collaboration/DoD discipline: when guard boundaries or protected flows change, update routing docs and governance references in the same PR.
+- Apply risk-based tests first to guard branches, protected transitions, authz degradation paths, and race-prone navigation flows.
+- Follow stage-based evolution: incremental route-module hardening, no rewrite-first routing architecture changes.
+- Top risks to avoid: security logic in ad-hoc route utils, untested guard edge cases, and hidden coupling across modules.
+
 ---
 
 ## QA Checklist
@@ -46,3 +61,8 @@
 - [ ] New route is registered
 - [ ] Guard applied when needed
 - [ ] Route points to feature component
+- [ ] Guard logic uses policy/dependency contracts (no ad-hoc role strings)
+- [ ] Real-time route hooks (if any) do not contain critical business logic
+- [ ] Sensitive flows keep backend audit correlation metadata
+- [ ] Critical route/guard paths include proportional automated tests by risk
+- [ ] Guard/flow boundary changes updated docs in the same PR

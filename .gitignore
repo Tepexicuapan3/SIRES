@@ -68,3 +68,7 @@ coverage/
 
 # Settings files
 .settings/*
+
+# Tool cache
+.cache/
+.ruff_cache/

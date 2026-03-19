@@ -20,12 +20,35 @@ Necesitamos reglas explicitas para:
 
 1. **Aislamiento logico (etapa actual/preferida en Fase 1)**
    - Cada dominio tiene ownership de su modelo de datos en PostgreSQL (schemas, tablas, migraciones e indices).
-   - Puede convivir en la misma instancia/cluster PostgreSQL, pero con fronteras de ownership claras.
+   - SIRES usa una sola instancia/engine PostgreSQL como fuente transaccional en esta etapa, con fronteras de ownership y aislamiento logico estrictos.
 2. **Aislamiento fisico (etapa futura por dominio)**
    - Un dominio pasa a DB dedicada cuando su carga/criticidad lo justifica.
    - El contrato entre dominios no cambia: API/eventos/read-models.
 
 Este enfoque mantiene el plan incremental del monolito modular y evita redisenos de datos cuando un dominio necesite mayor aislamiento en etapas futuras.
+
+## Principios de integridad y seguridad de datos
+
+- Todo cambio de datos debe explicitar: PK/FK, `UNIQUE`, nullabilidad, defaults y estrategia de indices.
+- Prohibido crear tablas sin owner de dominio y sin contrato de acceso definido.
+- Constraints e indices se disenan por patrones reales de lectura/escritura, no por convencion generica.
+- Los cambios de alto riesgo deben incluir plan de validacion post-merge y rollback.
+
+## Limites transaccionales y concurrencia
+
+- Los limites de transaccion para flujos criticos se definen en capa `application`/casos de uso, no en transporte.
+- Para hotspots de concurrencia, se debe documentar y aplicar un patron explicito por caso:
+  - `SELECT ... FOR UPDATE` para coordinacion pessimista,
+  - versionado optimista (`version`/`updated_at`) para conflicto controlado,
+  - idempotency keys para operaciones repetibles,
+  - serializacion por cola cuando el orden sea requisito de negocio.
+- Toda decision de concurrencia en un flujo critico debe quedar registrada en ticket/PR.
+
+## Separacion entre estado operacional y auditoria/historico
+
+- Tablas transaccionales de dominio almacenan estado operacional actual.
+- Auditoria/historico se mantiene en storage append-only y acceso restringido.
+- Prohibido usar tablas operacionales como sustituto de bitacora de auditoria o cadena historica.
 
 ## Ownership de datos en PostgreSQL
 
@@ -79,6 +102,7 @@ La decision debe quedar en RFC + ADR con plan de rollout y rollback.
 
 - Dominio owner definido.
 - Engine objetivo PostgreSQL considerado en diseno/migracion.
+- Excepcion de testing documentada: SQLite solo para ejecucion de tests locales/CI, sin impacto en el target PostgreSQL ni en `DB por dominio`.
 - Sin acceso SQL cross-domain en codigo de aplicacion.
 - Impacto en queries/reportes identificado (incluyendo read-models si aplica).
 - Plan de datos legacy -> PostgreSQL documentado.

@@ -78,7 +78,7 @@ Artefactos que deben conservarse por corrida:
 Activar en frontend:
 
 ```env
-VITE_USE_MOCKS=true
+VITE_USE_MSW=true
 ```
 
 Con eso MSW intercepta requests en navegador y permite desarrollar sin backend activo.
@@ -127,3 +127,25 @@ Passwords magicas para simular errores:
 - Cubrir estados `loading`, `empty`, `success`, `error`.
 - Mantener handlers de MSW alineados a contratos en `docs/api/`.
 - Reusar factories y evitar data inline repetida.
+
+## Hooks de verificacion Part 2
+
+- Validar que flujos cross-domain usan contratos/adapters/eventos explicitos.
+- Si hay realtime, verificar que los handlers no toman decisiones de negocio/seguridad.
+- En acciones sensibles, cubrir envio de metadata de correlacion para auditoria backend.
+- Verificar gating UX por permisos atomicos/dependencias (sin checks ad-hoc por string de rol).
+
+## Hooks de verificacion Part 3
+
+- Aplicar piramide por riesgo: unit/integration como base; E2E solo para journeys criticos.
+- Priorizar cobertura en seguridad/authz UX, trazabilidad de auditoria, flujos clinicos criticos y transiciones de estado.
+- En flujos con concurrencia UI, cubrir condiciones de carrera (optimistic updates, retrys, transiciones asincronas superpuestas).
+- Para features criticas, exigir evidencia de cobertura automatizada proporcional antes de merge.
+
+## Gobernanza TDD-first estricta (obligatoria)
+
+- Alcance: NEW feature, NEW functionality y LARGE refactor.
+- Regla de tasking: primero tareas de diseno/creacion de tests; despues tareas de implementacion.
+- Ciclo requerido: **Red -> Green -> Refactor** (fallo inicial, implementacion minima en verde, refactor sin romper tests).
+- Evidencia de PR: adjuntar fallo inicial + progresion de implementacion + estado final en verde.
+- Excepciones: solo con racional explicito, controles/tests compensatorios y aprobacion en Jira/PR.

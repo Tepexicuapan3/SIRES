@@ -47,6 +47,20 @@
 - Always return normalized error shapes from resources.
 - Do not throw raw Axios errors from feature code.
 
+### Inter-domain, Real-time, and Permissions
+- Cross-domain frontend integration must happen through explicit API contracts, not internal domain imports.
+- Real-time integrations are exceptions and must live in dedicated adapters/contracts.
+- Do not place critical business/security decisions in WebSocket consumers or API interceptors.
+- Authorization logic in this layer is contract mapping only; backend remains source of truth.
+- Never encode security as ad-hoc role-string checks in client transport logic.
+
+### Part 3 Hooks
+- Keep DB strategy wording aligned in this layer: backend runs with one operational PostgreSQL source now and strict domain ownership/logical isolation; physical separation may happen later by criteria.
+- Do not model API clients assuming cross-domain DB shortcuts; require explicit backend contract aggregation.
+- For critical resources, document/reflect idempotency, concurrency, and transaction expectations exposed by backend contracts.
+- When API contracts change boundaries or critical behavior, update related docs/DoD references in the same PR.
+- Prioritize risk-based tests for auth/authz transport paths, audit correlation metadata propagation, and concurrency-sensitive mutations.
+
 ---
 
 ## Decision Trees
@@ -86,3 +100,8 @@ frontend/src/api/
 - [ ] Types are centralized in `types/`
 - [ ] Errors are normalized
 - [ ] Zod schemas match API contract
+- [ ] Cross-domain API usage is contract-driven and explicit.
+- [ ] Realtime flows (if any) are isolated and documented.
+- [ ] Permissions represented as atomic capabilities, not role-string assumptions.
+- [ ] Critical API paths have proportional test coverage by risk.
+- [ ] Contract/boundary changes updated docs in the same PR.

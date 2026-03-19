@@ -12,8 +12,8 @@ All new backend functionality must be built for Django/DRF.
 
 ## Operating Baseline (Phase 1)
 
-- Official strategy: evolutionary modular monolith + `DB por dominio` with PostgreSQL as target engine.
-- Mandatory delivery flow: Jira ticketing + SDD phases + Engram persistence + GGA pre-commit gate.
+- Official strategy: evolutionary modular monolith + `DB per domain` with PostgreSQL as target engine.
+- Mandatory delivery flow: Jira ticketing + SDD phases + TDD-first planning/execution + Engram persistence + GGA pre-commit gate.
 - Runtime remains on current routes/modules until each domain reaches DoD (no big-bang cutover).
 - Auth functional refactor starts only after planning artifacts and Jira acceptance criteria are ready.
 
@@ -36,13 +36,173 @@ All new backend functionality must be built for Django/DRF.
 
 ## Domain-First Operating Model (Phase 1 + base Phase 2)
 
-- Delivery se organiza por dominios con ownership explicito (backend + frontend + DB + docs por dominio).
-- No hacer big-bang moves: coexistencia `old` y `new` hasta cerrar dominios piloto.
-- Rutas/runtime actuales son la fuente operativa; nuevas estructuras se introducen como scaffolding gradual.
-- Estrategia de datos obligatoria: `DB por dominio` con PostgreSQL como tecnologia objetivo por escalabilidad.
-- Aislamiento de datos por dominio: primero logico (schema/namespace ownership), luego fisico (DB dedicada) segun criterios documentados.
-- Prohibido el acceso directo cross-domain a tablas o schemas de otro dominio; usar contratos (API/eventos/read-models).
-- Cambios cross-domain requieren RFC corto y PR con checklist de impacto.
+- Delivery is organized by domains with explicit ownership (backend + frontend + DB + docs per domain).
+- No big-bang moves: `old` and `new` coexist until pilot domains are completed.
+- Current routes/runtime remain the source of operation; new structures are introduced as gradual scaffolding.
+- Mandatory data strategy: `DB per domain` with PostgreSQL as target technology for scalability.
+- Domain data isolation: first logical (schema/namespace ownership), then physical (dedicated DB) based on documented criteria.
+- Direct cross-domain access to tables/schemas is prohibited; use contracts (API/events/read-models).
+- Cross-domain changes require a short RFC and PR impact checklist.
+
+## Architecture and Organization Standards (Operationalized)
+
+These rules convert team standards into mandatory repository behavior for AI agents.
+
+### 1) Recommended Architecture (mandatory)
+
+- Keep SIRES as an evolutionary modular monolith with pragmatic, lightweight DDD.
+- Apply layered architecture in every domain/module:
+  - `presentation` (API/UI transport, validation, mapping)
+  - `application` (use cases, orchestration, transaction boundaries)
+  - `domain` (business invariants, entities/value objects, domain policies)
+  - `infrastructure` (ORM, external services, adapters)
+- Critical business rules MUST live in `application` and `domain`, never in transport layers.
+- Hard ban: do not put critical business logic in views, serializers, forms, route handlers, React components, or UI utility helpers.
+
+### 2) Folder Organization by Business Domain (mandatory)
+
+- Organize by business domain first, then by layer inside each domain.
+- Backend target: `backend/domains/<domain>/{presentation,use_cases,infrastructure,domain,tests}`.
+- Frontend target: `frontend/src/domains/<domain>/{components,hooks,pages,state,adapters,types}`.
+- Shared modules are controlled and limited to technical cross-cutting concerns (design tokens, API client primitives, logging, telemetry, shared test tools).
+- Hard ban: generic "misc/common/utils" modules containing domain business decisions.
+- Hard ban: direct cross-domain DB access from application code; use contracts (API/events/read-models).
+
+### 3) Recommended Design Patterns (use intentionally)
+
+- Use Cases / Application Services: default for business operations.
+- Repository Pattern: use when persistence complexity, transactional consistency, or multi-source orchestration justifies abstraction.
+- Domain Events (internal first): publish internal domain events before introducing external integration events.
+- Policies: centralize authorization and contextual business permission rules in dedicated policy objects/functions.
+- Transactions: open and close transactional boundaries at the application layer.
+- Avoid premature complexity:
+  - Do not split to microservices without explicit architecture decision and measurable need.
+  - Do not introduce full CQRS or full event sourcing by default.
+  - Do not add abstraction layers with no current domain pressure.
+
+### 4) Inter-domain Communication (mandatory)
+
+- Allowed mechanisms only:
+  - Formal query/service contract (sync request/response).
+  - Orchestrator use case in application layer (multi-domain workflow coordination).
+  - Domain events (internal first, explicit subscribers).
+- Hard ban: no direct dependency on another domain's internal models, repositories, tables, or business rules.
+- Hard ban: no uncontrolled cross-domain data access (including convenience SQL joins across domain ownership boundaries).
+- When to use:
+  - Query/service contract for deterministic reads/writes requiring immediate response.
+  - Orchestrator use case for transactional or ordered workflows spanning multiple domains.
+  - Domain events for decoupled side effects and eventual consistency.
+
+### 5) Real-time Communication (controlled exception)
+
+- Real-time is an exception, not the default transport; default remains request/response APIs.
+- Recommended: operational notifications, collaborative presence, progress streams, low-latency dashboards.
+- Not recommended: core CRUD orchestration, security-critical decisions, and primary audit persistence.
+- All real-time features must use a dedicated module with standardized channel naming, auth, and message contracts.
+- WebSocket consumers/handlers must delegate critical business behavior to application use cases.
+- Every new real-time feature requires explicit business justification and documentation in the corresponding domain docs.
+
+### 6) Complete Audit (mandatory cross-cutting)
+
+- Audit is mandatory for auth events, sensitive reads/changes, and critical business operations.
+- Minimum audit event contract:
+  - `actor`, `timestamp`, `action`, `domain`, `resource`, `result`, `contextId/requestId`.
+  - `ip` and `userAgent` when available.
+  - `beforeState` and `afterState` when mutation context applies.
+- Audit implementation guidance:
+  - Explicit logging in use cases for critical operations.
+  - Automated hooks for sensitive pathways.
+- Audit storage must be append-only, access-restricted, and include masking/redaction for sensitive data.
+- Definition of Done for critical operations must include audit verification.
+
+### 7) Atomic/Granular Permissions (mandatory)
+
+- Authorization base is atomic permissions, not coarse role names.
+- Roles are permission bundles, not the source of truth.
+- Contextual authorization must be enforced via policy modules/services.
+- Central authorization service is required; ad-hoc role-string checks are prohibited as a security basis.
+- Backend is security source of truth; frontend checks are UX gating only.
+
+### 8) Database Strategy (integrity and safety first)
+
+- Stage policy (non-contradictory baseline): SIRES runs on a single PostgreSQL engine/instance in early stages, with strict domain ownership and logical isolation now; physical DB separation is evaluated later with documented criteria.
+- Every domain-owned schema/table must enforce integrity intentionally: PK/FK constraints, uniqueness, explicit nullability, and indexes aligned with real query patterns.
+- Application services/use cases define transaction boundaries for critical workflows; avoid ad-hoc transaction control in transport layers.
+- For concurrency hotspots, document and apply safe update patterns (`SELECT ... FOR UPDATE`, optimistic version checks, idempotency keys, or queue serialization) per use case.
+- Keep operational state and audit/history stores separated by responsibility (transactional tables are not audit logs; audit/history is append-only and query-optimized for traceability).
+
+### 9) Team Collaboration Standards (mandatory)
+
+- Architecture standards docs are live artifacts: PRs that change behavior/boundaries must update affected docs in the same change.
+- Domain ownership model is explicit: assign primary and secondary maintainers per domain for backend, frontend, DB, and docs.
+- Use a single DoD baseline for all domains/slices; no local ad-hoc DoD variants.
+- PR review must include architecture compliance gates, not just code-style/lint checks.
+
+### 10) Testing Strategy (risk-based)
+
+- Use a risk-based pyramid: unit and service tests as base, integration/API tests for contracts and boundaries, E2E for critical user journeys.
+- Mandatory priority coverage areas: security/authentication/authorization, audit traceability, critical clinical flows, state transitions, and concurrency-sensitive paths.
+- Rule: critical features must include proportional automated coverage before merge (depth depends on risk and blast radius).
+
+### 10.1) Strict TDD-First Governance (mandatory additive)
+
+- Scope (mandatory): all NEW features, NEW functionalities, and LARGE refactors.
+- Planning rule: implementation task lists must start with testing tasks (design + creation) before production code tasks.
+- Execution rule: enforce Red -> Green -> Refactor cycle; tests must fail first, then pass with minimal implementation, then refactor with tests still passing.
+- PR evidence rule: include test-first proof (initial failing tests, implementation progression, final passing state).
+- Exception rule: if TDD cannot be applied, document explicit rationale, define compensating controls/tests, and obtain explicit approval in Jira/PR review.
+
+### 11) System Evolution Strategy (stage-based)
+
+- Stage 1: stabilize modular-monolith boundaries and domain ownership on shared PostgreSQL infrastructure.
+- Stage 2: harden domain modules (performance, observability, reliability, security controls) while preserving contracts.
+- Stage 3: evaluate extraction/physical separation only with evidence (SLO pressure, operational pain, compliance, or independent scaling need).
+- Hard ban: no architecture changes driven by hype, preference, or trend without measurable need and documented decision.
+
+### 12) Recommended Architectural Decision Synthesis
+
+- Keep the modular monolith as the default system shape.
+- Keep domain-first boundaries as the default planning and delivery unit.
+- Keep DB-per-domain ownership on PostgreSQL as the mandatory data policy (logical first, physical by criteria).
+- Keep centralized security/audit governance and contract-based inter-domain integration.
+
+### 13) System Blueprint (canonical)
+
+- Backend: Django/DRF layered by `presentation -> application -> domain -> infrastructure`, with use cases owning critical flows.
+- Frontend: React domain-first structure where UI is transport/presentation and domain/application modules own behavior.
+- Security: JWT in HttpOnly cookies + CSRF for mutating operations + centralized authorization policies.
+- Audit: append-only, restricted, masked traceability store with required event contract.
+- Communication: request/response by default; real-time as controlled exception; cross-domain via contracts/orchestrators/events only.
+
+### 14) Risks to Avoid (reviewer anti-checklist)
+
+- Pseudo-domain modularization (folders changed but dependencies and ownership remain tangled).
+- Shared module sprawl that accumulates business decisions in `common`/`shared`/`utils`.
+- Premature complexity (microservices/CQRS/event-sourcing without evidence).
+- Dispersed security logic (authorization duplicated in views/components/helpers instead of centralized policies).
+
+### 15) Final Recommendation (operational)
+
+- Optimize for disciplined incremental evolution: enforce boundaries, integrity, and traceability first.
+- Prefer measurable architecture decisions with explicit rollback plans over speculative redesigns.
+- Treat docs/checklists as execution controls, not optional documentation.
+
+### Pull Request Compliance Checklist (architecture)
+
+- [ ] Layer responsibilities are respected (`presentation` vs `application` vs `domain` vs `infrastructure`).
+- [ ] No critical business rules live in transport/UI utility code.
+- [ ] Domain boundaries are explicit; no direct cross-domain data access.
+- [ ] Pattern choices are justified (repository/events/policies/transactions).
+- [ ] Inter-domain communication uses only approved mechanisms (contract/orchestrator/event).
+- [ ] Real-time usage is justified, standardized, and delegated to use cases.
+- [ ] Audit coverage exists for critical operations with minimum event contract.
+- [ ] Authorization uses atomic permissions and centralized policies (no ad-hoc role strings).
+- [ ] No premature complexity was introduced.
+- [ ] DB changes document integrity constraints, transaction boundary, and concurrency strategy.
+- [ ] Critical features include proportional automated tests by risk level.
+- [ ] New features/new functionality/large refactors show TDD-first evidence (tests-first tasks + Red/Green/Refactor trace).
+- [ ] Any TDD exception includes explicit rationale, compensating controls/tests, and reviewer approval.
+- [ ] Architecture docs affected by boundary/flow changes were updated in the same PR.
 
 ### Canonical domain docs
 
@@ -185,6 +345,6 @@ python manage.py test
 ```bash
 docker compose up --build
 docker compose down
-# usar down -v solo para reset explicito de datos
+# use down -v only for explicit data reset
 docker compose logs -f
 ```

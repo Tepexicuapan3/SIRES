@@ -27,6 +27,7 @@ Persona
 3. Sin SQL cross-domain desde codigo de aplicacion.
 4. Cross-domain changes requieren RFC corto y checklist de impacto.
 5. No big-bang cutover; usar estados `legacy`, `hybrid`, `domain-first`.
+6. Para NEW feature/NEW functionality/LARGE refactor, TDD-first es obligatorio (tasking de tests primero + Red -> Green -> Refactor).
 
 ## Protocolo diario
 
@@ -39,14 +40,16 @@ Persona
 ### Durante
 
 1. Ejecutar trabajo por slices chicos.
-2. Guardar en Engram solo eventos high-signal (decisiones de arquitectura/tecnicas, bugfix raiz, convenciones, config).
-3. Mantener Jira actualizado (In Progress / Review).
+2. Arrancar cada slice aplicable con test fallando (Red), luego implementacion minima (Green) y refactor seguro.
+3. Guardar en Engram solo eventos high-signal (decisiones de arquitectura/tecnicas, bugfix raiz, convenciones, config).
+4. Mantener Jira actualizado (In Progress / Review).
 
 ### Antes de PR
 
 1. Verificar hooks activos y GGA disponible.
 2. Revisar cambios por dominio.
 3. Validar checklist de dependencia, datos y seguridad.
+4. Adjuntar evidencia TDD-first cuando aplique (fallo inicial + progresion + verde final) o excepcion aprobada con controles compensatorios.
 
 ### Gate de commit (GGA + hooks)
 

@@ -8,12 +8,109 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 2. `docs/getting-started/ai-team-workflow.md`
 3. `docs/getting-started/onboarding-day-1-checklist.md`
 
+## Onboarding por areas raiz
+
+- `backend/apps/README.md` - onboarding operativo para runtime backend actual y reglas de coexistencia.
+- `frontend/src/README.md` - onboarding rapido para estructura y limites del runtime frontend.
+
 ## Flujo Operativo (canonico)
 
 - Estrategia de arquitectura: monolito modular evolutivo (sin migracion a microservicios full en esta fase).
 - Estrategia de datos: DB por dominio con PostgreSQL como target estrategico.
-- Flujo de entrega obligatorio: Jira -> SDD-Orchestrator -> Engram -> GGA -> PR/Merge.
+- Flujo de entrega obligatorio: Jira -> SDD-Orchestrator -> planificacion TDD-first -> Engram -> GGA -> PR/Merge.
 - Entrega por dominios completos con ownership explicito (backend + frontend + DB + docs).
+
+## Estandares operativos (arquitectura + organizacion + patrones)
+
+### Arquitectura (obligatoria)
+
+- Monolito modular evolutivo con DDD pragmatico.
+- Capas por dominio/modulo: `presentation`, `application`, `domain`, `infrastructure`.
+- Regla dura: no ubicar logica critica de negocio en views/serializers/forms/rutas/componentes UI/utils.
+
+### Organizacion de carpetas (obligatoria)
+
+- Backend target: `backend/domains/<dominio>/{presentation,use_cases,infrastructure,domain,tests}`.
+- Frontend target: `frontend/src/domains/<dominio>/{components,hooks,pages,state,adapters,types}`.
+- Shared modules solo para cross-cutting tecnico; no decisiones de negocio.
+- Prohibido: acceso DB cross-domain directo desde codigo de aplicacion.
+
+### Patrones recomendados (cuando usar)
+
+- Use Cases/Application Services como default.
+- Repository cuando hay complejidad/consistencia/multiples fuentes.
+- Domain Events con enfoque internal-first.
+- Policies para autorizacion y reglas contextuales.
+- Transacciones delimitadas en `application`.
+- Evitar complejidad prematura (microservicios/CQRS full/event sourcing full sin ADR).
+
+### Comunicacion inter-dominio (obligatoria)
+
+- Mecanismos permitidos: contrato query/service, caso de uso orquestador, domain events.
+- Prohibido acoplarse a modelos internos/repositorios/tablas/reglas de otro dominio.
+- Prohibido acceso cross-domain no controlado a datos de dominio.
+- Guia de uso:
+  - Contrato query/service: respuesta inmediata y deterministica.
+  - Orquestador: flujo ordenado o transaccional entre dominios.
+  - Eventos: side-effects desacoplados y consistencia eventual.
+
+### Realtime (excepcion controlada)
+
+- Realtime no reemplaza API request/response como default.
+- Recomendado: notificaciones, presencia, progreso y tableros de baja latencia.
+- No recomendado: CRUD core, decisiones security-critical, persistencia primaria de auditoria.
+- Toda feature realtime debe documentar modulo dedicado + contrato de canal/auth/mensaje + justificacion de negocio.
+
+### Auditoria completa (obligatoria)
+
+- Cobertura minima: auth events, lecturas/cambios sensibles y operaciones criticas.
+- Contrato minimo de evento: `actor`, `timestamp`, `action`, `domain`, `resource`, `result`, `contextId/requestId`; `ip`/`userAgent` cuando aplique; `beforeState`/`afterState` en mutaciones.
+- Reglas de almacenamiento: append-only, acceso restringido y masking/redaction.
+- El DoD de operaciones criticas debe incluir validacion de auditoria.
+
+### Permisos atomicos/granulares (obligatorio)
+
+- Autorizacion basada en permisos atomicos; roles como bundles.
+- Politicas contextuales obligatorias para autorizacion condicional.
+- Servicio central de autorizacion requerido; prohibidos checks ad-hoc de role strings.
+- Backend es source of truth de seguridad; frontend aplica gating UX.
+
+### Estrategia DB (Part 3, obligatoria)
+
+- Baseline por etapas: una sola instancia/engine PostgreSQL al inicio con ownership estricto por dominio y aislamiento logico; separacion fisica por dominio solo cuando cumpla criterios documentados.
+- Integridad primero: PK/FK, unicidad, nullabilidad explicita e indices segun patrones reales de consulta.
+- Limites transaccionales definidos en `application`/casos de uso; evitar manejo transaccional en transporte.
+- Concurrencia en hotspots: documentar y elegir patron seguro (`FOR UPDATE`, versionado optimista, idempotencia o serializacion).
+- Separar estado operacional de auditoria/historico (append-only para trazabilidad).
+
+### Colaboracion y governance (Part 3)
+
+- Los docs de arquitectura son artefactos vivos: cualquier PR que cambie boundaries/flujo actualiza docs impactados en el mismo cambio.
+- Ownership explicito por dominio (primario/secundario en backend, frontend, DB y docs).
+- Un DoD base unico para todos los dominios/slices.
+- Review de PR con gates de compliance arquitectonico + evidencia de testing proporcional al riesgo.
+
+### Testing por riesgo (Part 3)
+
+- Piramide base: unit/service -> integration/API -> E2E para journeys criticos.
+- Cobertura prioritaria: seguridad/authn/authz, auditoria, flujos clinicos criticos, transiciones de estado y concurrencia.
+- Regla de merge: features criticas requieren cobertura automatizada proporcional al riesgo.
+- Regla TDD-first (obligatoria): NEW feature/NEW functionality/LARGE refactor siguen Red -> Green -> Refactor.
+- Regla de planning: el tasking debe iniciar con tareas de testing antes de tareas de implementacion.
+- Regla de evidencia: PRs deben mostrar fallo inicial + progresion de implementacion + estado final en verde; excepciones requieren racional explicito + controles compensatorios + aprobacion.
+
+### Evolucion del sistema (Part 3)
+
+- Etapa 1: estabilizar boundaries y ownership en PostgreSQL compartido.
+- Etapa 2: endurecer dominios (performance, observabilidad, confiabilidad, seguridad) sin romper contratos.
+- Etapa 3: separar fisicamente solo con evidencia operativa/compliance/SLO.
+- Prohibido redisenar arquitectura por hype o preferencia sin necesidad medible.
+
+### Sintesis + blueprint + riesgos
+
+- Sintesis canonica: monolito modular + domain-first + DB ownership por dominio + seguridad/auditoria centralizadas + integracion por contratos.
+- Blueprint: backend en capas Django/DRF, frontend domain-first, JWT HttpOnly + CSRF, auditoria append-only, comunicacion API por defecto con realtime como excepcion.
+- Riesgos a evitar: pseudo-modularizacion, sprawl de shared con reglas de negocio, complejidad prematura y seguridad dispersa.
 
 ## Arquitectura
 

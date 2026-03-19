@@ -29,6 +29,7 @@ Cada dominio debe tener ownership explicito para:
 - frontend (UI, hooks, state)
 - DB en PostgreSQL (schemas/tablas/migraciones/indices)
 - docs (playbook, contracts, ADR/RFC)
+- Cada area debe declarar owner primario y secundario para continuidad operativa y review.
 
 ### Reglas de datos entre dominios
 
@@ -42,10 +43,10 @@ Formato sugerido para ticket de ownership:
 
 ```text
 Dominio: Recepcion
-Owner backend: @backend-owner
-Owner frontend: @frontend-owner
-Owner DB: @db-owner
-Owner docs: @docs-owner
+Owner backend (primary/secondary): @backend-owner-a / @backend-owner-b
+Owner frontend (primary/secondary): @frontend-owner-a / @frontend-owner-b
+Owner DB (primary/secondary): @db-owner-a / @db-owner-b
+Owner docs (primary/secondary): @docs-owner-a / @docs-owner-b
 ```
 
 ## References

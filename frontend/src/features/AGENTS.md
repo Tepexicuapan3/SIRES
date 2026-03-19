@@ -40,6 +40,20 @@
 - Separate queries and mutations by module with dedicated query keys.
 - Place reusable pieces in `frontend/src/components/`; keep feature-specific pieces local.
 
+## Architecture Guardrails
+
+- Treat feature `components/` and `pages/` as presentation layer.
+- Keep orchestration/business flows in `queries/`, `mutations/`, and `domain/`.
+- Place permission/contextual rules in policy-like helpers under `domain/`, not inline in JSX.
+- Hard ban: critical business logic in `utils/` catch-all helpers.
+
+## Pattern Guidance
+
+- Use feature use-case style hooks to coordinate multi-step operations.
+- Use repository-like wrappers only when multiple API resources need unified behavior.
+- Prefer internal state events or query invalidation before adding external messaging mechanisms.
+- Avoid premature complexity: no microfrontend splits or CQRS-style architecture in feature modules by default.
+
 ## Permission UX Rules
 
 - If a secondary catalog is blocked by permissions, show neutral contextual notice (not critical/red banner).
@@ -54,6 +68,21 @@
 - If adding a permission, update dependency rules and tests in `frontend/src/test/unit/auth/permission-dependencies.test.ts`.
 - Use `dependencyAware` mode in `PermissionGate` or `ProtectedRoute` when UX requires full capability.
 
+## Part 2 Guardrails (Operational)
+
+- Cross-feature/domain flows must go through contracts, explicit orchestration hooks, or documented events; no direct internal coupling.
+- Real-time is a controlled exception; keep handlers in dedicated adapters and delegate business decisions to feature/domain application logic.
+- For sensitive actions, propagate correlation metadata (`X-Request-ID` when available) so backend audit remains traceable.
+- Feature permission checks are UX-only; backend authorization is final and must map to atomic permissions/policies.
+
+## Part 3 Guardrails (Operational)
+
+- Keep backend data-strategy awareness in feature contracts: do not design UI flows that depend on implicit cross-domain DB joins; require explicit backend contract composition.
+- Collaboration baseline: update feature/domain docs and DoD notes in the same PR when flow boundaries, permissions, or critical contracts change.
+- Use risk-based tests: prioritize auth/authz UX gates, audit-traceable actions, critical transitions, and concurrency-prone state changes.
+- Stage-based evolution only: improve current modular monolith boundaries incrementally; avoid rewrite-first architecture moves.
+- Top risks to avoid: hidden coupling in `utils/`, unverified critical flows, and complexity added without measurable need.
+
 ## QA Checklist
 
 - [ ] Feature follows module boundaries.
@@ -61,3 +90,8 @@
 - [ ] Query/mutation separation is clear.
 - [ ] Permission states are handled without noisy UX.
 - [ ] Dependency-aware permission checks are used where needed.
+- [ ] Cross-domain interactions use explicit contracts/orchestration/events.
+- [ ] Real-time paths (if any) avoid business/security decisions in handlers.
+- [ ] Sensitive flows keep backend audit traceability metadata.
+- [ ] Critical user journeys have proportional automated tests by risk.
+- [ ] Flow/contract changes updated related docs in the same PR.
