@@ -103,6 +103,7 @@ No recomendada. El contrato operativo de desarrollo en SIRES es docker-first.
 Playbook y onboarding:
 - `docs/getting-started/ai-team-workflow.md`
 - `docs/getting-started/onboarding-day-1-checklist.md`
+- `docs/getting-started/github-hardening-ci-cd-baseline.md`
 
 ## Comandos utiles
 

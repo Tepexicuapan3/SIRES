@@ -46,6 +46,7 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 - `docs/getting-started/ai-team-workflow.md` - runbook diario de trabajo con IA.
 - `docs/getting-started/onboarding-day-1-checklist.md` - checklist day-1.
 - `docs/getting-started/engram-team-sync.md` - hooks y sincronizacion de memoria compartida.
+- `docs/getting-started/github-hardening-ci-cd-baseline.md` - guia practica para branch protection, checks requeridos y hardening en GitHub UI.
 
 ## Templates
 
