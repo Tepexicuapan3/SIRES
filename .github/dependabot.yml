@@ -8,22 +8,12 @@ updates:
       day: "monday"
       time: "04:00"
       timezone: "America/Mexico_City"
-    open-pull-requests-limit: 2
+    # Solo seguridad: desactiva version updates normales.
+    # Dependabot security updates siguen habilitados en GitHub settings.
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
       - "frontend"
-    groups:
-      frontend-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-      frontend-major:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
 
   - package-ecosystem: "pip"
     directory: "/backend"
@@ -33,22 +23,10 @@ updates:
       day: "monday"
       time: "04:15"
       timezone: "America/Mexico_City"
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
       - "backend"
-    groups:
-      backend-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-      backend-major:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -58,11 +36,7 @@ updates:
       day: "monday"
       time: "04:30"
       timezone: "America/Mexico_City"
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
       - "github-actions"
-    groups:
-      github-actions-all:
-        patterns:
-          - "*"
