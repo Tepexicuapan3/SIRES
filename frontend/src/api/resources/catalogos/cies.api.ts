@@ -51,12 +51,19 @@ export interface CiesConfirmResponse {
   inserted: number;
 }
 
+interface ApiErrorWithStatus {
+  status?: number;
+}
+
 /* =======================
    Helpers
 ======================= */
 
 const waitForTokenRefresh = (): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, 800));
+
+const hasStatus = (error: unknown): error is ApiErrorWithStatus =>
+  typeof error === "object" && error !== null && "status" in error;
 
 /* =======================
    API
@@ -80,7 +87,7 @@ export const ciesAPI = {
   preview: async (
     file: File,
     version: string = "CIE-10",
-    _retry = false
+    _retry = false,
   ): Promise<CiesPreviewResponse> => {
     const buildFormData = () => {
       const formData = new FormData();
@@ -99,12 +106,11 @@ export const ciesAPI = {
             // Axios genera multipart/form-data con boundary correcto.
             "Content-Type": undefined,
           },
-        }
+        },
       );
       return response.data;
-
-    } catch (err: any) {
-      if (!_retry && err?.status === 401) {
+    } catch (err: unknown) {
+      if (!_retry && hasStatus(err) && err.status === 401) {
         await waitForTokenRefresh();
         return ciesAPI.preview(file, version, true);
       }
@@ -120,7 +126,7 @@ export const ciesAPI = {
   confirm: async (rows: CiesUploadRow[]): Promise<CiesConfirmResponse> => {
     const response = await apiClient.post<CiesConfirmResponse>(
       "/cies/confirm/",
-      { rows }
+      { rows },
     );
     return response.data;
   },
@@ -140,9 +146,12 @@ export const ciesAPI = {
    */
   update: async (
     code: string,
-    data: Partial<CiesListItem>
+    data: Partial<CiesListItem>,
   ): Promise<CiesListItem> => {
-    const response = await apiClient.patch<CiesListItem>(`/cies/${code}/`, data);
+    const response = await apiClient.patch<CiesListItem>(
+      `/cies/${code}/`,
+      data,
+    );
     return response.data;
   },
 
