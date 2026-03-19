@@ -1,283 +1,96 @@
-# Setup - SIRES
+# Setup SIRES
 
-Guía rápida para levantar el proyecto desde cero.
+> TL;DR: Levantar SIRES con Docker es el camino oficial. El stack operativo usa Django/DRF + React 19 sobre MySQL + Redis en contenedores.
 
----
+## Prerequisitos
 
-## Requisitos
+- Docker + Docker Compose
+- Git
 
-- **Docker** v20.10+
-- **MySQL** 8.0+ (local o remoto)
-- **Git**
+## Opcion recomendada: Docker
 
----
-
-## Instalación (5 minutos)
-
-### 1. Clonar el repo
+1. Clonar repositorio:
 
 ```bash
 git clone https://github.com/Luis-Ant/SIRES.git
 cd SIRES
 ```
 
-### 2. Configurar variables de entorno
-
-El proyecto usa **tres niveles** de `.env`:
-
-```
-SIRES/
-├── .env                # Docker Compose (puertos)
-├── backend/.env        # Flask (BD, JWT, CORS)
-└── frontend/.env       # Vite (API URL)
-```
-
-**Copiar plantillas:**
+2. Crear env desde ejemplo:
 
 ```bash
-# Desarrollo (recomendado)
-cp backend/.env.development backend/.env
-cp frontend/.env.development frontend/.env
-
-# Producción
-cp backend/.env.production backend/.env
-cp frontend/.env.production frontend/.env
+cp .env.example .env
 ```
 
-### 3. Configurar MySQL
-
-**Opción A: MySQL local**
-
-Ya está configurado en `.env.development`:
-
-```env
-# backend/.env
-MYSQL_HOST=host.docker.internal  # ← Accede a localhost desde Docker
-MYSQL_PORT=3306
-MYSQL_USER=sires
-MYSQL_PASSWORD=tu_password
-MYSQL_DATABASE=SIRES
-```
-
-### 4. Levantar servicios
+3. Levantar servicios:
 
 ```bash
-docker-compose up -d
+docker compose up --build
 ```
 
-Esto inicia:
-- **Backend** (Flask) → `http://localhost:5000`
-- **Frontend** (Vite) → `http://localhost:5173`
-- **Redis** → `localhost:6379`
+Notas clave del entorno docker-first:
+- Backend usa MySQL por variables de entorno (`DB_ENGINE`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+- El seed demo (`backend/seed_e2e.py`) se ejecuta automaticamente en el arranque (`RUN_SEED_ON_BOOT=true`).
+- La data persiste en volumen Docker (`mysql_data`).
 
-**Ver logs:**
+4. Verificacion rapida:
+
+- Frontend: `http://localhost:5173`
+- Backend admin: `http://localhost:5000/admin/`
+
+5. Logs utiles:
 
 ```bash
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 ```
 
-### 5. Verificar
+## Opcion local (sin Docker)
 
-**Health check backend:**
+No recomendada. La configuracion soportada para el equipo es docker-first.
+
+## Comandos operativos frecuentes
 
 ```bash
-curl http://localhost:5000/health
-# Esperado: {"status": "ok"}
+# Docker
+docker compose up --build
+docker compose down
+
+# Reset explicito de datos (solo cuando se requiere limpiar DB)
+docker compose down -v
+docker compose logs -f
+
+# Frontend
+cd frontend && bun lint
+cd frontend && bun test
+
+# Backend
+cd backend && python manage.py test
 ```
 
-**Abrir frontend:**
+## Troubleshooting rapido
 
-```
-http://localhost:5173/login
-```
+### El frontend no conecta al backend
 
----
+- Verificar `VITE_API_URL` en `.env`.
+- Verificar puerto backend (`5000`) y estado del contenedor.
 
-## Comandos Útiles
+### El backend no levanta
 
-### Docker
+- Revisar `.env` y credenciales de MySQL (`MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD`).
+- Revisar logs: `docker compose logs -f backend mysql`.
+
+### Hooks o gates no activos
+
+- Ejecutar `./.engram/scripts/install-hooks.sh`.
+- Confirmar `core.hooksPath`:
 
 ```bash
-# Detener servicios
-docker-compose down
-
-# Reconstruir imágenes
-docker-compose up -d --build
-
-# Acceder al contenedor
-docker-compose exec backend sh
-docker-compose exec frontend sh
-
-# Ver logs en tiempo real
-docker-compose logs -f
+git config --get core.hooksPath
 ```
 
-### Backend (Python)
+## References
 
-```bash
-# Instalar dependencia
-docker-compose exec backend pip install <paquete>
-
-# Ejecutar script
-docker-compose exec backend python run.py
-
-# Acceder a MySQL desde el contenedor
-docker-compose exec backend mysql -h $MYSQL_HOST -u $MYSQL_USER -p
-```
-
-### Frontend (Bun)
-
-```bash
-# Instalar dependencia
-docker-compose exec frontend bun add <paquete>
-
-# Lint
-docker-compose exec frontend bun lint
-
-# Build
-docker-compose exec frontend bun build
-```
-
----
-
-## Variables de Entorno (Detalle)
-
-### `backend/.env` (Flask)
-
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `FLASK_ENV` | Entorno | `development` o `production` |
-| `SECRET_KEY` | Clave para JWT | Generá una con `openssl rand -hex 32` |
-| `JWT_SECRET_KEY` | Clave específica JWT | Generá otra distinta |
-| `MYSQL_HOST` | Host de BD | `host.docker.internal` (local) |
-| `MYSQL_PORT` | Puerto BD | `3306` |
-| `MYSQL_USER` | Usuario BD | `sires` |
-| `MYSQL_PASSWORD` | Password BD | `tu_password` |
-| `MYSQL_DATABASE` | Nombre BD | `SIRES` |
-| `CORS_ORIGINS` | Origins permitidos | `http://localhost:5173` |
-
-### `frontend/.env` (Vite)
-
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `VITE_API_URL` | URL del backend | `http://localhost:5000/api/v1` |
-
-**⚠️ IMPORTANTE:** Solo variables con prefijo `VITE_` son accesibles en el navegador. **NO** pongas secrets con ese prefijo.
-
----
-
-## Troubleshooting
-
-### Error: "Can't connect to MySQL server"
-
-**Causa:** Backend no puede conectarse a MySQL.
-
-**Solución:**
-
-1. Verificá que MySQL esté corriendo:
-   ```bash
-   mysql -u root -p -h localhost -P 3306
-   ```
-
-2. Si usás Docker Desktop en Windows/Mac, usá `host.docker.internal`:
-   ```env
-   MYSQL_HOST=host.docker.internal
-   ```
-
-3. Si usás Linux, agregá esto a `docker-compose.yml`:
-   ```yaml
-   extra_hosts:
-     - "host.docker.internal:host-gateway"
-   ```
-
-### Error: "Port 5000 already in use"
-
-**Causa:** Otro servicio (AirPlay en Mac, por ejemplo) usa el puerto 5000.
-
-**Solución:**
-
-Cambiar puerto en `.env` raíz:
-
-```env
-BACKEND_PORT=5001
-```
-
-Y en `frontend/.env`:
-
-```env
-VITE_API_URL=http://localhost:5001/api/v1
-```
-
-### Error: CORS en el navegador
-
-**Causa:** Backend no permite el origin del frontend.
-
-**Solución:**
-
-En `backend/.env`:
-
-```env
-CORS_ORIGINS=http://localhost:5173
-```
-
-Si usás otro puerto, agregalo separado por comas:
-
-```env
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-```
-
-### Frontend muestra pantalla blanca
-
-**Causa:** Error en build o en el código.
-
-**Solución:**
-
-1. Verificá logs:
-   ```bash
-   docker-compose logs frontend
-   ```
-
-2. Revisá la consola del navegador (F12)
-
-3. Reconstruí el contenedor:
-   ```bash
-   docker-compose up -d --build frontend
-   ```
-
----
-
-## Desarrollo sin Docker (Opcional)
-
-### Backend local
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python run.py
-```
-
-### Frontend local
-
-```bash
-cd frontend
-bun install
-bun dev
-```
-
-**Nota:** Si desarrollás sin Docker, cambiá `MYSQL_HOST` a `localhost` en `backend/.env`.
-
----
-
-## Próximos Pasos
-
-1. **[Entender la arquitectura](/docs/architecture/overview.md)**
-2. **[Explorar RBAC](/docs/architecture/rbac.md)**
-3. **[Crear tu primera feature](/docs/guides/adding-feature.md)**
-4. **[Componentes UI](/docs/guides/ui-components.md)**
-
----
-
-**Última actualización:** Enero 2026
+- `docs/getting-started/ai-team-workflow.md`
+- `docs/getting-started/onboarding-day-1-checklist.md`
+- `docs/architecture/overview.md`

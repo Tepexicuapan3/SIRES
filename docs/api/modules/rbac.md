@@ -293,7 +293,7 @@ Matriz de `accion` recomendada:
    - Si se revoca rol primario, promover otro rol activo en la misma transaccion.
 4. `es_sistema = true` en roles/permisos implica solo lectura.
    - update de rol de sistema: `ROLE_SYSTEM_PROTECTED` (403).
-   - delete de rol de sistema: `CANNOT_DELETE_SYSTEM_ROLE` (403/400 segun politica final).
+   - delete de rol de sistema: `CANNOT_DELETE_SYSTEM_ROLE` (403).
 5. `is_admin = true` retorna `permissions: ["*"]` y anula overrides.
 6. Overrides expirados o con `fch_baja` no impactan permisos.
 7. Override es idempotente por usuario+permiso (upsert: actualiza `efecto` y `fch_expira`).

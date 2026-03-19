@@ -279,7 +279,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": True,
         "address": "Av. Demo 123, CDMX",
-        "schedule": _build_schedule("07:00", "14:00", "14:00", "20:00", "20:00", "23:00"),
+        "schedule": _build_schedule(
+            "07:00", "14:00", "14:00", "20:00", "20:00", "23:00"
+        ),
     },
     {
         "code": "HGR-002",
@@ -287,7 +289,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": True,
         "address": "Av. Reforma 240, CDMX",
-        "schedule": _build_schedule("06:00", "13:00", "13:00", "19:00", "19:00", "23:00"),
+        "schedule": _build_schedule(
+            "06:00", "13:00", "13:00", "19:00", "19:00", "23:00"
+        ),
     },
     {
         "code": "CLI-003",
@@ -295,7 +299,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": True,
         "address": "Calle Cedro 55, CDMX",
-        "schedule": _build_schedule("08:00", "15:00", "15:00", "21:00", "21:00", "23:30"),
+        "schedule": _build_schedule(
+            "08:00", "15:00", "15:00", "21:00", "21:00", "23:30"
+        ),
     },
     {
         "code": "SAN-004",
@@ -303,7 +309,9 @@ CENTER_DEFS = [
         "is_external": True,
         "is_active": True,
         "address": "Av. Division del Norte 1200, CDMX",
-        "schedule": _build_schedule("07:00", "13:00", "13:00", "19:00", "19:00", "22:00"),
+        "schedule": _build_schedule(
+            "07:00", "13:00", "13:00", "19:00", "19:00", "22:00"
+        ),
     },
     {
         "code": "UMO-005",
@@ -311,7 +319,9 @@ CENTER_DEFS = [
         "is_external": True,
         "is_active": True,
         "address": "Calz. Zaragoza 3500, CDMX",
-        "schedule": _build_schedule("09:00", "14:00", "14:00", "18:00", "18:00", "21:00"),
+        "schedule": _build_schedule(
+            "09:00", "14:00", "14:00", "18:00", "18:00", "21:00"
+        ),
     },
     {
         "code": "URG-006",
@@ -319,7 +329,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": True,
         "address": "Eje Central 900, CDMX",
-        "schedule": _build_schedule("00:00", "07:59", "08:00", "15:59", "16:00", "23:59"),
+        "schedule": _build_schedule(
+            "00:00", "07:59", "08:00", "15:59", "16:00", "23:59"
+        ),
     },
     {
         "code": "ARC-007",
@@ -327,7 +339,9 @@ CENTER_DEFS = [
         "is_external": False,
         "is_active": False,
         "address": "Av. Constituyentes 1500, CDMX",
-        "schedule": _build_schedule("07:00", "14:00", "14:00", "20:00", "20:00", "23:00"),
+        "schedule": _build_schedule(
+            "07:00", "14:00", "14:00", "20:00", "20:00", "23:00"
+        ),
     },
 ]
 
@@ -769,10 +783,7 @@ def _seed_area_types(admin_user):
             area_type_def["key"]: {"id": area_type_def["fallback_code"]}
             for area_type_def in AREA_TYPE_DEFS
         }
-        print(
-            "[SEED] cat_tpareas no existe; "
-            "se usan codigos fallback para cat_areas"
-        )
+        print("[SEED] cat_tpareas no existe; se usan codigos fallback para cat_areas")
         return fallback_types
 
     area_types = {}
@@ -902,7 +913,9 @@ def _get_or_create_user(username, email, full_name, center, admin_user=None, **f
         user.terminos_acept = desired_terms_accepted
         updated_fields.append("terminos_acept")
 
-    desired_terms_date = None if requires_onboarding else (user.fch_terminos or timezone.now())
+    desired_terms_date = (
+        None if requires_onboarding else (user.fch_terminos or timezone.now())
+    )
     if user.fch_terminos != desired_terms_date:
         user.fch_terminos = desired_terms_date
         updated_fields.append("fch_terminos")
@@ -914,7 +927,9 @@ def _get_or_create_user(username, email, full_name, center, admin_user=None, **f
             user.usr_modf = admin_user
             updated_fields.append("usr_modf")
         user.save(update_fields=sorted(set(updated_fields)))
-        print(f"[SEED] Actualizado {username}: {', '.join(sorted(set(updated_fields)))}")
+        print(
+            f"[SEED] Actualizado {username}: {', '.join(sorted(set(updated_fields)))}"
+        )
     else:
         print(f"[SEED] Verificado {username}: OK")
 
@@ -1056,21 +1071,54 @@ def _seed_user_overrides(users_by_username, permissions_map, admin_user):
             continue
 
         expires_in_days = override_def.get("expires_in_days")
-        expires_at = None
-        if expires_in_days is not None:
-            expires_at = timezone.now() + timedelta(days=expires_in_days)
 
-        RelUsuarioOverride.objects.update_or_create(
+        override, created = RelUsuarioOverride.objects.get_or_create(
             id_usuario=user,
             id_permiso=permission,
             defaults={
                 "efecto": override_def["effect"],
-                "fch_expira": expires_at,
+                "fch_expira": (
+                    timezone.now() + timedelta(days=expires_in_days)
+                    if expires_in_days is not None
+                    else None
+                ),
                 "fch_baja": None,
                 "usr_asignacion": admin_user,
                 "usr_baja": None,
             },
         )
+
+        update_fields = []
+
+        if override.efecto != override_def["effect"]:
+            override.efecto = override_def["effect"]
+            update_fields.append("efecto")
+
+        expected_expiry = None
+        if expires_in_days is not None:
+            expected_expiry = override.fch_expira
+            if created or expected_expiry is None:
+                expected_expiry = timezone.now() + timedelta(days=expires_in_days)
+
+        if override.fch_expira != expected_expiry:
+            override.fch_expira = expected_expiry
+            update_fields.append("fch_expira")
+
+        if override.fch_baja is not None:
+            override.fch_baja = None
+            update_fields.append("fch_baja")
+
+        if override.usr_baja_id is not None:
+            override.usr_baja = None
+            update_fields.append("usr_baja")
+
+        if override.usr_asignacion_id != admin_user.id_usuario:
+            override.usr_asignacion = admin_user
+            update_fields.append("usr_asignacion")
+
+        if update_fields:
+            override.save(update_fields=sorted(set(update_fields)))
+
         total += 1
 
     print(f"[SEED] Overrides asegurados: {total}")

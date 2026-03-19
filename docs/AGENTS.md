@@ -32,6 +32,21 @@
 - Avoid duplicating content across files.
 - Use existing templates in `docs/templates/`.
 - Always link new docs from `docs/README.md`.
+- Domain governance docs are mandatory references for cross-domain changes.
+
+## Domain-First Docs (Phase 1 + base Phase 2)
+
+When documenting domain work, keep these artifacts aligned:
+
+- `docs/architecture/domain-map.md`
+- `docs/architecture/context-map.md`
+- `docs/architecture/dependency-rules.md`
+- `docs/architecture/db-ownership-migration-policy.md`
+- `docs/architecture/repo-navigation-map.md`
+- `docs/guides/pr-merge-governance.md`
+- `docs/guides/domain-dor-dod.md`
+- `docs/guides/incremental-domain-migration.md`
+- `docs/templates/rfc-cross-domain-template.md`
 
 ---
 

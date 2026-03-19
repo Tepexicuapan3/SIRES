@@ -1,0 +1,29 @@
+# Global fallback
+* @Luis-Ant
+
+# Platform areas
+/backend/ @Luis-Ant
+/frontend/ @Luis-Ant
+/docs/ @Luis-Ant
+/.github/ @Luis-Ant
+
+# Operating model and governance
+/README.md @Luis-Ant
+/AGENTS.md @Luis-Ant
+/docs/guides/pr-merge-governance.md @Luis-Ant
+/docs/guides/domain-dor-dod.md @Luis-Ant
+/docs/guides/incremental-domain-migration.md @Luis-Ant
+/docs/templates/rfc-cross-domain-template.md @Luis-Ant
+/docs/getting-started/ai-team-workflow.md @Luis-Ant
+/docs/getting-started/onboarding-day-1-checklist.md @Luis-Ant
+
+# Architecture maps
+/docs/architecture/domain-map.md @Luis-Ant
+/docs/architecture/context-map.md @Luis-Ant
+/docs/architecture/dependency-rules.md @Luis-Ant
+/docs/architecture/repo-navigation-map.md @Luis-Ant
+/docs/architecture/db-ownership-migration-policy.md @Luis-Ant
+
+# Domain scaffolding (phase 1)
+/backend/domains/ @Luis-Ant
+/frontend/src/domains/ @Luis-Ant

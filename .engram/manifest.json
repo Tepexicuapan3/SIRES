@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "chunks": [
+    {
+      "id": "0d130c22",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-18T02:21:55Z",
+      "sessions": 1,
+      "memories": 1,
+      "prompts": 0
+    },
+    {
+      "id": "d9ffe0a0",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-18T22:40:48Z",
+      "sessions": 7,
+      "memories": 34,
+      "prompts": 14
+    },
+    {
+      "id": "a54ec57b",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-18T22:44:19Z",
+      "sessions": 0,
+      "memories": 1,
+      "prompts": 0
+    }
+  ]
+}

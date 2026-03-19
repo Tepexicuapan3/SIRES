@@ -1,6 +1,6 @@
 # API Docs - SIRES
 
-Documentacion de contratos de API consumidos por el frontend.
+Documentacion de contratos REST consumidos por frontend y otros clientes internos.
 
 ## Fuente de Verdad
 
@@ -8,7 +8,7 @@ Documentacion de contratos de API consumidos por el frontend.
 - Modulos por dominio: `docs/api/modules/*.md`
 - Implementacion real: `backend/apps/**`
 
-Si hay desalineacion entre docs y codigo, se corrige la documentacion para reflejar el comportamiento actual y luego se define el plan de ajuste.
+Si hay desalineacion entre docs y codigo, corregir primero el contrato o implementar ajuste con plan explicito; no mantener divergencia silenciosa.
 
 ## Estructura
 

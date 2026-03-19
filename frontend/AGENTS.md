@@ -7,6 +7,7 @@
 
 ## Load Narrow Context
 
+- `frontend/src/domains/AGENTS.md` - domain scaffolding and migration flow.
 - `frontend/src/api/AGENTS.md` - API client/contracts.
 - `frontend/src/components/AGENTS.md` - shared UI/component rules.
 - `frontend/src/features/AGENTS.md` - feature-module patterns.
@@ -82,6 +83,7 @@ Local component state? -> useState
 ```
 Reusable across 2+ features? -> frontend/src/components/
 Single feature only? -> frontend/src/features/<feature>/components/
+Domain reusable building block? -> frontend/src/domains/<domain>/
 Primitive UI? -> frontend/src/components/ui/
 ```
 
@@ -111,3 +113,4 @@ bun test
 - [ ] No hardcoded colors or `var()` in className
 - [ ] Zustand/TanStack Query used appropriately
 - [ ] Tests updated when contracts change
+- [ ] If domain scaffolding changed, migration notes updated in `docs/guides/incremental-domain-migration.md`

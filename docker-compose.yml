@@ -1,92 +1,111 @@
-x-proxy-build-args: &proxy-build-args
-  HTTP_PROXY: ${HTTP_PROXY-}
-  HTTPS_PROXY: ${HTTPS_PROXY-}
-  NO_PROXY: ${NO_PROXY-localhost,127.0.0.1,backend,redis,10.15.15.76,host.docker.internal}
-
 services:
-  # === FRONTEND (React + Bun) ===
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args: *proxy-build-args
-    container_name: sires-frontend
-    ports:
-      - "${FRONTEND_PORT-5173}:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - VITE_API_URL=${VITE_API_URL-}
-      - VITE_BACKEND_PORT=${VITE_BACKEND_PORT-${BACKEND_PORT-5000}}
-      - VITE_DEV_PROXY_TARGET=${VITE_DEV_PROXY_TARGET-http://backend:5000}
-      - VITE_VISITS_STREAM_PATH=${VITE_VISITS_STREAM_PATH-/ws/v1/visits/stream}
-      - VITE_VISITS_STREAM_URL=${VITE_VISITS_STREAM_URL-}
-      - VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS=${VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS-30000}
-      - VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS=${VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS-10000}
-      - VITE_VISITS_STREAM_BACKOFF_BASE_MS=${VITE_VISITS_STREAM_BACKOFF_BASE_MS-1000}
-      - VITE_VISITS_STREAM_BACKOFF_MAX_MS=${VITE_VISITS_STREAM_BACKOFF_MAX_MS-30000}
-      - VITE_VISITS_STREAM_JITTER_RATIO=${VITE_VISITS_STREAM_JITTER_RATIO-0.1}
-      - VITE_VISITS_STREAM_DISCONNECT_GRACE_MS=${VITE_VISITS_STREAM_DISCONNECT_GRACE_MS-1500}
-      - SIRES_HOST=${SIRES_HOST-localhost}
-    command: sh -lc "bun install && unset http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY && bun run dev -- --host 0.0.0.0 --port 5173"
+  mysql:
+    image: mysql:8.4
+    container_name: sires-mysql
     restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_started
-    networks:
-      - sires-network
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sires}
+      MYSQL_USER: ${MYSQL_USER:-sires}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-sires_dev_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-sires_root_dev_password}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD:-sires_root_dev_password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
-  # === BACKEND (Django/DRF) ===
+  redis:
+    image: redis:7-alpine
+    container_name: sires-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args: *proxy-build-args
     container_name: sires-backend
+    restart: unless-stopped
+    command: sh /app/start-docker.sh
     ports:
-      - "${BACKEND_PORT-5000}:5000"
+      - "${BACKEND_PORT:-5000}:5000"
     volumes:
       - ./backend:/app
-    command: sh /app/start-docker.sh
-    restart: unless-stopped
     environment:
-      TZ: "America/Mexico_City"
-      ALLOW_ALL_HOSTS: ${ALLOW_ALL_HOSTS-true}
-      ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS-*}
-      CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS-http://localhost:5173,http://127.0.0.1:5173}
-      CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS-http://localhost:5173,http://127.0.0.1:5173}
-      WS_ALLOW_ALL_ORIGINS: ${WS_ALLOW_ALL_ORIGINS-false}
-      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS-}
-      EMAIL_BACKEND: ${EMAIL_BACKEND-django.core.mail.backends.console.EmailBackend}
-      ALLOW_USER_CREATE_WITHOUT_EMAIL: ${ALLOW_USER_CREATE_WITHOUT_EMAIL-true}
-      AUTO_RUN_SEED: ${AUTO_RUN_SEED-false}
-      CHANNEL_REDIS_URL: ${CHANNEL_REDIS_URL-redis://redis:6379/1}
-      SIRES_HOST: ${SIRES_HOST-localhost}
-    env_file:
-      - ./backend/.env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
+      TZ: America/Mexico_City
+      DEBUG: ${DEBUG:-true}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-dev-only}
+      ALLOW_ALL_HOSTS: ${ALLOW_ALL_HOSTS:-true}
+      ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+      CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      WS_ALLOW_ALL_ORIGINS: ${WS_ALLOW_ALL_ORIGINS:-false}
+      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-}
+      DB_ENGINE: ${DB_ENGINE:-django.db.backends.mysql}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE:-sires}
+      DB_USER: ${MYSQL_USER:-sires}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-sires_dev_password}
+      CHANNEL_REDIS_URL: redis://redis:6379/1
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      ALLOW_USER_CREATE_WITHOUT_EMAIL: ${ALLOW_USER_CREATE_WITHOUT_EMAIL:-true}
+      RUN_SEED_ON_BOOT: ${RUN_SEED_ON_BOOT:-true}
     depends_on:
+      mysql:
+        condition: service_healthy
       redis:
-        condition: service_started
-    networks:
-      - sires-network
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
-  # === REDIS (Base de datos OTP) ===
-  redis:
-    image: redis:7-alpine
-    container_name: sires-redis
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sires-frontend
+    restart: unless-stopped
+    command: sh -lc "bun install && bun run dev -- --host 0.0.0.0 --port 5173"
     ports:
-      - "${REDIS_PORT-6379}:6379"
-    networks:
-      - sires-network
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      VITE_API_URL: ${VITE_API_URL:-}
+      VITE_DEV_PROXY_TARGET: ${VITE_DEV_PROXY_TARGET:-http://backend:5000}
+      VITE_BACKEND_PORT: ${VITE_BACKEND_PORT:-5000}
+      VITE_VISITS_STREAM_PATH: ${VITE_VISITS_STREAM_PATH:-/ws/v1/visits/stream}
+      VITE_VISITS_STREAM_URL: ${VITE_VISITS_STREAM_URL:-}
+      VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS: ${VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS:-30000}
+      VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS: ${VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS:-10000}
+      VITE_VISITS_STREAM_BACKOFF_BASE_MS: ${VITE_VISITS_STREAM_BACKOFF_BASE_MS:-1000}
+      VITE_VISITS_STREAM_BACKOFF_MAX_MS: ${VITE_VISITS_STREAM_BACKOFF_MAX_MS:-30000}
+      VITE_VISITS_STREAM_JITTER_RATIO: ${VITE_VISITS_STREAM_JITTER_RATIO:-0.1}
+      VITE_VISITS_STREAM_DISCONNECT_GRACE_MS: ${VITE_VISITS_STREAM_DISCONNECT_GRACE_MS:-1500}
+      VITE_APP_NAME: ${VITE_APP_NAME:-SIRES}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
+      VITE_API_TIMEOUT: ${VITE_API_TIMEOUT:-30000}
+      VITE_USE_MSW: ${VITE_USE_MSW:-false}
+    depends_on:
+      backend:
+        condition: service_healthy
 
-# Red interna
-networks:
-  sires-network:
-    driver: bridge
+volumes:
+  mysql_data:
