@@ -1,6 +1,6 @@
 # GitHub Baseline: CI/CD + Security Hardening
 
-> TL;DR: this repo now includes CI (`.github/workflows/ci.yml`), security baseline + optional CodeQL (`.github/workflows/security.yml`), and Dependabot (`.github/dependabot.yml`). You still need to enforce branch and security settings in GitHub UI.
+> TL;DR: this repo now includes CI (`.github/workflows/ci.yml`), security baseline + optional CodeQL (`.github/workflows/security.yml`), deploy gates with environments (`.github/workflows/deploy.yml`), and Dependabot (`.github/dependabot.yml`). You still need to enforce branch and security settings in GitHub UI.
 
 ## Problem / Context
 
@@ -20,6 +20,10 @@ This baseline aligns SIRES with the expected flow: PR mandatory to `main`, domai
   - Job `security-baseline` (always-on, does not depend on GitHub Advanced Security).
   - Job `codeql-javascript-typescript` (optional, only if repository variable `ENABLE_CODEQL=true`).
   - Job `codeql-python` (optional, only if repository variable `ENABLE_CODEQL=true`).
+- `Deploy` workflow (`.github/workflows/deploy.yml`):
+  - `deploy-staging`: automatic on push to `main` and manual via dispatch target `Staging`.
+  - `deploy-production`: manual only via dispatch target `Production`.
+  - Both jobs require environment-level secrets/vars and run through GitHub Environment protection rules.
 - Dependabot config (`.github/dependabot.yml`) for:
   - npm in `/frontend`
   - pip in `/backend`
@@ -97,6 +101,31 @@ Create two environments in Settings -> Environments:
 
 Use environment-scoped secrets/variables instead of repository-wide secrets whenever possible.
 
+If your GitHub plan does not support required reviewers or wait timer for environments, keep branch policy protection enabled (`main` only) and enforce approval at PR level.
+
+### 7) Environment config required by `deploy.yml`
+
+The deploy workflow expects these values in each environment.
+
+Environment secrets (required):
+
+- `SSH_HOST`
+- `SSH_USER`
+- `SSH_PRIVATE_KEY`
+
+Environment variables (required):
+
+- `DEPLOY_PATH` (absolute path in remote host where the repository is cloned)
+- `SSH_PORT` (usually `22`)
+
+Optional repository variable:
+
+- `ENABLE_CODEQL` (`true` to run CodeQL jobs, unset/false to skip)
+- `ENABLE_STAGING_DEPLOY` (`true` to enable deploy-staging job)
+- `ENABLE_PRODUCTION_DEPLOY` (`true` to enable deploy-production job)
+
+The workflow will fail fast with a clear error list if any required secret/variable is missing.
+
 ## Examples
 
 ### Checklist for initial hardening rollout
@@ -107,7 +136,8 @@ Use environment-scoped secrets/variables instead of repository-wide secrets when
 4. Enable Code scanning in GitHub UI, set repository variable `ENABLE_CODEQL=true`, and then add the 2 CodeQL checks as required.
 5. Enable security features under Security & analysis.
 6. Create `staging` and `production` environments with reviewer protections.
-7. Merge PR using squash (recommended).
+7. Add required environment secrets/vars for `Staging` and `Production`.
+8. Merge PR using squash (recommended).
 
 ### Fast verification after setup
 
@@ -119,5 +149,6 @@ Use environment-scoped secrets/variables instead of repository-wide secrets when
 
 - `.github/workflows/ci.yml`
 - `.github/workflows/security.yml`
+- `.github/workflows/deploy.yml`
 - `.github/dependabot.yml`
 - `docs/guides/pr-merge-governance.md`

@@ -1,0 +1,162 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - Staging
+          - Production
+      ref:
+        description: "Git ref to deploy"
+        required: false
+        default: "main"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    name: deploy-staging
+    if: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'Staging')) && vars.ENABLE_STAGING_DEPLOY == 'true' }}
+    runs-on: ubuntu-latest
+    environment: Staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || github.ref_name }}
+
+      - name: Validate required environment secrets and vars
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -n "${SSH_HOST}" ] || missing+=("secrets.SSH_HOST")
+          [ -n "${SSH_USER}" ] || missing+=("secrets.SSH_USER")
+          [ -n "${SSH_PRIVATE_KEY}" ] || missing+=("secrets.SSH_PRIVATE_KEY")
+          [ -n "${DEPLOY_PATH}" ] || missing+=("vars.DEPLOY_PATH")
+          [ -n "${SSH_PORT}" ] || missing+=("vars.SSH_PORT")
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf 'Missing environment config:\n' >&2
+            printf ' - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Configure SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy with Docker Compose
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_REF='$DEPLOY_REF' bash -s" <<'EOF'
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            git fetch --all --prune
+            git checkout "$DEPLOY_REF"
+            if git rev-parse --verify --quiet "origin/$DEPLOY_REF" >/dev/null; then
+              git reset --hard "origin/$DEPLOY_REF"
+            fi
+            docker compose pull
+            docker compose up -d --build --remove-orphans
+            docker image prune -f
+          EOF
+
+  deploy-production:
+    name: deploy-production
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'Production' && vars.ENABLE_PRODUCTION_DEPLOY == 'true' }}
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Validate required environment secrets and vars
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -n "${SSH_HOST}" ] || missing+=("secrets.SSH_HOST")
+          [ -n "${SSH_USER}" ] || missing+=("secrets.SSH_USER")
+          [ -n "${SSH_PRIVATE_KEY}" ] || missing+=("secrets.SSH_PRIVATE_KEY")
+          [ -n "${DEPLOY_PATH}" ] || missing+=("vars.DEPLOY_PATH")
+          [ -n "${SSH_PORT}" ] || missing+=("vars.SSH_PORT")
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf 'Missing environment config:\n' >&2
+            printf ' - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Configure SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy with Docker Compose
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_REF: ${{ github.event.inputs.ref }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_REF='$DEPLOY_REF' bash -s" <<'EOF'
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            git fetch --all --prune
+            git checkout "$DEPLOY_REF"
+            if git rev-parse --verify --quiet "origin/$DEPLOY_REF" >/dev/null; then
+              git reset --hard "origin/$DEPLOY_REF"
+            fi
+            docker compose pull
+            docker compose up -d --build --remove-orphans
+            docker image prune -f
+          EOF
