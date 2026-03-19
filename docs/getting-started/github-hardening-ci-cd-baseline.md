@@ -1,6 +1,6 @@
 # GitHub Baseline: CI/CD + Security Hardening
 
-> TL;DR: this repo now includes CI (`.github/workflows/ci.yml`), CodeQL (`.github/workflows/security.yml`), and Dependabot (`.github/dependabot.yml`). You still need to enforce branch and security settings in GitHub UI.
+> TL;DR: this repo now includes CI (`.github/workflows/ci.yml`), security baseline + optional CodeQL (`.github/workflows/security.yml`), and Dependabot (`.github/dependabot.yml`). You still need to enforce branch and security settings in GitHub UI.
 
 ## Problem / Context
 
@@ -17,8 +17,9 @@ This baseline aligns SIRES with the expected flow: PR mandatory to `main`, domai
   - Job `backend`: Python setup, dependencies install, Django tests.
   - Job `docker-compose-validate`: `docker compose config`.
 - `Security` workflow (`.github/workflows/security.yml`) runs on `pull_request`, `push` to `main`, and weekly schedule:
-  - Job `codeql-javascript-typescript`.
-  - Job `codeql-python`.
+  - Job `security-baseline` (always-on, does not depend on GitHub Advanced Security).
+  - Job `codeql-javascript-typescript` (optional, only if repository variable `ENABLE_CODEQL=true`).
+  - Job `codeql-python` (optional, only if repository variable `ENABLE_CODEQL=true`).
 - Dependabot config (`.github/dependabot.yml`) for:
   - npm in `/frontend`
   - pip in `/backend`
@@ -49,6 +50,10 @@ After the first run of each workflow, set these checks as required:
 - `CI / frontend`
 - `CI / backend`
 - `CI / docker-compose-validate`
+- `Security / security-baseline`
+
+Add CodeQL checks as required only after enabling Code scanning and setting `ENABLE_CODEQL=true`:
+
 - `Security / codeql-javascript-typescript`
 - `Security / codeql-python`
 
@@ -71,7 +76,7 @@ Settings -> Security & analysis:
 - Dependency graph: ON
 - Dependabot alerts: ON
 - Dependabot security updates: ON
-- Code scanning (CodeQL): ON
+- Code scanning (CodeQL): ON (required before enabling `ENABLE_CODEQL=true`)
 - Secret scanning: ON
 - Push protection for secret scanning: ON
 - Private vulnerability reporting: ON (if repository visibility and plan support it)
@@ -97,11 +102,12 @@ Use environment-scoped secrets/variables instead of repository-wide secrets when
 ### Checklist for initial hardening rollout
 
 1. Push these baseline files to the repository.
-2. Open a PR and verify all 5 checks run and pass.
-3. Configure ruleset for `main` and mark the 5 checks as required.
-4. Enable security features under Security & analysis.
-5. Create `staging` and `production` environments with reviewer protections.
-6. Merge PR using squash (recommended).
+2. Open a PR and verify these 4 checks run and pass (`frontend`, `backend`, `docker-compose-validate`, `security-baseline`).
+3. Configure ruleset for `main` and mark those 4 checks as required.
+4. Enable Code scanning in GitHub UI, set repository variable `ENABLE_CODEQL=true`, and then add the 2 CodeQL checks as required.
+5. Enable security features under Security & analysis.
+6. Create `staging` and `production` environments with reviewer protections.
+7. Merge PR using squash (recommended).
 
 ### Fast verification after setup
 
