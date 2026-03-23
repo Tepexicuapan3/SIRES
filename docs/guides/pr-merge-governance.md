@@ -21,6 +21,23 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 9. Incluir owners primario/secundario por dominio impactado (backend, frontend, DB, docs) en descripcion o checklist del PR.
 10. Para NEW feature/NEW functionality/LARGE refactor, aplicar TDD-first estricto: tasks de testing primero y ciclo Red -> Green -> Refactor.
 
+## Workflow obligatorio de branch y PR
+
+- Cada developer crea una rama NUEVA por ticket partiendo desde `main` actualizado.
+- Todo el trabajo del ticket ocurre solo en esa rama (sin mezclar multiples tickets en la misma rama).
+- Cuando el ticket esta completo y testeado, se abre PR hacia `main`.
+- Los cambios en `main` se integran unicamente via PR (sin pushes directos).
+- La rama del ticket se elimina al hacer merge o al cerrar el PR sin merge.
+
+### Convencion de nombres de rama
+
+- Formato recomendado: `<tipo>/<dominio>/<jira-key>-<slug>`.
+- Tipos permitidos: `feat`, `fix`, `chore`.
+- Ejemplos:
+  - `feat/auth/SIRES-142-jwt-refresh-rotation`
+  - `fix/consulta/SIRES-287-validacion-receta`
+  - `chore/docs/SIRES-310-ajuste-pr-governance`
+
 ## Gates minimos de merge
 
 - Checklist de seguridad (JWT HttpOnly + CSRF para mutaciones).

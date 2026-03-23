@@ -138,6 +138,15 @@ These rules convert team standards into mandatory repository behavior for AI age
 - Use a single DoD baseline for all domains/slices; no local ad-hoc DoD variants.
 - PR review must include architecture compliance gates, not just code-style/lint checks.
 
+### 9.1) Git Workflow Enforcement (mandatory)
+
+- Every implementation task MUST start on a new branch linked to the Jira ticket or approved change identifier.
+- Hard ban: no implementation work is allowed directly on `main`.
+- Hard ban: direct pushes to `main` are prohibited.
+- `main` integration is allowed only through Pull Requests with review and required checks.
+- If an agent receives an implementation task while on `main`, it must stop, create/switch to a compliant branch, and only then continue implementation.
+- After PR merge or PR closure without merge, delete the working branch locally and remotely unless explicit retention is documented.
+
 ### 10) Testing Strategy (risk-based)
 
 - Use a risk-based pyramid: unit and service tests as base, integration/API tests for contracts and boundaries, E2E for critical user journeys.

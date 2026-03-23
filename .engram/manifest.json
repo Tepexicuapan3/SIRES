@@ -104,6 +104,14 @@
       "sessions": 1,
       "memories": 7,
       "prompts": 1
+    },
+    {
+      "id": "aca48dac",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-23T18:13:56Z",
+      "sessions": 3,
+      "memories": 25,
+      "prompts": 0
     }
   ]
 }
