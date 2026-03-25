@@ -2,7 +2,12 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
+from apps.administracion.models import (
+    AuditoriaEvento,
+    RelRolPermiso,
+    RelUsuarioOverride,
+    RelUsuarioRol,
+)
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Permisos, Roles
 from apps.recepcion.models import Visit
@@ -19,6 +24,21 @@ class VitalsContractsApiTests(APITestCase):
             email="somato@example.com",
             password=self.somato_password,
             role_code="SOMATOMETRIA",
+            permissions=["clinico:somatometria:read"],
+        )
+        self._create_user_with_role(
+            username="somato_role_only_user",
+            email="somato_role_only@example.com",
+            password="SomatoRoleOnly_123456",
+            role_code="SOMATOMETRIA",
+            permissions=["clinico:somatometria:read"],
+        )
+        role_only_user = SyUsuario.objects.get(usuario="somato_role_only_user")
+        denied_permission = Permisos.objects.get(codigo="clinico:somatometria:read")
+        RelUsuarioOverride.objects.create(
+            id_usuario=role_only_user,
+            id_permiso=denied_permission,
+            efecto="DENY",
         )
         self._create_user_with_role(
             username="recepcion_user",
@@ -90,6 +110,8 @@ class VitalsContractsApiTests(APITestCase):
                 id_permiso=permission,
             )
 
+        return user
+
     def _login_as(self, username, password):
         self.client.cookies.clear()
         response = self.client.post(
@@ -113,11 +135,6 @@ class VitalsContractsApiTests(APITestCase):
             "temperatureC": 36.6,
             "oxygenSaturationPct": 98,
         }
-
-    def _csrf_headers(self):
-        csrf_token = "csrf-token-test"
-        self.client.cookies["csrf_token"] = csrf_token
-        return {"HTTP_X_CSRF_TOKEN": csrf_token}
 
     def test_capture_vitals_happy_path_contract(self):
         self._login_as("somato_user", self.somato_password)
@@ -279,6 +296,22 @@ class VitalsContractsApiTests(APITestCase):
 
     def test_capture_vitals_role_not_allowed(self):
         self._login_as("recepcion_user", self.recepcion_password)
+
+        response = self.client.post(
+            f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",
+            self._valid_payload(),
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "ROLE_NOT_ALLOWED")
+        self.assertEqual(response.data["status"], 403)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+    def test_capture_vitals_role_only_user_without_capability_is_denied(self):
+        self._login_as("somato_role_only_user", "SomatoRoleOnly_123456")
 
         response = self.client.post(
             f"/api/v1/visits/{self.visit_in_somato.id_visit}/vitals",

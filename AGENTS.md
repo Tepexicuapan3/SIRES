@@ -225,6 +225,109 @@ These rules convert team standards into mandatory repository behavior for AI age
 - `docs/guides/incremental-domain-migration.md`
 - `docs/templates/rfc-cross-domain-template.md`
 
+## Protocolo documental de reducción de incertidumbre (obligatorio)
+
+Cuando una tarea implique diseño, implementación, refactor o decisiones con impacto de arquitectura/contratos, el agente DEBE usar `docs/` como sistema primario para reducir incertidumbre antes de proponer cambios.
+
+### A) Mapa canónico de documentación (path + uso + trigger)
+
+| Ruta | Para qué sirve | Cuándo consultarlo (trigger) |
+| --- | --- | --- |
+| `docs/architecture/hexagonal-clean-framework.md` | Reglas de Hexagonal/Clean y separación de responsabilidades | Diseño de arquitectura, refactor por capas, dudas de ubicación de lógica |
+| `docs/governance/solid-enforcement.md` | Criterios operativos para enforcement de SOLID | Cambios de diseño interno, extracción de servicios, revisión de acoplamiento |
+| `docs/architecture/pattern-catalog.md` | Cuándo usar/evitar patrones (use case, repository, event, policy, transaction) | Decisión de patrón o discusión de tradeoffs |
+| `docs/architecture/backend-structure-reference.md` | Estructura backend objetivo por dominio/capa | Implementación backend o migración estructural |
+| `docs/architecture/frontend-structure-reference.md` | Estructura frontend objetivo por dominio/capa | Implementación frontend o migración estructural |
+| `docs/domains/auth-access/*` | Verdad de dominio auth/access (boundary, ACL, PRD, decisiones pendientes) | Cambios de auth, permisos, RBAC, boundary cross-domain |
+| `docs/api/*` | Contratos API, estándares y módulos | Crear/modificar endpoints, payloads, errores, versionado |
+| `docs/governance/*` | Reglas de gobierno, compliance y gates de entrega | Decisiones de riesgo, excepciones, calidad y controles |
+| `docs/runbooks/*` | Procedimientos operativos y ejecución repetible | Operación, troubleshooting, handoff y tareas recurrentes |
+
+> Si alguna ruta canónica esperada no existe en la rama actual, usar fallback inmediato: `docs/architecture/overview.md`, `docs/architecture/dependency-rules.md`, `docs/architecture/repo-navigation-map.md`, `docs/guides/pr-merge-governance.md`, `docs/guides/domain-dor-dod.md`, y documentar el gap en la PR.
+
+### B) Playbooks por tipo de solicitud
+
+- **Diseño de arquitectura**
+  1. `docs/architecture/hexagonal-clean-framework.md`
+  2. `docs/governance/solid-enforcement.md`
+  3. `docs/architecture/pattern-catalog.md`
+  4. `docs/architecture/context-map.md` + `docs/architecture/dependency-rules.md`
+- **Implementación backend**
+  1. `docs/architecture/backend-structure-reference.md`
+  2. `docs/architecture/hexagonal-clean-framework.md`
+  3. `docs/architecture/pattern-catalog.md`
+  4. `docs/api/*` (si hay contrato) + `docs/domains/<dominio>/*`
+- **Implementación frontend**
+  1. `docs/architecture/frontend-structure-reference.md`
+  2. `docs/architecture/hexagonal-clean-framework.md`
+  3. `docs/architecture/pattern-catalog.md`
+  4. `docs/api/*` (si consume contrato) + `docs/domains/<dominio>/*`
+- **Cambios de API/contratos**
+  1. `docs/api/standards.md`
+  2. `docs/api/modules/*.md` afectados
+  3. `docs/architecture/dependency-rules.md`
+  4. `docs/domains/<dominio>/*` relacionado
+- **Decisiones / riesgos / excepciones**
+  1. `docs/governance/*`
+  2. `docs/guides/pr-merge-governance.md`
+  3. `docs/guides/domain-dor-dod.md`
+  4. `docs/templates/rfc-cross-domain-template.md` (si cruza dominios)
+- **Migración/refactor de dominio**
+  1. `docs/architecture/domain-map.md`
+  2. `docs/architecture/db-ownership-migration-policy.md`
+  3. `docs/guides/incremental-domain-migration.md`
+  4. `docs/domains/<dominio>/*` + RFC si hay impacto cross-domain
+
+### C) Orden de lectura recomendado
+
+- **Fast path (contexto mínimo, obligatorio antes de proponer cambios):**
+  1. `docs/README.md`
+  2. `docs/architecture/overview.md`
+  3. Documento específico de tarea (`docs/api/*` o `docs/domains/<dominio>/*`)
+  4. `docs/architecture/dependency-rules.md`
+- **Deep path (si hay ambigüedad, impacto alto o cross-domain):**
+  1. Fast path completo
+  2. `docs/architecture/hexagonal-clean-framework.md`
+  3. `docs/governance/solid-enforcement.md`
+  4. `docs/architecture/pattern-catalog.md`
+  5. `docs/architecture/backend-structure-reference.md` o `docs/architecture/frontend-structure-reference.md`
+  6. `docs/governance/*` + `docs/runbooks/*`
+  7. `docs/templates/rfc-cross-domain-template.md` si aplica
+
+### D) Reglas de precedencia documental (si hay conflicto)
+
+Orden de autoridad (de mayor a menor):
+
+1. `AGENTS.md` más específico del subtree (incluye este root cuando no hay override).
+2. Documentos de governance/compliance (`docs/governance/*`, `docs/guides/pr-merge-governance.md`).
+3. Contratos explícitos (`docs/api/standards.md` + módulo específico).
+4. Documentación de dominio (`docs/domains/<dominio>/*`).
+5. Frameworks y referencias de estructura (`docs/architecture/*-framework.md`, `*structure-reference.md`, `pattern-catalog.md`).
+6. Runbooks y guías operativas (`docs/runbooks/*`, `docs/getting-started/*`).
+
+Si persiste contradicción:
+- No inventar criterio propio.
+- Elegir la opción más restrictiva para seguridad/auditoría.
+- Abrir/actualizar RFC corto y dejar decisión explícita en PR.
+
+### E) Checklist obligatorio antes de proponer cambios
+
+- [ ] Identifiqué tipo de solicitud (arquitectura, backend, frontend, API, riesgo, migración).
+- [ ] Ejecuté fast path completo.
+- [ ] Ejecuté deep path si hay impacto alto, ambigüedad o cross-domain.
+- [ ] Confirmé reglas de Hexagonal/Clean + SOLID + catálogo de patrones aplicables.
+- [ ] Validé contrato de dominio/API afectado.
+- [ ] Registré explícitamente supuestos y restricciones derivadas de docs.
+
+### F) Checklist obligatorio antes de cerrar tarea / PR
+
+- [ ] La descripción de PR lista documentos consultados con rutas concretas.
+- [ ] La PR incluye sección "Evidencia documental" con: ruta, decisión tomada y impacto.
+- [ ] Si hubo conflicto documental, la PR documenta precedencia aplicada y resolución.
+- [ ] Si faltó un documento canónico esperado, la PR reporta gap y fallback utilizado.
+- [ ] Se actualizó documentación impactada en el mismo cambio (si cambió behavior/boundary/contrato).
+- [ ] Se verifica que no hubo cambios fuera de alcance en código de aplicación.
+
 ## Active Skills (SIRES)
 
 | Skill | Recommended use | Path |

@@ -28,11 +28,12 @@ Cada ticket Jira de este dominio debe incluir referencia explicita a:
 - La epic y tareas iniciales del dominio deben mantenerse alineadas con este mapeo.
 - Si cambia el alcance del PRD, actualizar primero este documento y luego Jira/SDD.
 
-## Dependencia explicita KAN-48 -> KAN-49/KAN-50/KAN-52
+## Dependencia explicita KAN-48 -> KAN-49/KAN-50/KAN-52/KAN-57
 
 - **KAN-48** fija el artefacto canonico de fronteras y ACL: [`boundary-map-acl.md`](./boundary-map-acl.md).
 - **KAN-49** (contratos/integraciones) solo puede ejecutar mecanismos marcados como `Permitida` o `Condicionada` en la matriz ACL y debe adjuntar evidencia de contrato.
-- **KAN-50** (enforcement de autorizacion) debe cumplir guardrails de politicas centralizadas, `deny by default` y backend como source of truth.
+- **KAN-50** (DB ownership/migracion RBAC) define estrategia de datos `managed=False` y plan incremental `expand -> migrate -> contract` sin cambios de runtime.
+- **KAN-57** (runtime hardening) ejecuta enforcement de autorizacion en use cases/realtime manteniendo backend como source of truth.
 - **KAN-52** (auditoria/trazabilidad) debe cumplir contrato minimo de evento de seguridad y evidencia de correlacion por `contextId/requestId`.
 
 ### Estado KAN-49 (slice runtime inicial)
@@ -42,6 +43,7 @@ Cada ticket Jira de este dominio debe incluir referencia explicita a:
   - migracion runtime acotada al flujo critico de recepcion,
   - consumo frontend del contrato canonico con `deny by default` cuando hay proyeccion backend,
   - evidencia de tests para deny/allow/punto unico de cambio.
-- La migracion runtime de somatometria queda pendiente para KAN-50/KAN-52 o siguiente slice aprobado.
+- KAN-50 documenta la estrategia de ownership/migracion DB RBAC en [`rbac-db-ownership-migration-strategy.md`](./rbac-db-ownership-migration-strategy.md).
+- El endurecimiento runtime de somatometria/realtime se traza en KAN-57 (fuera de alcance de KAN-50).
 
-Regla operativa: cualquier implementacion KAN-49/KAN-50/KAN-52 que contradiga KAN-48 requiere decision previa registrada en `decision-log.md`.
+Regla operativa: cualquier implementacion KAN-49/KAN-50/KAN-52/KAN-57 que contradiga KAN-48 requiere decision previa registrada en `decision-log.md`.

@@ -1,6 +1,6 @@
 # auth-access - Boundary Map + ACL tecnico (KAN-48)
 
-> TL;DR: artefacto canonico de fronteras e integraciones permitidas para `auth_access`, con matriz ACL verificable y guardrails de ejecucion para KAN-49/KAN-50/KAN-52, sin cambios de runtime.
+> TL;DR: artefacto canonico de fronteras e integraciones permitidas para `auth_access`, con matriz ACL verificable y guardrails de ejecucion para KAN-49/KAN-50/KAN-52/KAN-57, sin cambios de runtime en KAN-48.
 
 ## 1) Contexto y objetivo
 
@@ -18,7 +18,7 @@ KAN-48 define el marco documental para evitar acoplamientos cross-domain y estab
 - Definir boundary map operativo del dominio `auth_access`.
 - Definir ACL tecnica de integraciones con estado `permitida | condicionada | prohibida`.
 - Definir contratos formales permitidos (`query`, `service`, `event`) para inter-domain communication.
-- Dejar guardrails ejecutables para tickets dependientes KAN-49/KAN-50/KAN-52.
+- Dejar guardrails ejecutables para tickets dependientes KAN-49/KAN-50/KAN-52/KAN-57.
 - Consolidar trazabilidad AC KAN-48 -> evidencia documental.
 
 ### No alcance
@@ -141,7 +141,7 @@ Campos minimos:
 5. Escribir auditoria en tablas transaccionales no append-only.
 6. Introducir realtime para CRUD core de autorizacion sin justificacion formal.
 
-## 8) Guardrails de ejecucion para KAN-49, KAN-50, KAN-52
+## 8) Guardrails de ejecucion para KAN-49, KAN-50, KAN-52, KAN-57
 
 > Estos guardrails son criterios de implementacion obligatorios para tickets dependientes.
 
@@ -151,7 +151,13 @@ Campos minimos:
 - No se aprueba implementacion sin contrato documentado (`query` o `service`) y evidencia de test de contrato.
 - Si surge necesidad fuera de ACL permitida, abrir decision previa en `decision-log.md`.
 
-### KAN-50 (endurecimiento de autorizacion y enforcement)
+### KAN-50 (DB ownership/migracion RBAC `managed=False`)
+
+- Definir ownership explicito de activos RBAC por dominio owner (`auth_access`).
+- Ejecutar plan incremental `expand -> migrate -> contract` con checkpoints verificables.
+- Prohibido incluir cambios de comportamiento runtime en este ticket.
+
+### KAN-57 (endurecimiento runtime de autorizacion y enforcement)
 
 - Politicas de autorizacion centralizadas; prohibido check ad-hoc por rol.
 - Backend decide siempre; frontend solo refleja experiencia (gating UX).
@@ -173,7 +179,7 @@ Campos minimos:
 | AC-04 Matriz ACL tecnica con condiciones verificables | Seccion 5 |
 | AC-05 Catalogo de contratos permitidos (query/service/event) | Seccion 6 |
 | AC-06 Anti-patrones explicitos de integracion | Seccion 7 |
-| AC-07 Guardrails para KAN-49/KAN-50/KAN-52 | Seccion 8 + `backlog-mapping.md` |
+| AC-07 Guardrails para KAN-49/KAN-50/KAN-52/KAN-57 | Seccion 8 + `backlog-mapping.md` |
 | AC-08 Discoverability actualizada en indices | `docs/domains/auth-access/README.md`, `docs/README.md` |
 | AC-09 Trazabilidad documental actualizada | `docs/domains/auth-access/changelog.md`, `decision-log.md`, `backlog-mapping.md` |
 | AC-10 DoD verificable y riesgos/mitigaciones documentados | Secciones 10 y 11 |
@@ -186,7 +192,7 @@ Campos minimos:
 - [x] Incluye matriz ACL tecnica con estado y condiciones verificables.
 - [x] Incluye catalogo de contratos permitidos (`query/service/event`).
 - [x] Incluye anti-patrones bloqueantes.
-- [x] Incluye guardrails operativos para KAN-49/KAN-50/KAN-52.
+- [x] Incluye guardrails operativos para KAN-49/KAN-50/KAN-52/KAN-57.
 - [x] Incluye matriz AC KAN-48 -> evidencia por ruta.
 - [x] Se enlaza en `docs/domains/auth-access/README.md`.
 - [x] Se enlaza en `docs/README.md`.
@@ -210,7 +216,7 @@ Campos minimos:
 - **Eventos de captura esperados**:
   - Aceptacion y cierre documental de KAN-48 (boundary map + ACL vigente).
   - Cambios de estado/condiciones en la matriz ACL (seccion 5).
-  - Cambios de dependencia o guardrails vinculados a KAN-49/KAN-50/KAN-52.
+  - Cambios de dependencia o guardrails vinculados a KAN-49/KAN-50/KAN-52/KAN-57.
 
 ## 13) Referencias
 

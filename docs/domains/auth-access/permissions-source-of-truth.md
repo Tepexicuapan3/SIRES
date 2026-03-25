@@ -14,7 +14,7 @@ Fuera de alcance en este slice:
 
 - Reescritura total de todos los checks historicos de permisos.
 - Migracion completa de todos los feature modules a `requiredCapability` puro.
-- Migracion del use case de somatometria (`capture_vitals_usecase`) a capability enforcement runtime.
+- Migracion completa de todos los flujos clinicos/realtime pendientes a capability enforcement runtime.
 
 ## 2) Contrato canonico de permisos (backend -> frontend)
 
@@ -42,7 +42,7 @@ Para evitar regresion en modulos no migrados y mantener backend como source of t
 - En este slice de KAN-49 los prefijos estrictos activos son:
   - `flow.recepcion.`
   - `flow.visits.`
-- `flow.somatometria.` queda documentado como pendiente para siguiente slice (KAN-50/KAN-52).
+- `flow.somatometria.` pasa a modo estricto en KAN-57 para cerrar fallback inseguro en el flujo clinico pendiente.
 - Para capabilities fuera de esos prefijos, frontend puede aplicar fallback legacy temporal (si se provee `fallbackRequirement`) para preservar UX en modulos no migrados.
 - Este fallback NO reemplaza seguridad backend: cualquier accion real sigue validando permisos/capabilities en backend.
 
@@ -67,7 +67,7 @@ Codigos observables en este slice para autorizacion:
 |---|---|---|
 | Resolucion de permisos/capabilities | Dependencias y checks dispersos entre use cases + fallback frontend | Servicio backend central (`backend/apps/authentication/services/authorization_service.py`) + consumo canonico en frontend |
 | Autorizacion de flujo critico recepcion | Bypass por role string (`RECEPCION`) | Evaluacion por capability canonica (`flow.recepcion.queue.write`, `flow.visits.queue.read`) |
-| Autorizacion de flujo critico somatometria | Bypass por role string (`SOMATOMETRIA`) | Pendiente de migracion de use case para siguiente slice (KAN-50/KAN-52) |
+| Autorizacion de flujo critico somatometria | Bypass historico por role string (`SOMATOMETRIA`) | Enforcement por capability canonica (`flow.somatometria.capture`) en backend |
 | UX fallback | Fallback local aunque backend tenga proyeccion | Modo hibrido: `deny by default` solo para prefijos estrictos KAN-49 + fallback legacy temporal en capabilities no migradas |
 
 ## 4) AC KAN-49 -> evidencia
@@ -77,14 +77,14 @@ Codigos observables en este slice para autorizacion:
 | 1) Acciones protegidas autorizadas desde backend (sin logica dispersa) | `backend/apps/authentication/services/authorization_service.py`, `backend/apps/recepcion/uses_case/visit_queue_usecase.py` |
 | 2) Frontend consume contrato canonico | `frontend/src/features/auth/queries/usePermissionDependencies.ts` (sin fallback inseguro con proyeccion backend), `frontend/src/test/unit/auth/usePermissionDependencies.test.ts` |
 | 3) Regla critica con punto unico de cambio + prueba | `backend/apps/authentication/tests/test_authorization_service.py::test_single_change_point_updates_runtime_behavior` |
-| 4) Somatometria runtime migration | Fuera de alcance en KAN-49; pendiente para KAN-50/KAN-52 o siguiente slice de migracion |
+| 4) Continuidad runtime fuera de KAN-49 (KAN-57) | `backend/apps/somatometria/uses_case/capture_vitals_usecase.py`, `backend/apps/somatometria/tests/test_vitals_contract_api.py` |
 
 ## 5) Riesgos y limites del slice
 
 Riesgos residuales:
 
 - Existen todavia checks heredados fuera de este flujo critico que no migraron al servicio central.
-- `capture_vitals_usecase` mantiene enforcement por role string en este ticket para respetar boundary/ownership vigente.
+- Realtime `visits.stream` y otros flujos no migrados todavia pueden requerir barrido adicional de capability gates en tickets siguientes.
 - `ROLE_NOT_ALLOWED` se mantiene como codigo de error de dominio para compatibilidad de contrato, aunque la decision ya es por capability.
 
 Limites:
@@ -92,7 +92,18 @@ Limites:
 - No hay deprecacion total de helpers legacy de dependencia local en frontend.
 - No se completo el barrido global de todas las rutas protegidas en backend/apps.
 
-## 6) Recomendaciones inmediatas (KAN-50 / KAN-52)
+## 6) Recomendaciones inmediatas (KAN-57 / KAN-52)
 
-- KAN-50: extender `authorization_service` como policy gateway unico en todos los use cases criticos y eliminar checks por role string remanentes.
+- KAN-57: continuar barrido de checks remanentes por role string en use cases fuera del slice clinico/realtime ya migrado.
 - KAN-52: amarrar decision de autorizacion con evento de auditoria estandarizado por capability evaluada + `requestId/contextId`.
+
+## 7) Delta aplicado en KAN-57 (endurecimiento runtime)
+
+- Se agrega `flow.somatometria.` a `strictCapabilityPrefixes` para forzar `deny by default` tambien en ese flujo.
+- `capture_vitals_usecase` elimina bypass por role string y usa capability centralizada (`flow.somatometria.capture`) via `authorization_service`.
+- `visits.stream` en realtime migra de allow-list por roles/permisos ad-hoc a capability gate unica (`flow.visits.queue.read`).
+
+## 8) Separacion de alcance con KAN-50
+
+- KAN-50 queda reservado para estrategia de datos RBAC (`managed=False`) en `rbac-db-ownership-migration-strategy.md`.
+- Este documento mantiene alcance runtime del slice KAN-49 y su continuidad en KAN-57.

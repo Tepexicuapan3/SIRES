@@ -64,6 +64,7 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
             context["strictCapabilityPrefixes"],
             [
                 "flow.recepcion.",
+                "flow.somatometria.",
                 "flow.visits.",
             ],
         )

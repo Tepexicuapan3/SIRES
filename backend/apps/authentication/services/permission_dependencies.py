@@ -127,6 +127,7 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
 
 STRICT_CAPABILITY_PREFIXES: List[str] = [
     "flow.recepcion.",
+    "flow.somatometria.",
     "flow.visits.",
 ]
 

@@ -144,6 +144,22 @@
       "sessions": 0,
       "memories": 10,
       "prompts": 1
+    },
+    {
+      "id": "96c60220",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-25T04:00:56Z",
+      "sessions": 2,
+      "memories": 31,
+      "prompts": 0
+    },
+    {
+      "id": "1b4a0d02",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-25T04:04:27Z",
+      "sessions": 0,
+      "memories": 3,
+      "prompts": 0
     }
   ]
 }

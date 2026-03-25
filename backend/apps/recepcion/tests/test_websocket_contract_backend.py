@@ -50,10 +50,46 @@ class VisitWebSocketContractsTests(TestCase):
             id_rol=recepcion_role,
             defaults={"is_primary": True},
         )
+
+        self.admin_user = SyUsuario.objects.create(
+            usuario="ws_admin_user",
+            correo="ws_admin_user@example.com",
+            clave_hash=make_password("Secret123!"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        admin_role, _ = Roles.objects.get_or_create(
+            rol="ADMIN",
+            defaults={
+                "desc_rol": "Administracion",
+                "landing_route": "/dashboard",
+                "is_active": True,
+                "is_admin": True,
+            },
+        )
+        RelUsuarioRol.objects.get_or_create(
+            id_usuario=self.admin_user,
+            id_rol=admin_role,
+            defaults={"is_primary": True},
+        )
+
         access_token, _ = create_access_refresh_tokens(self.user)
         self.cookie_header = f"{ACCESS_COOKIE}={access_token}".encode()
+        admin_access_token, _ = create_access_refresh_tokens(self.admin_user)
+        self.admin_cookie_header = f"{ACCESS_COOKIE}={admin_access_token}".encode()
 
     def test_handshake_requires_valid_cookie_auth(self):
+        response = self._connect_once(
+            headers=[
+                (b"origin", b"http://localhost:5173"),
+                (b"cookie", self.admin_cookie_header),
+            ]
+        )
+
+        self.assertEqual(response["type"], "websocket.accept")
+
+    def test_handshake_rejects_role_only_user_without_stream_capability(self):
         response = self._connect_once(
             headers=[
                 (b"origin", b"http://localhost:5173"),
@@ -61,7 +97,8 @@ class VisitWebSocketContractsTests(TestCase):
             ]
         )
 
-        self.assertEqual(response["type"], "websocket.accept")
+        self.assertEqual(response["type"], "websocket.close")
+        self.assertEqual(response["code"], 4403)
 
     def test_handshake_rejects_invalid_origin(self):
         response = self._connect_once(

@@ -46,6 +46,7 @@ class AuthPermissionsTests(TestCase):
             auth_user["strictCapabilityPrefixes"],
             [
                 "flow.recepcion.",
+                "flow.somatometria.",
                 "flow.visits.",
             ],
         )

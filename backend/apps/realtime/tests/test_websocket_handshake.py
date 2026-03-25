@@ -87,7 +87,7 @@ class RealtimeHandshakeSecurityTests(TestCase):
         response = self._connect_once(
             headers=[
                 (b"origin", b"http://localhost:5173"),
-                (b"cookie", self.cookie_header),
+                (b"cookie", self.admin_cookie_header),
             ],
             query_string=b"",
         )
@@ -115,7 +115,7 @@ class RealtimeHandshakeSecurityTests(TestCase):
         response = self._connect_once(
             headers=[
                 (b"origin", b"http://localhost:5173"),
-                (b"cookie", self.cookie_header),
+                (b"cookie", self.admin_cookie_header),
             ],
             query_string=b"",
         )
@@ -132,7 +132,7 @@ class RealtimeHandshakeSecurityTests(TestCase):
         response = self._connect_once(
             headers=[
                 (b"origin", b"http://localhost:5173"),
-                (b"cookie", self.cookie_header),
+                (b"cookie", self.admin_cookie_header),
             ],
             query_string=b"",
         )
@@ -152,7 +152,7 @@ class RealtimeHandshakeSecurityTests(TestCase):
         response = self._connect_once(
             headers=[
                 (b"origin", b"http://evil.example"),
-                (b"cookie", self.cookie_header),
+                (b"cookie", self.admin_cookie_header),
             ],
             query_string=b"",
         )
@@ -163,7 +163,7 @@ class RealtimeHandshakeSecurityTests(TestCase):
         response = self._connect_once(
             headers=[
                 (b"origin", b"http://localhost:5173"),
-                (b"cookie", self.cookie_header),
+                (b"cookie", self.admin_cookie_header),
             ],
             query_string=b"access_token=forbidden-token",
         )
@@ -176,6 +176,18 @@ class RealtimeHandshakeSecurityTests(TestCase):
             headers=[
                 (b"origin", b"http://localhost:5173"),
                 (b"cookie", self.blocked_cookie_header),
+            ],
+            query_string=b"",
+        )
+
+        self.assertEqual(response["type"], "websocket.close")
+        self.assertEqual(response.get("code"), 4403)
+
+    def test_connection_rejects_role_only_user_without_stream_capability(self):
+        response = self._connect_once(
+            headers=[
+                (b"origin", b"http://localhost:5173"),
+                (b"cookie", self.cookie_header),
             ],
             query_string=b"",
         )

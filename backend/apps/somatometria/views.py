@@ -13,9 +13,11 @@ from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
 from apps.realtime.events import publish_visit_status_changed
-from apps.recepcion.repositories.visit_repository import VisitRepository
-from apps.recepcion.services.errors import VisitDomainError
 from apps.somatometria.serializers import CaptureVitalsSerializer
+from apps.somatometria.services.visit_flow_service import (
+    VisitFlowError,
+    get_visit_flow_service,
+)
 from apps.somatometria.uses_case.capture_vitals_usecase import (
     capture_vitals,
     ensure_somatometria_role,
@@ -100,7 +102,7 @@ class VisitVitalsView(APIView):
 
         try:
             _require_somatometria_role(user)
-        except VisitDomainError as exc:
+        except VisitFlowError as exc:
             return _domain_error_response(request, exc)
 
         serializer = CaptureVitalsSerializer(data=request.data)
@@ -114,13 +116,18 @@ class VisitVitalsView(APIView):
             )
 
         previous_status = None
-        current_visit = VisitRepository.get_by_id(visit_id)
+        visit_flow = get_visit_flow_service()
+        current_visit = visit_flow.get_by_id(visit_id)
         if current_visit is not None:
             previous_status = current_visit.status
 
         try:
-            result = capture_vitals(visit_id, serializer.validated_data)
-        except VisitDomainError as exc:
+            result = capture_vitals(
+                visit_id,
+                serializer.validated_data,
+                visit_flow_service=visit_flow,
+            )
+        except VisitFlowError as exc:
             return _domain_error_response(request, exc)
 
         log_event(
