@@ -1,5 +1,11 @@
 # auth-access - Changelog
 
+## 2026-03-24 (KAN-52 plan de extraccion rbac_views)
+
+- Se agrega `rbac-views-extraction-slices-plan.md` con inventario de rutas RBAC, backlog priorizado de slices (`S0` a `S6`) y secuencia ejecutable por riesgo/dependencias.
+- Se define estrategia de coexistencia legacy/nuevo sin cambios de contrato HTTP en KAN-52, con criterios de corte y rollback por iteracion.
+- Se corrige trazabilidad de alcance en `backlog-mapping.md` para alinear KAN-52 al plan de extraccion de `rbac_views` (y no a auditoria/trazabilidad).
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
 ## 2026-03-24 (KAN-51 X-Request-ID E2E)
 
 - Se agrega `request-id-traceability-contract.md` como contrato canonico de propagacion request-id (`entrypoint -> middleware -> use case -> response`).

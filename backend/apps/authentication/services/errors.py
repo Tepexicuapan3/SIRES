@@ -6,3 +6,7 @@ class AuthServiceError(Exception):
         self.message = message
         self.status_code = status_code
         self.details = details or {}
+
+
+class PolicyStoreUnavailableError(Exception):
+    pass

@@ -21,6 +21,7 @@ Este dominio cubre:
 - [`permissions-source-of-truth.md`](./permissions-source-of-truth.md) - slice runtime minimo de KAN-49 para consolidar backend source of truth de permisos efectivos/capabilities.
 - [`rbac-db-ownership-migration-strategy.md`](./rbac-db-ownership-migration-strategy.md) - estrategia canonica de KAN-50 (ownership/migracion DB RBAC `managed=False`) en fases `expand -> migrate -> contract`.
 - [`request-id-traceability-contract.md`](./request-id-traceability-contract.md) - contrato transversal de correlacion `X-Request-ID` para KAN-51 (preserva/genera/devuelve).
+- [`rbac-views-extraction-slices-plan.md`](./rbac-views-extraction-slices-plan.md) - plan incremental de extraccion de `rbac_views` por slices desplegables con estrategia de coexistencia/rollback (KAN-52).
 - [`pending-decisions.md`](./pending-decisions.md) - pendientes criticos de negocio/compliance para cierre.
 - [`backlog-mapping.md`](./backlog-mapping.md) - mapeo entre PRD y backlog de ejecucion (Jira/SDD).
 - [`decision-log.md`](./decision-log.md) - registro de decisiones del dominio.

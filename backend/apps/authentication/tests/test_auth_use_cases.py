@@ -2,14 +2,13 @@ from unittest.mock import patch
 
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
-from django.core.cache import cache
 from django.test import TestCase
 from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.errors import AuthServiceError
+from apps.authentication.services.otp_service import OTP_TTL_SECONDS
 from apps.authentication.services.token_service import create_reset_token
-from apps.authentication.uses_case.login_usecase import _increment_attempts
 from apps.authentication.uses_case.onboarding_usecase import complete_onboarding
 from apps.authentication.uses_case.refresh_usecase import refresh_tokens
 from apps.authentication.uses_case.request_reset_code_usecase import request_reset_code
@@ -61,18 +60,28 @@ class AuthUseCasesTests(TestCase):
         self.assertIn("access_token", result)
         self.assertIn("refresh_token", result)
 
-    @patch("apps.authentication.uses_case.request_reset_code_usecase.rate_limit_request")
-    def test_request_reset_code_rate_limit(self, rate_limit_mock):
-        rate_limit_mock.return_value = True
+    @patch(
+        "apps.authentication.uses_case.request_reset_code_usecase.policy_service.check_reset_request"
+    )
+    def test_request_reset_code_rate_limit(self, check_reset_request_mock):
+        check_reset_request_mock.side_effect = AuthServiceError(
+            "RATE_LIMIT_EXCEEDED",
+            "Demasiadas solicitudes, espera un momento",
+            429,
+        )
 
         with self.assertRaises(AuthServiceError) as ctx:
             request_reset_code("usecase.user@example.com")
 
         self.assertEqual(ctx.exception.code, "RATE_LIMIT_EXCEEDED")
 
-    @patch("apps.authentication.uses_case.request_reset_code_usecase.send_reset_code_email")
+    @patch(
+        "apps.authentication.uses_case.request_reset_code_usecase.send_reset_code_email"
+    )
     @patch("apps.authentication.uses_case.request_reset_code_usecase.generate_code")
-    def test_request_reset_code_uses_username_when_no_profile_name(self, code_mock, send_mock):
+    def test_request_reset_code_uses_username_when_no_profile_name(
+        self, code_mock, send_mock
+    ):
         self.user.detalle.nombre = ""
         self.user.detalle.paterno = ""
         self.user.detalle.materno = ""
@@ -135,24 +144,42 @@ class AuthUseCasesTests(TestCase):
 
         self.assertEqual(ctx.exception.code, "CODE_EXPIRED")
 
-    def test_verify_reset_code_when_attempt_limit_already_reached(self):
-        from apps.authentication.services.otp_service import OTP_ATTEMPT_LIMIT, store_code
+    def test_verify_reset_code_consumes_otp_as_one_time_token(self):
+        from apps.authentication.services.otp_service import store_code
 
         email = "usecase.user@example.com"
         store_code(email, "123456")
-        cache_key = f"otp:{email}"
-        otp_data = cache.get(cache_key)
-        otp_data["attempts"] = OTP_ATTEMPT_LIMIT
-        cache.set(cache_key, otp_data, 300)
+
+        first_result = verify_reset_code(email, "123456")
+        self.assertTrue(first_result["valid"])
 
         with self.assertRaises(AuthServiceError) as ctx:
             verify_reset_code(email, "123456")
 
-        self.assertEqual(ctx.exception.code, "RATE_LIMIT_EXCEEDED")
+        self.assertEqual(ctx.exception.code, "CODE_EXPIRED")
+
+    def test_verify_reset_code_when_attempt_limit_already_reached(self):
+        from apps.authentication.application.auth_policy_service import (
+            AuthPolicyService,
+        )
+        from apps.authentication.services.otp_service import store_code
+
+        email = "usecase.user@example.com"
+        store_code(email, "123456")
+        policy_service = AuthPolicyService()
+        for _ in range(5):
+            policy_service.record_verify_failure(email)
+
+        with self.assertRaises(AuthServiceError) as ctx:
+            verify_reset_code(email, "123456")
+
+        self.assertEqual(ctx.exception.code, "ACCOUNT_LOCKED")
 
     def test_refresh_tokens_session_expired_for_inactive_user(self):
         # Use refresh token normal para este flujo
-        from apps.authentication.services.token_service import create_access_refresh_tokens
+        from apps.authentication.services.token_service import (
+            create_access_refresh_tokens,
+        )
 
         _, refresh = create_access_refresh_tokens(self.user)
         self.user.est_activo = False
@@ -163,5 +190,5 @@ class AuthUseCasesTests(TestCase):
 
         self.assertEqual(ctx.exception.code, "SESSION_EXPIRED")
 
-    def test_increment_attempts_accepts_none_user(self):
-        _increment_attempts(None)
+    def test_otp_ttl_is_five_minutes(self):
+        self.assertEqual(OTP_TTL_SECONDS, 300)

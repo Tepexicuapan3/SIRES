@@ -30,4 +30,7 @@ def error_response(error_code, message, status_code, details=None, request_id=No
     if request_id:
         payload["requestId"] = request_id
 
-    return Response(payload, status=status_code)
+    response = Response(payload, status=status_code)
+    if request_id:
+        response["X-Request-ID"] = request_id
+    return response

@@ -1,33 +1,36 @@
 from apps.authentication.repositories.user_repository import UserRepository
-from apps.authentication.serializers import (CompleteOnboardingSerializer,
-                                             LoginSerializer,
-                                             RequestResetCodeSerializer,
-                                             ResetPasswordSerializer,
-                                             VerifyResetCodeSerializer)
-from apps.authentication.services.audit_service import (log_event, mask_email,
-                                                        mask_username)
+from apps.authentication.serializers import (
+    CompleteOnboardingSerializer,
+    LoginSerializer,
+    RequestResetCodeSerializer,
+    ResetPasswordSerializer,
+    VerifyResetCodeSerializer,
+)
+from apps.authentication.services.audit_service import (
+    log_event,
+    mask_email,
+    mask_username,
+)
 from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
-from apps.authentication.services.response_service import (error_response,
-                                                           get_request_id)
+from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
-from apps.authentication.services.token_service import (REFRESH_COOKIE,
-                                                        clear_auth_cookies,
-                                                        clear_reset_cookie,
-                                                        generate_csrf_token,
-                                                        set_auth_cookies,
-                                                        set_csrf_cookie,
-                                                        set_reset_cookie)
+from apps.authentication.services.token_service import (
+    REFRESH_COOKIE,
+    clear_auth_cookies,
+    clear_reset_cookie,
+    generate_csrf_token,
+    set_auth_cookies,
+    set_csrf_cookie,
+    set_reset_cookie,
+)
 from apps.authentication.uses_case.login_usecase import login_user
 from apps.authentication.uses_case.me_usecase import build_me_response
-from apps.authentication.uses_case.onboarding_usecase import \
-    complete_onboarding
+from apps.authentication.uses_case.onboarding_usecase import complete_onboarding
 from apps.authentication.uses_case.refresh_usecase import refresh_tokens
-from apps.authentication.uses_case.request_reset_code_usecase import \
-    request_reset_code
+from apps.authentication.uses_case.request_reset_code_usecase import request_reset_code
 from apps.authentication.uses_case.reset_password_usecase import reset_password
-from apps.authentication.uses_case.verify_reset_code_usecase import \
-    verify_reset_code
+from apps.authentication.uses_case.verify_reset_code_usecase import verify_reset_code
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
@@ -44,6 +47,25 @@ def _csrf_or_error(request):
         "No tienes permiso para esta acción",
         status.HTTP_403_FORBIDDEN,
         request_id=get_request_id(request),
+    )
+
+
+def _policy_meta_from_error(exc):
+    if not getattr(exc, "details", None):
+        return {}
+    return exc.details.get("policy", {}) or {}
+
+
+def _log_policy_deny_if_needed(request, exc, base_meta):
+    if exc.code not in {"RATE_LIMIT_EXCEEDED", "ACCOUNT_LOCKED", "SERVICE_UNAVAILABLE"}:
+        return
+
+    log_event(
+        request,
+        "POLICY_ENFORCEMENT_DENY",
+        "FAIL",
+        error_code=exc.code,
+        meta={**base_meta, **_policy_meta_from_error(exc)},
     )
 
 
@@ -80,7 +102,14 @@ class LoginView(APIView):
                 request.META.get("REMOTE_ADDR"),
             )
         except AuthServiceError as exc:
-            user = UserRepository.get_by_username(serializer.validated_data.get("username"))
+            user = UserRepository.get_by_username(
+                serializer.validated_data.get("username")
+            )
+            base_meta = {
+                "endpoint": "/auth/login",
+                "username": mask_username(serializer.validated_data.get("username")),
+            }
+            _log_policy_deny_if_needed(request, exc, base_meta)
             log_event(
                 request,
                 "LOGIN_FAILED",
@@ -88,10 +117,7 @@ class LoginView(APIView):
                 actor_user=user,
                 target_user=user,
                 error_code=exc.code,
-                meta={
-                    "endpoint": "/auth/login",
-                    "username": mask_username(serializer.validated_data.get("username")),
-                },
+                meta={**base_meta, **_policy_meta_from_error(exc)},
             )
             return error_response(
                 exc.code,
@@ -132,8 +158,12 @@ class LoginView(APIView):
             request,
             "LOGIN_SUCCESS",
             "SUCCESS",
-            actor_user=UserRepository.get_by_username(serializer.validated_data["username"]),
-            target_user=UserRepository.get_by_username(serializer.validated_data["username"]),
+            actor_user=UserRepository.get_by_username(
+                serializer.validated_data["username"]
+            ),
+            target_user=UserRepository.get_by_username(
+                serializer.validated_data["username"]
+            ),
             meta={
                 "endpoint": "/auth/login",
                 "username": mask_username(serializer.validated_data.get("username")),
@@ -462,8 +492,14 @@ class RequestResetCodeView(APIView):
     def post(self, request):
         serializer = RequestResetCodeSerializer(data=request.data)
         if not serializer.is_valid():
-            error_code = "INVALID_EMAIL" if "email" in serializer.errors else "VALIDATION_ERROR"
-            message = "Email inválido" if error_code == "INVALID_EMAIL" else "Hay errores en el formulario"
+            error_code = (
+                "INVALID_EMAIL" if "email" in serializer.errors else "VALIDATION_ERROR"
+            )
+            message = (
+                "Email inválido"
+                if error_code == "INVALID_EMAIL"
+                else "Hay errores en el formulario"
+            )
             log_event(
                 request,
                 "RESET_CODE_REQUESTED",
@@ -483,17 +519,22 @@ class RequestResetCodeView(APIView):
             )
 
         try:
-            user = request_reset_code(serializer.validated_data["email"])
+            user = request_reset_code(
+                serializer.validated_data["email"],
+                request.META.get("REMOTE_ADDR"),
+            )
         except AuthServiceError as exc:
+            base_meta = {
+                "endpoint": "/auth/request-reset-code",
+                "email": mask_email(serializer.validated_data.get("email")),
+            }
+            _log_policy_deny_if_needed(request, exc, base_meta)
             log_event(
                 request,
                 "RESET_CODE_REQUESTED",
                 "FAIL",
                 error_code=exc.code,
-                meta={
-                    "endpoint": "/auth/request-reset-code",
-                    "email": mask_email(serializer.validated_data.get("email")),
-                },
+                meta={**base_meta, **_policy_meta_from_error(exc)},
             )
             return error_response(
                 exc.code,
@@ -539,8 +580,14 @@ class VerifyResetCodeView(APIView):
     def post(self, request):
         serializer = VerifyResetCodeSerializer(data=request.data)
         if not serializer.is_valid():
-            error_code = "INVALID_EMAIL" if "email" in serializer.errors else "INVALID_CODE"
-            message = "Email inválido" if error_code == "INVALID_EMAIL" else "Código incorrecto"
+            error_code = (
+                "INVALID_EMAIL" if "email" in serializer.errors else "INVALID_CODE"
+            )
+            message = (
+                "Email inválido"
+                if error_code == "INVALID_EMAIL"
+                else "Código incorrecto"
+            )
             log_event(
                 request,
                 "RESET_CODE_FAILED",
@@ -563,17 +610,20 @@ class VerifyResetCodeView(APIView):
             result = verify_reset_code(
                 serializer.validated_data["email"],
                 serializer.validated_data["code"],
+                request.META.get("REMOTE_ADDR"),
             )
         except AuthServiceError as exc:
+            base_meta = {
+                "endpoint": "/auth/verify-reset-code",
+                "email": mask_email(serializer.validated_data.get("email")),
+            }
+            _log_policy_deny_if_needed(request, exc, base_meta)
             log_event(
                 request,
                 "RESET_CODE_FAILED",
                 "FAIL",
                 error_code=exc.code,
-                meta={
-                    "endpoint": "/auth/verify-reset-code",
-                    "email": mask_email(serializer.validated_data.get("email")),
-                },
+                meta={**base_meta, **_policy_meta_from_error(exc)},
             )
             return error_response(
                 exc.code,

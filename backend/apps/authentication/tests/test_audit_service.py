@@ -5,8 +5,11 @@ from rest_framework.test import APIRequestFactory
 
 from apps.administracion.models import AuditoriaEvento
 from apps.authentication.models import SyUsuario
-from apps.authentication.services.audit_service import (log_event, mask_email,
-                                                        mask_username)
+from apps.authentication.services.audit_service import (
+    log_event,
+    mask_email,
+    mask_username,
+)
 
 
 class AuditServiceTests(TestCase):
@@ -56,3 +59,32 @@ class AuditServiceTests(TestCase):
         self.assertEqual(mask_email("invalid"), "***")
         self.assertEqual(mask_username("usuario"), "u***")
         self.assertEqual(mask_username(""), "***")
+
+    def test_log_event_keeps_policy_metadata(self):
+        factory = APIRequestFactory()
+        request = factory.post(
+            "/api/v1/auth/login",
+            HTTP_X_REQUEST_ID="req-policy-metadata",
+            HTTP_USER_AGENT="pytest",
+            REMOTE_ADDR="127.0.0.1",
+        )
+
+        log_event(
+            request,
+            "POLICY_ENFORCEMENT_DENY",
+            "FAIL",
+            error_code="ACCOUNT_LOCKED",
+            meta={
+                "policyKey": "login.account.lock",
+                "threshold": 5,
+                "window": "15m",
+                "counterValue": 5,
+                "lockTtl": 900,
+            },
+        )
+
+        event = AuditoriaEvento.objects.get(accion="POLICY_ENFORCEMENT_DENY")
+        self.assertEqual(event.request_id, "req-policy-metadata")
+        self.assertEqual(event.meta.get("policyKey"), "login.account.lock")
+        self.assertEqual(event.meta.get("threshold"), 5)
+        self.assertEqual(event.meta.get("window"), "15m")

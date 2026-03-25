@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
+from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.otp_service import store_code
 from apps.authentication.services.token_service import (
     ACCESS_COOKIE,
@@ -359,8 +360,17 @@ class AuthApiTests(APITestCase):
                 format="json",
             )
 
-        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
-        self.assertEqual(response.data["code"], "RATE_LIMIT_EXCEEDED")
+        response = self.client.post(
+            "/api/v1/auth/verify-reset-code",
+            {"email": "abel@example.com", "code": "000000"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-verify-lock",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_423_LOCKED)
+        self.assertEqual(response.data["code"], "ACCOUNT_LOCKED")
+        self.assertEqual(response.data["requestId"], "req-verify-lock")
+        self.assertEqual(response["X-Request-ID"], "req-verify-lock")
 
     def test_verify_reset_code_expired(self):
         response = self.client.post(
@@ -528,5 +538,182 @@ class AuthApiTests(APITestCase):
                 format="json",
             )
 
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "ClaveMala1"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-login-lock",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_423_LOCKED)
+        self.assertEqual(response.data["code"], "ACCOUNT_LOCKED")
+        self.assertEqual(response.data["requestId"], "req-login-lock")
+        self.assertEqual(response["X-Request-ID"], "req-login-lock")
+
+    def test_login_ip_throttle_returns_429(self):
+        response = None
+        for index in range(1, 22):
+            username = f"ip_user_{index}"
+            SyUsuario.objects.create(
+                usuario=username,
+                correo=f"{username}@example.com",
+                clave_hash=make_password("Abel_180903"),
+                est_activo=True,
+                cambiar_clave=True,
+                terminos_acept=False,
+            )
+
+            response = self.client.post(
+                "/api/v1/auth/login",
+                {"username": username, "password": "ClaveMala1"},
+                format="json",
+                REMOTE_ADDR="198.51.100.23",
+            )
+
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
         self.assertEqual(response.data["code"], "RATE_LIMIT_EXCEEDED")
+
+    @patch(
+        "apps.authentication.uses_case.request_reset_code_usecase.send_reset_code_email"
+    )
+    def test_request_reset_code_account_limit_is_three_per_fifteen_minutes(
+        self, send_mail_mock
+    ):
+        send_mail_mock.return_value = True
+
+        response = None
+        for _ in range(4):
+            response = self.client.post(
+                "/api/v1/auth/request-reset-code",
+                {"email": "abel@example.com"},
+                format="json",
+                HTTP_X_REQUEST_ID="req-reset-account-limit",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertEqual(response.data["code"], "RATE_LIMIT_EXCEEDED")
+        self.assertEqual(response.data["requestId"], "req-reset-account-limit")
+        self.assertEqual(response["X-Request-ID"], "req-reset-account-limit")
+
+    @patch(
+        "apps.authentication.uses_case.request_reset_code_usecase.send_reset_code_email"
+    )
+    def test_request_reset_code_ip_limit_is_ten_per_fifteen_minutes(
+        self, send_mail_mock
+    ):
+        send_mail_mock.return_value = True
+
+        for index in range(1, 12):
+            email = f"ip-limit-{index}@example.com"
+            SyUsuario.objects.create(
+                usuario=f"ip_limit_{index}",
+                correo=email,
+                clave_hash=make_password("Abel_180903"),
+                est_activo=True,
+                cambiar_clave=True,
+                terminos_acept=False,
+            )
+
+            response = self.client.post(
+                "/api/v1/auth/request-reset-code",
+                {"email": email},
+                format="json",
+                REMOTE_ADDR="203.0.113.77",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertEqual(response.data["code"], "RATE_LIMIT_EXCEEDED")
+
+    @patch("apps.authentication.uses_case.login_usecase.policy_service.check_login")
+    def test_login_fail_closed_when_policy_store_unavailable(self, check_login_mock):
+        check_login_mock.side_effect = AuthServiceError(
+            "SERVICE_UNAVAILABLE",
+            "Servicio temporalmente no disponible",
+            503,
+        )
+
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "ClaveMala1"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-login-503",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data["code"], "SERVICE_UNAVAILABLE")
+        self.assertEqual(response.data["requestId"], "req-login-503")
+        self.assertEqual(response["X-Request-ID"], "req-login-503")
+
+    @patch(
+        "apps.authentication.uses_case.request_reset_code_usecase.policy_service.check_reset_request"
+    )
+    def test_request_reset_fail_closed_when_policy_store_unavailable(
+        self, check_reset_mock
+    ):
+        check_reset_mock.side_effect = AuthServiceError(
+            "SERVICE_UNAVAILABLE",
+            "Servicio temporalmente no disponible",
+            503,
+        )
+
+        response = self.client.post(
+            "/api/v1/auth/request-reset-code",
+            {"email": "abel@example.com"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-reset-503",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data["code"], "SERVICE_UNAVAILABLE")
+        self.assertEqual(response.data["requestId"], "req-reset-503")
+        self.assertEqual(response["X-Request-ID"], "req-reset-503")
+
+    @patch(
+        "apps.authentication.uses_case.verify_reset_code_usecase.policy_service.check_verify_code"
+    )
+    def test_verify_reset_fail_closed_when_policy_store_unavailable(
+        self, check_verify_mock
+    ):
+        check_verify_mock.side_effect = AuthServiceError(
+            "SERVICE_UNAVAILABLE",
+            "Servicio temporalmente no disponible",
+            503,
+        )
+
+        response = self.client.post(
+            "/api/v1/auth/verify-reset-code",
+            {"email": "abel@example.com", "code": "123456"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-verify-503",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data["code"], "SERVICE_UNAVAILABLE")
+        self.assertEqual(response.data["requestId"], "req-verify-503")
+        self.assertEqual(response["X-Request-ID"], "req-verify-503")
+
+    def test_policy_deny_is_audited_with_policy_metadata(self):
+        for _ in range(5):
+            self.client.post(
+                "/api/v1/auth/login",
+                {"username": "abelb", "password": "ClaveMala1"},
+                format="json",
+                HTTP_X_REQUEST_ID="req-policy-audit",
+            )
+
+        self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "ClaveMala1"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-policy-audit",
+        )
+
+        deny_event = AuditoriaEvento.objects.filter(
+            accion="POLICY_ENFORCEMENT_DENY"
+        ).latest("fch_evento")
+        self.assertEqual(deny_event.request_id, "req-policy-audit")
+        self.assertEqual(deny_event.meta.get("policyKey"), "login.account.lock")
+        self.assertEqual(deny_event.meta.get("threshold"), 5)
+        self.assertEqual(deny_event.meta.get("window"), "15m")
+        self.assertIn("counterValue", deny_event.meta)
+        self.assertIn("lockTtl", deny_event.meta)
