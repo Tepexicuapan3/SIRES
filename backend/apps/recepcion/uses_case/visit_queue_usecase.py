@@ -1,6 +1,4 @@
-from apps.authentication.services.permission_dependencies import (
-    evaluate_permission_requirement,
-)
+from apps.authentication.services.authorization_service import has_capability
 from apps.recepcion.models import Visit
 from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.services.errors import VisitDomainError
@@ -9,35 +7,14 @@ from apps.recepcion.uses_case.visit_state_machine_usecase import (
     transition_visit_state,
 )
 
-RECEPCION_WRITE_PERMISSIONS = [
-    "recepcion:fichas:medicina_general:create",
-    "recepcion:fichas:especialidad:create",
-    "recepcion:fichas:urgencias:create",
-]
-
-RECEPCION_WRITE_PERMISSION_REQUIREMENT = {
-    "anyOf": RECEPCION_WRITE_PERMISSIONS,
-}
-
-VISIT_QUEUE_PERMISSION_REQUIREMENT = {
-    "anyOf": [
-        *RECEPCION_WRITE_PERMISSIONS,
-        "clinico:consultas:read",
-        "clinico:somatometria:read",
-    ]
-}
+RECEPCION_WRITE_CAPABILITY = "flow.recepcion.queue.write"
+VISIT_QUEUE_READ_CAPABILITY = "flow.visits.queue.read"
 
 
 def ensure_recepcion_role(roles, permissions=None):
-    normalized_roles = {(role or "").strip().upper() for role in roles}
-    if ROLE_RECEPCION in normalized_roles:
-        return
+    del roles
 
-    permission_state = evaluate_permission_requirement(
-        RECEPCION_WRITE_PERMISSION_REQUIREMENT,
-        permissions or [],
-    )
-    if permission_state["granted"]:
+    if has_capability(permissions or [], RECEPCION_WRITE_CAPABILITY):
         return
 
     raise VisitDomainError(
@@ -48,15 +25,9 @@ def ensure_recepcion_role(roles, permissions=None):
 
 
 def ensure_visit_queue_access(roles, permissions):
-    normalized_roles = {(role or "").strip().upper() for role in roles}
-    if ROLE_RECEPCION in normalized_roles:
-        return
+    del roles
 
-    state = evaluate_permission_requirement(
-        VISIT_QUEUE_PERMISSION_REQUIREMENT,
-        permissions,
-    )
-    if state["granted"]:
+    if has_capability(permissions or [], VISIT_QUEUE_READ_CAPABILITY):
         return
 
     raise VisitDomainError(

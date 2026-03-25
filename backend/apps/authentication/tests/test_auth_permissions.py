@@ -1,4 +1,3 @@
-from django.contrib.auth.hashers import make_password
 from datetime import timedelta
 
 from django.contrib.auth.hashers import make_password
@@ -43,6 +42,13 @@ class AuthPermissionsTests(TestCase):
         self.assertEqual(auth_user["permissions"], ["*"])
         self.assertEqual(auth_user["effectivePermissions"], ["*"])
         self.assertEqual(auth_user["permissionDependenciesVersion"], "v1")
+        self.assertEqual(
+            auth_user["strictCapabilityPrefixes"],
+            [
+                "flow.recepcion.",
+                "flow.visits.",
+            ],
+        )
         self.assertTrue(auth_user["authRevision"])
         self.assertTrue(auth_user["capabilities"]["admin.users.editFull"]["granted"])
         self.assertEqual(auth_user["roles"], ["ADMIN"])

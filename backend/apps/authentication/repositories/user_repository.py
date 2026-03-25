@@ -1,34 +1,27 @@
 from django.contrib.auth.hashers import check_password, make_password
-from django.db import models, transaction
+from django.db import transaction
 from django.utils import timezone
 
-from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
+from apps.administracion.services.rbac_resolver import RBACResolver
 from apps.authentication.models import SyUsuario
 from apps.authentication.services.auth_revision import serialize_auth_revision
-from apps.authentication.services.permission_dependencies import (
-    build_permission_context,
+from apps.authentication.services.authorization_service import (
+    get_permission_context,
 )
-from apps.catalogos.models import Permisos, Roles
 
 
 class UserRepository:
-    #Acceso a datos para autenticacion
+    # Acceso a datos para autenticacion
 
     @staticmethod
     def get_by_username(usuario):
         return (
-            SyUsuario.objects.select_related("detalle")
-            .filter(usuario=usuario)
-            .first()
+            SyUsuario.objects.select_related("detalle").filter(usuario=usuario).first()
         )
 
     @staticmethod
     def get_by_email(correo):
-        return (
-            SyUsuario.objects.select_related("detalle")
-            .filter(correo=correo)
-            .first()
-        )
+        return SyUsuario.objects.select_related("detalle").filter(correo=correo).first()
 
     @staticmethod
     def get_by_id(user_id):
@@ -60,7 +53,13 @@ class UserRepository:
         user.fch_modf = timezone.now()
         user.usr_modf = user
         user.save(
-            update_fields=["cambiar_clave", "terminos_acept", "fch_terminos", "fch_modf", "usr_modf"]
+            update_fields=[
+                "cambiar_clave",
+                "terminos_acept",
+                "fch_terminos",
+                "fch_modf",
+                "usr_modf",
+            ]
         )
 
     @staticmethod
@@ -96,7 +95,7 @@ class UserRepository:
         profile = getattr(user, "detalle", None)
         roles, primary_role, landing_route, is_admin = _get_roles(user)
         permissions = _get_permissions(user, roles, is_admin)
-        permission_context = build_permission_context(permissions)
+        permission_context = get_permission_context(permissions)
 
         full_name = ""
         if profile and profile.nombre_completo:
@@ -128,6 +127,7 @@ class UserRepository:
             "permissionDependenciesVersion": permission_context[
                 "permissionDependenciesVersion"
             ],
+            "strictCapabilityPrefixes": permission_context["strictCapabilityPrefixes"],
             "authRevision": serialize_auth_revision(user),
             "mustChangePassword": user.cambiar_clave,
             "requiresOnboarding": user.cambiar_clave or not user.terminos_acept,
@@ -135,71 +135,26 @@ class UserRepository:
 
 
 def _get_roles(user):
-    active_roles = (
-        RelUsuarioRol.objects.select_related("id_rol")
-        .filter(id_usuario=user, fch_baja__isnull=True, id_rol__is_active=True)
-        .order_by("id_usuario_rol")
+    # Use RBACResolver service from administracion domain
+    role_objects, primary_role, landing_route, is_admin = RBACResolver.get_user_roles(
+        user
     )
 
-    roles = []
-    primary_role = None
-    landing_route = None
-    is_admin = False
+    # Extract role names as strings
+    roles = [role.rol for role in role_objects]
 
-    for rel in active_roles:
-        role = rel.id_rol
-        roles.append(role.rol)
-        if rel.is_primary and not primary_role:
-            primary_role = role.rol
-            landing_route = role.landing_route
-        if role.is_admin:
-            is_admin = True
-
+    # Handle case where user has no roles
     if not primary_role and roles:
         primary_role = roles[0]
-        role = Roles.objects.filter(rol=primary_role, is_active=True).first()
-        landing_route = role.landing_route if role else None
-
-    if not primary_role:
+        # Try to get landing route from the role name
+        role_obj = RBACResolver.get_role_by_name(primary_role)
+        landing_route = role_obj.landing_route if role_obj else None
+    elif not primary_role:
         primary_role = ""
 
     return roles, primary_role, landing_route, is_admin
 
 
 def _get_permissions(user, roles, is_admin):
-    now = timezone.now()
-    overrides = RelUsuarioOverride.objects.filter(
-        id_usuario=user,
-        fch_baja__isnull=True,
-        id_permiso__is_active=True,
-    ).filter(models.Q(fch_expira__isnull=True) | models.Q(fch_expira__gt=now)).select_related("id_permiso")
-
-    if is_admin:
-        has_active_deny = any(override.efecto == "DENY" for override in overrides)
-        if not has_active_deny:
-            return ["*"]
-        permissions = set(Permisos.objects.filter(is_active=True).values_list("codigo", flat=True))
-    else:
-        role_ids = list(
-            Roles.objects.filter(rol__in=roles, is_active=True).values_list("id_rol", flat=True)
-        )
-        permissions = set()
-
-        if role_ids:
-            role_perm_ids = (
-                RelRolPermiso.objects.filter(id_rol_id__in=role_ids, fch_baja__isnull=True)
-                .values_list("id_permiso_id", flat=True)
-            )
-            for code in Permisos.objects.filter(
-                id_permiso__in=role_perm_ids, is_active=True
-            ).values_list("codigo", flat=True):
-                permissions.add(code)
-
-    for override in overrides:
-        code = override.id_permiso.codigo
-        if override.efecto == "DENY" and code in permissions:
-            permissions.discard(code)
-        elif override.efecto == "ALLOW":
-            permissions.add(code)
-
-    return sorted(list(permissions))
+    # Use RBACResolver service from administracion domain
+    return RBACResolver.get_effective_permissions(user)

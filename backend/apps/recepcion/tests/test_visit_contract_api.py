@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Permisos, Roles
-from apps.somatometria.models import VisitVitalSigns
+from apps.somatometria.repositories.vitals_repository import VitalsRepository
 
 
 class VisitContractsApiTests(APITestCase):
@@ -21,6 +21,10 @@ class VisitContractsApiTests(APITestCase):
             email="recepcion@example.com",
             password=self.recepcion_password,
             role_code="RECEPCION",
+            permissions=[
+                "recepcion:fichas:medicina_general:read",
+                "recepcion:fichas:medicina_general:create",
+            ],
         )
         self._create_user_with_role(
             username="medico_user",
@@ -234,13 +238,19 @@ class VisitContractsApiTests(APITestCase):
             arrival_type="walk_in",
             serviceType="urgencias",
         )
-        VisitVitalSigns.objects.create(
-            id_visit_id=visit_with_vitals["id"],
-            weight_kg=70,
-            height_cm=175,
-            temperature_c=36.6,
-            oxygen_saturation_pct=98,
-            bmi=22.86,
+        # Use VitalsRepository from somatometria domain instead of direct model import
+        from apps.recepcion.models import Visit
+
+        visit = Visit.objects.get(id_visit=visit_with_vitals["id"])
+        VitalsRepository.upsert_for_visit(
+            visit,
+            {
+                "weightKg": 70,
+                "heightCm": 175,
+                "temperatureC": 36.6,
+                "oxygenSaturationPct": 98,
+                "bmi": 22.86,
+            },
         )
 
         response = self.client.get(

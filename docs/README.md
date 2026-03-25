@@ -20,6 +20,15 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 - Flujo de entrega obligatorio: Jira -> SDD-Orchestrator -> planificacion TDD-first -> Engram -> GGA -> PR/Merge.
 - Entrega por dominios completos con ownership explicito (backend + frontend + DB + docs).
 
+## Dominios
+
+- `docs/domains/README.md` - indice canonico de documentacion por dominio.
+- `docs/domains/auth-access/README.md` - hub canonico del Dominio 1 (auth/access).
+- `docs/domains/auth-access/baseline-as-is.md` - baseline tecnico AS-IS (KAN-47) con trazabilidad de flujos/modulos/endpoints/permisos/deuda.
+- `docs/domains/auth-access/boundary-map-acl.md` - boundary map + ACL tecnico canonico (KAN-48) para fronteras, contratos permitidos y guardrails de ejecucion.
+- `docs/domains/auth-access/permissions-source-of-truth.md` - slice runtime inicial de KAN-49 para backend source of truth de permisos/capabilities.
+- Nota de discoverability: los links legacy en `docs/guides/` para PRD de auth-access se mantienen como **deprecados** y redirigen a la ruta canonica del dominio.
+
 ## Estandares operativos (arquitectura + organizacion + patrones)
 
 ### Arquitectura (obligatoria)
@@ -127,6 +136,8 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 - `docs/guides/domain-dor-dod.md` - Definition of Ready / Definition of Done por dominio.
 - `docs/guides/incremental-domain-migration.md` - coexistencia old/new y plan incremental.
 - `docs/guides/ai-skills-matrix.md` - matriz activa de skills y auto-invoke.
+- `docs/guides/prd-dominio-1-auth-access.md` - **DEPRECADO** (stub legacy). Ver ruta canonica en `docs/domains/auth-access/prd.md`.
+- `docs/guides/prd-dominio-1-auth-access-pendientes-reunion.md` - **DEPRECADO** (stub legacy). Ver ruta canonica en `docs/domains/auth-access/pending-decisions.md`.
 
 ## API
 

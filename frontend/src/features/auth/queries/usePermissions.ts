@@ -14,6 +14,7 @@ export const usePermissions = () => {
   const effectivePermissions = user?.effectivePermissions ?? permissions;
   const capabilities = user?.capabilities ?? {};
   const permissionDependenciesVersion = user?.permissionDependenciesVersion;
+  const strictCapabilityPrefixes = user?.strictCapabilityPrefixes ?? [];
 
   /**
    * Deteccion de admin para bypass explicito.
@@ -73,6 +74,7 @@ export const usePermissions = () => {
     effectivePermissions,
     capabilities,
     permissionDependenciesVersion,
+    strictCapabilityPrefixes,
     hasPermission,
     hasEffectivePermission,
     hasAnyPermission,

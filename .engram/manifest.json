@@ -112,6 +112,38 @@
       "sessions": 3,
       "memories": 25,
       "prompts": 0
+    },
+    {
+      "id": "7cab21b4",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-24T01:05:08Z",
+      "sessions": 3,
+      "memories": 26,
+      "prompts": 3
+    },
+    {
+      "id": "12caaa26",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-24T02:27:21Z",
+      "sessions": 1,
+      "memories": 6,
+      "prompts": 0
+    },
+    {
+      "id": "8e415b6e",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-24T02:45:37Z",
+      "sessions": 0,
+      "memories": 11,
+      "prompts": 0
+    },
+    {
+      "id": "ade9b15e",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-03-24T13:48:24Z",
+      "sessions": 0,
+      "memories": 10,
+      "prompts": 1
     }
   ]
 }

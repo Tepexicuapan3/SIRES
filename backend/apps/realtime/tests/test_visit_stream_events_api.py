@@ -36,6 +36,10 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
             password=self.recepcion_password,
             role_code="RECEPCION",
             landing_route="/recepcion/fichas/medicina-general",
+            permissions=[
+                "recepcion:fichas:medicina_general:read",
+                "recepcion:fichas:medicina_general:create",
+            ],
         )
         self._create_user_with_role(
             username="clinico_ws",

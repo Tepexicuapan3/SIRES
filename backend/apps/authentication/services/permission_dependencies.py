@@ -125,6 +125,12 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
 }
 
 
+STRICT_CAPABILITY_PREFIXES: List[str] = [
+    "flow.recepcion.",
+    "flow.visits.",
+]
+
+
 def _normalize_permission(permission_code: str) -> str:
     return permission_code.strip()
 
@@ -297,4 +303,5 @@ def build_permission_context(granted_permissions: List[str]):
         "effectivePermissions": effective_permissions,
         "capabilities": capabilities,
         "permissionDependenciesVersion": "v1",
+        "strictCapabilityPrefixes": STRICT_CAPABILITY_PREFIXES,
     }

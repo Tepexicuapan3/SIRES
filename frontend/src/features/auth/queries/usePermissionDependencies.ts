@@ -7,6 +7,11 @@ import {
   type PermissionRequirementState,
 } from "@features/auth/domain/permission-dependencies";
 
+const KAN49_STRICT_CAPABILITY_PREFIXES = [
+  "flow.recepcion.",
+  "flow.visits.",
+] as const;
+
 export const usePermissionDependencies = () => {
   const permissionContext = usePermissions();
   const permissions = permissionContext.permissions ?? [];
@@ -15,7 +20,22 @@ export const usePermissionDependencies = () => {
   const capabilities = permissionContext.capabilities ?? {};
   const permissionDependenciesVersion =
     permissionContext.permissionDependenciesVersion;
+  const strictCapabilityPrefixes =
+    permissionContext.strictCapabilityPrefixes?.length
+      ? Array.from(
+          new Set([
+            ...permissionContext.strictCapabilityPrefixes,
+            ...KAN49_STRICT_CAPABILITY_PREFIXES,
+          ]),
+        )
+      : [...KAN49_STRICT_CAPABILITY_PREFIXES];
   const hasBackendProjection = Boolean(permissionDependenciesVersion);
+
+  const isStrictCapability = (capabilityKey: string): boolean => {
+    return strictCapabilityPrefixes.some((prefix) =>
+      capabilityKey.startsWith(prefix),
+    );
+  };
 
   const getPermissionState = (
     permissionCode: string,
@@ -78,6 +98,10 @@ export const usePermissionDependencies = () => {
       return capabilityState.granted;
     }
 
+    if (hasBackendProjection && isStrictCapability(capabilityKey)) {
+      return false;
+    }
+
     if (!fallbackRequirement) {
       return false;
     }
@@ -90,6 +114,7 @@ export const usePermissionDependencies = () => {
     effectivePermissions,
     capabilities,
     permissionDependenciesVersion,
+    strictCapabilityPrefixes,
     getPermissionState,
     hasEffectivePermission,
     getRequirementState,

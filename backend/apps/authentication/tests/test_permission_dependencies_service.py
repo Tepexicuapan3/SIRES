@@ -57,6 +57,17 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
         self.assertEqual(context["effectivePermissions"], ["*"])
         self.assertTrue(context["capabilities"]["admin.users.editFull"]["granted"])
 
+    def test_permission_context_exposes_strict_capability_prefixes(self):
+        context = build_permission_context(["clinico:somatometria:read"])
+
+        self.assertEqual(
+            context["strictCapabilityPrefixes"],
+            [
+                "flow.recepcion.",
+                "flow.visits.",
+            ],
+        )
+
     def test_flow_somatometria_capabilities_resolve_from_clinico_permission(self):
         context = build_permission_context(["clinico:somatometria:read"])
 
