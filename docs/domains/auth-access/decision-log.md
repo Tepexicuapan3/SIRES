@@ -19,4 +19,7 @@ Registro historico de decisiones del dominio con fecha, estado e impacto.
 | 2026-03-24 | AUTH-DEC-006 | Reemplazada | El hardening runtime de enforcement (somatometria/realtime) se reclasifica en KAN-57 para evitar mezcla de alcance con KAN-50. | Se corrige trazabilidad y se elimina ambiguedad entre estrategia DB y runtime hardening. |
 | 2026-03-24 | AUTH-DEC-007 | Aceptada | KAN-50 queda acotada a estrategia DB ownership/migracion RBAC (`managed=False`) con plan `expand -> migrate -> contract` y validaciones por fase. | Asegura ejecucion incremental de datos con rollback/control de integridad sin tocar runtime. |
 | 2026-03-24 | AUTH-DEC-008 | Aceptada | KAN-51 adopta `X-Request-ID` como contrato transversal obligatorio en auth-access, con preservacion de header entrante, generacion UUID cuando falta y retorno en header/payload de error. | Permite reconstruccion E2E de flujos por request-id y reduce huecos de correlacion detectados en baseline KAN-47. |
-
+<<<<<<< HEAD
+| 2026-03-24 | AUTH-DEC-009 | Aceptada | KAN-52 se fija como artefacto de planificacion incremental de extraccion de `rbac_views` por slices (no ejecucion big-bang), con estrategia de coexistencia legacy/nuevo y rollback por iteracion. | Reduce riesgo de regresion al desacoplar una superficie critica en entregas pequeñas y reversibles, alineadas a dependencias KAN-48/KAN-49/KAN-55/KAN-56. |
+=======
+>>>>>>> origin/main
