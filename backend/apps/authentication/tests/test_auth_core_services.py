@@ -13,21 +13,22 @@ from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.auth_revision import serialize_auth_revision
-from apps.authentication.services.response_service import (error_response,
-                                                           get_request_id)
+from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
-from apps.authentication.services.token_service import (ACCESS_COOKIE,
-                                                        CSRF_COOKIE,
-                                                        RESET_COOKIE,
-                                                        clear_auth_cookies,
-                                                        clear_reset_cookie,
-                                                        create_access_refresh_tokens,
-                                                        create_reset_token,
-                                                        decode_access_token,
-                                                        decode_reset_token,
-                                                        set_auth_cookies,
-                                                        set_reset_cookie,
-                                                        validate_refresh_token)
+from apps.authentication.services.token_service import (
+    ACCESS_COOKIE,
+    CSRF_COOKIE,
+    RESET_COOKIE,
+    clear_auth_cookies,
+    clear_reset_cookie,
+    create_access_refresh_tokens,
+    create_reset_token,
+    decode_access_token,
+    decode_reset_token,
+    set_auth_cookies,
+    set_reset_cookie,
+    validate_refresh_token,
+)
 from middlewares.auth import JWTAuthenticationMiddleware
 
 
@@ -68,6 +69,12 @@ class AuthCoreServicesTests(TestCase):
         self.assertIn("details", response.data)
         self.assertIn("timestamp", response.data)
 
+    def test_get_request_id_falls_back_to_request_attribute(self):
+        request = self.factory.get("/api/test")
+        request.request_id = "req-from-middleware"
+
+        self.assertEqual(get_request_id(request), "req-from-middleware")
+
     def test_validate_csrf(self):
         request = self.factory.post("/api/test", HTTP_X_CSRF_TOKEN="token-1")
         request.COOKIES[CSRF_COOKIE] = "token-1"
@@ -105,7 +112,9 @@ class AuthCoreServicesTests(TestCase):
             def get(self, key, default=None):
                 return super().get(key, default)
 
-        refresh_cls_mock.return_value = FakeRefresh({api_settings.TOKEN_TYPE_CLAIM: "access"})
+        refresh_cls_mock.return_value = FakeRefresh(
+            {api_settings.TOKEN_TYPE_CLAIM: "access"}
+        )
 
         with self.assertRaises(TokenError):
             validate_refresh_token("fake")
@@ -116,7 +125,9 @@ class AuthCoreServicesTests(TestCase):
             def get(self, key, default=None):
                 return super().get(key, default)
 
-        access_cls_mock.return_value = FakeAccess({api_settings.TOKEN_TYPE_CLAIM: "refresh"})
+        access_cls_mock.return_value = FakeAccess(
+            {api_settings.TOKEN_TYPE_CLAIM: "refresh"}
+        )
 
         with self.assertRaises(TokenError):
             decode_access_token("fake")
@@ -162,7 +173,10 @@ class AuthCoreServicesTests(TestCase):
 
     def test_authenticate_request_expired_and_user_state_paths(self):
         expired = AccessToken.for_user(self.user)
-        expired.set_exp(from_time=timezone.now() - timedelta(minutes=30), lifetime=timedelta(seconds=1))
+        expired.set_exp(
+            from_time=timezone.now() - timedelta(minutes=30),
+            lifetime=timedelta(seconds=1),
+        )
 
         request_expired = self.factory.get("/api/test")
         request_expired.COOKIES[ACCESS_COOKIE] = str(expired)

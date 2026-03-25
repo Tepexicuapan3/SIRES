@@ -1,15 +1,16 @@
 from unittest.mock import patch
 
-from apps.administracion.models import (AuditoriaEvento, RelRolPermiso,
-                                        RelUsuarioRol)
+from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.otp_service import store_code
-from apps.authentication.services.token_service import (ACCESS_COOKIE,
-                                                        CSRF_COOKIE,
-                                                        REFRESH_COOKIE,
-                                                        RESET_COOKIE,
-                                                        create_reset_token,
-                                                        generate_csrf_token)
+from apps.authentication.services.token_service import (
+    ACCESS_COOKIE,
+    CSRF_COOKIE,
+    REFRESH_COOKIE,
+    RESET_COOKIE,
+    create_reset_token,
+    generate_csrf_token,
+)
 from apps.catalogos.models import Permisos, Roles
 from django.contrib.auth.hashers import make_password
 from django.core.cache import cache
@@ -149,6 +150,31 @@ class AuthApiTests(APITestCase):
         self.assertEqual(response.data["requestId"], "req-123")
         self.assertIn("timestamp", response.data)
 
+    def test_login_invalid_password_preserves_request_id_in_response_header(self):
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "ClaveMala1"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-kan-51-preserve",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response["X-Request-ID"], "req-kan-51-preserve")
+        self.assertEqual(response.data["requestId"], "req-kan-51-preserve")
+
+    def test_login_invalid_password_generates_request_id_when_header_is_missing(self):
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "ClaveMala1"},
+            format="json",
+        )
+
+        response_request_id = response.get("X-Request-ID")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(response_request_id)
+        self.assertEqual(response.data["requestId"], response_request_id)
+
     def test_me_returns_user(self):
         self._login()
 
@@ -281,7 +307,9 @@ class AuthApiTests(APITestCase):
         self.assertEqual(response.data["code"], "USER_NOT_FOUND")
         self.assertIn("timestamp", response.data)
 
-    @patch("apps.authentication.uses_case.request_reset_code_usecase.send_reset_code_email")
+    @patch(
+        "apps.authentication.uses_case.request_reset_code_usecase.send_reset_code_email"
+    )
     def test_request_reset_code_email_failure(self, send_mail_mock):
         send_mail_mock.return_value = False
 

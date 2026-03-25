@@ -27,6 +27,7 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 - `docs/domains/auth-access/baseline-as-is.md` - baseline tecnico AS-IS (KAN-47) con trazabilidad de flujos/modulos/endpoints/permisos/deuda.
 - `docs/domains/auth-access/boundary-map-acl.md` - boundary map + ACL tecnico canonico (KAN-48) para fronteras, contratos permitidos y guardrails de ejecucion.
 - `docs/domains/auth-access/permissions-source-of-truth.md` - slice runtime inicial de KAN-49 para backend source of truth de permisos/capabilities.
+- `docs/domains/auth-access/request-id-traceability-contract.md` - contrato canonico de trazabilidad `X-Request-ID` para KAN-51.
 - Nota de discoverability: los links legacy en `docs/guides/` para PRD de auth-access se mantienen como **deprecados** y redirigen a la ruta canonica del dominio.
 
 ## Estandares operativos (arquitectura + organizacion + patrones)

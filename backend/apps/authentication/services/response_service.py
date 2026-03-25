@@ -5,7 +5,11 @@ from rest_framework.response import Response
 
 
 def get_request_id(request):
-    # Obtiene el id de trazabilidad del request.
+    # Obtiene el id de trazabilidad del request priorizando middleware.
+    request_id = getattr(request, "request_id", None)
+    if request_id:
+        return request_id
+
     return request.headers.get("X-Request-ID")
 
 
@@ -15,7 +19,10 @@ def error_response(error_code, message, status_code, details=None, request_id=No
         "code": error_code,
         "message": message,
         "status": status_code,
-        "timestamp": timezone.now().astimezone(dt_timezone.utc).isoformat().replace("+00:00", "Z"),
+        "timestamp": timezone.now()
+        .astimezone(dt_timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z"),
     }
 
     if details:

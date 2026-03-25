@@ -20,6 +20,7 @@ Este dominio cubre:
 - [`boundary-map-acl.md`](./boundary-map-acl.md) - boundary map + ACL tecnico canonico de `auth_access` (KAN-48) con guardrails para KAN-49/KAN-50/KAN-52/KAN-57.
 - [`permissions-source-of-truth.md`](./permissions-source-of-truth.md) - slice runtime minimo de KAN-49 para consolidar backend source of truth de permisos efectivos/capabilities.
 - [`rbac-db-ownership-migration-strategy.md`](./rbac-db-ownership-migration-strategy.md) - estrategia canonica de KAN-50 (ownership/migracion DB RBAC `managed=False`) en fases `expand -> migrate -> contract`.
+- [`request-id-traceability-contract.md`](./request-id-traceability-contract.md) - contrato transversal de correlacion `X-Request-ID` para KAN-51 (preserva/genera/devuelve).
 - [`pending-decisions.md`](./pending-decisions.md) - pendientes criticos de negocio/compliance para cierre.
 - [`backlog-mapping.md`](./backlog-mapping.md) - mapeo entre PRD y backlog de ejecucion (Jira/SDD).
 - [`decision-log.md`](./decision-log.md) - registro de decisiones del dominio.

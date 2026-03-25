@@ -1,5 +1,11 @@
 # auth-access - Changelog
 
+## 2026-03-24 (KAN-51 X-Request-ID E2E)
+
+- Se agrega `request-id-traceability-contract.md` como contrato canonico de propagacion request-id (`entrypoint -> middleware -> use case -> response`).
+- Se actualiza discoverability en `docs/domains/auth-access/README.md`, `docs/README.md` y `backlog-mapping.md` para trazabilidad de KAN-51.
+- Se explicita cobertura inicial de rutas criticas y pendientes de barrido completo para correlacion operacional.
+
 ## 2026-03-24 (KAN-50 DB ownership/migracion RBAC)
 
 - Se agrega `rbac-db-ownership-migration-strategy.md` como artefacto canonico de estrategia DB para KAN-50 (`managed=False`).
