@@ -83,7 +83,7 @@ describe("auth-session-sync", () => {
 
     queryClient.setQueryData(
       authKeys.session(),
-      createMockAuthUser({ authRevision: undefined }),
+      createMockAuthUser({ authRevision: "" }),
     );
 
     syncAuthSessionRevision({

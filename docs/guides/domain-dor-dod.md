@@ -19,6 +19,12 @@ La migracion por dominios falla si no hay criterio comun para empezar y terminar
 - Cambio SDD creado (o justificacion explicita de por que no aplica).
 - Para NEW feature/NEW functionality/LARGE refactor: tasking inicial de testing definido (tests-first por riesgo).
 
+### DoR adicional para auth-access (KAN-55)
+
+- Slice clasificado como `P0|P1|P2` con justificación por factores (`auth/session`, `policy`, `audit`, `mutation`, `cross-domain`).
+- Mínimos de cobertura esperados por riesgo declarados antes de iniciar apply.
+- Si hay excepción TDD propuesta, debe existir borrador de `TddExceptionRecord` con aprobador objetivo.
+
 ## Definition of Done (DoD)
 
 - Backend y frontend del slice funcionando en entorno local.
@@ -30,6 +36,16 @@ La migracion por dominios falla si no hay criterio comun para empezar y terminar
 - Engram actualizado con decisiones/fixes relevantes (`SIRES_SHARED`).
 - Gate de GGA en pre-commit ejecutado y sin bloqueos pendientes.
 - PR mergeable con checklist completo y reviewers correctos.
+
+### DoD adicional por riesgo (KAN-55)
+
+| Riesgo | Evidencia mínima para DoD |
+|---|---|
+| P0 | Red->Green->Refactor completo + >=2 integration/API + >=1 E2E crítico + validación de auditoría/requestId |
+| P1 | Red->Green->Refactor completo + >=1 integration/API + validación de contratos afectados |
+| P2 | Red->Green->Refactor completo + unit/service de comportamiento modificado |
+
+Regla: evidencia incompleta para su nivel de riesgo => DoD rechazado.
 
 ## DoD extendido para dominio piloto cerrado
 

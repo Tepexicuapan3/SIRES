@@ -35,6 +35,14 @@
 - REFACTOR evidence (cleanup with tests still passing):
 - Exception (if applicable): rationale + compensating controls/tests + approval (Jira/PR reviewer):
 
+## KAN-55 Risk Gate (required for auth-access slices)
+
+- Slice identifier (`S0..S6` if applies):
+- Risk level (`P0` | `P1` | `P2`):
+- Risk factor justification (auth/session, policy, audit, mutation, cross-domain):
+- Minimum evidence required for selected risk:
+- Go/No-Go result:
+
 ## Checklist
 
 - [ ] Scope is focused and single-purpose
@@ -49,6 +57,8 @@
 - [ ] Tests/evidence attached (or N/A explained)
 - [ ] TDD-first evidence included for applicable scope (tests-first plan + Red/Green/Refactor)
 - [ ] Any TDD exception includes rationale, compensating controls/tests, and explicit approval
+- [ ] (auth-access) KAN-55 risk gate completed (risk classification + minimum evidence by risk)
+- [ ] (auth-access) No unresolved merge markers in `docs/domains/auth-access/*`
 
 ## Risks and Rollback
 

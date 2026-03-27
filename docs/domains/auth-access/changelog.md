@@ -1,6 +1,22 @@
 # auth-access - Changelog
 
-<<<<<<< HEAD
+## 2026-03-26 (cierre formal documental validado con cliente)
+
+- Se agrega `cierre-formal-mvp-fase2.md` como documento canonico para alcance final MVP/Fase 2, reglas operativas, acciones sensibles, break-glass, trazabilidad, KPIs y DoR para implementacion.
+- Se transforma `pending-decisions.md` en acta de cierre de decisiones historicamente pendientes (estado resuelto).
+- Se actualiza `prd.md` para reflejar decisiones validadas por cliente y eliminar pendientes abiertos en ownership, alcance y controles operativos.
+- Se actualizan `README.md` y `overview.md` del dominio para mejorar discoverability y onboarding junior.
+- Se registra `AUTH-DEC-012` en `decision-log.md` para trazabilidad de la decision de cierre formal.
+
+## 2026-03-26 (KAN-55 estrategia TDD-first por riesgo)
+
+- Se resuelven marcadores de conflicto de merge en `boundary-map-acl.md`, `backlog-mapping.md`, `request-id-traceability-contract.md`, `decision-log.md` y `changelog.md` para recuperar baseline canónico de `auth-access`.
+- Se agrega `tdd-risk-strategy-kan-55.md` con clasificación P0/P1/P2 por slice `S0..S6`, matriz mínima de cobertura y gate go/no-go por riesgo.
+- Se agrega `tdd-evidence-templates.md` con plantillas obligatorias de evidencia Red->Green->Refactor para Jira/PR.
+- Se agrega `tdd-exception-policy.md` con flujo formal de excepción, aprobación dual para alto impacto y seguimiento por vencimiento.
+- Se actualizan `docs/guides/pr-merge-governance.md`, `docs/guides/domain-dor-dod.md` y `.github/pull_request_template.md` para enforcement operativo KAN-55.
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
+
 ## 2026-03-24 (KAN-52 plan de extraccion rbac_views)
 
 - Se agrega `rbac-views-extraction-slices-plan.md` con inventario de rutas RBAC, backlog priorizado de slices (`S0` a `S6`) y secuencia ejecutable por riesgo/dependencias.
@@ -8,8 +24,6 @@
 - Se corrige trazabilidad de alcance en `backlog-mapping.md` para alinear KAN-52 al plan de extraccion de `rbac_views` (y no a auditoria/trazabilidad).
 - Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
 
-=======
->>>>>>> origin/main
 ## 2026-03-24 (KAN-51 X-Request-ID E2E)
 
 - Se agrega `request-id-traceability-contract.md` como contrato canonico de propagacion request-id (`entrypoint -> middleware -> use case -> response`).

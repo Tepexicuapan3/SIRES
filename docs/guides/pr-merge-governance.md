@@ -12,7 +12,7 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 
 1. Una intencion principal por PR.
 2. Referencia obligatoria a ticket Jira.
-3. Referencia obligatoria al cambio SDD (si aplica).
+3. Referencia obligatoria al cambio SDD.
 4. Indicar dominio(s) impactado(s) y estado (`legacy`, `hybrid`, `domain-first`).
 5. Si cruza dominios, adjuntar RFC corto usando template.
 6. No mezclar refactor de estructura con cambios funcionales grandes sin justificacion.
@@ -48,8 +48,44 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 - Si hubo excepcion TDD, incluir racional explicito, controles/tests compensatorios y aprobacion registrada en Jira/PR.
 - Confirmacion de actualizacion de docs cuando cambia la operativa.
 - Evidencia de memoria high-signal guardada en Engram (`SIRES_SHARED`) cuando corresponda.
+- Cuando se reporte evidencia Engram, incluir `topic_key` estable segun convencion (`feature/{slug}/decision`, `feature/{slug}/progress`, `bug/{id-or-slug}/fix`, `ops/{area}/config`, `docs/{topic}/note`).
 - Gate de `pre-commit` con GGA ejecutado sin bloqueos pendientes.
 - Checklist de datos completo: ownership por dominio en PostgreSQL, sin SQL cross-domain directo, y plan de rollback en cambios de alto riesgo.
+
+### Gate explicito KAN-55: TDD-first por riesgo (auth-access)
+
+Aplica a cualquier PR/slice de `auth-access` en alcance KAN-52/KAN-56+.
+
+Reglas go/no-go:
+- [ ] Slice clasificado como `P0|P1|P2` con justificacion factor-a-factor.
+- [ ] Evidencia Red->Green->Refactor completa segun `tdd-evidence-templates.md`.
+- [ ] Minimos por riesgo cumplidos:
+  - `P0`: >=2 integration/API + >=1 E2E crítico + tests de reglas críticas.
+  - `P1`: >=1 integration/API + tests core.
+  - `P2`: tests unit/service para comportamiento modificado.
+- [ ] Guardrails no negociables verificados (sin role-string ad-hoc, sin cross-domain directo, sin breaking API no versionado).
+- [ ] Contrato de trazabilidad/auditoría verificado (`X-Request-ID` + error `requestId` + evento de auditoría mínimo).
+
+Condiciones de bloqueo automático:
+- Falta evidencia RED inicial.
+- Evidencia incompleta para el riesgo declarado.
+- Excepción TDD incompleta o sin aprobación requerida.
+- Persistencia de conflictos documentales en `docs/domains/auth-access/*` (merge markers).
+
+### Gate explicito: Auth-access contract alignment (obligatorio cuando aplica)
+
+Aplica a PRs que toquen alguno de estos artefactos en auth-access:
+- backend auth payload/contract (`build_auth_user`, views/auth responses, tests de contrato)
+- `docs/api/modules/auth.md`
+- `frontend/src/api/types/auth.types.ts`
+
+Checklist obligatorio de alineacion:
+- [ ] `docs/api/modules/auth.md` actualizado contra runtime real.
+- [ ] `frontend/src/api/types/auth.types.ts` actualizado contra runtime real.
+- [ ] No missing fields between backend runtime contract, docs/api/modules/auth.md, and frontend/src/api/types/auth.types.ts.
+- [ ] Tabla de error codes revisada contra tests/runtime actuales (sin inventar codigos nuevos).
+- [ ] Declaracion explicita de compatibilidad hacia atras (sin breaking changes involuntarios).
+- [ ] `docs/domains/auth-access/pending-decisions.md` revisado y con evidencia/estado actualizado para items impactados.
 
 ## Collaboration baseline (obligatorio)
 

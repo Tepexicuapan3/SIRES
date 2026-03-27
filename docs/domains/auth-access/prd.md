@@ -15,13 +15,15 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 
 **No incluye (fuera de alcance):**
 - Rediseno funcional de dominios clinicos no-auth.
-- Cambios de producto para paciente, salvo portal activo y critico.
+- Funcionalidad para pacientes en MVP (se mueve a Fase 2).
 - Proyectos de IAM corporativo fuera del perimetro SIRES.
 
 ## 3) Ownership y aprobadores
 
-- Owner de negocio propuesto: Gerencia de Salud (**Pendiente de validacion formal**).
+- Owner de negocio titular: **David Tepexicuapan** (**Definido**).
+- Owner de negocio suplente: **Luis Antonio** (**Definido**).
 - Ejecucion tecnica: Informatica (**Definido**).
+- Coordinacion de gobierno: Administracion + Compliance (**Definido**).
 - Aprobadores operativos por tipo de solicitud (**Definido**):
   - Alta: jefe inmediato + owner funcional del perfil.
   - Cambio: jefe inmediato + owner de area/dominio.
@@ -38,9 +40,9 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 ## 5) Marco normativo y compliance
 
 - NOM-004-SSA3-2012 (**Definido como referencia obligatoria**).
-- NOM-024-SSA3-2012 cuando aplique (**Definido con aplicabilidad condicionada**).
+- NOM-024-SSA3-2012 cuando aplique (**Definido con aplicabilidad condicionada por flujo**).
 - LFPDPPP y Reglamento (**Definido como marco transversal**).
-- Retencion de bitacoras base >=5 anos (**Definido**), sujeto a juridica/compliance para plazo final (**Pendiente de validacion**).
+- Retencion de bitacoras base >=5 anos (**Definido**), con formalizacion en governance/compliance segun impacto.
 
 ## 6) Modelo actual (as-is)
 
@@ -82,6 +84,8 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 - RF-06: Resolver conflictos con deny-overrides y deny by default.
 - RF-07: Permitir break-glass con controles estrictos y expiracion corta.
 - RF-08: Auditar eventos minimos obligatorios del dominio.
+- RF-09: Doble validacion obligatoria para acciones sensibles.
+- RF-10: Exportacion de datos sensibles solo con autorizacion de administracion y validacion adicional por impacto.
 
 ## 11) Requerimientos no funcionales (NFR)
 
@@ -90,6 +94,7 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 - NFR-03 SLA revocacion: inmediata al dejar de laborar; tolerancia maxima <4h estandar y <1h privilegiadas.
 - NFR-04 Disponibilidad operativa: proceso de recuperacion de acceso auditable y replicable.
 - NFR-05 Integridad de datos: ownership logico por dominio sobre PostgreSQL compartido en etapa actual.
+- NFR-06 Criticidad: una caida de 1 hora del dominio impacta transversalmente.
 
 ## 12) Reglas de negocio (definidas)
 
@@ -99,6 +104,8 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 - RB-04: Privilegios sensibles requieren doble aprobacion.
 - RB-05: Revocacion por baja laboral es inmediata por Informatica con evidencia auditable.
 - RB-06: Break-glass solo procede con justificacion, autorizacion y temporalidad corta.
+- RB-07: En conflicto operacion vs seguridad, se preserva operacion sin perder control; si no hay equilibrio, prevalece seguridad con mecanismo excepcional.
+- RB-08: Privilegiado se define por capacidad efectiva, no por nombre de puesto.
 
 ## 13) Operaciones sensibles y eventos auditables minimos
 
@@ -130,9 +137,9 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 ## 15) Plan por olas (implementacion accionable)
 
 **Ola 0 - Gobierno y baseline (corto plazo)**
-- Validar owner de negocio formal y matriz de aprobaciones final.
-- Definir catalogo inicial de permisos atomicos y perfiles sensibles.
-- Acordar retencion legal final de bitacoras con juridica/compliance.
+- Publicar baseline operativo validado para MVP/Fase 2.
+- Versionar matriz de capacidades privilegiadas y aprobadores.
+- Alinear politica de evidencia minima y trazabilidad de cambios de permisos.
 
 **Ola 1 - Controles core de acceso**
 - Estandarizar alta/cambio/baja/desbloqueo con SLA de revocacion.
@@ -176,28 +183,33 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 - Criterios de evidencia y auditoria acordados.
 
 **Checklist de validacion cliente/compliance:**
-- [ ] Confirmar formalmente owner de negocio (Gerencia de Salud).
-- [ ] Confirmar aplicabilidad final de NOM-024-SSA3-2012 por tipo de flujo.
-- [ ] Confirmar retencion final de bitacoras (>=5 anos base).
-- [ ] Confirmar causalario y autorizadores para break-glass.
-- [ ] Confirmar listado final de perfiles privilegiados.
+- [x] Owner de negocio titular/suplente definidos.
+- [x] Alcance MVP interno y Fase 2 para pacientes definido.
+- [x] Doble validacion en acciones sensibles definida.
+- [x] Break-glass con segregacion de funciones y TTL max 2h definido.
+- [x] Politica de trazabilidad completa y evidencia minima definida.
+- [x] Frecuencia de recertificacion definida (mensual/trimestral).
 
-## 19) Matriz de decisiones (Definido vs Pendiente validacion)
+## 19) Matriz de decisiones (estado final validado)
 
-| Tema | Estado | Decision preliminar |
+| Tema | Estado | Decision final |
 |---|---|---|
-| Alcance Dominio 1 | Definido | Solo autenticacion, identidad, autorizacion, recuperacion y trazabilidad |
-| Owner de negocio | Pendiente validacion cliente/compliance | Gerencia de Salud (propuesto) |
+| Alcance Dominio 1 | Definido | Login, alta/cambio/inhabilitacion/baja, recuperacion, roles/permisos, restriccion por perfil, bitacora y trazabilidad |
+| Alcance pacientes | Definido | Fuera de MVP; pasa a Fase 2 |
+| Owner de negocio | Definido | Titular David Tepexicuapan; suplente Luis Antonio |
 | Ejecucion tecnica | Definido | Informatica |
-| Aprobaciones alta/cambio/baja/sensibles | Definido | Segun matriz indicada en este PRD |
+| Coordinacion | Definido | Administracion + Compliance |
+| Aprobaciones alta/cambio/baja/sensibles | Definido | Doble validacion obligatoria para acciones sensibles |
 | SLA revocacion | Definido | Inmediata; max <4h estandar y <1h privilegiadas |
 | SSO | Definido condicionado | Se implementa si existe directorio corporativo |
 | MFA | Definido | Obligatoria para privilegiados y remoto |
 | Modelo permisos | Definido | Hibrido: rol + clinica + sede/region + responsabilidad |
 | Conflictos de permisos | Definido | deny-overrides + deny by default |
-| Retencion de bitacoras | Pendiente validacion cliente/compliance | Base >=5 anos |
-| Paciente fase 1 | Definido | Fuera de alcance salvo portal activo y critico |
-| Break-glass | Definido con validacion operativa pendiente | Permitido con controles estrictos |
+| Retencion de bitacoras | Definido | Base >=5 anos y formalizacion governance/compliance |
+| Break-glass | Definido | Pedir/autorizar/ejecutar separados, max 2h y renovacion formal |
+| Exportacion de datos sensibles | Definido | Requiere autorizacion de administracion + validacion adicional por impacto |
+| Recertificacion | Definido | Mensual privilegiados/excepcionales; trimestral normales |
+| KPIs 90 dias | Definido | % permisos correctos, tiempo ciclo acceso, % eventos criticos trazables |
 
 ## 20) Evidencias requeridas y salida a PRD ejecutable
 
@@ -216,6 +228,7 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 ## Referencias
 
 - `docs/domains/auth-access/overview.md`
+- `docs/domains/auth-access/cierre-formal-mvp-fase2.md`
 - `docs/domains/auth-access/pending-decisions.md`
 - `docs/domains/auth-access/backlog-mapping.md`
 - `docs/architecture/domain-map.md`

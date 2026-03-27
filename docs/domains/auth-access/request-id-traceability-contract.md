@@ -51,11 +51,7 @@ Cobertura transversal impactada por contrato (sin barrido exhaustivo de endpoint
 Pendientes explícitos:
 
 - Barrido de verificación endpoint por endpoint para evidencia completa de cobertura en todo auth-access.
-<<<<<<< HEAD
 - Correlación obligatoria request-id en reportes operativos agregados (ticket de observabilidad/auditoría dedicado, fuera de KAN-51).
-=======
-- Correlación obligatoria request-id en reportes operativos agregados (KAN-52).
->>>>>>> origin/main
 
 ## 4) Evidencia técnica
 

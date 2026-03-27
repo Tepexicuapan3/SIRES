@@ -8,6 +8,34 @@
 
 import type { SuccessResponse } from "@api/types/common.types";
 
+export const AUTH_USER_CONTRACT_FIELDS = {
+  ID: "id",
+  USERNAME: "username",
+  FULL_NAME: "fullName",
+  EMAIL: "email",
+  AVATAR_URL: "avatarUrl",
+  PRIMARY_ROLE: "primaryRole",
+  LANDING_ROUTE: "landingRoute",
+  ROLES: "roles",
+  PERMISSIONS: "permissions",
+  EFFECTIVE_PERMISSIONS: "effectivePermissions",
+  CAPABILITIES: "capabilities",
+  PERMISSION_DEPENDENCIES_VERSION: "permissionDependenciesVersion",
+  STRICT_CAPABILITY_PREFIXES: "strictCapabilityPrefixes",
+  AUTH_REVISION: "authRevision",
+  MUST_CHANGE_PASSWORD: "mustChangePassword",
+  REQUIRES_ONBOARDING: "requiresOnboarding",
+} as const;
+
+export type AuthUserContractField =
+  (typeof AUTH_USER_CONTRACT_FIELDS)[keyof typeof AUTH_USER_CONTRACT_FIELDS];
+
+export const AUTH_CAPABILITY_STATE_FIELDS = {
+  GRANTED: "granted",
+  MISSING_ALL_OF: "missingAllOf",
+  MISSING_ANY_OF: "missingAnyOf",
+} as const;
+
 // =============================================================================
 // ENTIDADES BASE
 // =============================================================================
@@ -26,13 +54,13 @@ export interface AuthUser {
   landingRoute: string | null;
   roles: string[];
   permissions: string[];
-  effectivePermissions?: string[];
-  capabilities?: Record<string, AuthCapabilityState>;
-  permissionDependenciesVersion?: string;
-  strictCapabilityPrefixes?: string[];
-  authRevision?: string;
+  effectivePermissions: string[];
+  capabilities: Record<string, AuthCapabilityState>;
+  permissionDependenciesVersion: string;
+  strictCapabilityPrefixes: string[];
+  authRevision: string;
   mustChangePassword: boolean;
-  requiresOnboarding?: boolean;
+  requiresOnboarding: boolean;
 }
 
 export interface AuthCapabilityState {
@@ -98,7 +126,7 @@ export interface CompleteOnboardingRequest {
  */
 export interface LoginResponse {
   user: AuthUser;
-  requiresOnboarding?: boolean;
+  requiresOnboarding: boolean;
 }
 
 /**

@@ -16,20 +16,46 @@ export const createMockAuthUser = (
   const fullName = `${firstName} ${paternalName} ${maternalName}`;
   const mustChangePassword = overrides.mustChangePassword ?? false;
   const requiresOnboarding = overrides.requiresOnboarding ?? mustChangePassword;
+  const permissions = overrides.permissions ?? ["*"];
+  const effectivePermissions = overrides.effectivePermissions ?? permissions;
+  const capabilities = overrides.capabilities ?? {};
+  const permissionDependenciesVersion =
+    overrides.permissionDependenciesVersion ?? "v1";
+  const strictCapabilityPrefixes = overrides.strictCapabilityPrefixes ?? [
+    "flow.recepcion.",
+    "flow.somatometria.",
+    "flow.visits.",
+  ];
+  const authRevision =
+    overrides.authRevision ?? faker.date.recent().toISOString();
+  const avatarUrl =
+    overrides.avatarUrl !== undefined
+      ? overrides.avatarUrl
+      : faker.datatype.boolean()
+        ? faker.image.avatar()
+        : null;
 
   return {
-    id: faker.number.int({ min: 1, max: 1000 }),
-    username: faker.internet.username({ firstName, lastName: paternalName }),
-    fullName,
-    email: faker.internet.email({ firstName, lastName: paternalName }),
-    avatarUrl: faker.datatype.boolean() ? faker.image.avatar() : null,
-    primaryRole: "Admin",
-    landingRoute: "/dashboard",
-    roles: ["Admin", "Clinico"],
-    permissions: ["*"],
+    id: overrides.id ?? faker.number.int({ min: 1, max: 1000 }),
+    username:
+      overrides.username ??
+      faker.internet.username({ firstName, lastName: paternalName }),
+    fullName: overrides.fullName ?? fullName,
+    email:
+      overrides.email ??
+      faker.internet.email({ firstName, lastName: paternalName }),
+    avatarUrl,
+    primaryRole: overrides.primaryRole ?? "Admin",
+    landingRoute: overrides.landingRoute ?? "/dashboard",
+    roles: overrides.roles ?? ["Admin", "Clinico"],
+    permissions,
+    effectivePermissions,
+    capabilities,
+    permissionDependenciesVersion,
+    strictCapabilityPrefixes,
+    authRevision,
     mustChangePassword,
     requiresOnboarding,
-    ...overrides,
   };
 };
 

@@ -24,11 +24,15 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 
 - `docs/domains/README.md` - indice canonico de documentacion por dominio.
 - `docs/domains/auth-access/README.md` - hub canonico del Dominio 1 (auth/access).
+- `docs/domains/auth-access/cierre-formal-mvp-fase2.md` - cierre documental formal validado con cliente (MVP/Fase 2, reglas operativas, excepciones, trazabilidad, KPIs y DoR).
 - `docs/domains/auth-access/baseline-as-is.md` - baseline tecnico AS-IS (KAN-47) con trazabilidad de flujos/modulos/endpoints/permisos/deuda.
 - `docs/domains/auth-access/boundary-map-acl.md` - boundary map + ACL tecnico canonico (KAN-48) para fronteras, contratos permitidos y guardrails de ejecucion.
 - `docs/domains/auth-access/permissions-source-of-truth.md` - slice runtime inicial de KAN-49 para backend source of truth de permisos/capabilities.
 - `docs/domains/auth-access/request-id-traceability-contract.md` - contrato canonico de trazabilidad `X-Request-ID` para KAN-51.
 - `docs/domains/auth-access/rbac-views-extraction-slices-plan.md` - plan de extraccion incremental de `rbac_views` por slices con coexistencia y rollback (KAN-52).
+- `docs/domains/auth-access/tdd-risk-strategy-kan-55.md` - estrategia TDD-first por riesgo (P0/P1/P2) por slice con gate go/no-go (KAN-55).
+- `docs/domains/auth-access/tdd-evidence-templates.md` - plantillas de evidencia Red->Green->Refactor para Jira/PR (KAN-55).
+- `docs/domains/auth-access/tdd-exception-policy.md` - politica de excepciones TDD con aprobacion y controles compensatorios (KAN-55).
 - Nota de discoverability: los links legacy en `docs/guides/` para PRD de auth-access se mantienen como **deprecados** y redirigen a la ruta canonica del dominio.
 
 ## Estandares operativos (arquitectura + organizacion + patrones)

@@ -34,11 +34,7 @@ Cada ticket Jira de este dominio debe incluir referencia explicita a:
 - **KAN-49** (contratos/integraciones) solo puede ejecutar mecanismos marcados como `Permitida` o `Condicionada` en la matriz ACL y debe adjuntar evidencia de contrato.
 - **KAN-50** (DB ownership/migracion RBAC) define estrategia de datos `managed=False` y plan incremental `expand -> migrate -> contract` sin cambios de runtime.
 - **KAN-57** (runtime hardening) ejecuta enforcement de autorizacion en use cases/realtime manteniendo backend como source of truth.
-<<<<<<< HEAD
 - **KAN-52** (plan de extraccion `rbac_views`) define backlog por slices, estrategia de coexistencia legacy/nuevo y rollback por iteracion sin cortar operacion.
-=======
-- **KAN-52** (auditoria/trazabilidad) debe cumplir contrato minimo de evento de seguridad y evidencia de correlacion por `contextId/requestId`.
->>>>>>> origin/main
 - **KAN-51** (request correlation) define contrato transversal `X-Request-ID` desde entrada HTTP hasta response/error payload para reconstruccion E2E por request.
 
 ### Estado KAN-49 (slice runtime inicial)
@@ -51,9 +47,6 @@ Cada ticket Jira de este dominio debe incluir referencia explicita a:
 - KAN-50 documenta la estrategia de ownership/migracion DB RBAC en [`rbac-db-ownership-migration-strategy.md`](./rbac-db-ownership-migration-strategy.md).
 - El endurecimiento runtime de somatometria/realtime se traza en KAN-57 (fuera de alcance de KAN-50).
 - KAN-51 documenta/implementa contrato de propagacion request-id en `request-id-traceability-contract.md`.
-<<<<<<< HEAD
 - KAN-52 documenta plan incremental de extraccion de `rbac_views` en [`rbac-views-extraction-slices-plan.md`](./rbac-views-extraction-slices-plan.md).
-=======
->>>>>>> origin/main
 
 Regla operativa: cualquier implementacion KAN-49/KAN-50/KAN-52/KAN-57 que contradiga KAN-48 requiere decision previa registrada en `decision-log.md`.

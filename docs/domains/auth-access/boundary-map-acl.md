@@ -163,19 +163,11 @@ Campos minimos:
 - Backend decide siempre; frontend solo refleja experiencia (gating UX).
 - Debe existir evidencia de `deny by default` y manejo de conflictos (`deny-overrides`).
 
-<<<<<<< HEAD
 ### KAN-52 (plan de extraccion incremental de `rbac_views`)
 
 - Definir backlog de slices priorizado por riesgo/impacto para `rbac_views`.
 - Asegurar estrategia de coexistencia legacy/nuevo por slice sin romper contratos HTTP.
 - Definir criterio de corte y rollback por iteracion antes de ejecutar slices mutantes.
-=======
-### KAN-52 (auditoria y trazabilidad operativa)
-
-- Cada operacion sensible de acceso/autorizacion debe emitir evidencia auditable con contrato minimo.
-- Auditoria separada de estado operacional (append-only, acceso restringido, masking/redaction).
-- Verificacion DoD incluye trazabilidad de `contextId/requestId` extremo a extremo.
->>>>>>> origin/main
 
 ## 9) Mapeo AC KAN-48 -> evidencia
 
