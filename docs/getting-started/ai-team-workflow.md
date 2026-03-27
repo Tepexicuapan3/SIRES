@@ -42,7 +42,7 @@ Persona
 1. Ejecutar trabajo por slices chicos.
 2. Arrancar cada slice aplicable con test fallando (Red), luego implementacion minima (Green) y refactor seguro.
 3. Guardar en Engram solo eventos high-signal (decisiones de arquitectura/tecnicas, bugfix raiz, convenciones, config).
-4. Mantener Jira actualizado (In Progress / Review).
+4. Mantener Jira actualizado con el flujo operativo del dominio (Backlog Sprint -> Ready -> In Dev -> In Test -> In Review -> Blocked -> Done).
 
 ### Antes de PR
 
@@ -123,3 +123,4 @@ which gga
 - `docs/guides/domain-dor-dod.md`
 - `docs/guides/incremental-domain-migration.md`
 - `docs/getting-started/engram-team-sync.md`
+- `docs/domains/auth-access/jira-workflow-operating-model.md`

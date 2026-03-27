@@ -34,6 +34,7 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 - `docs/domains/auth-access/tdd-evidence-templates.md` - plantillas de evidencia Red->Green->Refactor para Jira/PR (KAN-55).
 - `docs/domains/auth-access/tdd-exception-policy.md` - politica de excepciones TDD con aprobacion y controles compensatorios (KAN-55).
 - `docs/domains/auth-access/kan-56-s1-apply-evidence.md` - evidencia de apply KAN-56 (slice S1 read-only), checklist dark launch/canary/rollback y validacion contractual.
+- `docs/domains/auth-access/jira-workflow-operating-model.md` - workflow operativo Jira de Auth-Access (columnas, gates, WIP, due dates, bloqueos, daily/cierre y reglas para agentes IA).
 - Nota de discoverability: los links legacy en `docs/guides/` para PRD de auth-access se mantienen como **deprecados** y redirigen a la ruta canonica del dominio.
 
 ## Estandares operativos (arquitectura + organizacion + patrones)
