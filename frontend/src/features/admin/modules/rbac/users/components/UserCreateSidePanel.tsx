@@ -1,8 +1,8 @@
 import { ShieldCheck, UserRound } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@shared/ui/avatar";
+import { Badge } from "@shared/ui/badge";
+import { ScrollArea } from "@shared/ui/ScrollArea";
+import { Separator } from "@shared/ui/separator";
 
 export function UserCreateSidePanel() {
   return (

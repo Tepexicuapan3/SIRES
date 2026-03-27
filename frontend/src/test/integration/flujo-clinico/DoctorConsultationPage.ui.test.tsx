@@ -5,7 +5,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ApiError } from "@api/utils/errors";
 import { toast } from "sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@shared/ui/tooltip";
 import DoctorConsultationPage from "@features/consulta-medica/modules/atencion/pages/DoctorConsultationPage";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
 import { useCloseVisit } from "@features/consulta-medica/modules/atencion/mutations/useCloseVisit";

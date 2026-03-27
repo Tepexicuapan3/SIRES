@@ -6,14 +6,14 @@ import { VerifyOtpForm } from "../components/recovery/VerifyOtpForm";
 import { AuthPasswordForm } from "../components/shared/password/AuthPasswordForm";
 import { ParticlesBackground } from "../animations/ParticlesBackground";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { authAPI } from "@/api/resources/auth.api";
+import { authAPI } from "@api/resources/auth.api";
 import { toast } from "sonner";
 import type { ResetPasswordResponse } from "@api/types";
 import {
   getAuthErrorMessage,
   recoveryErrorMessages,
 } from "@features/auth/domain/auth.messages";
-import { cn } from "@/lib/utils";
+import { cn } from "@shared/utils/styling/cn";
 import { setAuthSession } from "@features/auth/utils/auth-cache";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { AuthCard } from "@features/auth/components/shared/AuthCard";

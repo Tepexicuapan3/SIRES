@@ -6,7 +6,7 @@ import {
 } from "../../factories/roles";
 import { getApiUrl } from "../urls";
 import { getMockSessionUser, hasMockPermission } from "../session";
-import type { RoleListItem, RolePermission } from "@/api/types/roles.types";
+import type { RoleListItem, RolePermission } from "@api/types/roles.types";
 
 const MOCK_DELAY = {
   list: 900,

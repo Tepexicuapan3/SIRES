@@ -81,7 +81,7 @@ admin/
 
 ## Flujo de Datos
 
-`UI -> queries/mutations -> frontend/src/api/resources -> backend`
+`UI -> queries/mutations -> frontend/src/infrastructure/api/resources -> backend`
 
 ## Patrones recomendados (cuando usar)
 

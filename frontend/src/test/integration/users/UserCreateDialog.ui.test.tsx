@@ -17,7 +17,7 @@ vi.mock("@features/admin/modules/rbac/users/mutations/useCreateUser", () => ({
   useCreateUser: vi.fn(),
 }));
 
-vi.mock("@/components/ui/select", async () => {
+vi.mock("@shared/ui/select", async () => {
   const React = await import("react");
   const SelectContext = React.createContext({
     value: "",

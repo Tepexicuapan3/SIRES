@@ -11,7 +11,7 @@ import { useUpdateArea } from "@features/admin/modules/catalogos/areas/mutations
 import { useDeleteArea } from "@features/admin/modules/catalogos/areas/mutations/useDeleteArea";
 import type { AreaListItem } from "@api/types";
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@shared/hooks/useDebounce", () => ({
   useDebounce: (value: string) => value,
 }));
 

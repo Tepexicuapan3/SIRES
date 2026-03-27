@@ -1,7 +1,7 @@
 import { Eye, UserCheck, UserX } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@shared/ui/avatar";
+import { Badge } from "@shared/ui/badge";
+import { Skeleton } from "@shared/ui/skeleton";
 import type { UserListItem } from "@api/types";
 import { getRoleBadgeVariant } from "@features/admin/shared/utils/roleBadge";
 import { type DataTableColumn } from "@features/admin/shared/components/DataTable";

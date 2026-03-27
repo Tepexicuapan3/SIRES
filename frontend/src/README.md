@@ -6,10 +6,25 @@ Guia corta para ubicarse en `frontend/src/` y evitar romper estandares de arquit
 
 - `domains/`: estructura objetivo por dominio de negocio.
 - `features/`: implementacion por feature (coexistencia incremental).
-- `api/`: clientes HTTP, contratos y adapters de transporte.
-- `components/`: componentes compartidos (tecnicos, no reglas de negocio).
-- `routes/`: enrutado y guards de navegacion.
+- `infrastructure/api/`: clientes HTTP, contratos y adapters de transporte.
+- `shared/`: UI/components/layouts/hooks/styles/utilidades tecnicas compartidas.
+- `app/`: bootstrap, providers, config y router de composicion de aplicacion.
+- `app/router/`: enrutado y guards de navegacion.
 - `test/`: utilidades y estrategia de tests frontend.
+
+## Aliases canonicos (Fase 4)
+
+- Base: `@/*` -> `src/*`
+- Canones por capa:
+  - `@app/*` -> `src/app/*`
+  - `@infra/*` -> `src/infrastructure/*`
+  - `@shared/*` -> `src/shared/*`
+- Atajos permitidos:
+  - `@api/*` -> `src/infrastructure/api/*`
+  - `@routes/*` -> `src/app/router/*`
+  - `@realtime/*` -> `src/infrastructure/realtime/*`
+
+> Cierre de transicion: imports legacy `@/api/*`, `@/routes/*`, `@/realtime/*`, `@/components/{ui,shared,layouts}/*`, `@/{config,providers,store,styles,hooks}/*` quedan deprecados y removidos de la config.
 
 ## Checklist obligatorio de entrega
 

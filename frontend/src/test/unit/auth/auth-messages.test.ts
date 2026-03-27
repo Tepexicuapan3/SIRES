@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ERROR_CODES, ERROR_MESSAGES } from "@/api/utils/errors";
+import { ERROR_CODES, ERROR_MESSAGES } from "@api/utils/errors";
 import {
   getAuthErrorMessage,
   loginErrorMessages,

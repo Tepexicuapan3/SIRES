@@ -55,7 +55,7 @@ routes/pages
       -> backend API
 ```
 
-- HTTP solo en `frontend/src/api/`.
+- HTTP solo en `frontend/src/infrastructure/api/`.
 - Componentes no acceden directamente a transporte.
 - Estado de servidor y estado UI se separan.
 

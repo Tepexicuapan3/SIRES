@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 // @vitest-environment node
-import { usersAPI } from "@/api/resources/users.api";
-import { authAPI } from "@/api/resources/auth.api";
+import { usersAPI } from "@api/resources/users.api";
+import { authAPI } from "@api/resources/auth.api";
 
 describe("Admin RBAC Users API (with MSW)", () => {
   beforeEach(async () => {

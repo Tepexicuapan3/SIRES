@@ -21,19 +21,19 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+} from "@shared/ui/card";
+import { Button } from "@shared/ui/button";
+import { Input } from "@shared/ui/input";
+import { Label } from "@shared/ui/label";
+import { Textarea } from "@shared/ui/textarea";
+import { Badge } from "@shared/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@shared/ui/select";
 
 export const NuevaConsultaPage = () => {
   const [expediente, setExpediente] = useState("");

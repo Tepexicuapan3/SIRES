@@ -15,11 +15,11 @@ import {
   KeyRound,
   Layers,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { TruncatedTooltip } from "@/components/ui/truncated-tooltip";
-import { cn } from "@/lib/utils";
+import { Badge } from "@shared/ui/badge";
+import { Button } from "@shared/ui/button";
+import { Skeleton } from "@shared/ui/skeleton";
+import { TruncatedTooltip } from "@shared/ui/truncated-tooltip";
+import { cn } from "@shared/utils/styling/cn";
 import type { Permission } from "@api/types";
 import { usePermissionsCatalog } from "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog";
 import { PermissionSearchField } from "@features/admin/modules/rbac/shared/components/PermissionSearchField";

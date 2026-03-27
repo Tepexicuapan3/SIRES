@@ -8,17 +8,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@shared/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+} from "@shared/ui/dialog";
+import { ScrollArea } from "@shared/ui/ScrollArea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
+import { cn } from "@shared/utils/styling/cn";
 import type {
   AdminDetailsDialogFooterControls,
   AdminDetailsDialogSection,

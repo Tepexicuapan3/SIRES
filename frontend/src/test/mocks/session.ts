@@ -1,4 +1,4 @@
-import type { AuthUser } from "@/api/types/auth.types";
+import type { AuthUser } from "@api/types/auth.types";
 import { createMockAuthUser } from "@/test/factories/users";
 
 const createDefaultSessionUser = (): AuthUser =>

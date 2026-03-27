@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@shared/ui/badge";
 import { VISIT_STATUS, type VisitStatus } from "@api/types";
 import { formatVisitStatusLabel } from "@features/recepcion/shared/utils/recepcion-format";
 

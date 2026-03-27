@@ -192,7 +192,7 @@ test.describe("Flujo clinico smoke", () => {
 
       const e2eSmokeScript = packageJson.scripts?.["test:e2e:smoke"] ?? "";
       expect(e2eSmokeScript).toContain(
-        "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=playwright.smoke.docker.config.mjs --project=chromium",
+        "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=scripts/playwright.smoke.docker.config.mjs --project=chromium",
       );
 
       const qualityGateScript =

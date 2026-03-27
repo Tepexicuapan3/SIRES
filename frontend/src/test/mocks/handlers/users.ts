@@ -16,7 +16,7 @@ import type {
   CreateUserRequest,
   SetPrimaryRoleRequest,
   UpdateUserRequest,
-} from "@/api/types/users.types";
+} from "@api/types/users.types";
 
 const MOCK_DELAY = {
   list: 1200,

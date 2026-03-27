@@ -1,18 +1,9 @@
-import { useEffect, useState } from "react";
-import { EnfermedadesResource } from "@/api/resources/catalogos/enfermedades.resource";
-import type { EnfermedadListItem } from "@/api/types/catalogos/enfermedades.types";
+import { useEnfermedadesList } from "@features/catalogos/queries/useEnfermedadesList";
 
 const EnfermedadesPage = () => {
-  const [data, setData] = useState<EnfermedadListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data = [], isLoading } = useEnfermedadesList();
 
-  useEffect(() => {
-    EnfermedadesResource.list()
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <p>Cargando enfermedades...</p>;
+  if (isLoading) return <p>Cargando enfermedades...</p>;
 
   return (
     <div>

@@ -1,5 +1,5 @@
 import { Eye, Pencil, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@shared/ui/badge";
 import type { CentroAtencionListItem } from "@api/types";
 import { CatalogStatusBadge } from "@features/admin/modules/catalogos/shared/components/CatalogStatusBadge";
 import { type DataTableColumn } from "@features/admin/shared/components/DataTable";

@@ -3,9 +3,9 @@ import {
   type VisitQueueItem,
   type VisitsListResponse,
 } from "@api/types";
-import { SOCKET_CONNECTION_STATUS } from "@/realtime/visits/client";
-import { useVisitQueueByStatus } from "@/realtime/visits/useVisitQueueByStatus";
-import { useVisitRealtimeSync } from "@/realtime/visits/useVisitRealtimeSync";
+import { SOCKET_CONNECTION_STATUS } from "@realtime/visits/client";
+import { useVisitQueueByStatus } from "@realtime/visits/useVisitQueueByStatus";
+import { useVisitRealtimeSync } from "@realtime/visits/useVisitRealtimeSync";
 
 interface UseDoctorQueueOptions {
   enabled?: boolean;

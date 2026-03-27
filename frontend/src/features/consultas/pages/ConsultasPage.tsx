@@ -6,13 +6,13 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@shared/ui/card";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
 
 const HUB_ACTIONS = [

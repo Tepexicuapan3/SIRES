@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { expedientesAPI } from '@/api/resources/expedientes.api';
-import { expedientesKeys } from '../queries/expedientes.keys';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { expedientesAPI } from "@api/resources/expedientes.api";
+import { expedientesKeys } from "../queries/expedientes.keys";
 
 export const useActualizarExpediente = () => {
   const queryClient = useQueryClient();
@@ -12,10 +12,10 @@ export const useActualizarExpediente = () => {
       queryClient.invalidateQueries({
         queryKey: expedientesKeys.detail(variables.expediente),
       });
-      toast.success('Expediente sincronizado desde Oracle correctamente.');
+      toast.success("Expediente sincronizado correctamente.");
     },
     onError: () => {
-      toast.error('Error al sincronizar el expediente. Verifica la conexión a Oracle.');
+      toast.error("Error al sincronizar el expediente. Intenta nuevamente.");
     },
   });
 };

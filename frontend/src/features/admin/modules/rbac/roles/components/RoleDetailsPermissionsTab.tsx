@@ -1,5 +1,5 @@
 import { CalendarDays, Plus, UserRound, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import { formatDateTime } from "@features/admin/modules/rbac/roles/utils/roles.format";
 import { PermissionsHierarchyExplorer } from "@features/admin/modules/rbac/shared/components/PermissionHierarchyExplorer";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";

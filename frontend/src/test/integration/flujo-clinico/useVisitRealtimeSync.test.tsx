@@ -3,13 +3,13 @@ import { act, renderHook, waitFor } from "@/test/utils";
 import { TestProviders } from "@/test/providers";
 import { visitsAPI } from "@api/resources/visits.api";
 import { VISIT_STATUS } from "@api/types";
-import { resetRealtimeClientSingletonsForTests } from "@/realtime/client";
+import { resetRealtimeClientSingletonsForTests } from "@realtime/client";
 import {
   SOCKET_CONNECTION_STATUS,
   type WebSocketLike,
-} from "@/realtime/visits/client";
-import type { VisitRealtimeEventEnvelope } from "@/realtime/visits/protocol";
-import { useVisitRealtimeSync } from "@/realtime/visits/useVisitRealtimeSync";
+} from "@realtime/visits/client";
+import type { VisitRealtimeEventEnvelope } from "@realtime/visits/protocol";
+import { useVisitRealtimeSync } from "@realtime/visits/useVisitRealtimeSync";
 
 class FakeWebSocket implements WebSocketLike {
   url: string;

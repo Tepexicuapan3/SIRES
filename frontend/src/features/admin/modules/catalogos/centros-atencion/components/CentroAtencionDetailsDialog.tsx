@@ -3,9 +3,9 @@ import { AlertTriangle, CalendarDays, Pencil } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@shared/ui/button";
+import { Separator } from "@shared/ui/separator";
+import { Skeleton } from "@shared/ui/skeleton";
 import { CentroAtencionDetailsGeneralSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsGeneralSection";
 import { CentroAtencionDialogHeader } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDialogHeader";
 import {

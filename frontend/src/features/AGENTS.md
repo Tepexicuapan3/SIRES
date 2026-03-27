@@ -36,7 +36,7 @@
 ## Feature Rules
 
 - Keep feature boundaries clear: `pages/`, `components/`, `queries/`, `mutations/`, `domain/`, `utils/`.
-- UI must not call HTTP directly; use hooks/resources from `frontend/src/api/`.
+- UI must not call HTTP directly; use hooks/resources from `frontend/src/infrastructure/api/`.
 - Separate queries and mutations by module with dedicated query keys.
 - Place reusable pieces in `frontend/src/components/`; keep feature-specific pieces local.
 

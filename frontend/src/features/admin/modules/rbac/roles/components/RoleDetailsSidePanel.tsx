@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Clock3, Route, ShieldCheck, UserRound, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Separator } from "@/components/ui/separator";
+import { Badge } from "@shared/ui/badge";
+import { ScrollArea } from "@shared/ui/ScrollArea";
+import { Separator } from "@shared/ui/separator";
 
 interface RoleDetailsSidePanelProps {
   name: string;

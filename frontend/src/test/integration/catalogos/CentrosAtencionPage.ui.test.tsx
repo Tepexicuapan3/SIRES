@@ -11,7 +11,7 @@ import { useUpdateCentroAtencion } from "@features/admin/modules/catalogos/centr
 import { useDeleteCentroAtencion } from "@features/admin/modules/catalogos/centros-atencion/mutations/useDeleteCentroAtencion";
 import type { CentroAtencionListItem } from "@api/types";
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@shared/hooks/useDebounce", () => ({
   useDebounce: (value: string) => value,
 }));
 

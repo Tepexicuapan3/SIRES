@@ -5,7 +5,7 @@ import type {
 } from "axios";
 import type { AuthUser } from "@api/types";
 import { authKeys } from "@features/auth/queries/auth.keys";
-import { queryClient } from "@/config/query-client";
+import { queryClient } from "@app/config/query-client";
 
 const AUTH_REVISION_HEADER = "x-auth-revision";
 const INVALIDATION_COOLDOWN_MS = 10_000;

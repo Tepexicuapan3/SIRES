@@ -2,7 +2,7 @@ import { FileText, Route, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@shared/ui/dialog";
 import {
   Form,
   FormControl,
@@ -18,10 +18,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Textarea } from "@/components/ui/textarea";
+} from "@shared/ui/form";
+import { Input } from "@shared/ui/input";
+import { ScrollArea } from "@shared/ui/ScrollArea";
+import { Textarea } from "@shared/ui/textarea";
 import { useCreateRole } from "@features/admin/modules/rbac/roles/mutations/useCreateRole";
 import {
   createRoleSchema,

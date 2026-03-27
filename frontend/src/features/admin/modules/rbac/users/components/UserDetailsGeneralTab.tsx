@@ -7,15 +7,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+} from "@shared/ui/form";
+import { Input } from "@shared/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@shared/ui/select";
 import type { CentroAtencionListItem, UserDetail } from "@api/types";
 import type { UserDetailsFormValues } from "@features/admin/modules/rbac/users/domain/users.schemas";
 

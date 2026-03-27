@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { authAPI } from "@api/resources/auth.api";
 import { clearAuthSession } from "@features/auth/utils/auth-cache";
-import { useSidebarStore } from "@/store/sidebarStore";
-import { useThemeStore } from "@/store/themeStore";
+import { useSidebarStore } from "@app/state/ui/sidebarStore";
+import { useThemeStore } from "@app/state/ui/themeStore";
 
 /**
  * Mutation de logout.

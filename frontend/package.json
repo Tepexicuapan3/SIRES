@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun run scripts/patch-vite-proxy-bun-compat.ts && vite",
+    "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -12,9 +12,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:run": "vitest run",
-    "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=playwright.smoke.docker.config.mjs --project=chromium",
-    "test:e2e:kan4": "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts src/test/e2e/flujo-clinico/flujo-clinico-excepciones.e2e.ts --config=playwright.smoke.docker.config.mjs --project=chromium --max-failures=1",
+    "test:e2e": "playwright test --config=scripts/playwright.config.ts",
+    "test:e2e:smoke": "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=scripts/playwright.smoke.docker.config.mjs --project=chromium",
+    "test:e2e:kan4": "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts src/test/e2e/flujo-clinico/flujo-clinico-excepciones.e2e.ts --config=scripts/playwright.smoke.docker.config.mjs --project=chromium --max-failures=1",
     "quality:kan4:smoke": "bun run test:run src/test/integration/flujo-clinico/RecepcionQueuePage.ui.test.tsx src/test/integration/flujo-clinico/SomatometriaCapturePage.ui.test.tsx src/test/integration/flujo-clinico/DoctorConsultationPage.ui.test.tsx src/test/integration/flujo-clinico/CaptureVitals.api.test.ts src/test/integration/flujo-clinico/useVisitRealtimeSync.test.tsx && bun run test:e2e:smoke",
     "quality:kan4:release": "bun run test:run src/test/integration/flujo-clinico/RecepcionQueuePage.ui.test.tsx src/test/integration/flujo-clinico/SomatometriaCapturePage.ui.test.tsx src/test/integration/flujo-clinico/DoctorConsultationPage.ui.test.tsx src/test/integration/flujo-clinico/CaptureVitals.api.test.ts src/test/integration/flujo-clinico/useVisitRealtimeSync.test.tsx && bun run test:e2e:kan4"
   },

@@ -1,29 +1,31 @@
 import type {
-  NavItem,
-  NavSection,
-} from "@/components/layouts/sidebar/nav-config";
+  NavigationItem,
+  NavigationSection,
+} from "@features/navigation/domain/navigation.types";
 
 export interface NavigationFilterInput {
-  sections: NavSection[];
-  secondaryItems: NavItem[];
+  sections: NavigationSection[];
+  secondaryItems: NavigationItem[];
   isAdmin: boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
 }
 
 export interface NavigationFilterResult {
-  sections: NavSection[];
-  secondaryItems: NavItem[];
+  sections: NavigationSection[];
+  secondaryItems: NavigationItem[];
 }
 
-const isNavItem = (item: NavItem | null): item is NavItem => item !== null;
-const isNavSection = (section: NavSection | null): section is NavSection =>
-  section !== null;
+const isNavItem = (item: NavigationItem | null): item is NavigationItem =>
+  item !== null;
+const isNavSection = (
+  section: NavigationSection | null,
+): section is NavigationSection => section !== null;
 
 const filterNavItem = (
-  item: NavItem,
+  item: NavigationItem,
   isAdmin: boolean,
   hasAnyPermission: (permissions: string[]) => boolean,
-): NavItem | null => {
+): NavigationItem | null => {
   if (!isAdmin && item.permissions && item.permissions.length > 0) {
     if (!hasAnyPermission(item.permissions)) return null;
   }

@@ -3,16 +3,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { LogOut, Lock, Loader2 } from "lucide-react";
-import { ApiError, ERROR_CODES } from "@/api/utils/errors";
+import { ApiError, ERROR_CODES } from "@api/utils/errors";
 
-import { authAPI } from "@/api/resources/auth.api";
+import { authAPI } from "@api/resources/auth.api";
 import { useLogout } from "@/features/auth/mutations/useLogout";
 import {
   getAuthErrorMessage,
   onboardingErrorMessages,
 } from "@features/auth/domain/auth.messages";
 import { setAuthSession } from "@features/auth/utils/auth-cache";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 
 import type { CompleteOnboardingResponse } from "@api/types";
 import { TermsStep } from "@/features/auth/components/onboarding/TermsStep";

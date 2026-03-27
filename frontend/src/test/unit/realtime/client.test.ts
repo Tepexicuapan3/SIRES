@@ -6,8 +6,8 @@ import {
   acquireRealtimeClient,
   resetRealtimeClientSingletonsForTests,
   type RealtimeWebSocketLike,
-} from "@/realtime/client";
-import type { RealtimeEventEnvelope } from "@/realtime/protocol";
+} from "@realtime/client";
+import type { RealtimeEventEnvelope } from "@realtime/protocol";
 
 class FakeWebSocket implements RealtimeWebSocketLike {
   url: string;

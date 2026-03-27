@@ -3,8 +3,8 @@ import type {
   RoleDetail,
   RoleListItem,
   RolePermission,
-} from "@/api/types/roles.types";
-import type { UserRef } from "@/api/types/users.types";
+} from "@api/types/roles.types";
+import type { UserRef } from "@api/types/users.types";
 
 const createUserRef = (overrides: Partial<UserRef> = {}): UserRef => ({
   id: faker.number.int({ min: 1, max: 1000 }),

@@ -1,1 +1,1 @@
-export { visitFlowKeys } from "@/realtime/visits/query-keys";
+export { visitFlowKeys } from "@realtime/visits/query-keys";

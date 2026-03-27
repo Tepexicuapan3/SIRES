@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
-import { authAPI } from "@/api/resources/auth.api";
-import { ApiError, ERROR_CODES } from "@/api/utils/errors";
+import { authAPI } from "@api/resources/auth.api";
+import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { toast } from "sonner";
 
 const mockNavigate = vi.fn();
@@ -16,7 +16,7 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-vi.mock("@/api/resources/auth.api", () => ({
+vi.mock("@api/resources/auth.api", () => ({
   authAPI: {
     login: vi.fn().mockResolvedValue({
       user: {

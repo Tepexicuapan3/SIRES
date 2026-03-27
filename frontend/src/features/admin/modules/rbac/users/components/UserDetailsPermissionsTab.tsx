@@ -8,15 +8,11 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { TruncatedTooltip } from "@/components/ui/truncated-tooltip";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Badge } from "@shared/ui/badge";
+import { Button } from "@shared/ui/button";
+import { Calendar } from "@shared/ui/calendar";
+import { TruncatedTooltip } from "@shared/ui/truncated-tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/popover";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { PermissionSearchField } from "@features/admin/modules/rbac/shared/components/PermissionSearchField";
 import {
@@ -32,7 +28,7 @@ import {
   parseDateValue,
   toLocalDateInputValue,
 } from "@features/admin/modules/rbac/users/utils/users.permissions-search";
-import { cn } from "@/lib/utils";
+import { cn } from "@shared/utils/styling/cn";
 import type { Permission, UserOverride } from "@api/types";
 
 interface UserDetailsPermissionsTabProps {

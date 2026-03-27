@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { http, HttpResponse } from "msw";
-import { authAPI } from "@/api/resources/auth.api";
-import { ApiError } from "@/api/utils/errors";
+import { authAPI } from "@api/resources/auth.api";
+import { ApiError } from "@api/utils/errors";
 import { server } from "@/test/mocks/server";
 
 type ErrorExpectation = {

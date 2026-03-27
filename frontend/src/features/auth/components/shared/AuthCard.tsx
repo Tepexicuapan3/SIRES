@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 import { ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@shared/utils/styling/cn";
+import { Button } from "@shared/ui/button";
 
 /**
  * AuthCard - Componente Reutilizable para Flujos de Autenticación
@@ -126,7 +126,7 @@ export const AuthCard = ({
             ) : (
               <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full flex items-center justify-center shadow-xl shadow-brand/20 mb-6 transition-all duration-300 hover:scale-105 hover:rotate-2">
                 <img
-                  src="/SIRES.webp"
+                  src="/assets/brand/logos/primary/sires.webp"
                   alt="Logo SIRES"
                   className="w-32 h-32 sm:w-36 sm:h-36 object-contain"
                 />

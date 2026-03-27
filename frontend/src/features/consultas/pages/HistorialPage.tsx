@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { ChevronDown, History, Search, UserRound } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@shared/ui/badge";
+import { Button } from "@shared/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@shared/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
+} from "@shared/ui/collapsible";
+import { Input } from "@shared/ui/input";
 import {
   HistorialConsultaDetailDialog,
   type HistorialConsultaItem,

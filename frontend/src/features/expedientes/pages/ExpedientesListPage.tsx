@@ -11,17 +11,17 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+} from "@shared/ui/card";
+import { Button } from "@shared/ui/button";
+import { Input } from "@shared/ui/input";
+import { Badge } from "@shared/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@shared/ui/select";
 import { Link } from "react-router-dom";
 
 export const ExpedientesListPage = () => {

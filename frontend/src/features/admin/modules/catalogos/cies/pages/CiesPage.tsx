@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, FileSpreadsheet, RotateCcw, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
+import { Badge } from "@shared/ui/badge";
+import { Button } from "@shared/ui/button";
 import {
-  ciesAPI,
   type CiesPreviewResponse,
   type CiesUploadRow,
 } from "@api/resources/catalogos/cies.api";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { useCiesConfirmImport } from "@features/admin/modules/catalogos/cies/mutations/useCiesConfirmImport";
 import { CatalogModuleLayout } from "@features/admin/modules/catalogos/shared/components/CatalogModuleLayout";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { DataTable } from "@features/admin/shared/components/DataTable";
@@ -80,6 +80,7 @@ const getPreviewAlertProps = (
 export function CiesPage() {
   const uploadRef = useRef<CiesUploadFormRef>(null);
   const { hasCapability } = usePermissionDependencies();
+  const ciesConfirmImport = useCiesConfirmImport();
 
   const [previewResult, setPreviewResult] =
     useState<CiesPreviewResponse | null>(null);
@@ -184,7 +185,7 @@ export function CiesPage() {
     setIsConfirmPending(true);
 
     try {
-      const response = await ciesAPI.confirm(previewResult.rows);
+      const response = await ciesConfirmImport.mutateAsync(previewResult.rows);
       setIsConfirmed(true);
       toast.success("Importacion completada", {
         description:

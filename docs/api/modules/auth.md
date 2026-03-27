@@ -35,6 +35,7 @@ Headers requeridos
   "username": "jperez",
   "fullName": "Juan Perez",
   "email": "jperez@metro.cdmx.gob.mx",
+  "avatarUrl": null,
   "primaryRole": "ADMIN",
   "landingRoute": "/admin",
   "roles": ["ADMIN"],

@@ -436,6 +436,13 @@ This is the minimum required Engram protocol at repository level and applies eve
 - Data ownership rule: each domain owns its PostgreSQL data model and migrations.
 - Data access rule: no direct cross-domain table/schema reads or writes from application code.
 
+## Docker-First Testing Rule (mandatory)
+
+- When an agent needs to run tests/validation, it MUST start and use required services via Docker (`docker compose`).
+- Hard ban: do not start backend/frontend/supporting services directly on the host machine for test execution.
+- Preferred flow: `docker compose up -d` for dependencies/services, run test commands in containerized context, then inspect logs with `docker compose logs -f` if needed.
+- Any exception to Docker-first test execution must be explicitly approved by the user in the same thread.
+
 ## Development Commands
 
 ### Frontend (Bun)

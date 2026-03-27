@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 import { useLogout } from "@features/auth/mutations/useLogout";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@shared/ui/button";
+import { Badge } from "@shared/ui/badge";
 import {
   Card,
   CardContent,
@@ -24,21 +24,21 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+} from "@shared/ui/card";
+import { Input } from "@shared/ui/input";
+import { Textarea } from "@shared/ui/textarea";
+import { Label } from "@shared/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+} from "@shared/ui/select";
+import { Checkbox } from "@shared/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@shared/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +58,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@shared/ui/alert-dialog";
 import {
   Pagination,
   PaginationContent,
@@ -67,7 +67,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
+} from "@shared/ui/pagination";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -75,18 +75,18 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
+} from "@shared/ui/breadcrumb";
+import { Avatar, AvatarFallback, AvatarImage } from "@shared/ui/avatar";
+import { Separator } from "@shared/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { OtpInput } from "@/components/ui/OtpInput";
+} from "@shared/ui/tooltip";
+import { OtpInput } from "@shared/ui/OtpInput";
 import { usePermissions } from "@features/auth/queries/usePermissions";
-import { PermissionGate } from "@/components/shared/PermissionGate";
+import { PermissionGate } from "@shared/components/PermissionGate";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
 
 export const DashboardPage = () => {

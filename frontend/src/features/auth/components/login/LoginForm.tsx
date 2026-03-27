@@ -3,10 +3,10 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, User, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { useLogin } from "@features/auth/mutations/useLogin";
-import { FormField } from "@/components/ui/FormField";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@shared/ui/FormField";
+import { Button } from "@shared/ui/button";
+import { Checkbox } from "@shared/ui/checkbox";
+import { Label } from "@shared/ui/label";
 import {
   loginSchema,
   type LoginFormData,

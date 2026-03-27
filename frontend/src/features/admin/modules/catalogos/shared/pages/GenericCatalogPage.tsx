@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { BookOpen, Download, RotateCcw } from "lucide-react";
-import { useDebounce } from "@/hooks/useDebounce";
-import { DataTable, type DataTableColumn } from "@features/admin/shared/components/DataTable";
+import { useDebounce } from "@shared/hooks/useDebounce";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@features/admin/shared/components/DataTable";
 import {
   TableColumnVisibility,
   type ColumnVisibilityState,
@@ -16,9 +19,7 @@ import {
 import { TableSearch } from "@features/admin/shared/components/TableSearch";
 import { CatalogStatusBadge } from "@features/admin/modules/catalogos/shared/components/CatalogStatusBadge";
 import { CatalogModuleLayout } from "@features/admin/modules/catalogos/shared/components/CatalogModuleLayout";
-import {
-  type CatalogDefinition,
-} from "@features/admin/modules/catalogos/shared/domain/catalog-definitions";
+import { type CatalogDefinition } from "@features/admin/modules/catalogos/shared/domain/catalog-definitions";
 import { getCatalogErrorMessage } from "@features/admin/modules/catalogos/shared/utils/catalog-feedback";
 import { useCatalogList } from "@features/admin/modules/catalogos/shared/queries/useCatalogList";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
@@ -257,7 +258,9 @@ export function GenericCatalogPage({ catalog }: GenericCatalogPageProps) {
                 onVisibilityChange={setColumnVisibility}
               />
             ) : null}
-            {canReadCatalog ? <TableOptionsMenu options={tableOptions} /> : null}
+            {canReadCatalog ? (
+              <TableOptionsMenu options={tableOptions} />
+            ) : null}
           </>
         }
       />

@@ -13,7 +13,7 @@ El trabajo paralelo por dominios solo escala si cada cambio respeta fronteras y 
 1. **No circular deps** entre dominios.
 2. **Backend clean boundaries**: `presentation -> use_cases -> infrastructure/domain`.
 3. **Frontend boundaries**: `routes/pages -> domain hooks/components -> api resources`.
-4. **No HTTP fuera de `frontend/src/api/resources/`**.
+4. **No HTTP fuera de `frontend/src/infrastructure/api/resources/`**.
 5. **No acceso DB cross-domain sin contrato** (facade, API o RFC aprobado).
 6. **Shared solo para cross-cutting** (logging, auth primitives, realtime infra).
 
@@ -29,6 +29,7 @@ El trabajo paralelo por dominios solo escala si cada cambio respeta fronteras y 
 - Declarar dominios impactados.
 - Validar que no se agregan imports prohibidos.
 - Adjuntar RFC si hay cambio cross-domain de contratos o ownership.
+- Si hay migraciones estructurales de runtime frontend (`app/`, `infrastructure/`, `shared/`), incluir evidencia documental de impacto en este archivo o en `docs/guides/incremental-domain-migration.md`.
 
 ## References
 

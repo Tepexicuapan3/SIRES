@@ -1,13 +1,13 @@
 import { MoreVertical, type LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+} from "@shared/ui/dropdown-menu";
+import { cn } from "@shared/utils/styling/cn";
 
 const ACTION_VARIANT = {
   DEFAULT: "default",

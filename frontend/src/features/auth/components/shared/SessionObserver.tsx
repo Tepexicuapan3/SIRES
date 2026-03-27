@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { clearAuthSession } from "@features/auth/utils/auth-cache";
 import { subscribeSessionExpired } from "@features/auth/utils/session-events";
-import { queryClient } from "@/config/query-client";
+import { queryClient } from "@app/config/query-client";
 
 /**
  * Componente lógico (sin UI) que observa el estado de la sesión.

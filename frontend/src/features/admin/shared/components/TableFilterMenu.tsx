@@ -1,5 +1,5 @@
 import { Filter, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@shared/ui/dropdown-menu";
 
 export interface TableFilterOption {
   id: string;

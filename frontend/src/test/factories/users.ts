@@ -1,10 +1,10 @@
 import { faker } from "@faker-js/faker";
-import type { AuthUser } from "@/api/types/auth.types";
+import type { AuthUser } from "@api/types/auth.types";
 import type {
   UserDetail,
   UserListItem,
   UserRole,
-} from "@/api/types/users.types";
+} from "@api/types/users.types";
 import { createMockCentroAtencionRef } from "@/test/factories/centros-atencion";
 
 export const createMockAuthUser = (

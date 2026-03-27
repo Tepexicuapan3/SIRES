@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@shared/ui/badge";
 import type { CiesUploadRow } from "@api/resources/catalogos/cies.api";
 import { type DataTableColumn } from "@features/admin/shared/components/DataTable";
 

@@ -11,10 +11,10 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-import { FormField } from "@/components/ui/FormField";
-import { Button } from "@/components/ui/button";
+import { FormField } from "@shared/ui/FormField";
+import { Button } from "@shared/ui/button";
 import { PasswordRequirements } from "./PasswordRequirements";
-import { cn } from "@/lib/utils";
+import { cn } from "@shared/utils/styling/cn";
 import {
   authPasswordSchema,
   type PasswordFormData,

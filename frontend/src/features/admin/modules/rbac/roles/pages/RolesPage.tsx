@@ -28,7 +28,7 @@ import { getRoleErrorMessage } from "@features/admin/modules/rbac/roles/utils/ro
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import type { RoleListItem } from "@api/types";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@shared/hooks/useDebounce";
 
 const ROLE_STATUS_FILTER = {
   ALL: "all",

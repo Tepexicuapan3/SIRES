@@ -20,10 +20,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "@shared/ui/card";
+import { Button } from "@shared/ui/button";
+import { Badge } from "@shared/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
 
 export const ExpedienteDetailPage = () => {
   // Mock data - en producción vendría de useParams() + API

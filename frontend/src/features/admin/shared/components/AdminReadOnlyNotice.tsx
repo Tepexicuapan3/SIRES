@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Lock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@shared/utils/styling/cn";
 
 interface AdminReadOnlyNoticeProps {
   message: ReactNode;

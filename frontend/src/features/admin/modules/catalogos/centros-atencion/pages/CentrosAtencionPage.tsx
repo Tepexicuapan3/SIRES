@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Building2, Download, Plus, RotateCcw } from "lucide-react";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@shared/hooks/useDebounce";
 import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
   TableColumnVisibility,

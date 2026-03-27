@@ -2,12 +2,12 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, ArrowLeft, Loader2, Send } from "lucide-react";
-import { FormField } from "@/components/ui/FormField";
-import { Button } from "@/components/ui/button";
+import { FormField } from "@shared/ui/FormField";
+import { Button } from "@shared/ui/button";
 import { useMutation } from "@tanstack/react-query";
-import { authAPI } from "@/api/resources/auth.api";
+import { authAPI } from "@api/resources/auth.api";
 import { toast } from "sonner";
-import { ApiError } from "@/api/utils/errors";
+import { ApiError } from "@api/utils/errors";
 import {
   getAuthErrorMessage,
   recoveryErrorMessages,

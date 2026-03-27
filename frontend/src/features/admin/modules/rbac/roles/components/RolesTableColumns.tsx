@@ -1,5 +1,5 @@
 import { Eye, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@shared/ui/badge";
 import type { RoleListItem } from "@api/types";
 import { type DataTableColumn } from "@features/admin/shared/components/DataTable";
 import { type TableColumnVisibilityItem } from "@features/admin/shared/components/TableColumnVisibility";

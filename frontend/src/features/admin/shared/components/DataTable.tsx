@@ -1,9 +1,9 @@
 import { type ReactNode } from "react";
 import { AlertTriangle, Inbox, RotateCcw, SearchX } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
+import { Button } from "@shared/ui/button";
+import { Card, CardContent, CardFooter } from "@shared/ui/card";
+import { Skeleton } from "@shared/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -11,9 +11,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { TruncatedTooltip } from "@/components/ui/truncated-tooltip";
-import { cn } from "@/lib/utils";
+} from "@shared/ui/table";
+import { TruncatedTooltip } from "@shared/ui/truncated-tooltip";
+import { cn } from "@shared/utils/styling/cn";
 import {
   TablePagination,
   type TablePaginationProps,

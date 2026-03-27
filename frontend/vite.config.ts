@@ -11,13 +11,13 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@components": path.resolve(__dirname, "./src/components"),
+      "@app": path.resolve(__dirname, "./src/app"),
+      "@infra": path.resolve(__dirname, "./src/infrastructure"),
+      "@shared": path.resolve(__dirname, "./src/shared"),
       "@features": path.resolve(__dirname, "./src/features"),
-      "@api": path.resolve(__dirname, "./src/api"),
-      "@lib": path.resolve(__dirname, "./src/lib"),
-      "@store": path.resolve(__dirname, "./src/store"),
-      "@config": path.resolve(__dirname, "./src/config"),
-      "@routes": path.resolve(__dirname, "./src/routes"),
+      "@api": path.resolve(__dirname, "./src/infrastructure/api"),
+      "@routes": path.resolve(__dirname, "./src/app/router"),
+      "@realtime": path.resolve(__dirname, "./src/infrastructure/realtime"),
     },
   },
   server: {
@@ -46,7 +46,7 @@ export default defineConfig({
         manualChunks: {
           admin: ["./src/features/admin"],
           clinico: ["./src/features/consultas", "./src/features/expedientes"],
-          placeholders: ["./src/components/shared/PlaceholderPage.tsx"],
+          placeholders: ["./src/shared/components/PlaceholderPage.tsx"],
           auth: ["./src/features/auth"],
           vendors: [
             "react",

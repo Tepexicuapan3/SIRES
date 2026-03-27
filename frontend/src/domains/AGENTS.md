@@ -13,7 +13,7 @@
 ## Rules
 
 - Do not perform big-bang moves from `features` to `domains`.
-- Keep UI/API boundaries: HTTP stays in `frontend/src/api/resources/`.
+- Keep UI/API boundaries: HTTP stays in `frontend/src/infrastructure/api/resources/`.
 - Prefer additive extraction of domain modules and adapters.
 - Update migration tracker in `docs/guides/incremental-domain-migration.md` when moving components.
 

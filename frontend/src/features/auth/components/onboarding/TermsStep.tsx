@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { AlertTriangle, ShieldCheck, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@shared/utils/styling/cn";
 
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@shared/ui/ScrollArea";
+import { Checkbox } from "@shared/ui/checkbox";
+import { Button } from "@shared/ui/button";
+import { Label } from "@shared/ui/label";
 
 /** Paso 1 del onboarding: aceptación de términos. */
 
@@ -24,7 +24,7 @@ export const TermsStep = ({ onAccept }: Props) => {
           <div className="flex items-center gap-4 shrink-0">
             {/* Logo Metro CDMX */}
             <img
-              src="/icons/metro-logo-borde.svg"
+              src="/assets/brand/icons/partners/metro-logo-borde.svg"
               alt="Sistema de Transporte Colectivo Metro CDMX"
               className="h-16 sm:h-20 w-auto drop-shadow-lg"
             />

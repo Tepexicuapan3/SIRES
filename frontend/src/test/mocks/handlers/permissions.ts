@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from "msw";
 import { getApiUrl } from "../urls";
-import type { Permission } from "@/api/types/permissions.types";
+import type { Permission } from "@api/types/permissions.types";
 import { getMockSessionUser, hasMockPermission } from "../session";
 import {
   getRolePermissions,

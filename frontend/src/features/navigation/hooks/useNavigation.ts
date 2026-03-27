@@ -7,17 +7,16 @@
 
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
 import { usePermissions } from "@features/auth/queries/usePermissions";
-import {
-  NAV_CONFIG,
-  NAV_SECONDARY,
-  type NavSection,
-  type NavItem,
-} from "@/components/layouts/sidebar/nav-config";
+import { NAV_CONFIG, NAV_SECONDARY } from "@app/navigation/nav-config";
 import { filterNavigation } from "@features/navigation/domain/filterNavigation";
+import type {
+  NavigationItem,
+  NavigationSection,
+} from "@features/navigation/domain/navigation.types";
 
 export interface UseNavigationReturn {
-  sections: NavSection[];
-  secondaryItems: NavItem[];
+  sections: NavigationSection[];
+  secondaryItems: NavigationItem[];
   isEmpty: boolean;
 }
 

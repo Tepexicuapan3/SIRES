@@ -4,8 +4,8 @@ import {
   SOCKET_CONNECTION_STATUS,
   VisitRealtimeClient,
   type WebSocketLike,
-} from "@/realtime/visits/client";
-import type { VisitRealtimeEventEnvelope } from "@/realtime/visits/protocol";
+} from "@realtime/visits/client";
+import type { VisitRealtimeEventEnvelope } from "@realtime/visits/protocol";
 
 class FakeWebSocket implements WebSocketLike {
   url: string;

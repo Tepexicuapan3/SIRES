@@ -2,7 +2,7 @@ import {
   ERROR_CODES,
   ERROR_MESSAGES,
   type ErrorCode,
-} from "@/api/utils/errors";
+} from "@api/utils/errors";
 
 const pickMessages = (codes: ErrorCode[]) =>
   Object.fromEntries(

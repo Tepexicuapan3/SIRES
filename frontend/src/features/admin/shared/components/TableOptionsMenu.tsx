@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { MoreVertical, type LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+} from "@shared/ui/dropdown-menu";
+import { cn } from "@shared/utils/styling/cn";
 
 export interface TableOptionItem {
   id: string;

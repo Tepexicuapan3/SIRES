@@ -7,12 +7,12 @@ import {
   Loader2,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { authAPI } from "@/api/resources/auth.api";
+import { authAPI } from "@api/resources/auth.api";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { OtpInput } from "@/components/ui/OtpInput";
-import { Button } from "@/components/ui/button";
-import { ApiError, ERROR_CODES } from "@/api/utils/errors";
+import { cn } from "@shared/utils/styling/cn";
+import { OtpInput } from "@shared/ui/OtpInput";
+import { Button } from "@shared/ui/button";
+import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import {
   getAuthErrorMessage,
   recoveryErrorMessages,

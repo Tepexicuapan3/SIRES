@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import type { Permission } from "@/api/types/permissions.types";
-import type { UserOverride } from "@/api/types/users.types";
+import type { Permission } from "@api/types/permissions.types";
+import type { UserOverride } from "@api/types/users.types";
 
 export const createMockPermission = (
   overrides: Partial<Permission> = {},

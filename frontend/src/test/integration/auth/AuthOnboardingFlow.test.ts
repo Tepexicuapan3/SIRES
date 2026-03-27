@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { authAPI } from "@/api/resources/auth.api";
-import { ApiError } from "@/api/utils/errors";
+import { authAPI } from "@api/resources/auth.api";
+import { ApiError } from "@api/utils/errors";
 
 type ErrorExpectation = {
   code: string;

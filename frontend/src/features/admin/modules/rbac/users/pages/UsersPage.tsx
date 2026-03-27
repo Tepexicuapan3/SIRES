@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Download, Plus, RotateCcw, ShieldUser } from "lucide-react";
 import { useAuthSession } from "@features/auth/queries/useAuthSession";
 import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@shared/hooks/useDebounce";
 import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
   TableColumnVisibility,

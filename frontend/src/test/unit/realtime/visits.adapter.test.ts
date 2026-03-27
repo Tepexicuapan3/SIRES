@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { visitsAPI } from "@api/resources/visits.api";
 import { VISIT_STATUS, type VisitStatus } from "@api/types";
 import { visitFlowKeys } from "@features/recepcion/shared/queries/visit-flow.keys";
-import { createVisitsRealtimeAdapter } from "@/realtime/adapters/visits";
-import type { RealtimeEventEnvelope } from "@/realtime/protocol";
+import { createVisitsRealtimeAdapter } from "@realtime/adapters/visits";
+import type { RealtimeEventEnvelope } from "@realtime/protocol";
 
 const buildEvent = (
   eventType: string,

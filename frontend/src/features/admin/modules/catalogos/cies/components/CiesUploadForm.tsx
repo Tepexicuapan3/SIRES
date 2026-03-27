@@ -1,13 +1,11 @@
 import { forwardRef, useId, useImperativeHandle, useState } from "react";
 import { CircleAlert, FileSpreadsheet } from "lucide-react";
-import {
-  ciesAPI,
-  type CiesPreviewResponse,
-} from "@/api/resources/catalogos/cies.api";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import type { CiesPreviewResponse } from "@api/resources/catalogos/cies.api";
+import { useCiesPreview } from "@features/admin/modules/catalogos/cies/mutations/useCiesPreview";
+import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
+import { Input } from "@shared/ui/input";
+import { Label } from "@shared/ui/label";
+import { cn } from "@shared/utils/styling/cn";
 
 export type CiesUploadFormRef = {
   preview: () => Promise<CiesPreviewResponse | null>;
@@ -23,6 +21,7 @@ const DEFAULT_VERSION = "CIE-10";
 const ACCEPTED_FILES = ".xlsx,.xls";
 
 export const CiesUploadForm = forwardRef<CiesUploadFormRef>((_, ref) => {
+  const ciesPreview = useCiesPreview();
   const [file, setFile] = useState<File | null>(null);
   const [version, setVersion] = useState(DEFAULT_VERSION);
   const [error, setError] = useState<UploadError | null>(null);
@@ -54,7 +53,10 @@ export const CiesUploadForm = forwardRef<CiesUploadFormRef>((_, ref) => {
     setError(null);
 
     try {
-      return await ciesAPI.preview(file, normalizedVersion);
+      return await ciesPreview.mutateAsync({
+        file,
+        version: normalizedVersion,
+      });
     } catch {
       setError({
         title: "No se pudo previsualizar",

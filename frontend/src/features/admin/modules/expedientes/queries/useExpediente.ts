@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { expedientesAPI } from '@/api/resources/expedientes.api';
+import { expedientesAPI } from '@api/resources/expedientes.api';
 import { expedientesKeys } from './expedientes.keys';
 
 export const useExpediente = (idEmpleado: string) =>

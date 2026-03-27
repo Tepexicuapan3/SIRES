@@ -3,7 +3,7 @@ import {
   PaginationContent,
   PaginationItem,
   PaginationLink,
-} from "@/components/ui/pagination";
+} from "@shared/ui/pagination";
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,8 +16,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+} from "@shared/ui/select";
+import { cn } from "@shared/utils/styling/cn";
 
 const DEFAULT_PAGE_SIZES = [10, 20, 50] as const;
 

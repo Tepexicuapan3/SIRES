@@ -8,11 +8,11 @@
 ## Load Narrow Context
 
 - `frontend/src/domains/AGENTS.md` - domain scaffolding and migration flow.
-- `frontend/src/api/AGENTS.md` - API client/contracts.
+- `frontend/src/infrastructure/api/AGENTS.md` - API client/contracts.
 - `frontend/src/components/AGENTS.md` - shared UI/component rules.
 - `frontend/src/features/AGENTS.md` - feature-module patterns.
 - `frontend/src/features/admin/AGENTS.md` - admin module specifics.
-- `frontend/src/routes/AGENTS.md` - route/guard rules.
+- `frontend/src/app/router/AGENTS.md` - route/guard rules.
 - `frontend/src/test/AGENTS.md` - test strategy and execution.
 
 ## Skills Reference
@@ -63,7 +63,7 @@
 ## Critical Rules - Non-negotiable
 
 ### Architecture
-- UI never performs HTTP directly; API calls live only in `frontend/src/api/resources/`.
+- UI never performs HTTP directly; API calls live only in `frontend/src/infrastructure/api/resources/`.
 - Server state uses TanStack Query; UI state uses Zustand.
 - Prefer Zod-derived types to avoid duplication.
 - Keep domain logic outside React components and UI utility helpers.
@@ -107,7 +107,7 @@
 ## Inter-domain Communication (Mandatory)
 
 - Allowed mechanisms only:
-  - API/query contracts through `frontend/src/api/**`.
+  - API/query contracts through `frontend/src/infrastructure/api/**`.
   - Explicit application orchestration hooks/use-cases for multi-domain UI flows.
   - Event-driven integration only via documented domain events/contracts.
 - Hard bans:
@@ -178,9 +178,9 @@ Primitive UI? -> frontend/src/components/ui/
 
 ### API Call Placement
 ```
-HTTP request? -> frontend/src/api/resources/
-Transform/adapter? -> frontend/src/api/utils/
-Types shared? -> frontend/src/api/types/
+HTTP request? -> frontend/src/infrastructure/api/resources/
+Transform/adapter? -> frontend/src/infrastructure/api/utils/
+Types shared? -> frontend/src/infrastructure/api/types/
 ```
 
 ---
@@ -198,7 +198,7 @@ bun test
 ## QA Checklist
 
 - [ ] UI states handled (loading, empty, error)
-- [ ] API calls use `frontend/src/api/resources/`
+- [ ] API calls use `frontend/src/infrastructure/api/resources/`
 - [ ] No hardcoded colors or `var()` in className
 - [ ] Zustand/TanStack Query used appropriately
 - [ ] Tests updated when contracts change

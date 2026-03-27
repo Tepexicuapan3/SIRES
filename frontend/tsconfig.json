@@ -24,13 +24,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
+      "@app/*": ["./src/app/*"],
+      "@infra/*": ["./src/infrastructure/*"],
+      "@shared/*": ["./src/shared/*"],
       "@features/*": ["./src/features/*"],
-      "@api/*": ["./src/api/*"],
-      "@lib/*": ["./src/lib/*"],
-      "@store/*": ["./src/store/*"],
-      "@config/*": ["./src/config/*"],
-      "@routes/*": ["./src/routes/*"]
+      "@api/*": ["./src/infrastructure/api/*"],
+      "@routes/*": ["./src/app/router/*"],
+      "@realtime/*": ["./src/infrastructure/realtime/*"]
     }
   },
   "include": ["src", "src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**/*"]

@@ -4,7 +4,7 @@ import {
   resetAuthSessionSyncState,
   syncAuthSessionRevision,
 } from "@/features/auth/utils/auth-session-sync";
-import { queryClient } from "@/config/query-client";
+import { queryClient } from "@app/config/query-client";
 import { createMockAuthUser } from "@/test/factories/users";
 
 describe("auth-session-sync", () => {

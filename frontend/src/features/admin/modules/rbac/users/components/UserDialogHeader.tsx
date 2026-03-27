@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@shared/ui/avatar";
 import { AdminDetailsHeader } from "@features/admin/shared/components/details/AdminDetailsHeader";
 
 interface UserDialogHeaderProps {

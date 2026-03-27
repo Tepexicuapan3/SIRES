@@ -1,6 +1,6 @@
-import { SOCKET_CONNECTION_STATUS } from "@/realtime/visits/client";
-import { useVisitQueueByStatus } from "@/realtime/visits/useVisitQueueByStatus";
-import { useVisitRealtimeSync } from "@/realtime/visits/useVisitRealtimeSync";
+import { SOCKET_CONNECTION_STATUS } from "@realtime/visits/client";
+import { useVisitQueueByStatus } from "@realtime/visits/useVisitQueueByStatus";
+import { useVisitRealtimeSync } from "@realtime/visits/useVisitRealtimeSync";
 
 interface UseRecepcionAgendaQueueOptions {
   enabled?: boolean;

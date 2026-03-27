@@ -1,12 +1,12 @@
 import { Activity, Calendar, FileText, Pill, UserRound } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@shared/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@shared/ui/dialog";
 
 interface ConsultaSignos {
   presion: string;

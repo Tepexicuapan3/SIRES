@@ -9,11 +9,11 @@ import { toast } from "sonner";
 import { usePermissions } from "@features/auth/queries/usePermissions";
 import { useRolesList } from "@features/admin/modules/rbac/roles/queries/useRolesList";
 import { useDeleteRole } from "@features/admin/modules/rbac/roles/mutations/useDeleteRole";
-import { ApiError } from "@/api/utils/errors";
+import { ApiError } from "@api/utils/errors";
 
 const roleDetailsDialogPropsSpy = vi.fn();
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@shared/hooks/useDebounce", () => ({
   useDebounce: (value: string) => value,
 }));
 

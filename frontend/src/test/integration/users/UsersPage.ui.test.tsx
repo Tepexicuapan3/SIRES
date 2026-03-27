@@ -13,11 +13,11 @@ import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centro
 import { useActivateUser } from "@features/admin/modules/rbac/users/mutations/useActivateUser";
 import { useDeactivateUser } from "@features/admin/modules/rbac/users/mutations/useDeactivateUser";
 import type { CentroAtencionListItem, RoleListItem } from "@api/types";
-import { ApiError } from "@/api/utils/errors";
+import { ApiError } from "@api/utils/errors";
 
 const userDetailsDialogPropsSpy = vi.fn();
 
-vi.mock("@/hooks/useDebounce", () => ({
+vi.mock("@shared/hooks/useDebounce", () => ({
   useDebounce: (value: string) => value,
 }));
 

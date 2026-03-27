@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { PermissionGate } from "@/components/shared/PermissionGate";
-import { cn } from "@/lib/utils";
+import { Button } from "@shared/ui/button";
+import { PermissionGate } from "@shared/components/PermissionGate";
+import { cn } from "@shared/utils/styling/cn";
 
 export interface TablePrimaryActionProps {
   permission: string;

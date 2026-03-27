@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import { render, screen } from "@/test/utils";
 import { AdminDetailsDialogShell } from "@features/admin/shared/components/details/AdminDetailsDialogShell";
 import type { AdminDetailsDialogSection } from "@features/admin/shared/types/details-dialog.types";

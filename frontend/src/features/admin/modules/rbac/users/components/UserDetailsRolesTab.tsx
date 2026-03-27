@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CalendarDays, Plus, ShieldCheck, UserRound, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@shared/ui/button";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import {
   Select,
@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@shared/ui/select";
 import {
   formatDate,
   formatDateTime,

@@ -1,6 +1,6 @@
 import { Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@shared/ui/button";
+import { cn } from "@shared/utils/styling/cn";
 
 interface AdminDetailsFooterProps {
   isDirty: boolean;
