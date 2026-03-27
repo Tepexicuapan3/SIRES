@@ -22,6 +22,8 @@ This registry lists all available skills and project conventions for AI agents w
 | `playwright` | E2E with Page Objects + MCP | `.opencode/skill/playwright/SKILL.md` |
 | `jira-epic` | Large epics definition | `.opencode/skill/jira-epic/SKILL.md` |
 | `jira-task` | Tasks/bugs definition | `.opencode/skill/jira-task/SKILL.md` |
+| `pr-create-sires` | PR creation with SIRES evidence-first structure | `.opencode/skill/pr-create-sires/SKILL.md` |
+| `pr-review-sires` | PR review with SIRES governance + approve/squash actions | `.opencode/skill/pr-review-sires/SKILL.md` |
 | `find-skills` | Discover/install skills when requested | `.opencode/skill/find-skills/SKILL.md` |
 
 ## Auto-invoke Matrix
@@ -44,6 +46,8 @@ This registry lists all available skills and project conventions for AI agents w
 | E2E tests | `playwright` |
 | Create project epics | `jira-epic` |
 | Create tasks/bugs | `jira-task` |
+| Create/open PR with standardized SIRES structure and evidence | `pr-create-sires` |
+| Review/audit PRs and decide approve/request-changes/squash | `pr-review-sires` |
 | User asks to discover/install skills | `find-skills` |
 
 ## Project Conventions
