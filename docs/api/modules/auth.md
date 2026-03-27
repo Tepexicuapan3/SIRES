@@ -147,6 +147,38 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 
 Nota: `TOKEN_EXPIRED`, `TOKEN_INVALID`, `SESSION_EXPIRED` y `PERMISSION_DENIED` estan validados en tests de contrato/auth API (`backend/apps/authentication/tests/test_auth_api.py`, `test_auth_contract_edges.py`).
 
+#### GET `/auth/capabilities`
+
+Endpoint dedicado para UI admin cuando solo necesita proyeccion de permisos/capabilities.
+Mantiene compatibilidad con `/auth/me`: los campos documentados abajo son un subconjunto del `AuthUser` vigente.
+
+**200 OK**
+```json
+{
+  "permissions": ["expedientes:read"],
+  "effectivePermissions": ["expedientes:read"],
+  "capabilities": {
+    "admin.users.read": {
+      "granted": true,
+      "missingAllOf": [],
+      "missingAnyOf": []
+    }
+  },
+  "permissionDependenciesVersion": "v1",
+  "strictCapabilityPrefixes": ["flow.recepcion.", "flow.visits.", "flow.somatometria."],
+  "authRevision": "2026-03-26T20:15:00-06:00"
+}
+```
+
+**Errores (mensaje para toast)**
+| Code | Status | Message |
+| --- | --- | --- |
+| `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
+| `TOKEN_INVALID` | 401 | Token inválido |
+| `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
+| `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |
+| `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
+
 #### POST `/auth/logout`
 
 **200 OK**
@@ -361,6 +393,11 @@ Acciones recomendadas para clientes al recibir errores auth-access. Esta guia es
 - Lee BD: mismas tablas de permisos/roles que login.
 - Escribe BD: no aplica.
 - Auditoria: `SESSION_VALIDATE` (success/fail).
+
+#### GET `/auth/capabilities`
+- Lee BD: mismas tablas de permisos/roles que `/auth/me` (misma proyeccion backend).
+- Escribe BD: no aplica.
+- Auditoria: `CAPABILITIES_READ` (success/fail).
 
 #### POST `/auth/logout`
 - Lee BD: no aplica.

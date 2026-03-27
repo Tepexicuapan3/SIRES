@@ -25,7 +25,10 @@ from apps.authentication.services.token_service import (
     set_reset_cookie,
 )
 from apps.authentication.uses_case.login_usecase import login_user
-from apps.authentication.uses_case.me_usecase import build_me_response
+from apps.authentication.uses_case.me_usecase import (
+    build_capabilities_response,
+    build_me_response,
+)
 from apps.authentication.uses_case.onboarding_usecase import complete_onboarding
 from apps.authentication.uses_case.refresh_usecase import refresh_tokens
 from apps.authentication.uses_case.request_reset_code_usecase import request_reset_code
@@ -259,6 +262,60 @@ class MeView(APIView):
             meta={"endpoint": "/auth/me"},
         )
         return Response(build_me_response(user), status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class CapabilitiesView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        try:
+            user = authenticate_request(request)
+        except AuthServiceError as exc:
+            log_event(
+                request,
+                "CAPABILITIES_READ",
+                "FAIL",
+                error_code=exc.code,
+                meta={"endpoint": "/auth/capabilities"},
+            )
+            return error_response(
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
+                request_id=get_request_id(request),
+            )
+
+        try:
+            capabilities_payload = build_capabilities_response(user)
+        except Exception:
+            log_event(
+                request,
+                "CAPABILITIES_READ",
+                "FAIL",
+                actor_user=user,
+                target_user=user,
+                error_code="INTERNAL_SERVER_ERROR",
+                meta={"endpoint": "/auth/capabilities"},
+            )
+            return error_response(
+                "INTERNAL_SERVER_ERROR",
+                "Error del servidor, intenta nuevamente",
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                request_id=get_request_id(request),
+            )
+
+        log_event(
+            request,
+            "CAPABILITIES_READ",
+            "SUCCESS",
+            actor_user=user,
+            target_user=user,
+            meta={"endpoint": "/auth/capabilities"},
+        )
+        return Response(capabilities_payload, status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

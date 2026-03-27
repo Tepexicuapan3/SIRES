@@ -188,6 +188,71 @@ class AuthApiTests(APITestCase):
         self.assertTrue(response.data["authRevision"])
         self.assertEqual(response["X-Auth-Revision"], response.data["authRevision"])
 
+    def test_capabilities_returns_projection(self):
+        self._login()
+
+        response = self.client.get("/api/v1/auth/capabilities")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            set(response.data.keys()),
+            {
+                "permissions",
+                "effectivePermissions",
+                "capabilities",
+                "permissionDependenciesVersion",
+                "strictCapabilityPrefixes",
+                "authRevision",
+            },
+        )
+        self.assertEqual(response.data["permissions"], ["expedientes:read"])
+        self.assertIsInstance(response.data["effectivePermissions"], list)
+        self.assertIsInstance(response.data["capabilities"], dict)
+        self.assertEqual(response["X-Auth-Revision"], response.data["authRevision"])
+
+    def test_capabilities_requires_auth(self):
+        response = self.client.get(
+            "/api/v1/auth/capabilities",
+            HTTP_X_REQUEST_ID="req-capabilities-401",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["code"], "TOKEN_INVALID")
+        self.assertEqual(response.data["requestId"], "req-capabilities-401")
+        self.assertEqual(response["X-Request-ID"], "req-capabilities-401")
+
+    def test_capabilities_returns_403_for_inactive_user(self):
+        self._login()
+        self.user.est_activo = False
+        self.user.save(update_fields=["est_activo"])
+
+        response = self.client.get("/api/v1/auth/capabilities")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_DENIED")
+
+    @patch("apps.authentication.views.build_capabilities_response")
+    def test_capabilities_returns_500_when_projection_fails(self, projection_mock):
+        self._login()
+        projection_mock.side_effect = RuntimeError("projection-broken")
+
+        response = self.client.get(
+            "/api/v1/auth/capabilities",
+            HTTP_X_REQUEST_ID="req-capabilities-500",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["code"], "INTERNAL_SERVER_ERROR")
+        self.assertEqual(response.data["requestId"], "req-capabilities-500")
+        self.assertEqual(response["X-Request-ID"], "req-capabilities-500")
+        self.assertTrue(
+            AuditoriaEvento.objects.filter(
+                accion="CAPABILITIES_READ",
+                resultado="FAIL",
+                codigo_error="INTERNAL_SERVER_ERROR",
+            ).exists()
+        )
+
     def test_verify_requires_auth(self):
         response = self.client.get("/api/v1/auth/verify")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

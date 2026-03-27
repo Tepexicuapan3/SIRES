@@ -28,6 +28,10 @@ Campos relevantes:
 - `permissionDependenciesVersion: string` -> version del motor de proyeccion (`v1` en este slice).
 - `strictCapabilityPrefixes: string[]` -> prefijos de capability en modo estricto para frontend transicional.
 
+Proyeccion dedicada KAN-64:
+
+- `GET /api/v1/auth/capabilities` expone el subconjunto de `AuthUser` necesario para UI admin (`permissions`, `effectivePermissions`, `capabilities`, `permissionDependenciesVersion`, `strictCapabilityPrefixes`, `authRevision`) sin romper compatibilidad con `GET /api/v1/auth/me`.
+
 ### 2.2 Semantica
 
 - Backend es source of truth de autorizacion.
