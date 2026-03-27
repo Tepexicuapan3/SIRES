@@ -144,7 +144,7 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |
 
-Nota: `TOKEN_EXPIRED`, `TOKEN_INVALID`, `SESSION_EXPIRED` y `PERMISSION_DENIED` estan validados en tests de contrato/auth API (`backend/apps/authentication/tests/test_auth_api.py`, `backend/apps/authentication/tests/test_auth_contract_edges.py`).
+Nota: `TOKEN_EXPIRED`, `TOKEN_INVALID`, `SESSION_EXPIRED` y `PERMISSION_DENIED` estan validados en tests de contrato/auth API (`backend/apps/authentication/tests/test_auth_api.py`, `test_auth_contract_edges.py`).
 
 #### POST `/auth/logout`
 
