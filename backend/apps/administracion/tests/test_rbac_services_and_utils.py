@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.http import HttpResponse
-from django.test import RequestFactory, SimpleTestCase, TestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -13,13 +13,30 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 from apps.administracion.constants.rbac_actions import RBACActions
 from apps.administracion.exceptions import custom_exception_handler
 from apps.administracion.middleware.request_id import RequestIDMiddleware
-from apps.administracion.models import (AuditoriaEvento, RelRolPermiso,
-                                        RelUsuarioOverride, RelUsuarioRol)
+from apps.administracion.models import (
+    AuditoriaEvento,
+    RelRolPermiso,
+    RelUsuarioOverride,
+    RelUsuarioRol,
+)
 from apps.administracion.serializers.role_serializers import RoleDetailSerializer
 from apps.administracion.services.audit_service import AuditService
 from apps.administracion.services.rbac_resolver import RBACResolver
 from apps.administracion.use_cases.roles.create_role import CreateRoleUseCase
 from apps.administracion.use_cases.users.assign_roles import AssignRolesUseCase
+from apps.administracion.use_cases.rbac_read.get_role_detail import GetRoleDetailUseCase
+from apps.administracion.use_cases.rbac_read.list_permissions import (
+    ListPermissionsUseCase,
+)
+from apps.administracion.use_cases.rbac_read.list_roles import ListRolesUseCase
+from apps.administracion.repositories.rbac_read_repository import RbacReadRepository
+from apps.administracion.policies.rbac_read_policy import RbacReadPolicy
+from apps.administracion.services.rbac_read_serializers import (
+    serialize_permission_catalog,
+    serialize_role_detail,
+    serialize_role_list,
+)
+from apps.administracion.views.rbac_read_views import resolve_read_source
 from apps.administracion.views.role_views import RoleCreateView
 from apps.administracion.views import rbac_views
 from apps.authentication.models import DetUsuario, SyUsuario
@@ -58,7 +75,9 @@ class RequestIDMiddlewareTests(SimpleTestCase):
 
 class CustomExceptionHandlerTests(SimpleTestCase):
     def test_returns_api_error_for_drf_exception(self):
-        response = custom_exception_handler(ValidationError("dato invalido"), {"view": None})
+        response = custom_exception_handler(
+            ValidationError("dato invalido"), {"view": None}
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["code"], "API_ERROR")
@@ -72,7 +91,9 @@ class CustomExceptionHandlerTests(SimpleTestCase):
         self.assertEqual(response.data["status"], 500)
 
     @patch("apps.administracion.exceptions.exception_handler")
-    def test_preserves_nested_detail_payload_with_details_and_request_id(self, handler_mock):
+    def test_preserves_nested_detail_payload_with_details_and_request_id(
+        self, handler_mock
+    ):
         handler_mock.return_value = Response(
             {
                 "detail": {
@@ -117,7 +138,9 @@ class RbacResolverTests(TestCase):
             landing_route="/resolver",
             is_active=True,
         )
-        RelUsuarioRol.objects.create(id_usuario=self.user, id_rol=self.role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=self.user, id_rol=self.role, is_primary=True
+        )
 
         self.perm_read = Permisos.objects.create(
             codigo="expedientes:read",
@@ -360,8 +383,14 @@ class RbacViewHelpersTests(TestCase):
         self.assertEqual(rbac_views._user_name(None), "")
         self.assertEqual(rbac_views._user_name(user), "helper_user")
 
-        with patch("apps.administracion.views.rbac_views.UserRepository.get_by_id", return_value=None):
-            self.assertEqual(rbac_views._user_ref_by_id(10, fallback_system=True), {"id": 0, "name": "Sistema"})
+        with patch(
+            "apps.administracion.views.rbac_views.UserRepository.get_by_id",
+            return_value=None,
+        ):
+            self.assertEqual(
+                rbac_views._user_ref_by_id(10, fallback_system=True),
+                {"id": 0, "name": "Sistema"},
+            )
             self.assertIsNone(rbac_views._user_ref_by_id(10, fallback_system=False))
 
     def test_split_permission_code_invalid(self):
@@ -413,7 +442,9 @@ class RbacViewHelpersTests(TestCase):
 
     @patch("apps.administracion.views.rbac_views.authenticate_request")
     def test_authorize_handles_auth_service_error(self, auth_mock):
-        auth_mock.side_effect = rbac_views.AuthServiceError("TOKEN_INVALID", "Token invalido", 401)
+        auth_mock.side_effect = rbac_views.AuthServiceError(
+            "TOKEN_INVALID", "Token invalido", 401
+        )
         request = APIRequestFactory().get("/api/v1/roles")
 
         user, error = rbac_views._authorize(request, "admin:gestion:roles:read")
@@ -432,3 +463,100 @@ class RbacViewHelpersTests(TestCase):
         result = rbac_views._audit(request, "RBAC_TEST", "role")
 
         self.assertIsNone(result)
+
+
+class RbacReadPolicyAndUseCaseTests(TestCase):
+    def setUp(self):
+        self.user = SyUsuario.objects.create(
+            usuario="s1_policy_user",
+            correo="s1.policy.user@example.com",
+            clave_hash="hash",
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        self.role = Roles.objects.create(
+            rol="S1_POLICY_ROLE",
+            desc_rol="Role S1 policy",
+            landing_route="/s1",
+            is_active=True,
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=self.user, id_rol=self.role, is_primary=True
+        )
+        self.perm_roles_read = Permisos.objects.create(
+            codigo="admin:gestion:roles:read",
+            descripcion="Leer roles",
+            is_active=True,
+        )
+        self.perm_permissions_read = Permisos.objects.create(
+            codigo="admin:gestion:permisos:read",
+            descripcion="Leer permisos",
+            is_active=True,
+        )
+        RelRolPermiso.objects.create(id_rol=self.role, id_permiso=self.perm_roles_read)
+        RelRolPermiso.objects.create(
+            id_rol=self.role, id_permiso=self.perm_permissions_read
+        )
+
+        self.target_role = Roles.objects.create(
+            rol="S1_TARGET_ROLE",
+            desc_rol="Role S1 target",
+            landing_route="/target",
+            is_active=True,
+        )
+        self.target_permission = Permisos.objects.create(
+            codigo="catalogo:s1:read",
+            descripcion="Permiso S1",
+            is_active=True,
+        )
+        RelRolPermiso.objects.create(
+            id_rol=self.target_role, id_permiso=self.target_permission
+        )
+
+    @patch("apps.administracion.policies.rbac_read_policy.authenticate_request")
+    @patch(
+        "apps.administracion.policies.rbac_read_policy.UserRepository.build_auth_user"
+    )
+    def test_rbac_read_policy_authorize_allows_atomic_permission(
+        self, build_auth_user_mock, authenticate_mock
+    ):
+        authenticate_mock.return_value = self.user
+        build_auth_user_mock.return_value = {
+            "permissions": [
+                "admin:gestion:roles:read",
+                "admin:gestion:permisos:read",
+            ]
+        }
+        request = APIRequestFactory().get("/api/v1/roles")
+        user, error = RbacReadPolicy.authorize(request, "admin:gestion:roles:read")
+
+        self.assertEqual(user.id_usuario, self.user.id_usuario)
+        self.assertIsNone(error)
+
+    def test_rbac_read_repository_and_use_cases_return_read_models(self):
+        repository = RbacReadRepository()
+
+        roles_payload = ListRolesUseCase(repository).execute(page=1, page_size=10)
+        detail_payload = GetRoleDetailUseCase(repository).execute(
+            role_id=self.target_role.id_rol
+        )
+        permissions_payload = ListPermissionsUseCase(repository).execute()
+
+        self.assertIn("items", serialize_role_list(roles_payload, repository))
+        self.assertEqual(
+            serialize_role_detail(detail_payload)["role"]["id"], self.target_role.id_rol
+        )
+        self.assertGreaterEqual(
+            serialize_permission_catalog(permissions_payload)["total"], 1
+        )
+
+
+class RbacReadToggleTests(SimpleTestCase):
+    @override_settings(RBAC_READ_S1_ENABLED=True)
+    def test_resolve_read_source_returns_s1_when_enabled(self):
+        self.assertEqual(resolve_read_source(), "s1")
+
+    @override_settings(RBAC_READ_S1_ENABLED=False)
+    def test_resolve_read_source_returns_legacy_when_disabled(self):
+        self.assertEqual(resolve_read_source(), "legacy")

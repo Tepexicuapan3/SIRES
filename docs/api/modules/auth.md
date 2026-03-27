@@ -156,7 +156,7 @@ Nota: `TOKEN_EXPIRED`, `TOKEN_INVALID`, `SESSION_EXPIRED` y `PERMISSION_DENIED` 
 **Errores (mensaje para toast)**
 | Code | Status | Message |
 | --- | --- | --- |
-| `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
+| `REFRESH_TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
 | `TOKEN_INVALID` | 401 | Token inválido |
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |
@@ -182,7 +182,7 @@ Nota: `TOKEN_EXPIRED`, `TOKEN_INVALID`, `SESSION_EXPIRED` y `PERMISSION_DENIED` 
 **Errores (mensaje para toast)**
 | Code | Status | Message |
 | --- | --- | --- |
-| `REFRESH_TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
+| `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
 | `TOKEN_INVALID` | 401 | Token inválido |
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |

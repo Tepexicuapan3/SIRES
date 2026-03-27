@@ -1,7 +1,7 @@
 from ..models import AuditoriaEvento
 
-class AuditService:
 
+class AuditService:
     @staticmethod
     def log_event(
         *,
@@ -14,10 +14,12 @@ class AuditService:
         datos_antes=None,
         datos_despues=None,
         target_usuario=None,
+        metadata=None,
     ):
 
         actor = request.user if request.user.is_authenticated else None
 
+        extra_meta = metadata or {}
         AuditoriaEvento.objects.create(
             request_id=request.request_id,
             accion=accion,
@@ -36,5 +38,6 @@ class AuditService:
                 "endpoint": request.path,
                 "method": request.method,
                 "module": "rbac",
+                **extra_meta,
             },
         )

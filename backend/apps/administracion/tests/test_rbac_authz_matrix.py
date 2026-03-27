@@ -1,8 +1,9 @@
 from django.contrib.auth.hashers import make_password
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelUsuarioRol
+from apps.administracion.models import AuditoriaEvento, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
 from apps.catalogos.models import Permisos, Roles
@@ -79,6 +80,7 @@ class RbacAuthzMatrixTests(APITestCase):
     def _assert_forbidden(self, response):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data["code"], "PERMISSION_DENIED")
+        self.assertIn("requestId", response.data)
 
     def test_roles_endpoints_require_permissions(self):
         self._assert_forbidden(self.client.get("/api/v1/roles"))
@@ -90,7 +92,9 @@ class RbacAuthzMatrixTests(APITestCase):
                 HTTP_X_CSRF_TOKEN=self.csrf_token,
             )
         )
-        self._assert_forbidden(self.client.get(f"/api/v1/roles/{self.target_role.id_rol}"))
+        self._assert_forbidden(
+            self.client.get(f"/api/v1/roles/{self.target_role.id_rol}")
+        )
         self._assert_forbidden(
             self.client.put(
                 f"/api/v1/roles/{self.target_role.id_rol}",
@@ -142,7 +146,9 @@ class RbacAuthzMatrixTests(APITestCase):
                 HTTP_X_CSRF_TOKEN=self.csrf_token,
             )
         )
-        self._assert_forbidden(self.client.get(f"/api/v1/users/{self.target_user.id_usuario}"))
+        self._assert_forbidden(
+            self.client.get(f"/api/v1/users/{self.target_user.id_usuario}")
+        )
         self._assert_forbidden(
             self.client.patch(
                 f"/api/v1/users/{self.target_user.id_usuario}",
@@ -206,3 +212,17 @@ class RbacAuthzMatrixTests(APITestCase):
                 HTTP_X_CSRF_TOKEN=self.csrf_token,
             )
         )
+
+    @override_settings(RBAC_READ_S1_ENABLED=True)
+    def test_read_endpoints_audit_source_s1_on_deny(self):
+        self._assert_forbidden(self.client.get("/api/v1/roles"))
+        role_event = AuditoriaEvento.objects.filter(accion="RBAC_ROLE_LIST").latest(
+            "id_evento"
+        )
+        self.assertEqual(role_event.meta.get("source"), "s1")
+
+        self._assert_forbidden(self.client.get("/api/v1/permissions"))
+        permission_event = AuditoriaEvento.objects.filter(
+            accion="RBAC_PERMISSION_LIST"
+        ).latest("id_evento")
+        self.assertEqual(permission_event.meta.get("source"), "s1")

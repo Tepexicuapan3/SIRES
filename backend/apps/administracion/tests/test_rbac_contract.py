@@ -1,8 +1,9 @@
 from django.contrib.auth.hashers import make_password
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelRolPermiso, RelUsuarioRol
+from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
 from apps.catalogos.models import Permisos, Roles
@@ -122,3 +123,93 @@ class RbacContractTests(APITestCase):
         self.assertIn("clinic", user_item)
         self.assertIn("primaryRole", user_item)
         self.assertIn("isActive", user_item)
+
+
+class RbacReadS1ParityTests(APITestCase):
+    def setUp(self):
+        self.user = SyUsuario.objects.create(
+            usuario="adminrbac_s1",
+            correo="admin.rbac.s1@example.com",
+            clave_hash=make_password("Admin_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=self.user,
+            nombre="Admin",
+            paterno="RBAC",
+            materno="S1",
+            nombre_completo="Admin RBAC S1",
+        )
+
+        self.role = Roles.objects.create(
+            rol="ADMIN_RBAC_S1",
+            desc_rol="Administrador de pruebas S1",
+            landing_route="/admin/roles",
+            is_admin=True,
+            is_active=True,
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=self.user,
+            id_rol=self.role,
+            is_primary=True,
+        )
+
+        permission = Permisos.objects.create(
+            codigo="admin:gestion:permisos:read",
+            descripcion="Leer permisos",
+            is_active=True,
+        )
+        RelRolPermiso.objects.create(id_rol=self.role, id_permiso=permission)
+
+        login_response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "adminrbac_s1", "password": "Admin_123456"},
+            format="json",
+        )
+        assert login_response.status_code == status.HTTP_200_OK
+        self.client.cookies = login_response.cookies
+
+        self.target_role = Roles.objects.create(
+            rol="RBAC_S1_TARGET",
+            desc_rol="Rol target S1",
+            landing_route="/target",
+            is_active=True,
+        )
+
+    @override_settings(RBAC_READ_S1_ENABLED=False)
+    def test_roles_contract_parity_legacy_vs_s1(self):
+        legacy = self.client.get("/api/v1/roles")
+        self.assertEqual(legacy.status_code, status.HTTP_200_OK)
+
+        with self.settings(RBAC_READ_S1_ENABLED=True):
+            s1 = self.client.get("/api/v1/roles")
+
+        self.assertEqual(s1.status_code, legacy.status_code)
+        self.assertEqual(set(s1.data.keys()), set(legacy.data.keys()))
+        self.assertEqual(
+            set(s1.data["items"][0].keys()), set(legacy.data["items"][0].keys())
+        )
+
+    @override_settings(RBAC_READ_S1_ENABLED=False)
+    def test_role_detail_contract_parity_legacy_vs_s1(self):
+        legacy = self.client.get(f"/api/v1/roles/{self.target_role.id_rol}")
+        self.assertEqual(legacy.status_code, status.HTTP_200_OK)
+
+        with self.settings(RBAC_READ_S1_ENABLED=True):
+            s1 = self.client.get(f"/api/v1/roles/{self.target_role.id_rol}")
+
+        self.assertEqual(s1.status_code, legacy.status_code)
+        self.assertEqual(set(s1.data.keys()), set(legacy.data.keys()))
+        self.assertEqual(set(s1.data["role"].keys()), set(legacy.data["role"].keys()))
+
+    @override_settings(RBAC_READ_S1_ENABLED=True)
+    def test_permissions_catalog_records_s1_source(self):
+        response = self.client.get("/api/v1/permissions")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_PERMISSION_LIST").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.meta.get("source"), "s1")

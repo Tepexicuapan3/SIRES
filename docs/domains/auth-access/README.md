@@ -26,6 +26,7 @@ Este dominio cubre:
 - [`tdd-risk-strategy-kan-55.md`](./tdd-risk-strategy-kan-55.md) - matriz TDD-first por riesgo (P0/P1/P2) por slice `S0..S6` y gate go/no-go (KAN-55).
 - [`tdd-evidence-templates.md`](./tdd-evidence-templates.md) - plantillas obligatorias de evidencia Red->Green->Refactor para Jira/PR (KAN-55).
 - [`tdd-exception-policy.md`](./tdd-exception-policy.md) - politica formal de excepciones TDD con aprobacion, vencimiento y controles compensatorios (KAN-55).
+- [`kan-56-s1-apply-evidence.md`](./kan-56-s1-apply-evidence.md) - evidencia de implementacion KAN-56 S1 read-only (preflight, TDD, paridad contractual, rollback drill por flag).
 - [`pending-decisions.md`](./pending-decisions.md) - acta de cierre de decisiones historicamente pendientes (estado final resuelto).
 - [`backlog-mapping.md`](./backlog-mapping.md) - mapeo entre PRD y backlog de ejecucion (Jira/SDD).
 - [`decision-log.md`](./decision-log.md) - registro de decisiones del dominio.

@@ -1,11 +1,12 @@
 from datetime import timedelta
 
 from django.contrib.auth.hashers import make_password
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelRolPermiso, RelUsuarioRol
+from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
 from apps.catalogos.models import CatPermiso, CatRol, Permisos, Roles
@@ -292,7 +293,9 @@ class RbacRolesPermissionsApiTests(APITestCase):
             materno="",
             nombre_completo="Medico Activo",
         )
-        RelUsuarioRol.objects.create(id_usuario=user, id_rol=self.target_role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=user, id_rol=self.target_role, is_primary=True
+        )
 
         response = self.client.delete(
             f"/api/v1/roles/{self.target_role.id_rol}",
@@ -315,6 +318,26 @@ class RbacRolesPermissionsApiTests(APITestCase):
         self.assertIn("description", item)
         self.assertIn("isSystem", item)
 
+    @override_settings(RBAC_READ_S1_ENABLED=True)
+    def test_roles_list_s1_source_audit_when_flag_enabled(self):
+        response = self.client.get("/api/v1/roles")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_ROLE_LIST").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.meta.get("source"), "s1")
+
+    @override_settings(RBAC_READ_S1_ENABLED=False)
+    def test_roles_list_legacy_source_audit_when_flag_disabled(self):
+        response = self.client.get("/api/v1/roles")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_ROLE_LIST").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.meta.get("source"), "legacy")
+
     def test_assign_role_permissions_accepts_legacy_payload_keys(self):
         response = self.client.post(
             "/api/v1/permissions/assign",
@@ -336,7 +359,10 @@ class RbacRolesPermissionsApiTests(APITestCase):
             "/api/v1/permissions/assign",
             {
                 "roleId": self.target_role.id_rol,
-                "permissionIds": [self.perm_update.id_permiso, self.perm_read.id_permiso],
+                "permissionIds": [
+                    self.perm_update.id_permiso,
+                    self.perm_read.id_permiso,
+                ],
             },
             format="json",
             HTTP_X_CSRF_TOKEN=self.csrf_token,
@@ -511,7 +537,9 @@ class RbacRolesPermissionsApiTests(APITestCase):
             materno="",
             nombre_completo="Limited Manager",
         )
-        RelUsuarioRol.objects.create(id_usuario=limited_user, id_rol=limited_role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=limited_user, id_rol=limited_role, is_primary=True
+        )
 
         self._login_as("limited_role_manager", "Limited_123456")
 
@@ -526,9 +554,13 @@ class RbacRolesPermissionsApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data["code"], "SELF_ROLE_PERMISSION_ASSIGNMENT_FORBIDDEN")
+        self.assertEqual(
+            response.data["code"], "SELF_ROLE_PERMISSION_ASSIGNMENT_FORBIDDEN"
+        )
         self.assertFalse(
-            RelRolPermiso.objects.filter(id_rol=limited_role, id_permiso=users_update, fch_baja__isnull=True).exists()
+            RelRolPermiso.objects.filter(
+                id_rol=limited_role, id_permiso=users_update, fch_baja__isnull=True
+            ).exists()
         )
 
     def test_assign_role_permissions_blocks_updating_admin_role_without_wildcard(self):
@@ -560,7 +592,9 @@ class RbacRolesPermissionsApiTests(APITestCase):
             materno="",
             nombre_completo="Limited Admin",
         )
-        RelUsuarioRol.objects.create(id_usuario=limited_user, id_rol=limited_role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=limited_user, id_rol=limited_role, is_primary=True
+        )
 
         self._login_as("limited_admin_editor", "Limited_123456")
 
@@ -577,7 +611,9 @@ class RbacRolesPermissionsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data["code"], "ROLE_ADMIN_PROTECTED")
 
-    def test_assign_role_permissions_blocks_granting_permissions_actor_does_not_have(self):
+    def test_assign_role_permissions_blocks_granting_permissions_actor_does_not_have(
+        self,
+    ):
         roles_update = CatPermiso.objects.create(
             codigo="admin:gestion:roles:update",
             descripcion="Actualizar roles",
@@ -611,7 +647,9 @@ class RbacRolesPermissionsApiTests(APITestCase):
             materno="",
             nombre_completo="Limited Granter",
         )
-        RelUsuarioRol.objects.create(id_usuario=limited_user, id_rol=limited_role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=limited_user, id_rol=limited_role, is_primary=True
+        )
 
         external_role = CatRol.objects.create(
             rol="EXTERNAL_TARGET_ROLE",
@@ -635,12 +673,16 @@ class RbacRolesPermissionsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data["code"], "PERMISSION_GRANT_NOT_ALLOWED")
         self.assertFalse(
-            RelRolPermiso.objects.filter(id_rol=external_role, id_permiso=users_update, fch_baja__isnull=True).exists()
+            RelRolPermiso.objects.filter(
+                id_rol=external_role, id_permiso=users_update, fch_baja__isnull=True
+            ).exists()
         )
 
     def test_revoke_read_permission_with_dependency_returns_error(self):
         RelRolPermiso.objects.create(id_rol=self.target_role, id_permiso=self.perm_read)
-        RelRolPermiso.objects.create(id_rol=self.target_role, id_permiso=self.perm_update)
+        RelRolPermiso.objects.create(
+            id_rol=self.target_role, id_permiso=self.perm_update
+        )
 
         response = self.client.delete(
             f"/api/v1/permissions/roles/{self.target_role.id_rol}/permissions/{self.perm_read.id_permiso}",

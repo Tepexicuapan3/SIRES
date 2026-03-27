@@ -45,9 +45,9 @@ export const createMockAuthUser = (
       overrides.email ??
       faker.internet.email({ firstName, lastName: paternalName }),
     avatarUrl,
-    primaryRole: overrides.primaryRole ?? "Admin",
+    primaryRole: overrides.primaryRole ?? "ADMIN",
     landingRoute: overrides.landingRoute ?? "/dashboard",
-    roles: overrides.roles ?? ["Admin", "Clinico"],
+    roles: overrides.roles ?? ["ADMIN", "CLINICO"],
     permissions,
     effectivePermissions,
     capabilities,

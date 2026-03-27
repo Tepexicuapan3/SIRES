@@ -47,6 +47,10 @@ def _request_id(request):
     return get_request_id(request) or str(uuid.uuid4())
 
 
+def _is_rbac_read_s1_enabled():
+    return getattr(settings, "RBAC_READ_S1_ENABLED", False)
+
+
 def _to_utc_iso(value):
     if not value:
         return None
@@ -95,7 +99,9 @@ def _parse_expires_at_end_of_day(raw_value):
             base = timezone.make_aware(base, tz)
 
         localized = timezone.localtime(base, tz)
-        end_of_day = localized.replace(hour=23, minute=59, second=59, microsecond=999999)
+        end_of_day = localized.replace(
+            hour=23, minute=59, second=59, microsecond=999999
+        )
         end_of_day.astimezone(dt_timezone.utc)
         return end_of_day
     except (TypeError, ValueError, OverflowError):
@@ -105,7 +111,9 @@ def _parse_expires_at_end_of_day(raw_value):
 def _generate_temporary_password(length=TEMP_PASSWORD_LENGTH):
     effective_length = max(length, 12)
     while True:
-        candidate = "".join(secrets.choice(TEMP_PASSWORD_ALPHABET) for _ in range(effective_length))
+        candidate = "".join(
+            secrets.choice(TEMP_PASSWORD_ALPHABET) for _ in range(effective_length)
+        )
         if not any(char.islower() for char in candidate):
             continue
         if not any(char.isupper() for char in candidate):
@@ -136,24 +144,35 @@ def _parse_pagination(request):
         page = int(raw_page)
         page_size = int(raw_page_size)
     except (TypeError, ValueError):
-        return None, None, error_response(
-            "INVALID_FORMAT",
-            "Parametros de paginacion invalidos",
-            status.HTTP_400_BAD_REQUEST,
-            details={"page": ["Debe ser un entero"], "pageSize": ["Debe ser un entero"]},
-            request_id=_request_id(request),
+        return (
+            None,
+            None,
+            error_response(
+                "INVALID_FORMAT",
+                "Parametros de paginacion invalidos",
+                status.HTTP_400_BAD_REQUEST,
+                details={
+                    "page": ["Debe ser un entero"],
+                    "pageSize": ["Debe ser un entero"],
+                },
+                request_id=_request_id(request),
+            ),
         )
 
     if page < 1 or page_size < 1 or page_size > 100:
-        return None, None, error_response(
-            "VALIDATION_ERROR",
-            "Parametros de paginacion fuera de rango",
-            status.HTTP_400_BAD_REQUEST,
-            details={
-                "page": ["Debe ser mayor o igual a 1"],
-                "pageSize": ["Debe estar entre 1 y 100"],
-            },
-            request_id=_request_id(request),
+        return (
+            None,
+            None,
+            error_response(
+                "VALIDATION_ERROR",
+                "Parametros de paginacion fuera de rango",
+                status.HTTP_400_BAD_REQUEST,
+                details={
+                    "page": ["Debe ser mayor o igual a 1"],
+                    "pageSize": ["Debe estar entre 1 y 100"],
+                },
+                request_id=_request_id(request),
+            ),
         )
 
     return page, page_size, None
@@ -213,7 +232,9 @@ def _role_permissions(role):
                 "code": relation.id_permiso.codigo,
                 "description": relation.id_permiso.descripcion,
                 "assignedAt": _to_utc_iso(relation.fch_asignacion),
-                "assignedBy": _user_ref_by_id(relation.usr_asignacion_id, fallback_system=True),
+                "assignedBy": _user_ref_by_id(
+                    relation.usr_asignacion_id, fallback_system=True
+                ),
             }
         )
     return items
@@ -278,7 +299,9 @@ def _serialize_user_roles(user):
                 "description": role.desc_rol,
                 "isPrimary": bool(relation.is_primary),
                 "assignedAt": _to_utc_iso(relation.fch_asignacion),
-                "assignedBy": _user_ref_by_id(relation.usr_asignacion_id, fallback_system=True),
+                "assignedBy": _user_ref_by_id(
+                    relation.usr_asignacion_id, fallback_system=True
+                ),
             }
         )
     return roles
@@ -303,7 +326,9 @@ def _serialize_user_overrides(user):
                 "expiresAt": _to_utc_iso(override.fch_expira),
                 "isExpired": is_expired,
                 "assignedAt": _to_utc_iso(override.fch_asignacion),
-                "assignedBy": _user_ref_by_id(override.usr_asignacion_id, fallback_system=True),
+                "assignedBy": _user_ref_by_id(
+                    override.usr_asignacion_id, fallback_system=True
+                ),
             }
         )
     return items
@@ -363,7 +388,9 @@ def _split_permission_code(code):
 def _ensure_read_dependencies(permission_ids):
     permissions = {
         permission.id_permiso: permission
-        for permission in Permisos.objects.filter(id_permiso__in=permission_ids, is_active=True)
+        for permission in Permisos.objects.filter(
+            id_permiso__in=permission_ids, is_active=True
+        )
     }
     expanded = set(permission_ids)
 
@@ -390,7 +417,9 @@ def _scope_error(request, code, message, details=None):
     )
 
 
-def _validate_role_permission_scope(request, actor, role, actor_permissions, requested_codes=None):
+def _validate_role_permission_scope(
+    request, actor, role, actor_permissions, requested_codes=None
+):
     has_wildcard = "*" in actor_permissions
 
     if role.es_sistema and not has_wildcard:
@@ -420,7 +449,9 @@ def _validate_role_permission_scope(request, actor, role, actor_permissions, req
         )
 
     if requested_codes and not has_wildcard:
-        disallowed_codes = sorted(code for code in requested_codes if code not in actor_permissions)
+        disallowed_codes = sorted(
+            code for code in requested_codes if code not in actor_permissions
+        )
         if disallowed_codes:
             return _scope_error(
                 request,
@@ -432,7 +463,9 @@ def _validate_role_permission_scope(request, actor, role, actor_permissions, req
     return None
 
 
-def _validate_user_override_scope(request, actor, target_user, permission, actor_permissions):
+def _validate_user_override_scope(
+    request, actor, target_user, permission, actor_permissions
+):
     has_wildcard = "*" in actor_permissions
 
     if permission.es_sistema and not has_wildcard:
@@ -506,8 +539,13 @@ def _audit(
     before=None,
     after=None,
     target_user=None,
+    source="legacy",
 ):
-    actor = request.user if getattr(request, "user", None) and request.user.is_authenticated else None
+    actor = (
+        request.user
+        if getattr(request, "user", None) and request.user.is_authenticated
+        else None
+    )
     try:
         AuditoriaEvento.objects.create(
             request_id=_request_id(request),
@@ -524,7 +562,13 @@ def _audit(
             user_agent=request.META.get("HTTP_USER_AGENT"),
             datos_antes=before,
             datos_despues=after,
-            meta={"module": "rbac", "endpoint": request.path, "method": request.method},
+            meta={
+                "module": "rbac",
+                "endpoint": request.path,
+                "method": request.method,
+                "source": source,
+                "domain": "auth_access",
+            },
         )
     except Exception:
         return
@@ -535,25 +579,50 @@ class RolesListCreateView(APIView):
     permission_classes = []
 
     def get(self, request):
+        if _is_rbac_read_s1_enabled():
+            from apps.administracion.views.rbac_read_views import RbacReadRolesListView
+
+            return RbacReadRolesListView().get(request)
+
         user, auth_error = _authorize(request, "admin:gestion:roles:read")
         if auth_error:
-            _audit(request, "RBAC_ROLE_LIST", "role", result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_ROLE_LIST",
+                "role",
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         page, page_size, pagination_error = _parse_pagination(request)
         if pagination_error:
-            _audit(request, "RBAC_ROLE_LIST", "role", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_ROLE_LIST",
+                "role",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return pagination_error
 
         queryset = Roles.objects.all()
 
         search = request.query_params.get("search")
         if search:
-            queryset = queryset.filter(Q(rol__icontains=search) | Q(desc_rol__icontains=search))
+            queryset = queryset.filter(
+                Q(rol__icontains=search) | Q(desc_rol__icontains=search)
+            )
 
         is_active_raw = _parse_bool(request.query_params.get("isActive"))
         if is_active_raw == "invalid":
-            _audit(request, "RBAC_ROLE_LIST", "role", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_ROLE_LIST",
+                "role",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Parametro isActive invalido",
@@ -566,7 +635,13 @@ class RolesListCreateView(APIView):
 
         is_system_raw = _parse_bool(request.query_params.get("isSystem"))
         if is_system_raw == "invalid":
-            _audit(request, "RBAC_ROLE_LIST", "role", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_ROLE_LIST",
+                "role",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Parametro isSystem invalido",
@@ -586,7 +661,13 @@ class RolesListCreateView(APIView):
             "isSystem": "es_sistema",
         }
         if sort_by not in sort_map:
-            _audit(request, "RBAC_ROLE_LIST", "role", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_ROLE_LIST",
+                "role",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Parametro sortBy invalido",
@@ -595,7 +676,13 @@ class RolesListCreateView(APIView):
                 request_id=_request_id(request),
             )
         if sort_order not in {"asc", "desc"}:
-            _audit(request, "RBAC_ROLE_LIST", "role", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_ROLE_LIST",
+                "role",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Parametro sortOrder invalido",
@@ -632,7 +719,13 @@ class RolesListCreateView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_ROLE_CREATE", "role", result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_ROLE_CREATE",
+                "role",
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         name = request.data.get("name")
@@ -640,7 +733,13 @@ class RolesListCreateView(APIView):
         landing_route = request.data.get("landingRoute")
 
         if not name or not description:
-            _audit(request, "RBAC_ROLE_CREATE", "role", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_ROLE_CREATE",
+                "role",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Datos de entrada invalidos",
@@ -653,7 +752,13 @@ class RolesListCreateView(APIView):
             )
 
         if Roles.objects.filter(rol=name).exists():
-            _audit(request, "RBAC_ROLE_CREATE", "role", result="FAIL", error_code="ROLE_EXISTS")
+            _audit(
+                request,
+                "RBAC_ROLE_CREATE",
+                "role",
+                result="FAIL",
+                error_code="ROLE_EXISTS",
+            )
             return error_response(
                 "ROLE_EXISTS",
                 "El rol ya existe",
@@ -677,7 +782,9 @@ class RolesListCreateView(APIView):
             result="SUCCESS",
             after={"name": role.rol, "description": role.desc_rol},
         )
-        return Response({"id": role.id_rol, "name": role.rol}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"id": role.id_rol, "name": role.rol}, status=status.HTTP_201_CREATED
+        )
 
 
 class RoleDetailView(APIView):
@@ -688,14 +795,33 @@ class RoleDetailView(APIView):
         return Roles.objects.filter(id_rol=role_id).first()
 
     def get(self, request, role_id):
+        if _is_rbac_read_s1_enabled():
+            from apps.administracion.views.rbac_read_views import RbacReadRoleDetailView
+
+            return RbacReadRoleDetailView().get(request, role_id)
+
         _, auth_error = _authorize(request, "admin:gestion:roles:read")
         if auth_error:
-            _audit(request, "RBAC_ROLE_DETAIL", "role", resource_id=role_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_ROLE_DETAIL",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         role = self._get_role(role_id)
         if not role:
-            _audit(request, "RBAC_ROLE_DETAIL", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_ROLE_DETAIL",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
@@ -707,7 +833,13 @@ class RoleDetailView(APIView):
             "role": _serialize_role(role),
             "permissions": _role_permissions(role),
         }
-        _audit(request, "RBAC_ROLE_DETAIL", "role", resource_id=role.id_rol, result="SUCCESS")
+        _audit(
+            request,
+            "RBAC_ROLE_DETAIL",
+            "role",
+            resource_id=role.id_rol,
+            result="SUCCESS",
+        )
         return Response(payload, status=status.HTTP_200_OK)
 
     @transaction.atomic
@@ -718,12 +850,26 @@ class RoleDetailView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_ROLE_UPDATE", "role", resource_id=role_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_ROLE_UPDATE",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         role = self._get_role(role_id)
         if not role:
-            _audit(request, "RBAC_ROLE_UPDATE", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_ROLE_UPDATE",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
@@ -732,7 +878,14 @@ class RoleDetailView(APIView):
             )
 
         if role.es_sistema:
-            _audit(request, "RBAC_ROLE_UPDATE", "role", resource_id=role.id_rol, result="FAIL", error_code="ROLE_SYSTEM_PROTECTED")
+            _audit(
+                request,
+                "RBAC_ROLE_UPDATE",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code="ROLE_SYSTEM_PROTECTED",
+            )
             return error_response(
                 "ROLE_SYSTEM_PROTECTED",
                 "El rol de sistema no puede modificarse",
@@ -744,7 +897,14 @@ class RoleDetailView(APIView):
 
         name = request.data.get("name")
         if name and Roles.objects.filter(rol=name).exclude(id_rol=role.id_rol).exists():
-            _audit(request, "RBAC_ROLE_UPDATE", "role", resource_id=role.id_rol, result="FAIL", error_code="ROLE_EXISTS")
+            _audit(
+                request,
+                "RBAC_ROLE_UPDATE",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code="ROLE_EXISTS",
+            )
             return error_response(
                 "ROLE_EXISTS",
                 "El rol ya existe",
@@ -791,12 +951,26 @@ class RoleDetailView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_ROLE_DELETE", "role", resource_id=role_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_ROLE_DELETE",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         role = self._get_role(role_id)
         if not role:
-            _audit(request, "RBAC_ROLE_DELETE", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_ROLE_DELETE",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
@@ -805,7 +979,14 @@ class RoleDetailView(APIView):
             )
 
         if role.es_sistema:
-            _audit(request, "RBAC_ROLE_DELETE", "role", resource_id=role.id_rol, result="FAIL", error_code="CANNOT_DELETE_SYSTEM_ROLE")
+            _audit(
+                request,
+                "RBAC_ROLE_DELETE",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code="CANNOT_DELETE_SYSTEM_ROLE",
+            )
             return error_response(
                 "CANNOT_DELETE_SYSTEM_ROLE",
                 "No se puede eliminar un rol de sistema",
@@ -813,8 +994,17 @@ class RoleDetailView(APIView):
                 request_id=_request_id(request),
             )
 
-        if RelUsuarioRol.objects.filter(id_rol=role, fch_baja__isnull=True, id_usuario__est_activo=True).exists():
-            _audit(request, "RBAC_ROLE_DELETE", "role", resource_id=role.id_rol, result="FAIL", error_code="ROLE_HAS_USERS")
+        if RelUsuarioRol.objects.filter(
+            id_rol=role, fch_baja__isnull=True, id_usuario__est_activo=True
+        ).exists():
+            _audit(
+                request,
+                "RBAC_ROLE_DELETE",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code="ROLE_HAS_USERS",
+            )
             return error_response(
                 "ROLE_HAS_USERS",
                 "El rol tiene usuarios activos asignados",
@@ -850,9 +1040,22 @@ class PermissionsCatalogView(APIView):
     permission_classes = []
 
     def get(self, request):
+        if _is_rbac_read_s1_enabled():
+            from apps.administracion.views.rbac_read_views import (
+                RbacReadPermissionsCatalogView,
+            )
+
+            return RbacReadPermissionsCatalogView().get(request)
+
         _, auth_error = _authorize(request, "admin:gestion:permisos:read")
         if auth_error:
-            _audit(request, "RBAC_PERMISSION_LIST", "permission", result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_PERMISSION_LIST",
+                "permission",
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         permissions = [
@@ -876,7 +1079,13 @@ class AssignRolePermissionsView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_ROLE_PERMISSIONS_ASSIGN", "role", result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSIONS_ASSIGN",
+                "role",
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         role_id = request.data.get("roleId")
@@ -888,18 +1097,34 @@ class AssignRolePermissionsView(APIView):
             permission_ids = request.data.get("permission_ids", [])
 
         if role_id is None or not isinstance(permission_ids, list):
-            _audit(request, "RBAC_ROLE_PERMISSIONS_ASSIGN", "role", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSIONS_ASSIGN",
+                "role",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Datos de entrada invalidos",
                 status.HTTP_400_BAD_REQUEST,
-                details={"roleId": ["Campo requerido"], "permissionIds": ["Debe ser un arreglo"]},
+                details={
+                    "roleId": ["Campo requerido"],
+                    "permissionIds": ["Debe ser un arreglo"],
+                },
                 request_id=_request_id(request),
             )
 
         role = Roles.objects.filter(id_rol=role_id).first()
         if not role:
-            _audit(request, "RBAC_ROLE_PERMISSIONS_ASSIGN", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSIONS_ASSIGN",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
@@ -907,8 +1132,12 @@ class AssignRolePermissionsView(APIView):
                 request_id=_request_id(request),
             )
 
-        actor_permissions = set(UserRepository.build_auth_user(user).get("permissions", []))
-        scope_error = _validate_role_permission_scope(request, user, role, actor_permissions)
+        actor_permissions = set(
+            UserRepository.build_auth_user(user).get("permissions", [])
+        )
+        scope_error = _validate_role_permission_scope(
+            request, user, role, actor_permissions
+        )
         if scope_error:
             _audit(
                 request,
@@ -925,16 +1154,29 @@ class AssignRolePermissionsView(APIView):
 
         permissions = {
             permission.id_permiso: permission
-            for permission in Permisos.objects.filter(id_permiso__in=requested_ids, is_active=True)
+            for permission in Permisos.objects.filter(
+                id_permiso__in=requested_ids, is_active=True
+            )
         }
         missing_ids = sorted(requested_ids - set(permissions.keys()))
         if missing_ids:
-            _audit(request, "RBAC_ROLE_PERMISSIONS_ASSIGN", "role", resource_id=role.id_rol, result="FAIL", error_code="PERMISSION_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSIONS_ASSIGN",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code="PERMISSION_NOT_FOUND",
+            )
             return error_response(
                 "PERMISSION_NOT_FOUND",
                 "Permiso no encontrado",
                 status.HTTP_404_NOT_FOUND,
-                details={"permissionIds": [f"No existen: {', '.join(str(value) for value in missing_ids)}"]},
+                details={
+                    "permissionIds": [
+                        f"No existen: {', '.join(str(value) for value in missing_ids)}"
+                    ]
+                },
                 request_id=_request_id(request),
             )
 
@@ -1021,12 +1263,26 @@ class RevokeRolePermissionView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_ROLE_PERMISSION_REVOKE", "role", resource_id=role_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSION_REVOKE",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         role = Roles.objects.filter(id_rol=role_id).first()
         if not role:
-            _audit(request, "RBAC_ROLE_PERMISSION_REVOKE", "role", resource_id=role_id, result="FAIL", error_code="ROLE_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSION_REVOKE",
+                "role",
+                resource_id=role_id,
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
@@ -1034,8 +1290,12 @@ class RevokeRolePermissionView(APIView):
                 request_id=_request_id(request),
             )
 
-        actor_permissions = set(UserRepository.build_auth_user(user).get("permissions", []))
-        scope_error = _validate_role_permission_scope(request, user, role, actor_permissions)
+        actor_permissions = set(
+            UserRepository.build_auth_user(user).get("permissions", [])
+        )
+        scope_error = _validate_role_permission_scope(
+            request, user, role, actor_permissions
+        )
         if scope_error:
             _audit(
                 request,
@@ -1047,13 +1307,24 @@ class RevokeRolePermissionView(APIView):
             )
             return scope_error
 
-        relation = RelRolPermiso.objects.select_related("id_permiso").filter(
-            id_rol=role,
-            id_permiso_id=permission_id,
-            fch_baja__isnull=True,
-        ).first()
+        relation = (
+            RelRolPermiso.objects.select_related("id_permiso")
+            .filter(
+                id_rol=role,
+                id_permiso_id=permission_id,
+                fch_baja__isnull=True,
+            )
+            .first()
+        )
         if not relation:
-            _audit(request, "RBAC_ROLE_PERMISSION_REVOKE", "role", resource_id=role.id_rol, result="FAIL", error_code="PERMISSION_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_ROLE_PERMISSION_REVOKE",
+                "role",
+                resource_id=role.id_rol,
+                result="FAIL",
+                error_code="PERMISSION_NOT_FOUND",
+            )
             return error_response(
                 "PERMISSION_NOT_FOUND",
                 "Permiso no encontrado",
@@ -1064,7 +1335,9 @@ class RevokeRolePermissionView(APIView):
         code = relation.id_permiso.codigo
         resource, action = _split_permission_code(code)
         if action == "read" and resource:
-            active_relations = RelRolPermiso.objects.select_related("id_permiso").filter(
+            active_relations = RelRolPermiso.objects.select_related(
+                "id_permiso"
+            ).filter(
                 id_rol=role,
                 fch_baja__isnull=True,
                 id_permiso__is_active=True,
@@ -1072,9 +1345,22 @@ class RevokeRolePermissionView(APIView):
             for active in active_relations:
                 if active.id_permiso_id == relation.id_permiso_id:
                     continue
-                active_resource, active_action = _split_permission_code(active.id_permiso.codigo)
-                if active_resource == resource and active_action in {"create", "update", "delete"}:
-                    _audit(request, "RBAC_ROLE_PERMISSION_REVOKE", "role", resource_id=role.id_rol, result="FAIL", error_code="PERMISSION_DEPENDENCY")
+                active_resource, active_action = _split_permission_code(
+                    active.id_permiso.codigo
+                )
+                if active_resource == resource and active_action in {
+                    "create",
+                    "update",
+                    "delete",
+                }:
+                    _audit(
+                        request,
+                        "RBAC_ROLE_PERMISSION_REVOKE",
+                        "role",
+                        resource_id=role.id_rol,
+                        result="FAIL",
+                        error_code="PERMISSION_DEPENDENCY",
+                    )
                     return error_response(
                         "PERMISSION_DEPENDENCY",
                         "Violacion de dependencia de permisos",
@@ -1113,15 +1399,29 @@ class UsersListCreateView(APIView):
     def get(self, request):
         _, auth_error = _authorize(request, "admin:gestion:usuarios:read")
         if auth_error:
-            _audit(request, "RBAC_USER_LIST", "user", result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_LIST",
+                "user",
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         page, page_size, pagination_error = _parse_pagination(request)
         if pagination_error:
-            _audit(request, "RBAC_USER_LIST", "user", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_USER_LIST",
+                "user",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return pagination_error
 
-        queryset = SyUsuario.objects.select_related("detalle", "detalle__id_centro_atencion").all()
+        queryset = SyUsuario.objects.select_related(
+            "detalle", "detalle__id_centro_atencion"
+        ).all()
 
         search = request.query_params.get("search")
         if search:
@@ -1133,7 +1433,13 @@ class UsersListCreateView(APIView):
 
         is_active_raw = _parse_bool(request.query_params.get("isActive"))
         if is_active_raw == "invalid":
-            _audit(request, "RBAC_USER_LIST", "user", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_USER_LIST",
+                "user",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Parametro isActive invalido",
@@ -1146,7 +1452,9 @@ class UsersListCreateView(APIView):
 
         role_id = request.query_params.get("roleId")
         if role_id:
-            queryset = queryset.filter(relusuariorol__id_rol_id=role_id, relusuariorol__fch_baja__isnull=True)
+            queryset = queryset.filter(
+                relusuariorol__id_rol_id=role_id, relusuariorol__fch_baja__isnull=True
+            )
 
         clinic_id = request.query_params.get("clinicId")
         if clinic_id:
@@ -1160,7 +1468,11 @@ class UsersListCreateView(APIView):
         elif status_filter == "pending":
             queryset = queryset.filter(Q(terminos_acept=False) | Q(cambiar_clave=True))
 
-        user_ids_queryset = queryset.order_by("usuario", "id_usuario").values_list("id_usuario", flat=True).distinct()
+        user_ids_queryset = (
+            queryset.order_by("usuario", "id_usuario")
+            .values_list("id_usuario", flat=True)
+            .distinct()
+        )
 
         total = user_ids_queryset.count()
         start = (page - 1) * page_size
@@ -1168,11 +1480,13 @@ class UsersListCreateView(APIView):
         page_user_ids = list(user_ids_queryset[start:end])
         users_by_id = {
             user.id_usuario: user
-            for user in SyUsuario.objects.select_related("detalle", "detalle__id_centro_atencion").filter(
-                id_usuario__in=page_user_ids
-            )
+            for user in SyUsuario.objects.select_related(
+                "detalle", "detalle__id_centro_atencion"
+            ).filter(id_usuario__in=page_user_ids)
         }
-        ordered_users = [users_by_id[user_id] for user_id in page_user_ids if user_id in users_by_id]
+        ordered_users = [
+            users_by_id[user_id] for user_id in page_user_ids if user_id in users_by_id
+        ]
         items = [_serialize_user_list_item(user) for user in ordered_users]
         payload = {
             "items": items,
@@ -1192,13 +1506,31 @@ class UsersListCreateView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_USER_CREATE", "user", result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_CREATE",
+                "user",
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
-        required_fields = ["username", "firstName", "paternalName", "email", "primaryRoleId"]
+        required_fields = [
+            "username",
+            "firstName",
+            "paternalName",
+            "email",
+            "primaryRoleId",
+        ]
         missing = [field for field in required_fields if not request.data.get(field)]
         if missing:
-            _audit(request, "RBAC_USER_CREATE", "user", result="FAIL", error_code="VALIDATION_ERROR")
+            _audit(
+                request,
+                "RBAC_USER_CREATE",
+                "user",
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Datos de entrada invalidos",
@@ -1210,8 +1542,17 @@ class UsersListCreateView(APIView):
         username = request.data.get("username")
         email = request.data.get("email")
 
-        if SyUsuario.objects.filter(usuario=username).exists() or SyUsuario.objects.filter(correo=email).exists():
-            _audit(request, "RBAC_USER_CREATE", "user", result="FAIL", error_code="USER_EXISTS")
+        if (
+            SyUsuario.objects.filter(usuario=username).exists()
+            or SyUsuario.objects.filter(correo=email).exists()
+        ):
+            _audit(
+                request,
+                "RBAC_USER_CREATE",
+                "user",
+                result="FAIL",
+                error_code="USER_EXISTS",
+            )
             return error_response(
                 "USER_EXISTS",
                 "Ya existe un usuario con estos datos",
@@ -1219,9 +1560,17 @@ class UsersListCreateView(APIView):
                 request_id=_request_id(request),
             )
 
-        role = Roles.objects.filter(id_rol=request.data.get("primaryRoleId"), is_active=True).first()
+        role = Roles.objects.filter(
+            id_rol=request.data.get("primaryRoleId"), is_active=True
+        ).first()
         if not role:
-            _audit(request, "RBAC_USER_CREATE", "user", result="FAIL", error_code="ROLE_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_USER_CREATE",
+                "user",
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
@@ -1232,9 +1581,17 @@ class UsersListCreateView(APIView):
         clinic = None
         clinic_id = request.data.get("clinicId")
         if clinic_id is not None:
-            clinic = CatCentroAtencion.objects.filter(id=clinic_id, is_active=True).first()
+            clinic = CatCentroAtencion.objects.filter(
+                id=clinic_id, is_active=True
+            ).first()
             if not clinic:
-                _audit(request, "RBAC_USER_CREATE", "user", result="FAIL", error_code="CLINIC_NOT_FOUND")
+                _audit(
+                    request,
+                    "RBAC_USER_CREATE",
+                    "user",
+                    result="FAIL",
+                    error_code="CLINIC_NOT_FOUND",
+                )
                 return error_response(
                     "CLINIC_NOT_FOUND",
                     "Clinica no encontrada",
@@ -1257,7 +1614,11 @@ class UsersListCreateView(APIView):
         maternal_name = request.data.get("maternalName") or ""
         full_name = " ".join(
             part
-            for part in [request.data.get("firstName"), request.data.get("paternalName"), maternal_name]
+            for part in [
+                request.data.get("firstName"),
+                request.data.get("paternalName"),
+                maternal_name,
+            ]
             if part
         ).strip()
 
@@ -1307,7 +1668,10 @@ class UsersListCreateView(APIView):
             "username": user.usuario,
             "credentialsEmailSent": credentials_email_sent,
         }
-        audit_after = {"username": user.usuario, "credentialsEmailSent": credentials_email_sent}
+        audit_after = {
+            "username": user.usuario,
+            "credentialsEmailSent": credentials_email_sent,
+        }
         _audit(
             request,
             "RBAC_USER_CREATE",
@@ -1325,17 +1689,35 @@ class UserDetailView(APIView):
     permission_classes = []
 
     def _get_user(self, user_id):
-        return SyUsuario.objects.select_related("detalle", "detalle__id_centro_atencion").filter(id_usuario=user_id).first()
+        return (
+            SyUsuario.objects.select_related("detalle", "detalle__id_centro_atencion")
+            .filter(id_usuario=user_id)
+            .first()
+        )
 
     def get(self, request, user_id):
         _, auth_error = _authorize(request, "admin:gestion:usuarios:read")
         if auth_error:
-            _audit(request, "RBAC_USER_DETAIL", "user", resource_id=user_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_DETAIL",
+                "user",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         user = self._get_user(user_id)
         if not user:
-            _audit(request, "RBAC_USER_DETAIL", "user", resource_id=user_id, result="FAIL", error_code="USER_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_USER_DETAIL",
+                "user",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
             return error_response(
                 "USER_NOT_FOUND",
                 "Usuario no encontrado",
@@ -1348,7 +1730,14 @@ class UserDetailView(APIView):
             "roles": _serialize_user_roles(user),
             "overrides": _serialize_user_overrides(user),
         }
-        _audit(request, "RBAC_USER_DETAIL", "user", resource_id=user.id_usuario, result="SUCCESS", target_user=user)
+        _audit(
+            request,
+            "RBAC_USER_DETAIL",
+            "user",
+            resource_id=user.id_usuario,
+            result="SUCCESS",
+            target_user=user,
+        )
         return Response(payload, status=status.HTTP_200_OK)
 
     @transaction.atomic
@@ -1359,12 +1748,26 @@ class UserDetailView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_USER_UPDATE", "user", resource_id=user_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_UPDATE",
+                "user",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         user = self._get_user(user_id)
         if not user:
-            _audit(request, "RBAC_USER_UPDATE", "user", resource_id=user_id, result="FAIL", error_code="USER_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_USER_UPDATE",
+                "user",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
             return error_response(
                 "USER_NOT_FOUND",
                 "Usuario no encontrado",
@@ -1386,8 +1789,20 @@ class UserDetailView(APIView):
 
         if "email" in request.data:
             email = request.data.get("email")
-            if SyUsuario.objects.filter(correo=email).exclude(id_usuario=user.id_usuario).exists():
-                _audit(request, "RBAC_USER_UPDATE", "user", resource_id=user.id_usuario, result="FAIL", error_code="USER_EXISTS", target_user=user)
+            if (
+                SyUsuario.objects.filter(correo=email)
+                .exclude(id_usuario=user.id_usuario)
+                .exists()
+            ):
+                _audit(
+                    request,
+                    "RBAC_USER_UPDATE",
+                    "user",
+                    resource_id=user.id_usuario,
+                    result="FAIL",
+                    error_code="USER_EXISTS",
+                    target_user=user,
+                )
                 return error_response(
                     "USER_EXISTS",
                     "Ya existe un usuario con estos datos",
@@ -1408,9 +1823,19 @@ class UserDetailView(APIView):
             if clinic_id is None:
                 detail.id_centro_atencion = None
             else:
-                clinic = CatCentroAtencion.objects.filter(id=clinic_id, is_active=True).first()
+                clinic = CatCentroAtencion.objects.filter(
+                    id=clinic_id, is_active=True
+                ).first()
                 if not clinic:
-                    _audit(request, "RBAC_USER_UPDATE", "user", resource_id=user.id_usuario, result="FAIL", error_code="CLINIC_NOT_FOUND", target_user=user)
+                    _audit(
+                        request,
+                        "RBAC_USER_UPDATE",
+                        "user",
+                        resource_id=user.id_usuario,
+                        result="FAIL",
+                        error_code="CLINIC_NOT_FOUND",
+                        target_user=user,
+                    )
                     return error_response(
                         "CLINIC_NOT_FOUND",
                         "Clinica no encontrada",
@@ -1420,7 +1845,9 @@ class UserDetailView(APIView):
                 detail.id_centro_atencion = clinic
 
         detail.nombre_completo = " ".join(
-            part for part in [detail.nombre, detail.paterno, detail.materno or ""] if part
+            part
+            for part in [detail.nombre, detail.paterno, detail.materno or ""]
+            if part
         ).strip()
         detail.save()
 
@@ -1456,12 +1883,26 @@ class UserStatusView(APIView):
         )
         action = "RBAC_USER_ACTIVATE" if self.activate else "RBAC_USER_DEACTIVATE"
         if auth_error:
-            _audit(request, action, "user", resource_id=user_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                action,
+                "user",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         user = SyUsuario.objects.filter(id_usuario=user_id).first()
         if not user:
-            _audit(request, action, "user", resource_id=user_id, result="FAIL", error_code="USER_NOT_FOUND")
+            _audit(
+                request,
+                action,
+                "user",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
             return error_response(
                 "USER_NOT_FOUND",
                 "Usuario no encontrado",
@@ -1492,7 +1933,15 @@ class UserStatusView(APIView):
         user.save(update_fields=["est_activo", "fch_modf", "usr_modf"])
 
         payload = {"id": user.id_usuario, "isActive": bool(user.est_activo)}
-        _audit(request, action, "user", resource_id=user.id_usuario, result="SUCCESS", after=payload, target_user=user)
+        _audit(
+            request,
+            action,
+            "user",
+            resource_id=user.id_usuario,
+            result="SUCCESS",
+            after=payload,
+            target_user=user,
+        )
         return Response(payload, status=status.HTTP_200_OK)
 
 
@@ -1516,12 +1965,26 @@ class UserRolesView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_USER_ROLES_ASSIGN", "user_role", resource_id=user_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_ROLES_ASSIGN",
+                "user_role",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         user = SyUsuario.objects.filter(id_usuario=user_id).first()
         if not user:
-            _audit(request, "RBAC_USER_ROLES_ASSIGN", "user_role", resource_id=user_id, result="FAIL", error_code="USER_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_USER_ROLES_ASSIGN",
+                "user_role",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
             return error_response(
                 "USER_NOT_FOUND",
                 "Usuario no encontrado",
@@ -1531,7 +1994,15 @@ class UserRolesView(APIView):
 
         role_ids = request.data.get("roleIds")
         if not isinstance(role_ids, list) or not role_ids:
-            _audit(request, "RBAC_USER_ROLES_ASSIGN", "user_role", resource_id=user.id_usuario, result="FAIL", error_code="VALIDATION_ERROR", target_user=user)
+            _audit(
+                request,
+                "RBAC_USER_ROLES_ASSIGN",
+                "user_role",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+                target_user=user,
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Datos de entrada invalidos",
@@ -1540,15 +2011,30 @@ class UserRolesView(APIView):
                 request_id=_request_id(request),
             )
 
-        roles = {role.id_rol: role for role in Roles.objects.filter(id_rol__in=role_ids, is_active=True)}
+        roles = {
+            role.id_rol: role
+            for role in Roles.objects.filter(id_rol__in=role_ids, is_active=True)
+        }
         missing = sorted(set(role_ids) - set(roles.keys()))
         if missing:
-            _audit(request, "RBAC_USER_ROLES_ASSIGN", "user_role", resource_id=user.id_usuario, result="FAIL", error_code="ROLE_NOT_FOUND", target_user=user)
+            _audit(
+                request,
+                "RBAC_USER_ROLES_ASSIGN",
+                "user_role",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+                target_user=user,
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
                 status.HTTP_404_NOT_FOUND,
-                details={"roleIds": [f"No existen: {', '.join(str(value) for value in missing)}"]},
+                details={
+                    "roleIds": [
+                        f"No existen: {', '.join(str(value) for value in missing)}"
+                    ]
+                },
                 request_id=_request_id(request),
             )
 
@@ -1557,7 +2043,9 @@ class UserRolesView(APIView):
 
         for role_id in role_ids:
             role = roles[role_id]
-            relation = RelUsuarioRol.objects.filter(id_usuario=user, id_rol=role).first()
+            relation = RelUsuarioRol.objects.filter(
+                id_usuario=user, id_rol=role
+            ).first()
             if relation:
                 if relation.fch_baja is not None:
                     relation.fch_baja = None
@@ -1579,7 +2067,11 @@ class UserRolesView(APIView):
             is_primary=True,
         ).exists()
         if not has_primary:
-            first_relation = RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True).order_by("id_usuario_rol").first()
+            first_relation = (
+                RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True)
+                .order_by("id_usuario_rol")
+                .first()
+            )
             if first_relation and not first_relation.is_primary:
                 first_relation.is_primary = True
                 first_relation.save(update_fields=["is_primary"])
@@ -1614,12 +2106,26 @@ class UserPrimaryRoleView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_USER_ROLE_PRIMARY_SET", "user_role", resource_id=user_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_ROLE_PRIMARY_SET",
+                "user_role",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         user = SyUsuario.objects.filter(id_usuario=user_id).first()
         if not user:
-            _audit(request, "RBAC_USER_ROLE_PRIMARY_SET", "user_role", resource_id=user_id, result="FAIL", error_code="USER_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_USER_ROLE_PRIMARY_SET",
+                "user_role",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
             return error_response(
                 "USER_NOT_FOUND",
                 "Usuario no encontrado",
@@ -1629,7 +2135,15 @@ class UserPrimaryRoleView(APIView):
 
         role_id = request.data.get("roleId")
         if not role_id:
-            _audit(request, "RBAC_USER_ROLE_PRIMARY_SET", "user_role", resource_id=user.id_usuario, result="FAIL", error_code="VALIDATION_ERROR", target_user=user)
+            _audit(
+                request,
+                "RBAC_USER_ROLE_PRIMARY_SET",
+                "user_role",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+                target_user=user,
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Datos de entrada invalidos",
@@ -1644,7 +2158,15 @@ class UserPrimaryRoleView(APIView):
             fch_baja__isnull=True,
         ).first()
         if not relation:
-            _audit(request, "RBAC_USER_ROLE_PRIMARY_SET", "user_role", resource_id=user.id_usuario, result="FAIL", error_code="ROLE_NOT_FOUND", target_user=user)
+            _audit(
+                request,
+                "RBAC_USER_ROLE_PRIMARY_SET",
+                "user_role",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+                target_user=user,
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
@@ -1654,7 +2176,9 @@ class UserPrimaryRoleView(APIView):
 
         before = _serialize_user_roles(user)
 
-        RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True).update(is_primary=False)
+        RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True).update(
+            is_primary=False
+        )
         relation.is_primary = True
         relation.save(update_fields=["is_primary"])
 
@@ -1688,12 +2212,26 @@ class UserRoleRevokeView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_USER_ROLE_REVOKE", "user_role", resource_id=user_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_ROLE_REVOKE",
+                "user_role",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         user = SyUsuario.objects.filter(id_usuario=user_id).first()
         if not user:
-            _audit(request, "RBAC_USER_ROLE_REVOKE", "user_role", resource_id=user_id, result="FAIL", error_code="USER_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_USER_ROLE_REVOKE",
+                "user_role",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
             return error_response(
                 "USER_NOT_FOUND",
                 "Usuario no encontrado",
@@ -1701,13 +2239,25 @@ class UserRoleRevokeView(APIView):
                 request_id=_request_id(request),
             )
 
-        relation = RelUsuarioRol.objects.select_related("id_rol").filter(
-            id_usuario=user,
-            id_rol_id=role_id,
-            fch_baja__isnull=True,
-        ).first()
+        relation = (
+            RelUsuarioRol.objects.select_related("id_rol")
+            .filter(
+                id_usuario=user,
+                id_rol_id=role_id,
+                fch_baja__isnull=True,
+            )
+            .first()
+        )
         if not relation:
-            _audit(request, "RBAC_USER_ROLE_REVOKE", "user_role", resource_id=user.id_usuario, result="FAIL", error_code="ROLE_NOT_FOUND", target_user=user)
+            _audit(
+                request,
+                "RBAC_USER_ROLE_REVOKE",
+                "user_role",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="ROLE_NOT_FOUND",
+                target_user=user,
+            )
             return error_response(
                 "ROLE_NOT_FOUND",
                 "Rol no encontrado",
@@ -1715,9 +2265,19 @@ class UserRoleRevokeView(APIView):
                 request_id=_request_id(request),
             )
 
-        active_count = RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True).count()
+        active_count = RelUsuarioRol.objects.filter(
+            id_usuario=user, fch_baja__isnull=True
+        ).count()
         if active_count <= 1:
-            _audit(request, "RBAC_USER_ROLE_REVOKE", "user_role", resource_id=user.id_usuario, result="FAIL", error_code="CANNOT_REMOVE_LAST_ROLE", target_user=user)
+            _audit(
+                request,
+                "RBAC_USER_ROLE_REVOKE",
+                "user_role",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="CANNOT_REMOVE_LAST_ROLE",
+                target_user=user,
+            )
             return error_response(
                 "CANNOT_REMOVE_LAST_ROLE",
                 "El usuario debe conservar al menos un rol",
@@ -1733,7 +2293,11 @@ class UserRoleRevokeView(APIView):
         relation.save(update_fields=["fch_baja", "usr_baja", "is_primary"])
 
         if was_primary:
-            replacement = RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True).order_by("id_usuario_rol").first()
+            replacement = (
+                RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True)
+                .order_by("id_usuario_rol")
+                .first()
+            )
             if replacement:
                 replacement.is_primary = True
                 replacement.save(update_fields=["is_primary"])
@@ -1766,12 +2330,26 @@ class UserOverridesView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_USER_OVERRIDE_UPSERT", "user_override", resource_id=user_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_OVERRIDE_UPSERT",
+                "user_override",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         user = SyUsuario.objects.filter(id_usuario=user_id).first()
         if not user:
-            _audit(request, "RBAC_USER_OVERRIDE_UPSERT", "user_override", resource_id=user_id, result="FAIL", error_code="USER_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_USER_OVERRIDE_UPSERT",
+                "user_override",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
             return error_response(
                 "USER_NOT_FOUND",
                 "Usuario no encontrado",
@@ -1784,21 +2362,43 @@ class UserOverridesView(APIView):
         expires_at_raw = request.data.get("expiresAt")
 
         if not permission_code or effect not in {"ALLOW", "DENY"}:
-            _audit(request, "RBAC_USER_OVERRIDE_UPSERT", "user_override", resource_id=user.id_usuario, result="FAIL", error_code="VALIDATION_ERROR", target_user=user)
+            _audit(
+                request,
+                "RBAC_USER_OVERRIDE_UPSERT",
+                "user_override",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="VALIDATION_ERROR",
+                target_user=user,
+            )
             return error_response(
                 "VALIDATION_ERROR",
                 "Datos de entrada invalidos",
                 status.HTTP_400_BAD_REQUEST,
                 details={
-                    "permissionCode": ["Campo requerido"] if not permission_code else [],
-                    "effect": ["Debe ser ALLOW o DENY"] if effect not in {"ALLOW", "DENY"} else [],
+                    "permissionCode": ["Campo requerido"]
+                    if not permission_code
+                    else [],
+                    "effect": ["Debe ser ALLOW o DENY"]
+                    if effect not in {"ALLOW", "DENY"}
+                    else [],
                 },
                 request_id=_request_id(request),
             )
 
-        permission = Permisos.objects.filter(codigo=permission_code, is_active=True).first()
+        permission = Permisos.objects.filter(
+            codigo=permission_code, is_active=True
+        ).first()
         if not permission:
-            _audit(request, "RBAC_USER_OVERRIDE_UPSERT", "user_override", resource_id=user.id_usuario, result="FAIL", error_code="PERMISSION_NOT_FOUND", target_user=user)
+            _audit(
+                request,
+                "RBAC_USER_OVERRIDE_UPSERT",
+                "user_override",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="PERMISSION_NOT_FOUND",
+                target_user=user,
+            )
             return error_response(
                 "PERMISSION_NOT_FOUND",
                 "Permiso no encontrado",
@@ -1806,8 +2406,12 @@ class UserOverridesView(APIView):
                 request_id=_request_id(request),
             )
 
-        actor_permissions = set(UserRepository.build_auth_user(actor).get("permissions", []))
-        scope_error = _validate_user_override_scope(request, actor, user, permission, actor_permissions)
+        actor_permissions = set(
+            UserRepository.build_auth_user(actor).get("permissions", [])
+        )
+        scope_error = _validate_user_override_scope(
+            request, actor, user, permission, actor_permissions
+        )
         if scope_error:
             _audit(
                 request,
@@ -1824,7 +2428,15 @@ class UserOverridesView(APIView):
         if expires_at_raw:
             expires_at = _parse_expires_at_end_of_day(expires_at_raw)
             if expires_at == "invalid":
-                _audit(request, "RBAC_USER_OVERRIDE_UPSERT", "user_override", resource_id=user.id_usuario, result="FAIL", error_code="INVALID_FORMAT", target_user=user)
+                _audit(
+                    request,
+                    "RBAC_USER_OVERRIDE_UPSERT",
+                    "user_override",
+                    resource_id=user.id_usuario,
+                    result="FAIL",
+                    error_code="INVALID_FORMAT",
+                    target_user=user,
+                )
                 return error_response(
                     "INVALID_FORMAT",
                     "Formato invalido",
@@ -1836,7 +2448,9 @@ class UserOverridesView(APIView):
         before = _serialize_user_overrides(user)
         has_override_changes = False
 
-        override = RelUsuarioOverride.objects.filter(id_usuario=user, id_permiso=permission).first()
+        override = RelUsuarioOverride.objects.filter(
+            id_usuario=user, id_permiso=permission
+        ).first()
         if override:
             has_override_changes = (
                 override.efecto != effect
@@ -1864,7 +2478,10 @@ class UserOverridesView(APIView):
         if has_override_changes:
             touch_user_auth_revision(user, actor_id=actor.id_usuario)
 
-        payload = {"userId": user.id_usuario, "overrides": _serialize_user_overrides(user)}
+        payload = {
+            "userId": user.id_usuario,
+            "overrides": _serialize_user_overrides(user),
+        }
         _audit(
             request,
             "RBAC_USER_OVERRIDE_UPSERT",
@@ -1890,12 +2507,26 @@ class UserOverrideRemoveView(APIView):
             require_csrf=True,
         )
         if auth_error:
-            _audit(request, "RBAC_USER_OVERRIDE_REMOVE", "user_override", resource_id=user_id, result="FAIL", error_code=auth_error.data.get("code"))
+            _audit(
+                request,
+                "RBAC_USER_OVERRIDE_REMOVE",
+                "user_override",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
             return auth_error
 
         user = SyUsuario.objects.filter(id_usuario=user_id).first()
         if not user:
-            _audit(request, "RBAC_USER_OVERRIDE_REMOVE", "user_override", resource_id=user_id, result="FAIL", error_code="USER_NOT_FOUND")
+            _audit(
+                request,
+                "RBAC_USER_OVERRIDE_REMOVE",
+                "user_override",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
             return error_response(
                 "USER_NOT_FOUND",
                 "Usuario no encontrado",
@@ -1911,7 +2542,9 @@ class UserOverrideRemoveView(APIView):
             .first()
         )
         if override:
-            actor_permissions = set(UserRepository.build_auth_user(actor).get("permissions", []))
+            actor_permissions = set(
+                UserRepository.build_auth_user(actor).get("permissions", [])
+            )
             scope_error = _validate_user_override_scope(
                 request,
                 actor,
@@ -1939,7 +2572,10 @@ class UserOverrideRemoveView(APIView):
         if removed_override:
             touch_user_auth_revision(user, actor_id=actor.id_usuario)
 
-        payload = {"userId": user.id_usuario, "overrides": _serialize_user_overrides(user)}
+        payload = {
+            "userId": user.id_usuario,
+            "overrides": _serialize_user_overrides(user),
+        }
         _audit(
             request,
             "RBAC_USER_OVERRIDE_REMOVE",

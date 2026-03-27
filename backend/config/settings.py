@@ -282,3 +282,9 @@ ALLOW_USER_CREATE_WITHOUT_EMAIL = config(
     default=False,
     cast=bool,
 )
+
+RBAC_READ_S1_ENABLED = config(
+    "RBAC_READ_S1_ENABLED",
+    default=False,
+    cast=bool,
+)
