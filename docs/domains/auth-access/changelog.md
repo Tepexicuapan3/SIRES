@@ -1,5 +1,18 @@
 # auth-access - Changelog
 
+## 2026-03-30 (KAN-61 cierre de feedback bloqueante PR #51)
+
+- Se actualiza `kan-61-rbac-critical-use-cases-apply-evidence.md` con evidencia TDD verificable **RED -> GREEN -> REFACTOR** para riesgo `P1`, incluyendo comandos exactos, resultados y run refs locales trazables.
+- Se documenta ejecución combinada de pruebas `unit/service` + `integration/API` para no-regresión en mutaciones RBAC de roles por usuario.
+- Se registra `TddExceptionRecord` formal por bloqueo de Docker daemon local (`dockerDesktopLinuxEngine`), con `approval_ref`, controles compensatorios y vencimiento.
+
+## 2026-03-27 (KAN-61 extraccion de casos de uso RBAC criticos)
+
+- Se agrega `kan-61-rbac-critical-use-cases-apply-evidence.md` con trazabilidad de alcance, diseño aplicado y evidencia TDD de KAN-61.
+- Se documenta extracción de mutaciones sensibles RBAC desde `rbac_views.py` hacia `use_cases/rbac_write/*` y `rbac_write_policy.py`.
+- Se mantiene compatibilidad de contrato HTTP y auditoría, sin cambios de schema/migraciones.
+- Se registra bloqueo operativo de validación Docker por error de daemon local (`dockerDesktopLinuxEngine`), con plan de validación en CI/entorno sano.
+
 ## 2026-03-26 (cierre formal documental validado con cliente)
 
 - Se agrega `cierre-formal-mvp-fase2.md` como documento canonico para alcance final MVP/Fase 2, reglas operativas, acciones sensibles, break-glass, trazabilidad, KPIs y DoR para implementacion.

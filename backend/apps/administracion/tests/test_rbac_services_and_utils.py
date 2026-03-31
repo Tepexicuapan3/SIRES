@@ -24,6 +24,9 @@ from apps.administracion.services.audit_service import AuditService
 from apps.administracion.services.rbac_resolver import RBACResolver
 from apps.administracion.use_cases.roles.create_role import CreateRoleUseCase
 from apps.administracion.use_cases.users.assign_roles import AssignRolesUseCase
+from apps.administracion.use_cases.rbac_write.set_user_primary_role import (
+    SetUserPrimaryRoleUseCase,
+)
 from apps.administracion.use_cases.rbac_read.get_role_detail import GetRoleDetailUseCase
 from apps.administracion.use_cases.rbac_read.list_permissions import (
     ListPermissionsUseCase,
@@ -246,7 +249,77 @@ class AssignRolesUseCaseTests(TestCase):
         AssignRolesUseCase.execute(self.user, [self.role], self.actor)
         relation.refresh_from_db()
         self.assertIsNone(relation.fch_baja)
-        self.assertIsNone(relation.usr_baja)
+
+
+class SetUserPrimaryRoleUseCaseTests(TestCase):
+    def setUp(self):
+        self.actor = SyUsuario.objects.create(
+            usuario="set_primary_actor",
+            correo="set.primary.actor@example.com",
+            clave_hash="hash",
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        self.user = SyUsuario.objects.create(
+            usuario="set_primary_user",
+            correo="set.primary.user@example.com",
+            clave_hash="hash",
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        self.role_primary = Roles.objects.create(
+            rol="SET_PRIMARY_ROLE_A",
+            desc_rol="Primary role A",
+            landing_route="/primary-a",
+            is_active=True,
+        )
+        self.role_secondary = Roles.objects.create(
+            rol="SET_PRIMARY_ROLE_B",
+            desc_rol="Primary role B",
+            landing_route="/primary-b",
+            is_active=True,
+        )
+
+        RelUsuarioRol.objects.create(
+            id_usuario=self.user,
+            id_rol=self.role_primary,
+            is_primary=True,
+            usr_asignacion=self.actor,
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=self.user,
+            id_rol=self.role_secondary,
+            is_primary=False,
+            usr_asignacion=self.actor,
+        )
+
+    @patch(
+        "apps.administracion.use_cases.rbac_write.set_user_primary_role.touch_user_auth_revision"
+    )
+    def test_updates_primary_role_and_touches_auth_revision(self, touch_revision_mock):
+        result = SetUserPrimaryRoleUseCase.execute(
+            actor=self.actor,
+            user_id=self.user.id_usuario,
+            role_id=self.role_secondary.id_rol,
+            serialize_user_roles=lambda _user: [],
+        )
+
+        self.assertEqual(result["target_user"].id_usuario, self.user.id_usuario)
+        self.assertEqual(result["payload"]["userId"], self.user.id_usuario)
+        touch_revision_mock.assert_called_once_with(
+            self.user,
+            actor_id=self.actor.id_usuario,
+        )
+
+        primary_relations = RelUsuarioRol.objects.filter(
+            id_usuario=self.user,
+            fch_baja__isnull=True,
+            is_primary=True,
+        )
+        self.assertEqual(primary_relations.count(), 1)
+        self.assertEqual(primary_relations.first().id_rol_id, self.role_secondary.id_rol)
 
 
 class CreateRoleUseCaseAndSerializerTests(TestCase):

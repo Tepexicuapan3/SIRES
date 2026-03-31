@@ -32,6 +32,16 @@ from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
 from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
+from apps.administracion.use_cases.rbac_write import (
+    AssignRolePermissionsUseCase,
+    RevokeRolePermissionUseCase,
+    AssignUserRolesUseCase,
+    SetUserPrimaryRoleUseCase,
+    RevokeUserRoleUseCase,
+    UpsertUserOverrideUseCase,
+    RemoveUserOverrideUseCase,
+    RbacWriteError,
+)
 
 
 TEMP_PASSWORD_LENGTH = 12
@@ -1095,157 +1105,41 @@ class AssignRolePermissionsView(APIView):
         permission_ids = request.data.get("permissionIds")
         if permission_ids is None:
             permission_ids = request.data.get("permission_ids", [])
-
-        if role_id is None or not isinstance(permission_ids, list):
+        try:
+            result = AssignRolePermissionsUseCase.execute(
+                actor=user,
+                role_id=role_id,
+                permission_ids=permission_ids,
+                serialize_role_permissions=_role_permissions,
+                active_user_ids_for_role=_active_user_ids_for_role,
+            )
+        except RbacWriteError as exc:
             _audit(
                 request,
                 "RBAC_ROLE_PERMISSIONS_ASSIGN",
                 "role",
+                resource_id=exc.resource_id,
                 result="FAIL",
-                error_code="VALIDATION_ERROR",
+                error_code=exc.code,
+                target_user=exc.target_user,
             )
             return error_response(
-                "VALIDATION_ERROR",
-                "Datos de entrada invalidos",
-                status.HTTP_400_BAD_REQUEST,
-                details={
-                    "roleId": ["Campo requerido"],
-                    "permissionIds": ["Debe ser un arreglo"],
-                },
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
                 request_id=_request_id(request),
             )
 
-        role = Roles.objects.filter(id_rol=role_id).first()
-        if not role:
-            _audit(
-                request,
-                "RBAC_ROLE_PERMISSIONS_ASSIGN",
-                "role",
-                resource_id=role_id,
-                result="FAIL",
-                error_code="ROLE_NOT_FOUND",
-            )
-            return error_response(
-                "ROLE_NOT_FOUND",
-                "Rol no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                request_id=_request_id(request),
-            )
-
-        actor_permissions = set(
-            UserRepository.build_auth_user(user).get("permissions", [])
-        )
-        scope_error = _validate_role_permission_scope(
-            request, user, role, actor_permissions
-        )
-        if scope_error:
-            _audit(
-                request,
-                "RBAC_ROLE_PERMISSIONS_ASSIGN",
-                "role",
-                resource_id=role.id_rol,
-                result="FAIL",
-                error_code=scope_error.data.get("code"),
-            )
-            return scope_error
-
-        requested_ids = set(permission_ids)
-        requested_ids = _ensure_read_dependencies(requested_ids)
-
-        permissions = {
-            permission.id_permiso: permission
-            for permission in Permisos.objects.filter(
-                id_permiso__in=requested_ids, is_active=True
-            )
-        }
-        missing_ids = sorted(requested_ids - set(permissions.keys()))
-        if missing_ids:
-            _audit(
-                request,
-                "RBAC_ROLE_PERMISSIONS_ASSIGN",
-                "role",
-                resource_id=role.id_rol,
-                result="FAIL",
-                error_code="PERMISSION_NOT_FOUND",
-            )
-            return error_response(
-                "PERMISSION_NOT_FOUND",
-                "Permiso no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                details={
-                    "permissionIds": [
-                        f"No existen: {', '.join(str(value) for value in missing_ids)}"
-                    ]
-                },
-                request_id=_request_id(request),
-            )
-
-        requested_codes = {permission.codigo for permission in permissions.values()}
-        scope_error = _validate_role_permission_scope(
-            request,
-            user,
-            role,
-            actor_permissions,
-            requested_codes=requested_codes,
-        )
-        if scope_error:
-            _audit(
-                request,
-                "RBAC_ROLE_PERMISSIONS_ASSIGN",
-                "role",
-                resource_id=role.id_rol,
-                result="FAIL",
-                error_code=scope_error.data.get("code"),
-            )
-            return scope_error
-
-        before = _role_permissions(role)
-        relations = {
-            relation.id_permiso_id: relation
-            for relation in RelRolPermiso.objects.filter(id_rol=role)
-        }
-        has_permission_changes = False
-
-        for permission_id in requested_ids:
-            relation = relations.get(permission_id)
-            if relation:
-                if relation.fch_baja is not None:
-                    relation.fch_baja = None
-                    relation.usr_baja = None
-                    relation.save(update_fields=["fch_baja", "usr_baja"])
-                    has_permission_changes = True
-                continue
-
-            RelRolPermiso.objects.create(
-                id_rol=role,
-                id_permiso=permissions[permission_id],
-                usr_asignacion=user,
-            )
-            has_permission_changes = True
-
-        for permission_id, relation in relations.items():
-            if permission_id in requested_ids:
-                continue
-            if relation.fch_baja is None:
-                relation.fch_baja = timezone.now()
-                relation.usr_baja = user
-                relation.save(update_fields=["fch_baja", "usr_baja"])
-                has_permission_changes = True
-
-        if has_permission_changes:
-            touch_users_auth_revision(
-                _active_user_ids_for_role(role),
-                actor_id=user.id_usuario,
-            )
-
-        payload = {"roleId": role.id_rol, "permissions": _role_permissions(role)}
+        role = result["role"]
+        payload = result["payload"]
         _audit(
             request,
             "RBAC_ROLE_PERMISSIONS_ASSIGN",
             "role",
             resource_id=role.id_rol,
             result="SUCCESS",
-            before=before,
+            before=result["before"],
             after=payload,
         )
         return Response(payload, status=status.HTTP_200_OK)
@@ -1273,120 +1167,41 @@ class RevokeRolePermissionView(APIView):
             )
             return auth_error
 
-        role = Roles.objects.filter(id_rol=role_id).first()
-        if not role:
+        try:
+            result = RevokeRolePermissionUseCase.execute(
+                actor=user,
+                role_id=role_id,
+                permission_id=permission_id,
+                serialize_role_permissions=_role_permissions,
+                active_user_ids_for_role=_active_user_ids_for_role,
+            )
+        except RbacWriteError as exc:
             _audit(
                 request,
                 "RBAC_ROLE_PERMISSION_REVOKE",
                 "role",
-                resource_id=role_id,
+                resource_id=exc.resource_id,
                 result="FAIL",
-                error_code="ROLE_NOT_FOUND",
+                error_code=exc.code,
+                target_user=exc.target_user,
             )
             return error_response(
-                "ROLE_NOT_FOUND",
-                "Rol no encontrado",
-                status.HTTP_404_NOT_FOUND,
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
                 request_id=_request_id(request),
             )
 
-        actor_permissions = set(
-            UserRepository.build_auth_user(user).get("permissions", [])
-        )
-        scope_error = _validate_role_permission_scope(
-            request, user, role, actor_permissions
-        )
-        if scope_error:
-            _audit(
-                request,
-                "RBAC_ROLE_PERMISSION_REVOKE",
-                "role",
-                resource_id=role.id_rol,
-                result="FAIL",
-                error_code=scope_error.data.get("code"),
-            )
-            return scope_error
-
-        relation = (
-            RelRolPermiso.objects.select_related("id_permiso")
-            .filter(
-                id_rol=role,
-                id_permiso_id=permission_id,
-                fch_baja__isnull=True,
-            )
-            .first()
-        )
-        if not relation:
-            _audit(
-                request,
-                "RBAC_ROLE_PERMISSION_REVOKE",
-                "role",
-                resource_id=role.id_rol,
-                result="FAIL",
-                error_code="PERMISSION_NOT_FOUND",
-            )
-            return error_response(
-                "PERMISSION_NOT_FOUND",
-                "Permiso no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                request_id=_request_id(request),
-            )
-
-        code = relation.id_permiso.codigo
-        resource, action = _split_permission_code(code)
-        if action == "read" and resource:
-            active_relations = RelRolPermiso.objects.select_related(
-                "id_permiso"
-            ).filter(
-                id_rol=role,
-                fch_baja__isnull=True,
-                id_permiso__is_active=True,
-            )
-            for active in active_relations:
-                if active.id_permiso_id == relation.id_permiso_id:
-                    continue
-                active_resource, active_action = _split_permission_code(
-                    active.id_permiso.codigo
-                )
-                if active_resource == resource and active_action in {
-                    "create",
-                    "update",
-                    "delete",
-                }:
-                    _audit(
-                        request,
-                        "RBAC_ROLE_PERMISSION_REVOKE",
-                        "role",
-                        resource_id=role.id_rol,
-                        result="FAIL",
-                        error_code="PERMISSION_DEPENDENCY",
-                    )
-                    return error_response(
-                        "PERMISSION_DEPENDENCY",
-                        "Violacion de dependencia de permisos",
-                        status.HTTP_400_BAD_REQUEST,
-                        request_id=_request_id(request),
-                    )
-
-        before = _role_permissions(role)
-        relation.fch_baja = timezone.now()
-        relation.usr_baja = user
-        relation.save(update_fields=["fch_baja", "usr_baja"])
-
-        touch_users_auth_revision(
-            _active_user_ids_for_role(role),
-            actor_id=user.id_usuario,
-        )
-
-        payload = {"roleId": role.id_rol, "permissions": _role_permissions(role)}
-
+        role = result["role"]
+        payload = result["payload"]
         _audit(
             request,
             "RBAC_ROLE_PERMISSION_REVOKE",
             "role",
             resource_id=role.id_rol,
             result="SUCCESS",
-            before=before,
+            before=result["before"],
             after=payload,
         )
         return Response(payload, status=status.HTTP_200_OK)
@@ -1974,122 +1789,44 @@ class UserRolesView(APIView):
                 error_code=auth_error.data.get("code"),
             )
             return auth_error
-
-        user = SyUsuario.objects.filter(id_usuario=user_id).first()
-        if not user:
-            _audit(
-                request,
-                "RBAC_USER_ROLES_ASSIGN",
-                "user_role",
-                resource_id=user_id,
-                result="FAIL",
-                error_code="USER_NOT_FOUND",
-            )
-            return error_response(
-                "USER_NOT_FOUND",
-                "Usuario no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                request_id=_request_id(request),
-            )
-
         role_ids = request.data.get("roleIds")
-        if not isinstance(role_ids, list) or not role_ids:
+
+        try:
+            result = AssignUserRolesUseCase.execute(
+                actor=actor,
+                user_id=user_id,
+                role_ids=role_ids,
+                serialize_user_roles=_serialize_user_roles,
+            )
+        except RbacWriteError as exc:
             _audit(
                 request,
                 "RBAC_USER_ROLES_ASSIGN",
                 "user_role",
-                resource_id=user.id_usuario,
+                resource_id=exc.resource_id,
                 result="FAIL",
-                error_code="VALIDATION_ERROR",
-                target_user=user,
+                error_code=exc.code,
+                target_user=exc.target_user,
             )
             return error_response(
-                "VALIDATION_ERROR",
-                "Datos de entrada invalidos",
-                status.HTTP_400_BAD_REQUEST,
-                details={"roleIds": ["Debe ser un arreglo no vacio"]},
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
                 request_id=_request_id(request),
             )
 
-        roles = {
-            role.id_rol: role
-            for role in Roles.objects.filter(id_rol__in=role_ids, is_active=True)
-        }
-        missing = sorted(set(role_ids) - set(roles.keys()))
-        if missing:
-            _audit(
-                request,
-                "RBAC_USER_ROLES_ASSIGN",
-                "user_role",
-                resource_id=user.id_usuario,
-                result="FAIL",
-                error_code="ROLE_NOT_FOUND",
-                target_user=user,
-            )
-            return error_response(
-                "ROLE_NOT_FOUND",
-                "Rol no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                details={
-                    "roleIds": [
-                        f"No existen: {', '.join(str(value) for value in missing)}"
-                    ]
-                },
-                request_id=_request_id(request),
-            )
-
-        before = _serialize_user_roles(user)
-        has_role_changes = False
-
-        for role_id in role_ids:
-            role = roles[role_id]
-            relation = RelUsuarioRol.objects.filter(
-                id_usuario=user, id_rol=role
-            ).first()
-            if relation:
-                if relation.fch_baja is not None:
-                    relation.fch_baja = None
-                    relation.usr_baja = None
-                    relation.save(update_fields=["fch_baja", "usr_baja"])
-                    has_role_changes = True
-                continue
-            RelUsuarioRol.objects.create(
-                id_usuario=user,
-                id_rol=role,
-                is_primary=False,
-                usr_asignacion=actor,
-            )
-            has_role_changes = True
-
-        has_primary = RelUsuarioRol.objects.filter(
-            id_usuario=user,
-            fch_baja__isnull=True,
-            is_primary=True,
-        ).exists()
-        if not has_primary:
-            first_relation = (
-                RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True)
-                .order_by("id_usuario_rol")
-                .first()
-            )
-            if first_relation and not first_relation.is_primary:
-                first_relation.is_primary = True
-                first_relation.save(update_fields=["is_primary"])
-                has_role_changes = True
-
-        if has_role_changes:
-            touch_user_auth_revision(user, actor_id=actor.id_usuario)
-
-        payload = {"userId": user.id_usuario, "roles": _serialize_user_roles(user)}
+        target_user = result["target_user"]
+        payload = result["payload"]
         _audit(
             request,
             "RBAC_USER_ROLES_ASSIGN",
             "user_role",
-            resource_id=user.id_usuario,
+            resource_id=target_user.id_usuario,
             result="SUCCESS",
-            before=before,
+            before=result["before"],
             after=payload,
-            target_user=user,
+            target_user=target_user,
         )
         return Response(payload, status=status.HTTP_201_CREATED)
 
@@ -2115,87 +1852,44 @@ class UserPrimaryRoleView(APIView):
                 error_code=auth_error.data.get("code"),
             )
             return auth_error
-
-        user = SyUsuario.objects.filter(id_usuario=user_id).first()
-        if not user:
-            _audit(
-                request,
-                "RBAC_USER_ROLE_PRIMARY_SET",
-                "user_role",
-                resource_id=user_id,
-                result="FAIL",
-                error_code="USER_NOT_FOUND",
-            )
-            return error_response(
-                "USER_NOT_FOUND",
-                "Usuario no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                request_id=_request_id(request),
-            )
-
         role_id = request.data.get("roleId")
-        if not role_id:
+
+        try:
+            result = SetUserPrimaryRoleUseCase.execute(
+                actor=actor,
+                user_id=user_id,
+                role_id=role_id,
+                serialize_user_roles=_serialize_user_roles,
+            )
+        except RbacWriteError as exc:
             _audit(
                 request,
                 "RBAC_USER_ROLE_PRIMARY_SET",
                 "user_role",
-                resource_id=user.id_usuario,
+                resource_id=exc.resource_id,
                 result="FAIL",
-                error_code="VALIDATION_ERROR",
-                target_user=user,
+                error_code=exc.code,
+                target_user=exc.target_user,
             )
             return error_response(
-                "VALIDATION_ERROR",
-                "Datos de entrada invalidos",
-                status.HTTP_400_BAD_REQUEST,
-                details={"roleId": ["Campo requerido"]},
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
                 request_id=_request_id(request),
             )
 
-        relation = RelUsuarioRol.objects.filter(
-            id_usuario=user,
-            id_rol_id=role_id,
-            fch_baja__isnull=True,
-        ).first()
-        if not relation:
-            _audit(
-                request,
-                "RBAC_USER_ROLE_PRIMARY_SET",
-                "user_role",
-                resource_id=user.id_usuario,
-                result="FAIL",
-                error_code="ROLE_NOT_FOUND",
-                target_user=user,
-            )
-            return error_response(
-                "ROLE_NOT_FOUND",
-                "Rol no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                request_id=_request_id(request),
-            )
-
-        before = _serialize_user_roles(user)
-
-        RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True).update(
-            is_primary=False
-        )
-        relation.is_primary = True
-        relation.save(update_fields=["is_primary"])
-
-        user.fch_modf = timezone.now()
-        user.usr_modf = actor
-        user.save(update_fields=["fch_modf", "usr_modf"])
-
-        payload = {"userId": user.id_usuario, "roles": _serialize_user_roles(user)}
+        target_user = result["target_user"]
+        payload = result["payload"]
         _audit(
             request,
             "RBAC_USER_ROLE_PRIMARY_SET",
             "user_role",
-            resource_id=user.id_usuario,
+            resource_id=target_user.id_usuario,
             result="SUCCESS",
-            before=before,
+            before=result["before"],
             after=payload,
-            target_user=user,
+            target_user=target_user,
         )
         return Response(payload, status=status.HTTP_200_OK)
 
@@ -2222,98 +1916,42 @@ class UserRoleRevokeView(APIView):
             )
             return auth_error
 
-        user = SyUsuario.objects.filter(id_usuario=user_id).first()
-        if not user:
+        try:
+            result = RevokeUserRoleUseCase.execute(
+                actor=actor,
+                user_id=user_id,
+                role_id=role_id,
+                serialize_user_roles=_serialize_user_roles,
+            )
+        except RbacWriteError as exc:
             _audit(
                 request,
                 "RBAC_USER_ROLE_REVOKE",
                 "user_role",
-                resource_id=user_id,
+                resource_id=exc.resource_id,
                 result="FAIL",
-                error_code="USER_NOT_FOUND",
+                error_code=exc.code,
+                target_user=exc.target_user,
             )
             return error_response(
-                "USER_NOT_FOUND",
-                "Usuario no encontrado",
-                status.HTTP_404_NOT_FOUND,
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
                 request_id=_request_id(request),
             )
 
-        relation = (
-            RelUsuarioRol.objects.select_related("id_rol")
-            .filter(
-                id_usuario=user,
-                id_rol_id=role_id,
-                fch_baja__isnull=True,
-            )
-            .first()
-        )
-        if not relation:
-            _audit(
-                request,
-                "RBAC_USER_ROLE_REVOKE",
-                "user_role",
-                resource_id=user.id_usuario,
-                result="FAIL",
-                error_code="ROLE_NOT_FOUND",
-                target_user=user,
-            )
-            return error_response(
-                "ROLE_NOT_FOUND",
-                "Rol no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                request_id=_request_id(request),
-            )
-
-        active_count = RelUsuarioRol.objects.filter(
-            id_usuario=user, fch_baja__isnull=True
-        ).count()
-        if active_count <= 1:
-            _audit(
-                request,
-                "RBAC_USER_ROLE_REVOKE",
-                "user_role",
-                resource_id=user.id_usuario,
-                result="FAIL",
-                error_code="CANNOT_REMOVE_LAST_ROLE",
-                target_user=user,
-            )
-            return error_response(
-                "CANNOT_REMOVE_LAST_ROLE",
-                "El usuario debe conservar al menos un rol",
-                status.HTTP_400_BAD_REQUEST,
-                request_id=_request_id(request),
-            )
-
-        before = _serialize_user_roles(user)
-        was_primary = relation.is_primary
-        relation.fch_baja = timezone.now()
-        relation.usr_baja = actor
-        relation.is_primary = False
-        relation.save(update_fields=["fch_baja", "usr_baja", "is_primary"])
-
-        if was_primary:
-            replacement = (
-                RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True)
-                .order_by("id_usuario_rol")
-                .first()
-            )
-            if replacement:
-                replacement.is_primary = True
-                replacement.save(update_fields=["is_primary"])
-
-        touch_user_auth_revision(user, actor_id=actor.id_usuario)
-
-        payload = {"userId": user.id_usuario, "roles": _serialize_user_roles(user)}
+        target_user = result["target_user"]
+        payload = result["payload"]
         _audit(
             request,
             "RBAC_USER_ROLE_REVOKE",
             "user_role",
-            resource_id=user.id_usuario,
+            resource_id=target_user.id_usuario,
             result="SUCCESS",
-            before=before,
+            before=result["before"],
             after=payload,
-            target_user=user,
+            target_user=target_user,
         )
         return Response(payload, status=status.HTTP_200_OK)
 
@@ -2339,158 +1977,49 @@ class UserOverridesView(APIView):
                 error_code=auth_error.data.get("code"),
             )
             return auth_error
-
-        user = SyUsuario.objects.filter(id_usuario=user_id).first()
-        if not user:
-            _audit(
-                request,
-                "RBAC_USER_OVERRIDE_UPSERT",
-                "user_override",
-                resource_id=user_id,
-                result="FAIL",
-                error_code="USER_NOT_FOUND",
-            )
-            return error_response(
-                "USER_NOT_FOUND",
-                "Usuario no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                request_id=_request_id(request),
-            )
-
         permission_code = request.data.get("permissionCode")
         effect = request.data.get("effect")
         expires_at_raw = request.data.get("expiresAt")
 
-        if not permission_code or effect not in {"ALLOW", "DENY"}:
+        try:
+            result = UpsertUserOverrideUseCase.execute(
+                actor=actor,
+                user_id=user_id,
+                permission_code=permission_code,
+                effect=effect,
+                expires_at_raw=expires_at_raw,
+                parse_expires_at=_parse_expires_at_end_of_day,
+                serialize_user_overrides=_serialize_user_overrides,
+            )
+        except RbacWriteError as exc:
             _audit(
                 request,
                 "RBAC_USER_OVERRIDE_UPSERT",
                 "user_override",
-                resource_id=user.id_usuario,
+                resource_id=exc.resource_id,
                 result="FAIL",
-                error_code="VALIDATION_ERROR",
-                target_user=user,
+                error_code=exc.code,
+                target_user=exc.target_user,
             )
             return error_response(
-                "VALIDATION_ERROR",
-                "Datos de entrada invalidos",
-                status.HTTP_400_BAD_REQUEST,
-                details={
-                    "permissionCode": ["Campo requerido"]
-                    if not permission_code
-                    else [],
-                    "effect": ["Debe ser ALLOW o DENY"]
-                    if effect not in {"ALLOW", "DENY"}
-                    else [],
-                },
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
                 request_id=_request_id(request),
             )
 
-        permission = Permisos.objects.filter(
-            codigo=permission_code, is_active=True
-        ).first()
-        if not permission:
-            _audit(
-                request,
-                "RBAC_USER_OVERRIDE_UPSERT",
-                "user_override",
-                resource_id=user.id_usuario,
-                result="FAIL",
-                error_code="PERMISSION_NOT_FOUND",
-                target_user=user,
-            )
-            return error_response(
-                "PERMISSION_NOT_FOUND",
-                "Permiso no encontrado",
-                status.HTTP_404_NOT_FOUND,
-                request_id=_request_id(request),
-            )
-
-        actor_permissions = set(
-            UserRepository.build_auth_user(actor).get("permissions", [])
-        )
-        scope_error = _validate_user_override_scope(
-            request, actor, user, permission, actor_permissions
-        )
-        if scope_error:
-            _audit(
-                request,
-                "RBAC_USER_OVERRIDE_UPSERT",
-                "user_override",
-                resource_id=user.id_usuario,
-                result="FAIL",
-                error_code=scope_error.data.get("code"),
-                target_user=user,
-            )
-            return scope_error
-
-        expires_at = None
-        if expires_at_raw:
-            expires_at = _parse_expires_at_end_of_day(expires_at_raw)
-            if expires_at == "invalid":
-                _audit(
-                    request,
-                    "RBAC_USER_OVERRIDE_UPSERT",
-                    "user_override",
-                    resource_id=user.id_usuario,
-                    result="FAIL",
-                    error_code="INVALID_FORMAT",
-                    target_user=user,
-                )
-                return error_response(
-                    "INVALID_FORMAT",
-                    "Formato invalido",
-                    status.HTTP_400_BAD_REQUEST,
-                    details={"expiresAt": ["Debe ser una fecha ISO 8601 valida"]},
-                    request_id=_request_id(request),
-                )
-
-        before = _serialize_user_overrides(user)
-        has_override_changes = False
-
-        override = RelUsuarioOverride.objects.filter(
-            id_usuario=user, id_permiso=permission
-        ).first()
-        if override:
-            has_override_changes = (
-                override.efecto != effect
-                or override.fch_expira != expires_at
-                or override.fch_baja is not None
-                or override.usr_baja_id is not None
-            )
-            override.efecto = effect
-            override.fch_expira = expires_at
-            override.fch_baja = None
-            override.usr_baja = None
-            if not override.usr_asignacion_id:
-                override.usr_asignacion = actor
-            override.save()
-        else:
-            RelUsuarioOverride.objects.create(
-                id_usuario=user,
-                id_permiso=permission,
-                efecto=effect,
-                fch_expira=expires_at,
-                usr_asignacion=actor,
-            )
-            has_override_changes = True
-
-        if has_override_changes:
-            touch_user_auth_revision(user, actor_id=actor.id_usuario)
-
-        payload = {
-            "userId": user.id_usuario,
-            "overrides": _serialize_user_overrides(user),
-        }
+        target_user = result["target_user"]
+        payload = result["payload"]
         _audit(
             request,
             "RBAC_USER_OVERRIDE_UPSERT",
             "user_override",
-            resource_id=user.id_usuario,
+            resource_id=target_user.id_usuario,
             result="SUCCESS",
-            before=before,
+            before=result["before"],
             after=payload,
-            target_user=user,
+            target_user=target_user,
         )
         return Response(payload, status=status.HTTP_200_OK)
 
@@ -2517,73 +2046,41 @@ class UserOverrideRemoveView(APIView):
             )
             return auth_error
 
-        user = SyUsuario.objects.filter(id_usuario=user_id).first()
-        if not user:
+        try:
+            result = RemoveUserOverrideUseCase.execute(
+                actor=actor,
+                user_id=user_id,
+                code=code,
+                serialize_user_overrides=_serialize_user_overrides,
+            )
+        except RbacWriteError as exc:
             _audit(
                 request,
                 "RBAC_USER_OVERRIDE_REMOVE",
                 "user_override",
-                resource_id=user_id,
+                resource_id=exc.resource_id,
                 result="FAIL",
-                error_code="USER_NOT_FOUND",
+                error_code=exc.code,
+                target_user=exc.target_user,
             )
             return error_response(
-                "USER_NOT_FOUND",
-                "Usuario no encontrado",
-                status.HTTP_404_NOT_FOUND,
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
                 request_id=_request_id(request),
             )
 
-        before = _serialize_user_overrides(user)
-        removed_override = False
-        override = (
-            RelUsuarioOverride.objects.select_related("id_permiso")
-            .filter(id_usuario=user, id_permiso__codigo=code, fch_baja__isnull=True)
-            .first()
-        )
-        if override:
-            actor_permissions = set(
-                UserRepository.build_auth_user(actor).get("permissions", [])
-            )
-            scope_error = _validate_user_override_scope(
-                request,
-                actor,
-                user,
-                override.id_permiso,
-                actor_permissions,
-            )
-            if scope_error:
-                _audit(
-                    request,
-                    "RBAC_USER_OVERRIDE_REMOVE",
-                    "user_override",
-                    resource_id=user.id_usuario,
-                    result="FAIL",
-                    error_code=scope_error.data.get("code"),
-                    target_user=user,
-                )
-                return scope_error
-
-            override.fch_baja = timezone.now()
-            override.usr_baja = actor
-            override.save(update_fields=["fch_baja", "usr_baja"])
-            removed_override = True
-
-        if removed_override:
-            touch_user_auth_revision(user, actor_id=actor.id_usuario)
-
-        payload = {
-            "userId": user.id_usuario,
-            "overrides": _serialize_user_overrides(user),
-        }
+        target_user = result["target_user"]
+        payload = result["payload"]
         _audit(
             request,
             "RBAC_USER_OVERRIDE_REMOVE",
             "user_override",
-            resource_id=user.id_usuario,
+            resource_id=target_user.id_usuario,
             result="SUCCESS",
-            before=before,
+            before=result["before"],
             after=payload,
-            target_user=user,
+            target_user=target_user,
         )
         return Response(payload, status=status.HTTP_200_OK)

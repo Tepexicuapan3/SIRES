@@ -27,6 +27,7 @@ Este dominio cubre:
 - [`tdd-evidence-templates.md`](./tdd-evidence-templates.md) - plantillas obligatorias de evidencia Red->Green->Refactor para Jira/PR (KAN-55).
 - [`tdd-exception-policy.md`](./tdd-exception-policy.md) - politica formal de excepciones TDD con aprobacion, vencimiento y controles compensatorios (KAN-55).
 - [`kan-56-s1-apply-evidence.md`](./kan-56-s1-apply-evidence.md) - evidencia de implementacion KAN-56 S1 read-only (preflight, TDD, paridad contractual, rollback drill por flag).
+- [`kan-61-rbac-critical-use-cases-apply-evidence.md`](./kan-61-rbac-critical-use-cases-apply-evidence.md) - evidencia de KAN-61 para extraccion de mutaciones RBAC criticas a use_cases/policies conservando contrato.
 - [`jira-workflow-operating-model.md`](./jira-workflow-operating-model.md) - workflow operativo de Jira para Auth-Access (columnas, gates, WIP, due dates, bloqueos, daily/cierre, reglas IA y JQLs).
 - [`pending-decisions.md`](./pending-decisions.md) - acta de cierre de decisiones historicamente pendientes (estado final resuelto).
 - [`backlog-mapping.md`](./backlog-mapping.md) - mapeo entre PRD y backlog de ejecucion (Jira/SDD).

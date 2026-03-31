@@ -35,6 +35,7 @@ Cada ticket Jira de este dominio debe incluir referencia explicita a:
 - **KAN-50** (DB ownership/migracion RBAC) define estrategia de datos `managed=False` y plan incremental `expand -> migrate -> contract` sin cambios de runtime.
 - **KAN-57** (runtime hardening) ejecuta enforcement de autorizacion en use cases/realtime manteniendo backend como source of truth.
 - **KAN-52** (plan de extraccion `rbac_views`) define backlog por slices, estrategia de coexistencia legacy/nuevo y rollback por iteracion sin cortar operacion.
+- **KAN-61** ejecuta extraccion de mutaciones RBAC criticas hacia `application/use_cases` manteniendo compatibilidad en rutas actuales y evidencia de no regresion.
 - **KAN-51** (request correlation) define contrato transversal `X-Request-ID` desde entrada HTTP hasta response/error payload para reconstruccion E2E por request.
 
 ### Estado KAN-49 (slice runtime inicial)
