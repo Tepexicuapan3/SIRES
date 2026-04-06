@@ -1,6 +1,7 @@
 from django.utils import timezone
 
 from apps.administracion.models import AuditoriaEvento
+from apps.authentication.services.observability_service import record_audit_event
 from apps.authentication.services.response_service import get_request_id
 
 
@@ -36,6 +37,7 @@ def log_event(
             target_usuario=target_user,
             meta=payload_meta,
         )
+        record_audit_event("auth", action, result)
     except Exception:
         # No bloquear el flujo si falla auditoria.
         return

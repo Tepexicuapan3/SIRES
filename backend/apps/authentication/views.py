@@ -1,3 +1,6 @@
+import time
+
+from apps.administracion.services.rbac_resolver import RBACResolver
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.serializers import (
     CompleteOnboardingSerializer,
@@ -13,6 +16,12 @@ from apps.authentication.services.audit_service import (
 )
 from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
+from apps.authentication.services.observability_service import (
+    build_observability_snapshot,
+    observe_latency_ms,
+    record_login_result,
+    record_policy_deny,
+)
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
 from apps.authentication.services.token_service import (
@@ -63,6 +72,8 @@ def _log_policy_deny_if_needed(request, exc, base_meta):
     if exc.code not in {"RATE_LIMIT_EXCEEDED", "ACCOUNT_LOCKED", "SERVICE_UNAVAILABLE"}:
         return
 
+    record_policy_deny(exc.code)
+
     log_event(
         request,
         "POLICY_ENFORCEMENT_DENY",
@@ -78,101 +89,110 @@ class LoginView(APIView):
     permission_classes = []
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        if not serializer.is_valid():
+        start = time.perf_counter()
+        try:
+            serializer = LoginSerializer(data=request.data)
+            if not serializer.is_valid():
+                record_login_result("FAIL", error_code="INVALID_CREDENTIALS")
+                log_event(
+                    request,
+                    "LOGIN_FAILED",
+                    "FAIL",
+                    error_code="INVALID_CREDENTIALS",
+                    meta={
+                        "endpoint": "/auth/login",
+                        "username": mask_username(request.data.get("username")),
+                    },
+                )
+                return error_response(
+                    "INVALID_CREDENTIALS",
+                    "Usuario o contraseña incorrectos",
+                    status.HTTP_401_UNAUTHORIZED,
+                    details=serializer.errors,
+                    request_id=get_request_id(request),
+                )
+
+            try:
+                result = login_user(
+                    serializer.validated_data["username"],
+                    serializer.validated_data["password"],
+                    request.META.get("REMOTE_ADDR"),
+                )
+            except AuthServiceError as exc:
+                record_login_result("FAIL", error_code=exc.code)
+                user = UserRepository.get_by_username(
+                    serializer.validated_data.get("username")
+                )
+                base_meta = {
+                    "endpoint": "/auth/login",
+                    "username": mask_username(serializer.validated_data.get("username")),
+                }
+                _log_policy_deny_if_needed(request, exc, base_meta)
+                log_event(
+                    request,
+                    "LOGIN_FAILED",
+                    "FAIL",
+                    actor_user=user,
+                    target_user=user,
+                    error_code=exc.code,
+                    meta={**base_meta, **_policy_meta_from_error(exc)},
+                )
+                return error_response(
+                    exc.code,
+                    exc.message,
+                    exc.status_code,
+                    details=exc.details,
+                    request_id=get_request_id(request),
+                )
+            except Exception:
+                record_login_result("FAIL", error_code="INTERNAL_SERVER_ERROR")
+                log_event(
+                    request,
+                    "LOGIN_FAILED",
+                    "FAIL",
+                    error_code="INTERNAL_SERVER_ERROR",
+                    meta={"endpoint": "/auth/login"},
+                )
+                return error_response(
+                    "INTERNAL_SERVER_ERROR",
+                    "Error del servidor, intenta nuevamente",
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    request_id=get_request_id(request),
+                )
+
+            response_body = {
+                "user": result["user"],
+                "requiresOnboarding": result["requires_onboarding"],
+            }
+            response = Response(response_body, status=status.HTTP_200_OK)
+            # Genera cookies tras login exitoso.
+            csrf_token = generate_csrf_token()
+            set_auth_cookies(
+                response,
+                result["access_token"],
+                result["refresh_token"],
+                csrf_token,
+            )
             log_event(
                 request,
-                "LOGIN_FAILED",
-                "FAIL",
-                error_code="INVALID_CREDENTIALS",
+                "LOGIN_SUCCESS",
+                "SUCCESS",
+                actor_user=UserRepository.get_by_username(
+                    serializer.validated_data["username"]
+                ),
+                target_user=UserRepository.get_by_username(
+                    serializer.validated_data["username"]
+                ),
                 meta={
                     "endpoint": "/auth/login",
-                    "username": mask_username(request.data.get("username")),
+                    "username": mask_username(serializer.validated_data.get("username")),
                 },
             )
-            return error_response(
-                "INVALID_CREDENTIALS",
-                "Usuario o contraseña incorrectos",
-                status.HTTP_401_UNAUTHORIZED,
-                details=serializer.errors,
-                request_id=get_request_id(request),
-            )
-
-        try:
-            result = login_user(
-                serializer.validated_data["username"],
-                serializer.validated_data["password"],
-                request.META.get("REMOTE_ADDR"),
-            )
-        except AuthServiceError as exc:
-            user = UserRepository.get_by_username(
-                serializer.validated_data.get("username")
-            )
-            base_meta = {
-                "endpoint": "/auth/login",
-                "username": mask_username(serializer.validated_data.get("username")),
-            }
-            _log_policy_deny_if_needed(request, exc, base_meta)
-            log_event(
-                request,
-                "LOGIN_FAILED",
-                "FAIL",
-                actor_user=user,
-                target_user=user,
-                error_code=exc.code,
-                meta={**base_meta, **_policy_meta_from_error(exc)},
-            )
-            return error_response(
-                exc.code,
-                exc.message,
-                exc.status_code,
-                details=exc.details,
-                request_id=get_request_id(request),
-            )
-        except Exception:
-            log_event(
-                request,
-                "LOGIN_FAILED",
-                "FAIL",
-                error_code="INTERNAL_SERVER_ERROR",
-                meta={"endpoint": "/auth/login"},
-            )
-            return error_response(
-                "INTERNAL_SERVER_ERROR",
-                "Error del servidor, intenta nuevamente",
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                request_id=get_request_id(request),
-            )
-
-        response_body = {
-            "user": result["user"],
-            "requiresOnboarding": result["requires_onboarding"],
-        }
-        response = Response(response_body, status=status.HTTP_200_OK)
-        # Genera cookies tras login exitoso.
-        csrf_token = generate_csrf_token()
-        set_auth_cookies(
-            response,
-            result["access_token"],
-            result["refresh_token"],
-            csrf_token,
-        )
-        log_event(
-            request,
-            "LOGIN_SUCCESS",
-            "SUCCESS",
-            actor_user=UserRepository.get_by_username(
-                serializer.validated_data["username"]
-            ),
-            target_user=UserRepository.get_by_username(
-                serializer.validated_data["username"]
-            ),
-            meta={
-                "endpoint": "/auth/login",
-                "username": mask_username(serializer.validated_data.get("username")),
-            },
-        )
-        return response
+            record_login_result("SUCCESS")
+            return response
+        finally:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            observe_latency_ms("/auth/login", elapsed_ms)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -270,15 +290,74 @@ class CapabilitiesView(APIView):
     permission_classes = []
 
     def get(self, request):
+        start = time.perf_counter()
+        try:
+            try:
+                user = authenticate_request(request)
+            except AuthServiceError as exc:
+                log_event(
+                    request,
+                    "CAPABILITIES_READ",
+                    "FAIL",
+                    error_code=exc.code,
+                    meta={"endpoint": "/auth/capabilities"},
+                )
+                return error_response(
+                    exc.code,
+                    exc.message,
+                    exc.status_code,
+                    details=exc.details,
+                    request_id=get_request_id(request),
+                )
+
+            try:
+                capabilities_payload = build_capabilities_response(user)
+            except Exception:
+                log_event(
+                    request,
+                    "CAPABILITIES_READ",
+                    "FAIL",
+                    actor_user=user,
+                    target_user=user,
+                    error_code="INTERNAL_SERVER_ERROR",
+                    meta={"endpoint": "/auth/capabilities"},
+                )
+                return error_response(
+                    "INTERNAL_SERVER_ERROR",
+                    "Error del servidor, intenta nuevamente",
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    request_id=get_request_id(request),
+                )
+
+            log_event(
+                request,
+                "CAPABILITIES_READ",
+                "SUCCESS",
+                actor_user=user,
+                target_user=user,
+                meta={"endpoint": "/auth/capabilities"},
+            )
+            return Response(capabilities_payload, status=status.HTTP_200_OK)
+        finally:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            observe_latency_ms("/auth/capabilities", elapsed_ms)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class AuthAccessObservabilityView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
         try:
             user = authenticate_request(request)
         except AuthServiceError as exc:
             log_event(
                 request,
-                "CAPABILITIES_READ",
+                "AUTH_ACCESS_OBSERVABILITY_READ",
                 "FAIL",
                 error_code=exc.code,
-                meta={"endpoint": "/auth/capabilities"},
+                meta={"endpoint": "/auth/ops/observability"},
             )
             return error_response(
                 exc.code,
@@ -288,34 +367,35 @@ class CapabilitiesView(APIView):
                 request_id=get_request_id(request),
             )
 
-        try:
-            capabilities_payload = build_capabilities_response(user)
-        except Exception:
+        permissions = RBACResolver.get_effective_permissions(user)
+        has_observability_access = "*" in permissions or "admin:ops:observability:read" in permissions
+        if not has_observability_access:
             log_event(
                 request,
-                "CAPABILITIES_READ",
+                "AUTH_ACCESS_OBSERVABILITY_READ",
                 "FAIL",
                 actor_user=user,
                 target_user=user,
-                error_code="INTERNAL_SERVER_ERROR",
-                meta={"endpoint": "/auth/capabilities"},
+                error_code="PERMISSION_DENIED",
+                meta={"endpoint": "/auth/ops/observability"},
             )
             return error_response(
-                "INTERNAL_SERVER_ERROR",
-                "Error del servidor, intenta nuevamente",
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "PERMISSION_DENIED",
+                "No tienes permiso para esta acción",
+                status.HTTP_403_FORBIDDEN,
                 request_id=get_request_id(request),
             )
 
+        snapshot = build_observability_snapshot()
         log_event(
             request,
-            "CAPABILITIES_READ",
+            "AUTH_ACCESS_OBSERVABILITY_READ",
             "SUCCESS",
             actor_user=user,
             target_user=user,
-            meta={"endpoint": "/auth/capabilities"},
+            meta={"endpoint": "/auth/ops/observability"},
         )
-        return Response(capabilities_payload, status=status.HTTP_200_OK)
+        return Response(snapshot, status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

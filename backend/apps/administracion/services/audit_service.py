@@ -1,4 +1,5 @@
 from ..models import AuditoriaEvento
+from apps.authentication.services.observability_service import record_audit_event
 
 
 class AuditService:
@@ -41,3 +42,4 @@ class AuditService:
                 **extra_meta,
             },
         )
+        record_audit_event("rbac", accion, resultado)

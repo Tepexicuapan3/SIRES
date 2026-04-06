@@ -30,6 +30,7 @@ Este dominio cubre:
 - [`kan-61-rbac-critical-use-cases-apply-evidence.md`](./kan-61-rbac-critical-use-cases-apply-evidence.md) - evidencia de KAN-61 para extraccion de mutaciones RBAC criticas a use_cases/policies conservando contrato.
 - [`jira-workflow-operating-model.md`](./jira-workflow-operating-model.md) - workflow operativo de Jira para Auth-Access (columnas, gates, WIP, due dates, bloqueos, daily/cierre, reglas IA y JQLs).
 - [`kan-58a-s2-apply-evidence.md`](./kan-58a-s2-apply-evidence.md) - evidencia de implementacion KAN-58A S2 mutaciones de roles (scope freeze, TDD, validacion y riesgos).
+- [`kan-69-observability-baseline.md`](./kan-69-observability-baseline.md) - baseline operativo de observabilidad auth-access (métricas, alertas mínimas y snapshot/tablero inicial).
 - [`pending-decisions.md`](./pending-decisions.md) - acta de cierre de decisiones historicamente pendientes (estado final resuelto).
 - [`backlog-mapping.md`](./backlog-mapping.md) - mapeo entre PRD y backlog de ejecucion (Jira/SDD).
 - [`decision-log.md`](./decision-log.md) - registro de decisiones del dominio.

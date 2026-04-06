@@ -3,6 +3,7 @@ import os
 from django.urls import path
 
 from .views import (
+    AuthAccessObservabilityView,
     CapabilitiesView,
     CompleteOnboardingView,
     LoginView,
@@ -20,6 +21,11 @@ urlpatterns = [
     path("auth/logout", LogoutView.as_view(), name="auth-logout"),
     path("auth/me", MeView.as_view(), name="auth-me"),
     path("auth/capabilities", CapabilitiesView.as_view(), name="auth-capabilities"),
+    path(
+        "auth/ops/observability",
+        AuthAccessObservabilityView.as_view(),
+        name="auth-ops-observability",
+    ),
     path("auth/verify", VerifyView.as_view(), name="auth-verify"),
     path("auth/refresh", RefreshView.as_view(), name="auth-refresh"),
     path(
