@@ -29,10 +29,7 @@
     },
     "engram": {
       "type": "local",
-      "command": [
-        "engram",
-        "mcp"
-      ],
+      "command": ["engram", "mcp"],
       "enabled": true
     },
     "jira": {
@@ -40,55 +37,29 @@
       "url": "https://mcp.atlassian.com/v1/mcp",
       "enabled": true
     },
+    "notion": {
+      "type": "remote",
+      "url": "https://mcp.notion.com/mcp",
+      "enabled": true
+    },
     "playwright": {
       "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@playwright/mcp"
-      ],
+      "command": ["npx", "-y", "@playwright/mcp"],
       "enabled": true
     }
   },
   "formatter": {
     "prettier": {
-      "command": [
-        "bun",
-        "x",
-        "prettier",
-        "--write",
-        "$FILE"
-      ],
-      "extensions": [
-        ".js",
-        ".ts",
-        ".jsx",
-        ".tsx",
-        ".json",
-        ".css"
-      ]
+      "command": ["bun", "x", "prettier", "--write", "$FILE"],
+      "extensions": [".js", ".ts", ".jsx", ".tsx", ".json", ".css"]
     },
     "black": {
-      "command": [
-        "python",
-        "-m",
-        "black",
-        "$FILE"
-      ],
-      "extensions": [
-        ".py"
-      ]
+      "command": ["python", "-m", "black", "$FILE"],
+      "extensions": [".py"]
     },
     "isort": {
-      "command": [
-        "python",
-        "-m",
-        "isort",
-        "$FILE"
-      ],
-      "extensions": [
-        ".py"
-      ]
+      "command": ["python", "-m", "isort", "$FILE"],
+      "extensions": [".py"]
     }
   },
   "agent": {

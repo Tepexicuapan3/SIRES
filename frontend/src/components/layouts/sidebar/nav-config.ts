@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { CalendarPlus } from "lucide-react"
 /**
  * Configuracion de navegacion basada en permisos.
  *
@@ -301,7 +302,7 @@ export const NAV_CONFIG: NavSection[] = [
       },
     ],
   },
-  {
+    {
     title: "Recepcion",
     items: [
       {
@@ -314,6 +315,16 @@ export const NAV_CONFIG: NavSection[] = [
           "recepcion:fichas:urgencias:create",
           "clinico:consultas:read",
           "clinico:somatometria:read",
+        ],
+      },
+      {
+        title: "Agendar cita",
+        url: "/recepcion/citas",
+        icon: CalendarPlus,
+        permissions: [
+          "recepcion:fichas:medicina_general:create",
+          "recepcion:fichas:especialidad:create",
+          "recepcion:fichas:urgencias:create",
         ],
       },
     ],

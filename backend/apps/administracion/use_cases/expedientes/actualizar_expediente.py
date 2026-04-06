@@ -35,9 +35,9 @@ def actualizar_expediente(expediente: str) -> dict:
         Dict con resultado por tabla::
 
             {
-              "cat_empleados": {"insertados": 0, "eliminados": 0, "actualizados": 1},
-              ...
-              "errores": []
+                "cat_empleados": {"insertados": 0, "eliminados": 0, "actualizados": 1},
+                ...
+                "errores": []
             }
     """
     resultado: dict = {tabla: {} for tabla in TABLAS_SYNC}

@@ -336,3 +336,355 @@ def _visit_error_response(request, exc):
         details=exc.details,
         request_id=get_request_id(request),
     )
+
+
+
+#############################  VIEWS DEL MÓDULO DE CITAS EN LÍNEA  ###################################################################################
+"""
+apps/recepcion/views.py
+=======================
+Sección de Citas Médicas para el módulo de recepción.
+"""
+
+from datetime import date, timedelta
+
+from django.conf import settings
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSet
+
+from .models import CitaMedica, CitaNotificacion
+from .repositories.paciente_repository import PacienteRepository
+from .repositories.citas_repository import CitasRepository
+from .uses_case.citas_usecase import CitasMedicaUseCase
+from .serializers import (
+    CrearCitaSerializer,
+    CitaMedicaSerializer,
+    FiltrosCitasSerializer,
+    CancelarCitaSerializer,
+    NucleoFamiliarSerializer,
+    PacienteSerializer,
+    SlotDisponibilidadSerializer,
+)
+from .services.pdf_service import generar_pdf_cita
+
+
+paciente_repo = PacienteRepository()
+citas_repo = CitasRepository()
+citas_uc = CitasMedicaUseCase()
+
+
+# ============================================================================
+# NÚCLEO FAMILIAR
+# ============================================================================
+
+class NucleoFamiliarView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    """
+    GET /api/v1/recepcion/citas/nucleo-familiar/{no_exp}/
+    Retorna el trabajador y sus derechohabientes separados, cada uno con foto.
+    """
+
+    def get(self, request, no_exp: int):
+        nucleo = paciente_repo.get_nucleo_familiar(no_exp)
+        if not nucleo["trabajador"]:
+            return Response(
+                {"detail": f"No se encontró el expediente {no_exp}."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = NucleoFamiliarSerializer(nucleo)
+        return Response(serializer.data)
+
+
+class BuscarEmpleadosView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    """
+    GET /api/v1/recepcion/citas/buscar-empleados/?q=<texto>
+    Mínimo 2 caracteres. Máximo 15 resultados. Sin foto para agilizar.
+    """
+
+    def get(self, request):
+        q = (request.query_params.get("q") or "").strip()
+        if len(q) < 2:
+            return Response([])
+
+        resultado = paciente_repo.buscar_empleados(q, limit=15)
+        serializer = PacienteSerializer(resultado, many=True)
+        return Response(serializer.data)
+
+
+# ============================================================================
+# DISPONIBILIDAD
+# ============================================================================
+
+class DisponibilidadView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    """
+    GET /api/v1/recepcion/citas/disponibilidad/
+    Params:
+    - medico_id (requerido)
+    - fecha_inicio (opcional, YYYY-MM-DD)
+    - fecha_fin (opcional, YYYY-MM-DD)
+    """
+
+    def get(self, request):
+        medico_id = request.query_params.get("medico_id")
+        if not medico_id:
+            return Response(
+                {"detail": "medico_id es requerido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            medico_id = int(medico_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "medico_id inválido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        hoy = timezone.localdate()
+        fecha_inicio = _parse_date(request.query_params.get("fecha_inicio"), hoy)
+        fecha_fin = _parse_date(
+            request.query_params.get("fecha_fin"),
+            hoy + timedelta(days=30),
+        )
+
+        try:
+            slots = citas_repo.get_disponibilidad(
+                medico_id=medico_id,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # get_disponibilidad regresa dicts, no instancias; se responde directo
+        return Response(slots)
+
+
+# ============================================================================
+# CRUD DE CITAS
+# ============================================================================
+
+class CitasViewSet(ViewSet):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    """
+    Endpoints:
+      POST   /citas/                -> create
+      GET    /citas/                -> list
+      GET    /citas/{id}/           -> retrieve
+      POST   /citas/{id}/cancelar/  -> cancelar
+      GET    /citas/{id}/pdf/       -> pdf
+    """
+
+    def create(self, request):
+        serializer = CrearCitaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        usuario_id = None
+        if getattr(request, "user", None) and request.user.is_authenticated:
+            usuario_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+
+        try:
+            cita = citas_uc.crear_cita(
+                datos=serializer.validated_data,
+                usuario_id=usuario_id,
+            )
+        except ValueError as exc:
+            mensaje = str(exc).lower()
+            http_status = (
+                status.HTTP_409_CONFLICT
+                if (
+                    "disponible" in mensaje
+                    or "ocupado" in mensaje
+                    or "conflicto" in mensaje
+                    or "ya tiene una cita" in mensaje
+                )
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"detail": str(exc)}, status=http_status)
+
+        return Response(
+            CitaMedicaSerializer(cita).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def list(self, request):
+        serializer = FiltrosCitasSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        filtros = serializer.validated_data
+
+        resultado = citas_repo.listar_citas(
+            fecha=filtros.get("fecha"),
+            centro_atencion_id=filtros.get("centro_atencion_id"),
+            medico_id=filtros.get("medico_id"),
+            estatus=filtros.get("estatus"),
+            no_exp=filtros.get("no_exp"),
+            busqueda=filtros.get("busqueda"),
+            page=filtros.get("page", 1),
+            page_size=filtros.get("page_size", 30),
+        )
+        resultado["results"] = CitaMedicaSerializer(
+            resultado["results"],
+            many=True,
+        ).data
+        return Response(resultado)
+
+    def retrieve(self, request, pk=None):
+        cita = get_object_or_404(CitaMedica, id=pk)
+        return Response(CitaMedicaSerializer(cita).data)
+
+    @action(detail=True, methods=["post"])
+    def cancelar(self, request, pk=None):
+        serializer = CancelarCitaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            cita = citas_uc.cancelar_cita(
+                cita_id=pk,
+                motivo=serializer.validated_data.get("motivo", ""),
+                enviar_correo=serializer.validated_data.get("enviar_correo", True),
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(CitaMedicaSerializer(cita).data)
+
+    @action(detail=True, methods=["get"])
+    def pdf(self, request, pk=None):
+        cita = get_object_or_404(CitaMedica, id=pk)
+
+        cita_data = {
+            "id": str(cita.id),
+            "tipo_paciente": cita.tipo_paciente,
+            "no_exp": cita.no_exp,
+            "pk_num": cita.pk_num,
+            "nombre_paciente": cita.nombre_paciente,
+            "nombre_medico": cita.nombre_medico,
+            "nombre_centro": cita.nombre_centro,
+            "nombre_consult": cita.nombre_consult,
+            "fecha_hora": cita.fecha_hora.isoformat(),
+            "estatus": cita.get_estatus_display(),
+            "motivo": cita.motivo,
+        }
+
+        pdf_bytes = generar_pdf_cita(
+            cita_data,
+            logo_path=getattr(settings, "CITAS_LOGO_PATH", None),
+        )
+
+        return HttpResponse(
+            pdf_bytes,
+            content_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="cita_{str(cita.id)[:8]}.pdf"',
+            },
+        )
+
+
+# ============================================================================
+# ACCIONES DESDE TOKEN DE CORREO
+# ============================================================================
+
+class AccionTokenView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    """
+    GET /api/v1/recepcion/citas/accion/{token}/confirmar/
+    GET /api/v1/recepcion/citas/accion/{token}/cancelar/
+    """
+
+    def get(self, request, token, accion):
+        try:
+            notif = CitaNotificacion.objects.select_related("cita").get(token=token)
+        except CitaNotificacion.DoesNotExist:
+            return Response(
+                {"detail": "Enlace inválido."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if notif.token_usado:
+            return Response(
+                {"detail": "Este enlace ya fue utilizado."},
+                status=status.HTTP_410_GONE,
+            )
+
+        if notif.token_expira and notif.token_expira < timezone.now():
+            return Response(
+                {"detail": "Este enlace ha expirado."},
+                status=status.HTTP_410_GONE,
+            )
+
+        cita = notif.cita
+
+        try:
+            if accion == "confirmar":
+                cita = citas_uc.confirmar_desde_token(cita.id)
+                mensaje = "Su asistencia ha sido confirmada. Le esperamos."
+
+            elif accion == "cancelar":
+                cita = citas_uc.cancelar_cita(
+                    cita_id=cita.id,
+                    motivo="Cancelado por el paciente desde correo.",
+                    enviar_correo=False,
+                )
+                mensaje = "Su cita ha sido cancelada correctamente."
+
+            else:
+                return Response(
+                    {"detail": "Acción inválida."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        notif.token_usado = True
+        notif.save(update_fields=["token_usado"])
+
+        return Response(
+            {
+                "mensaje": mensaje,
+                "cita": CitaMedicaSerializer(cita).data,
+            }
+        )
+
+
+# ============================================================================
+# HELPERS
+# ============================================================================
+
+def _parse_date(value, default: date) -> date:
+    if not value:
+        return default
+    try:
+        return date.fromisoformat(value)
+    except (ValueError, TypeError):
+        return default

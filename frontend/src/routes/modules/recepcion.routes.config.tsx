@@ -4,6 +4,7 @@ import PlaceholderPage from "@/components/shared/PlaceholderPage";
 import RecepcionAgendaPage from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
 import RecepcionCheckinPage from "@features/recepcion/modules/checkin/pages/RecepcionCheckinPage";
 import { RECEPCION_QUEUE_READ_PERMISSIONS } from "@features/recepcion/shared/domain/recepcion.permissions";
+import RecepcionCitasPage from "@features/recepcion/modules/citas/pages/RecepcionCitasPage";
 
 const agendaElement = (
   <ProtectedRoute
@@ -22,6 +23,10 @@ export const recepcionRoutes: RouteObject[] = [
   {
     path: "agenda",
     element: agendaElement,
+  },
+  {
+  path: "citas",
+  element: <RecepcionCitasPage />,
   },
   {
     path: "agendar-cita",
