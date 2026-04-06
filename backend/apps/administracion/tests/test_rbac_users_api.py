@@ -6,7 +6,12 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.administracion.models import RelRolPermiso, RelUsuarioOverride, RelUsuarioRol
+from apps.administracion.models import (
+    AuditoriaEvento,
+    RelRolPermiso,
+    RelUsuarioOverride,
+    RelUsuarioRol,
+)
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
 from apps.catalogos.models import CatCentroAtencion, CatPermiso, CatRol, Permisos, Roles
@@ -535,6 +540,41 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["code"], "ROLE_NOT_FOUND")
 
+    def test_assign_roles_success_records_audit_event(self):
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/roles",
+            {"roleIds": [self.role_recepcion.id_rol]},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_USER_ROLES_ASSIGN").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.resultado, AuditoriaEvento.Resultado.SUCCESS)
+        self.assertEqual(event.recurso_id, self.target_user.id_usuario)
+        self.assertEqual(event.target_usuario_id, self.target_user.id_usuario)
+        self.assertEqual(event.meta.get("source"), "legacy")
+        self.assertEqual(event.meta.get("domain"), "auth_access")
+
+    def test_assign_roles_user_not_found_records_failed_audit_event(self):
+        response = self.client.post(
+            "/api/v1/users/999999/roles",
+            {"roleIds": [self.role_recepcion.id_rol]},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "USER_NOT_FOUND")
+        event = AuditoriaEvento.objects.filter(accion="RBAC_USER_ROLES_ASSIGN").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.resultado, AuditoriaEvento.Resultado.FAIL)
+        self.assertEqual(event.codigo_error, "USER_NOT_FOUND")
+        self.assertEqual(event.recurso_id, 999999)
+
     def test_assign_roles_reactivates_soft_deleted_relation(self):
         relation = RelUsuarioRol.objects.create(
             id_usuario=self.target_user,
@@ -597,6 +637,28 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(len(response.data["roles"]), 1)
         self.assertEqual(response.data["roles"][0]["name"], "RECEPCION_USERS")
         self.assertTrue(response.data["roles"][0]["isPrimary"])
+
+    def test_revoke_role_success_records_audit_event(self):
+        RelUsuarioRol.objects.create(
+            id_usuario=self.target_user,
+            id_rol=self.role_recepcion,
+            is_primary=False,
+            usr_asignacion=self.admin,
+        )
+
+        response = self.client.delete(
+            f"/api/v1/users/{self.target_user.id_usuario}/roles/{self.role_medico.id_rol}",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_USER_ROLE_REVOKE").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.resultado, AuditoriaEvento.Resultado.SUCCESS)
+        self.assertEqual(event.recurso_id, self.target_user.id_usuario)
+        self.assertEqual(event.target_usuario_id, self.target_user.id_usuario)
+        self.assertEqual(event.meta.get("source"), "legacy")
 
     def test_set_primary_role_requires_role_id(self):
         response = self.client.put(
@@ -731,6 +793,46 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(expires_local.minute, 59)
         self.assertEqual(expires_local.second, 59)
         self.assertEqual(expires_local.microsecond, 999999)
+
+    def test_override_upsert_success_records_audit_event(self):
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_USER_OVERRIDE_UPSERT").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.resultado, AuditoriaEvento.Resultado.SUCCESS)
+        self.assertEqual(event.recurso_id, self.target_user.id_usuario)
+        self.assertEqual(event.target_usuario_id, self.target_user.id_usuario)
+        self.assertEqual(event.meta.get("source"), "legacy")
+
+    def test_override_upsert_user_not_found_records_failed_audit_event(self):
+        response = self.client.post(
+            "/api/v1/users/999999/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "USER_NOT_FOUND")
+        event = AuditoriaEvento.objects.filter(accion="RBAC_USER_OVERRIDE_UPSERT").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.resultado, AuditoriaEvento.Resultado.FAIL)
+        self.assertEqual(event.codigo_error, "USER_NOT_FOUND")
+        self.assertEqual(event.recurso_id, 999999)
 
     def test_override_same_day_past_time_remains_active_until_day_end(self):
         now_local = timezone.make_aware(
