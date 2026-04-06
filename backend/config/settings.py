@@ -294,3 +294,9 @@ RBAC_ROLE_MUTATION_S2_ENABLED = config(
     default=False,
     cast=bool,
 )
+
+RBAC_ROLE_PERMISSION_S3_ENABLED = config(
+    "RBAC_ROLE_PERMISSION_S3_ENABLED",
+    default=False,
+    cast=bool,
+)

@@ -643,3 +643,13 @@ class RbacRoleMutationToggleTests(SimpleTestCase):
     @override_settings(RBAC_ROLE_MUTATION_S2_ENABLED=False)
     def test_role_mutation_toggle_returns_false_when_disabled(self):
         self.assertFalse(rbac_views._is_rbac_role_mutation_s2_enabled())
+
+
+class RbacRolePermissionToggleTests(SimpleTestCase):
+    @override_settings(RBAC_ROLE_PERMISSION_S3_ENABLED=True)
+    def test_role_permission_toggle_returns_true_when_enabled(self):
+        self.assertTrue(rbac_views._is_rbac_role_permission_s3_enabled())
+
+    @override_settings(RBAC_ROLE_PERMISSION_S3_ENABLED=False)
+    def test_role_permission_toggle_returns_false_when_disabled(self):
+        self.assertFalse(rbac_views._is_rbac_role_permission_s3_enabled())

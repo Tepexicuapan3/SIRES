@@ -65,6 +65,10 @@ def _is_rbac_role_mutation_s2_enabled():
     return getattr(settings, "RBAC_ROLE_MUTATION_S2_ENABLED", False)
 
 
+def _is_rbac_role_permission_s3_enabled():
+    return getattr(settings, "RBAC_ROLE_PERMISSION_S3_ENABLED", False)
+
+
 def _to_utc_iso(value):
     if not value:
         return None
@@ -1108,6 +1112,13 @@ class AssignRolePermissionsView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        if _is_rbac_role_permission_s3_enabled():
+            from apps.administracion.views.rbac_role_permission_views import (
+                RbacRolePermissionAssignView,
+            )
+
+            return RbacRolePermissionAssignView().post(request)
+
         user, auth_error = _authorize(
             request,
             "admin:gestion:roles:update",
@@ -1176,6 +1187,13 @@ class RevokeRolePermissionView(APIView):
 
     @transaction.atomic
     def delete(self, request, role_id, permission_id):
+        if _is_rbac_role_permission_s3_enabled():
+            from apps.administracion.views.rbac_role_permission_views import (
+                RbacRolePermissionRevokeView,
+            )
+
+            return RbacRolePermissionRevokeView().delete(request, role_id, permission_id)
+
         user, auth_error = _authorize(
             request,
             "admin:gestion:roles:update",
