@@ -13,6 +13,13 @@
 - Se mantiene compatibilidad de contrato HTTP y auditoría, sin cambios de schema/migraciones.
 - Se registra bloqueo operativo de validación Docker por error de daemon local (`dockerDesktopLinuxEngine`), con plan de validación en CI/entorno sano.
 
+## 2026-03-27 (KAN-58A S2 mutaciones de roles)
+
+- Se implementa extracción S2 para `POST /roles`, `PUT /roles/{id}` y `DELETE /roles/{id}` con policy/repository/use_cases/views dedicados.
+- Se agrega feature flag `RBAC_ROLE_MUTATION_S2_ENABLED` para delegación híbrida y rollback inmediato.
+- Se agrega evidencia `kan-58a-s2-apply-evidence.md` con trazabilidad TDD Red->Green->Refactor y validación Docker-first.
+- Se actualiza discoverability en `docs/README.md` y `docs/domains/auth-access/README.md`.
+
 ## 2026-03-26 (cierre formal documental validado con cliente)
 
 - Se agrega `cierre-formal-mvp-fase2.md` como documento canonico para alcance final MVP/Fase 2, reglas operativas, acciones sensibles, break-glass, trazabilidad, KPIs y DoR para implementacion.

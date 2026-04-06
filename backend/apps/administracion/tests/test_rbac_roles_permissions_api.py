@@ -338,6 +338,55 @@ class RbacRolesPermissionsApiTests(APITestCase):
         )
         self.assertEqual(event.meta.get("source"), "legacy")
 
+    @override_settings(RBAC_ROLE_MUTATION_S2_ENABLED=True)
+    def test_create_role_records_s2_source_when_mutation_flag_enabled(self):
+        response = self.client.post(
+            "/api/v1/roles",
+            {
+                "name": "SUPERVISOR_S2_CREATE",
+                "description": "Rol supervisor S2",
+                "landingRoute": "/supervisor-s2",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_ROLE_CREATE").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.meta.get("source"), "s2")
+
+    @override_settings(RBAC_ROLE_MUTATION_S2_ENABLED=True)
+    def test_update_role_records_s2_source_when_mutation_flag_enabled(self):
+        response = self.client.put(
+            f"/api/v1/roles/{self.target_role.id_rol}",
+            {
+                "description": "Descripcion S2",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_ROLE_UPDATE").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.meta.get("source"), "s2")
+
+    @override_settings(RBAC_ROLE_MUTATION_S2_ENABLED=True)
+    def test_delete_role_records_s2_source_when_mutation_flag_enabled(self):
+        response = self.client.delete(
+            f"/api/v1/roles/{self.target_role.id_rol}",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(accion="RBAC_ROLE_DELETE").latest(
+            "id_evento"
+        )
+        self.assertEqual(event.meta.get("source"), "s2")
+
     def test_assign_role_permissions_accepts_legacy_payload_keys(self):
         response = self.client.post(
             "/api/v1/permissions/assign",

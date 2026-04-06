@@ -3,7 +3,10 @@ import logging
 import zlib
 from io import BytesIO
 
-from PIL import Image
+try:
+    from PIL import Image
+except ModuleNotFoundError:  # pragma: no cover - depends on image build
+    Image = None
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +16,10 @@ def optimizar_imagen(imagen_blob: bytes) -> str | None:
     Descomprime (zlib), optimiza como JPEG y retorna string base64.
     Equivale a optimizar_imagen() del módulo Flask original.
     """
+    if Image is None:
+        logger.warning("Pillow no esta disponible; se omite optimizacion de imagen")
+        return None
+
     try:
         image = Image.open(BytesIO(zlib.decompress(imagen_blob)))
         if image.mode == 'RGBA':

@@ -288,3 +288,9 @@ RBAC_READ_S1_ENABLED = config(
     default=False,
     cast=bool,
 )
+
+RBAC_ROLE_MUTATION_S2_ENABLED = config(
+    "RBAC_ROLE_MUTATION_S2_ENABLED",
+    default=False,
+    cast=bool,
+)

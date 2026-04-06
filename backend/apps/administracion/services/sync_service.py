@@ -7,6 +7,8 @@ y fechas de actualización entre la BD origen (Oracle) y la BD destino (PostgreS
 Equivalente al ``actualizar_tabla`` del módulo Flask original.
 """
 
+from __future__ import annotations
+
 import gc
 import logging
 import time
@@ -14,11 +16,20 @@ import zlib
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-import oracledb
+try:
+    import oracledb
+except ModuleNotFoundError:  # pragma: no cover - depends on image build
+    oracledb = None
 from django.conf import settings
 from django.db import connections
 
 logger = logging.getLogger(__name__)
+
+
+def _require_oracledb() -> Any:
+    if oracledb is None:
+        raise RuntimeError("oracledb no esta disponible en la imagen del backend")
+    return oracledb
 
 
 # ──────────────────────────────────────────────────────────────
@@ -31,13 +42,14 @@ def _dividir_lista(lista: list, tamano: int):
         yield lista[i:i + tamano]
 
 
-def _procesar_blob(fila: tuple, indices_blob: list[int]) -> tuple:
+def _procesar_blob(fila: tuple[Any, ...], indices_blob: list[int]) -> tuple[Any, ...]:
     """Comprime con zlib los campos LOB de una fila de Oracle."""
-    fila = list(fila)
+    db_driver = _require_oracledb()
+    fila_editable: list[Any] = list(fila)
     for i in indices_blob:
-        if isinstance(fila[i], oracledb.LOB):
-            fila[i] = zlib.compress(fila[i].read())
-    return tuple(fila)
+        if isinstance(fila_editable[i], db_driver.LOB):
+            fila_editable[i] = zlib.compress(fila_editable[i].read())
+    return tuple(fila_editable)
 
 
 def _fetch_llaves_oracle(cursor, pk_str: str, tabla: str, no_exp: str,
@@ -104,14 +116,15 @@ def _fetch_fechas_postgres(cursor, pk_str: str, fec_act: str, tabla: str,
 # Conexión Oracle
 # ──────────────────────────────────────────────────────────────
 
-def obtener_conexion_oracle() -> oracledb.Connection:
+def obtener_conexion_oracle() -> Any:
+    db_driver = _require_oracledb()
     cfg = settings.ORACLE_CONFIG
     try:
-        oracledb.init_oracle_client(lib_dir=cfg.get('instant_client_dir', r'C:\oracle\instantclient_11_2'))
-    except oracledb.ProgrammingError:
+        db_driver.init_oracle_client(lib_dir=cfg.get('instant_client_dir', r'C:\oracle\instantclient_11_2'))
+    except db_driver.ProgrammingError:
         pass  # Ya fue inicializado anteriormente, ignorar
-    dsn = oracledb.makedsn(cfg['host'], cfg['port'], service_name=cfg['service_name'])
-    return oracledb.connect(user=cfg['user'], password=cfg['password'], dsn=dsn)
+    dsn = db_driver.makedsn(cfg['host'], cfg['port'], service_name=cfg['service_name'])
+    return db_driver.connect(user=cfg['user'], password=cfg['password'], dsn=dsn)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -122,7 +135,7 @@ BATCH_SIZE = 155
 
 
 def sincronizar_tabla(
-    oracle_conn: oracledb.Connection,
+    oracle_conn: Any,
     tabla: str,
     llaves_primarias: list[str],
     fec_actualizacion: str,

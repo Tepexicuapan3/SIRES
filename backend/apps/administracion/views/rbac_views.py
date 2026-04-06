@@ -61,6 +61,10 @@ def _is_rbac_read_s1_enabled():
     return getattr(settings, "RBAC_READ_S1_ENABLED", False)
 
 
+def _is_rbac_role_mutation_s2_enabled():
+    return getattr(settings, "RBAC_ROLE_MUTATION_S2_ENABLED", False)
+
+
 def _to_utc_iso(value):
     if not value:
         return None
@@ -723,6 +727,13 @@ class RolesListCreateView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        if _is_rbac_role_mutation_s2_enabled():
+            from apps.administracion.views.rbac_role_mutation_views import (
+                RbacRoleMutationCreateView,
+            )
+
+            return RbacRoleMutationCreateView().post(request)
+
         user, auth_error = _authorize(
             request,
             "admin:gestion:roles:create",
@@ -854,6 +865,13 @@ class RoleDetailView(APIView):
 
     @transaction.atomic
     def put(self, request, role_id):
+        if _is_rbac_role_mutation_s2_enabled():
+            from apps.administracion.views.rbac_role_mutation_views import (
+                RbacRoleMutationUpdateView,
+            )
+
+            return RbacRoleMutationUpdateView().put(request, role_id)
+
         user, auth_error = _authorize(
             request,
             "admin:gestion:roles:update",
@@ -955,6 +973,13 @@ class RoleDetailView(APIView):
 
     @transaction.atomic
     def delete(self, request, role_id):
+        if _is_rbac_role_mutation_s2_enabled():
+            from apps.administracion.views.rbac_role_mutation_views import (
+                RbacRoleMutationDeleteView,
+            )
+
+            return RbacRoleMutationDeleteView().delete(request, role_id)
+
         user, auth_error = _authorize(
             request,
             "admin:gestion:roles:delete",
