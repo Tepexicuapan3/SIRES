@@ -611,6 +611,111 @@ class RbacUsersApiTests(APITestCase):
         primary_roles = [role for role in response.data["roles"] if role["isPrimary"]]
         self.assertEqual(len(primary_roles), 1)
 
+    def test_assign_roles_is_idempotent_on_replay(self):
+        first_response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/roles",
+            {"roleIds": [self.role_recepcion.id_rol]},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+        second_response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/roles",
+            {"roleIds": [self.role_recepcion.id_rol]},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            RelUsuarioRol.objects.filter(
+                id_usuario=self.target_user,
+                id_rol=self.role_recepcion,
+                fch_baja__isnull=True,
+            ).count(),
+            1,
+        )
+
+    def test_assign_roles_deduplicates_role_ids_in_single_request(self):
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/roles",
+            {"roleIds": [self.role_recepcion.id_rol, self.role_recepcion.id_rol]},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            RelUsuarioRol.objects.filter(
+                id_usuario=self.target_user,
+                id_rol=self.role_recepcion,
+                fch_baja__isnull=True,
+            ).count(),
+            1,
+        )
+
+    def test_set_primary_role_is_idempotent_on_replay(self):
+        RelUsuarioRol.objects.create(
+            id_usuario=self.target_user,
+            id_rol=self.role_recepcion,
+            is_primary=False,
+            usr_asignacion=self.admin,
+        )
+
+        first_response = self.client.put(
+            f"/api/v1/users/{self.target_user.id_usuario}/roles/primary",
+            {"roleId": self.role_recepcion.id_rol},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+        second_response = self.client.put(
+            f"/api/v1/users/{self.target_user.id_usuario}/roles/primary",
+            {"roleId": self.role_recepcion.id_rol},
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        primary_relations = RelUsuarioRol.objects.filter(
+            id_usuario=self.target_user,
+            fch_baja__isnull=True,
+            is_primary=True,
+        )
+        self.assertEqual(primary_relations.count(), 1)
+        self.assertEqual(primary_relations.first().id_rol_id, self.role_recepcion.id_rol)
+
+    def test_override_upsert_is_idempotent_on_replay(self):
+        first_response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+        second_response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/overrides",
+            {
+                "permissionCode": self.override_permission.codigo,
+                "effect": "ALLOW",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            RelUsuarioOverride.objects.filter(
+                id_usuario=self.target_user,
+                id_permiso=self.override_permission,
+                fch_baja__isnull=True,
+            ).count(),
+            1,
+        )
+
     def test_revoke_last_role_returns_error(self):
         response = self.client.delete(
             f"/api/v1/users/{self.target_user.id_usuario}/roles/{self.role_medico.id_rol}",

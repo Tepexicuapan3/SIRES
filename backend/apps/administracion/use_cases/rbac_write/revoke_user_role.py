@@ -10,7 +10,7 @@ from .exceptions import RbacWriteError
 class RevokeUserRoleUseCase:
     @staticmethod
     def execute(*, actor, user_id, role_id, serialize_user_roles):
-        user = SyUsuario.objects.filter(id_usuario=user_id).first()
+        user = SyUsuario.objects.select_for_update().filter(id_usuario=user_id).first()
         if not user:
             raise RbacWriteError(
                 code="USER_NOT_FOUND",
@@ -19,14 +19,18 @@ class RevokeUserRoleUseCase:
                 resource_id=user_id,
             )
 
-        relation = (
-            RelUsuarioRol.objects.select_related("id_rol")
+        active_relations = list(
+            RelUsuarioRol.objects.select_for_update()
+            .select_related("id_rol")
             .filter(
                 id_usuario=user,
-                id_rol_id=role_id,
                 fch_baja__isnull=True,
             )
-            .first()
+            .order_by("id_usuario_rol")
+        )
+        relation = next(
+            (item for item in active_relations if item.id_rol_id == role_id),
+            None,
         )
         if not relation:
             raise RbacWriteError(
@@ -37,11 +41,7 @@ class RevokeUserRoleUseCase:
                 target_user=user,
             )
 
-        active_count = RelUsuarioRol.objects.filter(
-            id_usuario=user,
-            fch_baja__isnull=True,
-        ).count()
-        if active_count <= 1:
+        if len(active_relations) <= 1:
             raise RbacWriteError(
                 code="CANNOT_REMOVE_LAST_ROLE",
                 message="El usuario debe conservar al menos un rol",
@@ -58,10 +58,13 @@ class RevokeUserRoleUseCase:
         relation.save(update_fields=["fch_baja", "usr_baja", "is_primary"])
 
         if was_primary:
-            replacement = (
-                RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True)
-                .order_by("id_usuario_rol")
-                .first()
+            replacement = next(
+                (
+                    item
+                    for item in active_relations
+                    if item.id_usuario_rol != relation.id_usuario_rol
+                ),
+                None,
             )
             if replacement:
                 replacement.is_primary = True

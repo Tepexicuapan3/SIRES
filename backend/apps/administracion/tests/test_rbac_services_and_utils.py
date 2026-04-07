@@ -2,6 +2,7 @@ from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.db import IntegrityError
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
@@ -28,8 +29,17 @@ from apps.administracion.services.rbac_feature_flags import (
 )
 from apps.administracion.use_cases.roles.create_role import CreateRoleUseCase
 from apps.administracion.use_cases.users.assign_roles import AssignRolesUseCase
+from apps.administracion.use_cases.rbac_write.assign_user_roles import (
+    AssignUserRolesUseCase,
+)
+from apps.administracion.use_cases.rbac_write.revoke_user_role import (
+    RevokeUserRoleUseCase,
+)
 from apps.administracion.use_cases.rbac_write.set_user_primary_role import (
     SetUserPrimaryRoleUseCase,
+)
+from apps.administracion.use_cases.rbac_write.upsert_user_override import (
+    UpsertUserOverrideUseCase,
 )
 from apps.administracion.use_cases.rbac_read.get_role_detail import GetRoleDetailUseCase
 from apps.administracion.use_cases.rbac_read.list_permissions import (
@@ -324,6 +334,184 @@ class SetUserPrimaryRoleUseCaseTests(TestCase):
         )
         self.assertEqual(primary_relations.count(), 1)
         self.assertEqual(primary_relations.first().id_rol_id, self.role_secondary.id_rol)
+
+
+class RbacWriteConcurrencyHardeningUseCaseTests(TestCase):
+    def setUp(self):
+        self.actor = SyUsuario.objects.create(
+            usuario="concurrency_actor",
+            correo="concurrency.actor@example.com",
+            clave_hash="hash",
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        self.target_user = SyUsuario.objects.create(
+            usuario="concurrency_target",
+            correo="concurrency.target@example.com",
+            clave_hash="hash",
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        self.role_a = Roles.objects.create(
+            rol="CONCURRENCY_ROLE_A",
+            desc_rol="Role A",
+            landing_route="/role-a",
+            is_active=True,
+        )
+        self.role_b = Roles.objects.create(
+            rol="CONCURRENCY_ROLE_B",
+            desc_rol="Role B",
+            landing_route="/role-b",
+            is_active=True,
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=self.target_user,
+            id_rol=self.role_a,
+            is_primary=True,
+            usr_asignacion=self.actor,
+        )
+        self.override_permission = Permisos.objects.create(
+            codigo="concurrency:override:read",
+            descripcion="Concurrency override",
+            is_active=True,
+        )
+
+    @patch(
+        "apps.administracion.use_cases.rbac_write.assign_user_roles.touch_user_auth_revision"
+    )
+    def test_assign_user_roles_recovers_from_integrity_error(self, touch_revision_mock):
+        original_create = RelUsuarioRol.objects.create
+
+        def create_side_effect(*args, **kwargs):
+            original_create(
+                id_usuario=self.target_user,
+                id_rol=self.role_b,
+                is_primary=False,
+                usr_asignacion=self.actor,
+            )
+            raise IntegrityError("duplicate key value violates unique constraint")
+
+        with patch(
+            "apps.administracion.use_cases.rbac_write.assign_user_roles.RelUsuarioRol.objects.create",
+            side_effect=create_side_effect,
+        ):
+            result = AssignUserRolesUseCase.execute(
+                actor=self.actor,
+                user_id=self.target_user.id_usuario,
+                role_ids=[self.role_b.id_rol],
+                serialize_user_roles=lambda user: [
+                    {
+                        "id": relation.id_rol_id,
+                        "isPrimary": relation.is_primary,
+                    }
+                    for relation in RelUsuarioRol.objects.filter(
+                        id_usuario=user, fch_baja__isnull=True
+                    ).order_by("id_usuario_rol")
+                ],
+            )
+
+        self.assertEqual(result["target_user"].id_usuario, self.target_user.id_usuario)
+        self.assertEqual(
+            RelUsuarioRol.objects.filter(
+                id_usuario=self.target_user,
+                id_rol=self.role_b,
+                fch_baja__isnull=True,
+            ).count(),
+            1,
+        )
+        touch_revision_mock.assert_not_called()
+
+    def test_set_user_primary_role_uses_select_for_update(self):
+        with patch(
+            "apps.administracion.use_cases.rbac_write.set_user_primary_role.RelUsuarioRol.objects.select_for_update",
+            wraps=RelUsuarioRol.objects.select_for_update,
+        ) as lock_mock:
+            SetUserPrimaryRoleUseCase.execute(
+                actor=self.actor,
+                user_id=self.target_user.id_usuario,
+                role_id=self.role_a.id_rol,
+                serialize_user_roles=lambda _user: [],
+            )
+
+        self.assertTrue(lock_mock.called)
+
+    def test_revoke_user_role_uses_select_for_update(self):
+        RelUsuarioRol.objects.create(
+            id_usuario=self.target_user,
+            id_rol=self.role_b,
+            is_primary=False,
+            usr_asignacion=self.actor,
+        )
+        with patch(
+            "apps.administracion.use_cases.rbac_write.revoke_user_role.RelUsuarioRol.objects.select_for_update",
+            wraps=RelUsuarioRol.objects.select_for_update,
+        ) as lock_mock:
+            RevokeUserRoleUseCase.execute(
+                actor=self.actor,
+                user_id=self.target_user.id_usuario,
+                role_id=self.role_a.id_rol,
+                serialize_user_roles=lambda _user: [],
+            )
+
+        self.assertTrue(lock_mock.called)
+
+    @patch(
+        "apps.administracion.use_cases.rbac_write.upsert_user_override.touch_user_auth_revision"
+    )
+    @patch(
+        "apps.administracion.use_cases.rbac_write.upsert_user_override.UserRepository.build_auth_user"
+    )
+    def test_upsert_user_override_recovers_from_integrity_error(
+        self,
+        build_auth_user_mock,
+        touch_revision_mock,
+    ):
+        build_auth_user_mock.return_value = {"permissions": ["*"]}
+
+        original_create = RelUsuarioOverride.objects.create
+
+        def create_side_effect(*args, **kwargs):
+            original_create(
+                id_usuario=self.target_user,
+                id_permiso=self.override_permission,
+                efecto="ALLOW",
+                usr_asignacion=self.actor,
+            )
+            raise IntegrityError("duplicate key value violates unique constraint")
+
+        with patch(
+            "apps.administracion.use_cases.rbac_write.upsert_user_override.RelUsuarioOverride.objects.create",
+            side_effect=create_side_effect,
+        ):
+            result = UpsertUserOverrideUseCase.execute(
+                actor=self.actor,
+                user_id=self.target_user.id_usuario,
+                permission_code=self.override_permission.codigo,
+                effect="DENY",
+                expires_at_raw=None,
+                parse_expires_at=lambda value: value,
+                serialize_user_overrides=lambda user: [
+                    {
+                        "id": override.id_override,
+                        "effect": override.efecto,
+                    }
+                    for override in RelUsuarioOverride.objects.filter(
+                        id_usuario=user,
+                        fch_baja__isnull=True,
+                    ).order_by("id_override")
+                ],
+            )
+
+        self.assertEqual(result["target_user"].id_usuario, self.target_user.id_usuario)
+        override = RelUsuarioOverride.objects.get(
+            id_usuario=self.target_user,
+            id_permiso=self.override_permission,
+        )
+        self.assertEqual(override.efecto, "DENY")
+        self.assertIsNone(override.fch_baja)
+        touch_revision_mock.assert_called_once()
 
 
 class CreateRoleUseCaseAndSerializerTests(TestCase):

@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from rest_framework import status
 
 from apps.administracion.models import RelUsuarioOverride
@@ -22,7 +23,7 @@ class UpsertUserOverrideUseCase:
         parse_expires_at,
         serialize_user_overrides,
     ):
-        user = SyUsuario.objects.filter(id_usuario=user_id).first()
+        user = SyUsuario.objects.select_for_update().filter(id_usuario=user_id).first()
         if not user:
             raise RbacWriteError(
                 code="USER_NOT_FOUND",
@@ -80,33 +81,47 @@ class UpsertUserOverrideUseCase:
         before = serialize_user_overrides(user)
         has_override_changes = False
 
-        override = RelUsuarioOverride.objects.filter(
+        override = RelUsuarioOverride.objects.select_for_update().filter(
             id_usuario=user,
             id_permiso=permission,
         ).first()
-        if override:
+
+        def _apply_override_state(current_override):
+            nonlocal has_override_changes
             has_override_changes = (
-                override.efecto != effect
-                or override.fch_expira != expires_at
-                or override.fch_baja is not None
-                or override.usr_baja_id is not None
+                current_override.efecto != effect
+                or current_override.fch_expira != expires_at
+                or current_override.fch_baja is not None
+                or current_override.usr_baja_id is not None
             )
-            override.efecto = effect
-            override.fch_expira = expires_at
-            override.fch_baja = None
-            override.usr_baja = None
-            if not override.usr_asignacion_id:
-                override.usr_asignacion = actor
-            override.save()
+            current_override.efecto = effect
+            current_override.fch_expira = expires_at
+            current_override.fch_baja = None
+            current_override.usr_baja = None
+            if not current_override.usr_asignacion_id:
+                current_override.usr_asignacion = actor
+            current_override.save()
+
+        if override:
+            _apply_override_state(override)
         else:
-            RelUsuarioOverride.objects.create(
-                id_usuario=user,
-                id_permiso=permission,
-                efecto=effect,
-                fch_expira=expires_at,
-                usr_asignacion=actor,
-            )
-            has_override_changes = True
+            try:
+                RelUsuarioOverride.objects.create(
+                    id_usuario=user,
+                    id_permiso=permission,
+                    efecto=effect,
+                    fch_expira=expires_at,
+                    usr_asignacion=actor,
+                )
+                has_override_changes = True
+            except IntegrityError:
+                override = RelUsuarioOverride.objects.select_for_update().filter(
+                    id_usuario=user,
+                    id_permiso=permission,
+                ).first()
+                if not override:
+                    raise
+                _apply_override_state(override)
 
         if has_override_changes:
             touch_user_auth_revision(user, actor_id=actor.id_usuario)

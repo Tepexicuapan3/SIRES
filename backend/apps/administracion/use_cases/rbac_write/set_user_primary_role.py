@@ -8,7 +8,7 @@ from .exceptions import RbacWriteError
 class SetUserPrimaryRoleUseCase:
     @staticmethod
     def execute(*, actor, user_id, role_id, serialize_user_roles):
-        user = SyUsuario.objects.filter(id_usuario=user_id).first()
+        user = SyUsuario.objects.select_for_update().filter(id_usuario=user_id).first()
         if not user:
             raise RbacWriteError(
                 code="USER_NOT_FOUND",
@@ -27,11 +27,18 @@ class SetUserPrimaryRoleUseCase:
                 target_user=user,
             )
 
-        relation = RelUsuarioRol.objects.filter(
-            id_usuario=user,
-            id_rol_id=role_id,
-            fch_baja__isnull=True,
-        ).first()
+        active_relations = list(
+            RelUsuarioRol.objects.select_for_update()
+            .filter(
+                id_usuario=user,
+                fch_baja__isnull=True,
+            )
+            .order_by("id_usuario_rol")
+        )
+        relation = next(
+            (item for item in active_relations if item.id_rol_id == role_id),
+            None,
+        )
         if not relation:
             raise RbacWriteError(
                 code="ROLE_NOT_FOUND",
@@ -42,15 +49,19 @@ class SetUserPrimaryRoleUseCase:
             )
 
         before = serialize_user_roles(user)
+        has_changes = False
 
-        RelUsuarioRol.objects.filter(id_usuario=user, fch_baja__isnull=True).update(
-            is_primary=False
-        )
-        relation.is_primary = True
-        relation.save(update_fields=["is_primary"])
+        for item in active_relations:
+            should_be_primary = item.id_usuario_rol == relation.id_usuario_rol
+            if item.is_primary == should_be_primary:
+                continue
+            item.is_primary = should_be_primary
+            item.save(update_fields=["is_primary"])
+            has_changes = True
 
-        touch_user_auth_revision(user, actor_id=actor.id_usuario)
-        user.refresh_from_db(fields=["fch_modf", "usr_modf"])
+        if has_changes:
+            touch_user_auth_revision(user, actor_id=actor.id_usuario)
+            user.refresh_from_db(fields=["fch_modf", "usr_modf"])
 
         payload = {"userId": user.id_usuario, "roles": serialize_user_roles(user)}
         return {
