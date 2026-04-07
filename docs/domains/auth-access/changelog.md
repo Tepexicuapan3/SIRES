@@ -1,5 +1,16 @@
 # auth-access - Changelog
 
+## 2026-04-07 (KAN-67 cutover incremental + retiro controlado legacy)
+
+- Se retira lógica legacy inline del segmento S3 en `rbac_views.py` para `POST /permissions/assign` y `DELETE /permissions/roles/{roleId}/permissions/{permissionId}`.
+- Se mantiene fallback controlado por `RBAC_ROLE_PERMISSION_S3_ENABLED` delegando a:
+  - `rbac_role_permission_views.py` (source `s3`)
+  - `rbac_role_permission_legacy_views.py` (source `legacy`)
+- Se agrega cobertura de no-regresión para source de auditoría con flag deshabilitada:
+  - `test_assign_role_permissions_records_legacy_source_when_flag_disabled`
+  - `test_revoke_permission_records_legacy_source_when_flag_disabled`
+- Se agrega `kan-67-cutover-legacy-retirement.md` y se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
+
 ## 2026-04-07 (KAN-62 hardening switch operativo read-only RBAC)
 
 - Se agrega `kan-62-read-source-switch-hardening.md` con contrato operativo del nuevo switch `RBAC_READ_SLICE_SOURCE` (`legacy|s1|auto`).

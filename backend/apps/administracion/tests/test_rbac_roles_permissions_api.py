@@ -421,6 +421,24 @@ class RbacRolesPermissionsApiTests(APITestCase):
         ).latest("id_evento")
         self.assertEqual(event.meta.get("source"), "s3")
 
+    @override_settings(RBAC_ROLE_PERMISSION_S3_ENABLED=False)
+    def test_assign_role_permissions_records_legacy_source_when_flag_disabled(self):
+        response = self.client.post(
+            "/api/v1/permissions/assign",
+            {
+                "roleId": self.target_role.id_rol,
+                "permissionIds": [self.perm_extra.id_permiso],
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(
+            accion="RBAC_ROLE_PERMISSIONS_ASSIGN"
+        ).latest("id_evento")
+        self.assertEqual(event.meta.get("source"), "legacy")
+
     @override_settings(RBAC_ROLE_PERMISSION_S3_ENABLED=True)
     def test_assign_role_permissions_returns_token_invalid_when_unauthenticated(self):
         self.client.cookies.clear()
@@ -802,6 +820,21 @@ class RbacRolesPermissionsApiTests(APITestCase):
             accion="RBAC_ROLE_PERMISSION_REVOKE"
         ).latest("id_evento")
         self.assertEqual(event.meta.get("source"), "s3")
+
+    @override_settings(RBAC_ROLE_PERMISSION_S3_ENABLED=False)
+    def test_revoke_permission_records_legacy_source_when_flag_disabled(self):
+        RelRolPermiso.objects.create(id_rol=self.target_role, id_permiso=self.perm_read)
+
+        response = self.client.delete(
+            f"/api/v1/permissions/roles/{self.target_role.id_rol}/permissions/{self.perm_read.id_permiso}",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditoriaEvento.objects.filter(
+            accion="RBAC_ROLE_PERMISSION_REVOKE"
+        ).latest("id_evento")
+        self.assertEqual(event.meta.get("source"), "legacy")
 
     def test_revoke_permission_role_not_found(self):
         response = self.client.delete(

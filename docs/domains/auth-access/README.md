@@ -33,6 +33,7 @@ Este dominio cubre:
 - [`kan-58a-s2-apply-evidence.md`](./kan-58a-s2-apply-evidence.md) - evidencia de implementacion KAN-58A S2 mutaciones de roles (scope freeze, TDD, validacion y riesgos).
 - [`kan-65-admin-capabilities-apply-evidence.md`](./kan-65-admin-capabilities-apply-evidence.md) - evidencia de implementacion KAN-65 (capability-first en admin users/roles, trazabilidad AC y cierre TDD por bloques A-D).
 - [`kan-65-pr-evidence-draft.md`](./kan-65-pr-evidence-draft.md) - borrador evidence-first de descripcion de PR para KAN-65 (sin abrir PR).
+- [`kan-67-cutover-legacy-retirement.md`](./kan-67-cutover-legacy-retirement.md) - evidencia de corte incremental KAN-67 sobre S3 para retiro controlado de lógica legacy inline en `rbac_views` con fallback por flag.
 - [`kan-69-observability-baseline.md`](./kan-69-observability-baseline.md) - baseline operativo de observabilidad auth-access (métricas, alertas mínimas y snapshot/tablero inicial).
 - [`pending-decisions.md`](./pending-decisions.md) - acta de cierre de decisiones historicamente pendientes (estado final resuelto).
 - [`backlog-mapping.md`](./backlog-mapping.md) - mapeo entre PRD y backlog de ejecucion (Jira/SDD).

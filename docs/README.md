@@ -40,6 +40,7 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 - `docs/domains/auth-access/kan-58a-s2-apply-evidence.md` - evidencia de apply KAN-58A (slice S2 mutaciones de roles), TDD Red/Green/Refactor y rollback por flag.
 - `docs/domains/auth-access/kan-65-admin-capabilities-apply-evidence.md` - evidencia de apply KAN-65 (capabilities admin users/roles, AC traceability y cierre documental).
 - `docs/domains/auth-access/kan-65-pr-evidence-draft.md` - borrador evidence-first de descripcion de PR para KAN-65.
+- `docs/domains/auth-access/kan-67-cutover-legacy-retirement.md` - evidencia KAN-67 para cutover incremental y retiro controlado de porciones legacy en `rbac_views` (S3) con rollback por flag.
 - `docs/domains/auth-access/kan-69-observability-baseline.md` - baseline operativo de observabilidad auth-access (métricas, alertas mínimas, tablero/snapshot inicial).
 - Nota de discoverability: los links legacy en `docs/guides/` para PRD de auth-access se mantienen como **deprecados** y redirigen a la ruta canonica del dominio.
 
