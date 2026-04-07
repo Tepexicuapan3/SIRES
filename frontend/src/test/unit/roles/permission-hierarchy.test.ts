@@ -3,7 +3,7 @@ import {
   buildPermissionHierarchy,
   comparePermissionCodesByHierarchy,
   parsePermissionCode,
-} from "@features/admin/modules/rbac/shared/utils/permission-hierarchy";
+} from "@/domains/auth-access/adapters/rbac/shared/permission-hierarchy";
 
 describe("permission-hierarchy utils", () => {
   it("parses full permission code hierarchy", () => {

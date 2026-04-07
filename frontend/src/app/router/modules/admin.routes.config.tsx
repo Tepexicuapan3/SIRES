@@ -1,7 +1,7 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@routes/guards/ProtectedRoute";
-import UsersPage from "@features/admin/modules/rbac/users/pages/UsersPage";
-import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
+import UsersPage from "@/domains/auth-access/pages/admin/users/UsersPage";
+import RolesPage from "@/domains/auth-access/pages/admin/roles/RolesPage";
 import AreasPage from "@features/admin/modules/catalogos/areas/pages/AreasPage";
 import CentrosAtencionPage from "@features/admin/modules/catalogos/centros-atencion/pages/CentrosAtencionPage";
 import CiesPage from "@features/admin/modules/catalogos/cies/pages/CiesPage";
@@ -49,7 +49,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "usuarios",
     element: (
-      <ProtectedRoute requiredPermission="admin:gestion:usuarios:read">
+      <ProtectedRoute requiredCapability="admin.users.read">
         <UsersPage />
       </ProtectedRoute>
     ),
@@ -57,7 +57,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "roles",
     element: (
-      <ProtectedRoute requiredPermission="admin:gestion:roles:read">
+      <ProtectedRoute requiredCapability="admin.roles.read">
         <RolesPage />
       </ProtectedRoute>
     ),

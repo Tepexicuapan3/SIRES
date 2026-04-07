@@ -3,12 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { render, screen, within } from "@/test/utils";
 import RecepcionAgendaPage from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useRecepcionAgendaQueue } from "@features/recepcion/modules/agenda/queries/useRecepcionAgendaQueue";
 import { useVisitStatusAction } from "@features/recepcion/modules/checkin/mutations/useVisitStatusAction";
 import type { VisitQueueItem } from "@api/types";
 
-vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
+vi.mock("@/domains/auth-access/hooks/usePermissionDependencies", () => ({
   usePermissionDependencies: vi.fn(),
 }));
 

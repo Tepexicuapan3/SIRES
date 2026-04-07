@@ -3,8 +3,8 @@ import { QueryClient } from "@tanstack/react-query";
 import {
   setAuthSession,
   clearAuthSession,
-} from "@/features/auth/utils/auth-cache";
-import { authKeys } from "@/features/auth/queries/auth.keys";
+} from "@/domains/auth-access/adapters/auth-cache";
+import { authKeys } from "@/domains/auth-access/state/auth.keys";
 import { createMockAuthUser } from "@/test/factories/users";
 
 describe("auth-cache", () => {

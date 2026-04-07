@@ -69,6 +69,15 @@ export interface AuthCapabilityState {
   missingAnyOf: string[];
 }
 
+export interface AuthCapabilitiesResponse {
+  permissions: string[];
+  effectivePermissions: string[];
+  capabilities: Record<string, AuthCapabilityState>;
+  permissionDependenciesVersion: string;
+  strictCapabilityPrefixes: string[];
+  authRevision: string;
+}
+
 // =============================================================================
 // REQUEST TYPES
 // =============================================================================
@@ -181,3 +190,9 @@ export type CompleteOnboardingResponse = LoginResponse;
  * Retorna el usuario autenticado actual.
  */
 export type MeResponse = AuthUser;
+
+/**
+ * Respuesta de GET /api/v1/auth/capabilities
+ * Retorna proyección de capacidades para decisiones UX de autorización.
+ */
+export type CapabilitiesResponse = AuthCapabilitiesResponse;

@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { render, screen, within } from "@/test/utils";
-import { RoleDetailsGeneralTab } from "@features/admin/modules/rbac/roles/components/RoleDetailsGeneralTab";
+import { RoleDetailsGeneralTab } from "@/domains/auth-access/components/admin/rbac/roles/RoleDetailsGeneralTab";
 import { createMockRoleDetail } from "@/test/factories/roles";
-import type { RoleDetailsFormValues } from "@features/admin/modules/rbac/roles/domain/roles.schemas";
+import type { RoleDetailsFormValues } from "@/domains/auth-access/types/rbac/roles.schemas";
 
 const renderGeneralTab = ({
   onStatusChange,

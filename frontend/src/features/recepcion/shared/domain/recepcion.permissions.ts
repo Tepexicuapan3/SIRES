@@ -1,4 +1,4 @@
-import type { PermissionRequirement } from "@features/auth/domain/permission-dependencies";
+import type { PermissionRequirement } from "@/domains/auth-access/types/permission-dependencies";
 
 export const RECEPCION_WRITE_PERMISSIONS = [
   "recepcion:fichas:medicina_general:create",

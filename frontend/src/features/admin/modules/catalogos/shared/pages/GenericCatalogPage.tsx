@@ -23,7 +23,7 @@ import { type CatalogDefinition } from "@features/admin/modules/catalogos/shared
 import { getCatalogErrorMessage } from "@features/admin/modules/catalogos/shared/utils/catalog-feedback";
 import { useCatalogList } from "@features/admin/modules/catalogos/shared/queries/useCatalogList";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import type { GenericCatalogListItem } from "@api/types/catalogos/generic-catalog.types";
 
 const CATALOG_STATUS_FILTER = {

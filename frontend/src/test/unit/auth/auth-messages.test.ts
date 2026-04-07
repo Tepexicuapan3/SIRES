@@ -5,7 +5,7 @@ import {
   loginErrorMessages,
   onboardingErrorMessages,
   recoveryErrorMessages,
-} from "@/features/auth/domain/auth.messages";
+} from "@/domains/auth-access/types/auth.messages";
 
 describe("auth messages", () => {
   it("maps login error codes to global messages", () => {

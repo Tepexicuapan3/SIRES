@@ -7,13 +7,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@shared/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@shared/ui/card";
-import { useAuthSession } from "@features/auth/queries/useAuthSession";
+import { Card, CardDescription, CardHeader, CardTitle } from "@shared/ui/card";
+import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 
 const HUB_ACTIONS = [
   {

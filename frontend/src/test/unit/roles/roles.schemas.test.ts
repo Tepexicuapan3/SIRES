@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createRoleSchema,
   roleDetailsSchema,
-} from "@features/admin/modules/rbac/roles/domain/roles.schemas";
+} from "@/domains/auth-access/types/rbac/roles.schemas";
 
 describe("roles.schemas", () => {
   it("validates required fields for create role", () => {

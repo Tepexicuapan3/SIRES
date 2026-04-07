@@ -224,6 +224,14 @@
       "sessions": 0,
       "memories": 1,
       "prompts": 0
+    },
+    {
+      "id": "db853caa",
+      "created_by": "luismorenotrejo",
+      "created_at": "2026-04-06T20:05:29Z",
+      "sessions": 5,
+      "memories": 53,
+      "prompts": 0
     }
   ]
 }

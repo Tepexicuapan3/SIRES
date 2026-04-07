@@ -5,7 +5,7 @@ import userEvent, {
 import { fireEvent, render, screen, waitFor, within } from "@/test/utils";
 import AreasPage from "@features/admin/modules/catalogos/areas/pages/AreasPage";
 import { toast } from "sonner";
-import { usePermissions } from "@features/auth/queries/usePermissions";
+import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
 import { useAreasList } from "@features/admin/modules/catalogos/areas/queries/useAreasList";
 import { useUpdateArea } from "@features/admin/modules/catalogos/areas/mutations/useUpdateArea";
 import { useDeleteArea } from "@features/admin/modules/catalogos/areas/mutations/useDeleteArea";
@@ -38,7 +38,7 @@ vi.mock(
   }),
 );
 
-vi.mock("@features/auth/queries/usePermissions", () => ({
+vi.mock("@/domains/auth-access/hooks/usePermissions", () => ({
   usePermissions: vi.fn(),
 }));
 

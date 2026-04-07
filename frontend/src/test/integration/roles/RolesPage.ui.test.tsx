@@ -3,12 +3,13 @@ import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event";
 import { fireEvent, render, screen, waitFor, within } from "@/test/utils";
-import RolesPage from "@features/admin/modules/rbac/roles/pages/RolesPage";
+import RolesPage from "@/domains/auth-access/pages/admin/roles/RolesPage";
 import { createMockRoleListItem } from "@/test/factories/roles";
 import { toast } from "sonner";
-import { usePermissions } from "@features/auth/queries/usePermissions";
-import { useRolesList } from "@features/admin/modules/rbac/roles/queries/useRolesList";
-import { useDeleteRole } from "@features/admin/modules/rbac/roles/mutations/useDeleteRole";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
+import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
+import { useRolesList } from "@/domains/auth-access/hooks/rbac/roles/useRolesList";
+import { useDeleteRole } from "@/domains/auth-access/hooks/rbac/roles/useDeleteRole";
 import { ApiError } from "@api/utils/errors";
 
 const roleDetailsDialogPropsSpy = vi.fn();
@@ -25,7 +26,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock(
-  "@features/admin/modules/rbac/roles/components/RoleDetailsDialog",
+  "@/domains/auth-access/components/admin/rbac/roles/RoleDetailsDialog",
   () => ({
     RoleDetailsDialog: ({
       open,
@@ -41,28 +42,38 @@ vi.mock(
 );
 
 vi.mock(
-  "@features/admin/modules/rbac/roles/components/RoleCreateDialog",
+  "@/domains/auth-access/components/admin/rbac/roles/RoleCreateDialog",
   () => ({
     RoleCreateDialog: ({ open }: { open: boolean }) =>
       open ? <div>Crear rol abierto</div> : null,
   }),
 );
 
-vi.mock("@features/auth/queries/usePermissions", () => ({
-  usePermissions: vi.fn(),
+vi.mock("@/domains/auth-access/hooks/usePermissionDependencies", () => ({
+  usePermissionDependencies: vi.fn(),
 }));
 
-vi.mock("@features/admin/modules/rbac/roles/queries/useRolesList", () => ({
+vi.mock("@/domains/auth-access/hooks/useAuthCapabilities", () => ({
+  useAuthCapabilities: vi.fn(),
+}));
+
+vi.mock("@/domains/auth-access/hooks/rbac/roles/useRolesList", () => ({
   useRolesList: vi.fn(),
 }));
 
-vi.mock("@features/admin/modules/rbac/roles/mutations/useDeleteRole", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/roles/useDeleteRole", () => ({
   useDeleteRole: vi.fn(),
 }));
 
 describe("RolesPage UI", () => {
   const refetch = vi.fn();
+  const refetchCapabilities = vi.fn();
   const deleteMutate = vi.fn();
+  const defaultPermissionDeps = {
+    hasCapability: () => true,
+    hasPermission: () => true,
+    hasEffectivePermission: () => true,
+  } as ReturnType<typeof usePermissionDependencies>;
 
   beforeEach(() => {
     const customRole = createMockRoleListItem({
@@ -97,13 +108,13 @@ describe("RolesPage UI", () => {
       refetch,
     }));
 
-    vi.mocked(usePermissions).mockReturnValue({
-      permissions: ["*"],
-      hasPermission: () => true,
-      hasAnyPermission: () => true,
-      hasAllPermissions: () => true,
-      isAdmin: () => true,
-    });
+    vi.mocked(usePermissionDependencies).mockReturnValue(defaultPermissionDeps);
+
+    vi.mocked(useAuthCapabilities).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      refetch: refetchCapabilities,
+    } as ReturnType<typeof useAuthCapabilities>);
 
     vi.mocked(useDeleteRole).mockReturnValue({
       mutateAsync: deleteMutate,
@@ -174,6 +185,7 @@ describe("RolesPage UI", () => {
     await waitFor(() => {
       expect(vi.mocked(useRolesList)).toHaveBeenLastCalledWith(
         expect.objectContaining({ isSystem: true }),
+        expect.any(Object),
       );
     });
   });
@@ -187,6 +199,7 @@ describe("RolesPage UI", () => {
     await waitFor(() => {
       expect(vi.mocked(useRolesList)).toHaveBeenLastCalledWith(
         expect.objectContaining({ search: "aud" }),
+        expect.any(Object),
       );
     });
   });
@@ -251,15 +264,12 @@ describe("RolesPage UI", () => {
   it("passes permissions catalog access flag to details dialog", async () => {
     const user = userEvent.setup();
 
-    vi.mocked(usePermissions).mockReturnValue({
-      permissions: ["admin:gestion:roles:read", "admin:gestion:roles:update"],
-      hasPermission: (permission) =>
-        permission === "admin:gestion:roles:read" ||
-        permission === "admin:gestion:roles:update",
-      hasAnyPermission: () => true,
-      hasAllPermissions: () => false,
-      isAdmin: () => false,
-    });
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      ...defaultPermissionDeps,
+      hasCapability: (capabilityKey) =>
+        capabilityKey === "admin.roles.read" ||
+        capabilityKey === "admin.roles.update",
+    } as ReturnType<typeof usePermissionDependencies>);
 
     render(<RolesPage />);
 
@@ -270,6 +280,59 @@ describe("RolesPage UI", () => {
         open: true,
         canReadPermissionsCatalog: false,
       }),
+    );
+  });
+
+  it("disables roles query when read capability is denied", () => {
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      ...defaultPermissionDeps,
+      hasCapability: () => false,
+      hasPermission: () => false,
+      hasEffectivePermission: () => false,
+    } as ReturnType<typeof usePermissionDependencies>);
+
+    render(<RolesPage />);
+
+    expect(vi.mocked(useRolesList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
+  });
+
+  it("keeps privileged role actions disabled while capabilities are loading", () => {
+    vi.mocked(useAuthCapabilities).mockReturnValue({
+      isLoading: true,
+      isError: false,
+      refetch: refetchCapabilities,
+    } as ReturnType<typeof useAuthCapabilities>);
+
+    render(<RolesPage />);
+
+    expect(screen.queryByRole("button", { name: "Nuevo" })).toBeNull();
+    expect(vi.mocked(useRolesList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
+  });
+
+  it("shows degraded-safe message and fail-closed behavior on capabilities error", () => {
+    vi.mocked(useAuthCapabilities).mockReturnValue({
+      isLoading: false,
+      isError: true,
+      refetch: refetchCapabilities,
+    } as ReturnType<typeof useAuthCapabilities>);
+
+    render(<RolesPage />);
+
+    expect(screen.getByText("No se pudo validar permisos")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Se deshabilitaron acciones de roles de forma segura. Reintenta para refrescar capacidades.",
+      ),
+    ).toBeVisible();
+    expect(vi.mocked(useRolesList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
     );
   });
 });

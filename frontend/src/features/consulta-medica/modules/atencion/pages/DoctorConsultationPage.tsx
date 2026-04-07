@@ -24,7 +24,7 @@ import {
   type VisitStatus,
 } from "@api/types";
 import { useDebounce } from "@shared/hooks/useDebounce";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import {
   canCloseConsultation,
   canStartConsultation,

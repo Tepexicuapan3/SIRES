@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { Button } from "@shared/ui/button";
-import { PermissionGate } from "@shared/components/PermissionGate";
+import { PermissionGate } from "@/domains/auth-access/components/shared/PermissionGate";
 import { cn } from "@shared/utils/styling/cn";
 
 export interface TablePrimaryActionProps {

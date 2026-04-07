@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createUserSchema,
   userDetailsSchema,
-} from "@features/admin/modules/rbac/users/domain/users.schemas";
+} from "@/domains/auth-access/types/rbac/users.schemas";
 
 describe("users.schemas", () => {
   it("validates required fields for create user", () => {

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
-import { UserCreateDialog } from "@features/admin/modules/rbac/users/components/UserCreateDialog";
-import { useCreateUser } from "@features/admin/modules/rbac/users/mutations/useCreateUser";
+import { UserCreateDialog } from "@/domains/auth-access/components/admin/rbac/users/UserCreateDialog";
+import { useCreateUser } from "@/domains/auth-access/hooks/rbac/users/useCreateUser";
 import { toast } from "sonner";
 import type { CentroAtencionListItem, RoleListItem } from "@api/types";
 
@@ -13,7 +13,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@features/admin/modules/rbac/users/mutations/useCreateUser", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/users/useCreateUser", () => ({
   useCreateUser: vi.fn(),
 }));
 

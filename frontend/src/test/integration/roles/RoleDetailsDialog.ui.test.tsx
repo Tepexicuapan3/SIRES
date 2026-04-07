@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor, within } from "@/test/utils";
-import { RoleDetailsDialog } from "@features/admin/modules/rbac/roles/components/RoleDetailsDialog";
+import { RoleDetailsDialog } from "@/domains/auth-access/components/admin/rbac/roles/RoleDetailsDialog";
 import {
   createMockRoleDetail,
   createMockRoleListItem,
   createMockRolePermission,
 } from "@/test/factories/roles";
-import { useRoleDetail } from "@features/admin/modules/rbac/roles/queries/useRoleDetail";
-import { usePermissionsCatalog } from "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog";
-import { useAssignRolePermissions } from "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions";
-import { useUpdateRole } from "@features/admin/modules/rbac/roles/mutations/useUpdateRole";
+import { useRoleDetail } from "@/domains/auth-access/hooks/rbac/roles/useRoleDetail";
+import { usePermissionsCatalog } from "@/domains/auth-access/hooks/rbac/permissions/usePermissionsCatalog";
+import { useAssignRolePermissions } from "@/domains/auth-access/hooks/rbac/roles/useAssignRolePermissions";
+import { useUpdateRole } from "@/domains/auth-access/hooks/rbac/roles/useUpdateRole";
 import { toast } from "sonner";
 
 vi.mock("sonner", () => ({
@@ -20,23 +20,23 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@features/admin/modules/rbac/roles/queries/useRoleDetail", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/roles/useRoleDetail", () => ({
   useRoleDetail: vi.fn(),
 }));
 
 vi.mock(
-  "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog",
+  "@/domains/auth-access/hooks/rbac/permissions/usePermissionsCatalog",
   () => ({
     usePermissionsCatalog: vi.fn(),
   }),
 );
 
-vi.mock("@features/admin/modules/rbac/roles/mutations/useUpdateRole", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/roles/useUpdateRole", () => ({
   useUpdateRole: vi.fn(),
 }));
 
 vi.mock(
-  "@features/admin/modules/rbac/roles/mutations/useAssignRolePermissions",
+  "@/domains/auth-access/hooks/rbac/roles/useAssignRolePermissions",
   () => ({
     useAssignRolePermissions: vi.fn(),
   }),

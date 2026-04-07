@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import type { ReactNode } from "react";
-import { useAuthSession } from "@features/auth/queries/useAuthSession";
+import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { LoadingSpinner } from "@shared/components/LoadingSpinner";
 
 interface GuestRouteProps {

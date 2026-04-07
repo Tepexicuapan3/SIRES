@@ -13,7 +13,7 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
-import { useLogout } from "@features/auth/mutations/useLogout";
+import { useLogout } from "@/domains/auth-access/hooks/useLogout";
 import { toast } from "sonner";
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/badge";
@@ -85,9 +85,9 @@ import {
   TooltipTrigger,
 } from "@shared/ui/tooltip";
 import { OtpInput } from "@shared/ui/OtpInput";
-import { usePermissions } from "@features/auth/queries/usePermissions";
-import { PermissionGate } from "@shared/components/PermissionGate";
-import { useAuthSession } from "@features/auth/queries/useAuthSession";
+import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
+import { PermissionGate } from "@/domains/auth-access/components/shared/PermissionGate";
+import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 
 export const DashboardPage = () => {
   const { logoutWithToast, isPending } = useLogout();

@@ -29,7 +29,7 @@ import { AreaCreateDialog } from "@features/admin/modules/catalogos/areas/compon
 import { AreaDetailsDialog } from "@features/admin/modules/catalogos/areas/components/AreaDetailsDialog";
 import { getAreaErrorMessage } from "@features/admin/modules/catalogos/areas/utils/areas.feedback";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import type { AreaListItem } from "@api/types";
 
 const AREA_STATUS_FILTER = {

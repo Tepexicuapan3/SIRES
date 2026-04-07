@@ -24,7 +24,7 @@ import {
   type VisitStatus,
 } from "@api/types";
 import { ApiError } from "@api/utils/errors";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useVisitStatusAction } from "@features/recepcion/modules/checkin/mutations/useVisitStatusAction";
 import { useRecepcionAgendaQueue } from "@features/recepcion/modules/agenda/queries/useRecepcionAgendaQueue";
 import { RecepcionQuickCheckinDialog } from "@features/recepcion/modules/agenda/components/RecepcionQuickCheckinDialog";

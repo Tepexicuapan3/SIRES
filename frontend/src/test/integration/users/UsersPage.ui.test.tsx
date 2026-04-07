@@ -3,15 +3,16 @@ import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event";
 import { fireEvent, render, screen, waitFor, within } from "@/test/utils";
-import UsersPage from "@features/admin/modules/rbac/users/pages/UsersPage";
+import UsersPage from "@/domains/auth-access/pages/admin/users/UsersPage";
 import { createMockUser } from "@/test/factories/users";
 import { toast } from "sonner";
-import { usePermissions } from "@features/auth/queries/usePermissions";
-import { useUsersList } from "@features/admin/modules/rbac/users/queries/useUsersList";
-import { useRolesList } from "@features/admin/modules/rbac/roles/queries/useRolesList";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
+import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
+import { useUsersList } from "@/domains/auth-access/hooks/rbac/users/useUsersList";
+import { useRolesList } from "@/domains/auth-access/hooks/rbac/roles/useRolesList";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
-import { useActivateUser } from "@features/admin/modules/rbac/users/mutations/useActivateUser";
-import { useDeactivateUser } from "@features/admin/modules/rbac/users/mutations/useDeactivateUser";
+import { useActivateUser } from "@/domains/auth-access/hooks/rbac/users/useActivateUser";
+import { useDeactivateUser } from "@/domains/auth-access/hooks/rbac/users/useDeactivateUser";
 import type { CentroAtencionListItem, RoleListItem } from "@api/types";
 import { ApiError } from "@api/utils/errors";
 
@@ -29,7 +30,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock(
-  "@features/admin/modules/rbac/users/components/UserDetailsDialog",
+  "@/domains/auth-access/components/admin/rbac/users/UserDetailsDialog",
   () => ({
     UserDetailsDialog: ({
       open,
@@ -54,22 +55,26 @@ vi.mock(
 );
 
 vi.mock(
-  "@features/admin/modules/rbac/users/components/UserCreateDialog",
+  "@/domains/auth-access/components/admin/rbac/users/UserCreateDialog",
   () => ({
     UserCreateDialog: ({ open }: { open: boolean }) =>
       open ? <div>Crear abierto</div> : null,
   }),
 );
 
-vi.mock("@features/auth/queries/usePermissions", () => ({
-  usePermissions: vi.fn(),
+vi.mock("@/domains/auth-access/hooks/usePermissionDependencies", () => ({
+  usePermissionDependencies: vi.fn(),
 }));
 
-vi.mock("@features/admin/modules/rbac/users/queries/useUsersList", () => ({
+vi.mock("@/domains/auth-access/hooks/useAuthCapabilities", () => ({
+  useAuthCapabilities: vi.fn(),
+}));
+
+vi.mock("@/domains/auth-access/hooks/rbac/users/useUsersList", () => ({
   useUsersList: vi.fn(),
 }));
 
-vi.mock("@features/admin/modules/rbac/roles/queries/useRolesList", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/roles/useRolesList", () => ({
   useRolesList: vi.fn(),
 }));
 
@@ -80,12 +85,12 @@ vi.mock(
   }),
 );
 
-vi.mock("@features/admin/modules/rbac/users/mutations/useActivateUser", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/users/useActivateUser", () => ({
   useActivateUser: vi.fn(),
 }));
 
 vi.mock(
-  "@features/admin/modules/rbac/users/mutations/useDeactivateUser",
+  "@/domains/auth-access/hooks/rbac/users/useDeactivateUser",
   () => ({
     useDeactivateUser: vi.fn(),
   }),
@@ -118,8 +123,14 @@ const createClinicOption = (
 
 describe("UsersPage UI", () => {
   const refetch = vi.fn();
+  const refetchCapabilities = vi.fn();
   const activateMutate = vi.fn();
   const deactivateMutate = vi.fn();
+  const defaultPermissionDeps = {
+    hasCapability: () => true,
+    hasPermission: () => true,
+    hasEffectivePermission: () => true,
+  } as ReturnType<typeof usePermissionDependencies>;
 
   beforeEach(() => {
     const activeUser = createMockUser({
@@ -154,6 +165,7 @@ describe("UsersPage UI", () => {
       },
       isLoading: false,
       error: null,
+      isFetching: false,
       refetch,
     }));
 
@@ -172,13 +184,13 @@ describe("UsersPage UI", () => {
       },
     } as ReturnType<typeof useCentrosAtencionList>);
 
-    vi.mocked(usePermissions).mockReturnValue({
-      permissions: ["*"],
-      hasPermission: () => true,
-      hasAnyPermission: () => true,
-      hasAllPermissions: () => true,
-      isAdmin: () => true,
-    });
+    vi.mocked(usePermissionDependencies).mockReturnValue(defaultPermissionDeps);
+
+    vi.mocked(useAuthCapabilities).mockReturnValue({
+      isLoading: false,
+      isError: false,
+      refetch: refetchCapabilities,
+    } as ReturnType<typeof useAuthCapabilities>);
 
     vi.mocked(useActivateUser).mockReturnValue({
       mutateAsync: activateMutate,
@@ -251,6 +263,7 @@ describe("UsersPage UI", () => {
     await waitFor(() => {
       expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
         expect.objectContaining({ status: "inactive" }),
+        expect.any(Object),
       );
     });
   });
@@ -265,6 +278,7 @@ describe("UsersPage UI", () => {
     await waitFor(() => {
       expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
         expect.objectContaining({ status: "pending" }),
+        expect.any(Object),
       );
     });
   });
@@ -278,6 +292,7 @@ describe("UsersPage UI", () => {
     await waitFor(() => {
       expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
         expect.objectContaining({ search: "juan" }),
+        expect.any(Object),
       );
     });
   });
@@ -332,13 +347,9 @@ describe("UsersPage UI", () => {
   it("opens details in read-only when update permission is missing", async () => {
     const user = userEvent.setup();
 
-    vi.mocked(usePermissions).mockReturnValue({
-      permissions: ["admin:gestion:usuarios:read"],
-      hasPermission: (permission) =>
-        permission === "admin:gestion:usuarios:read",
-      hasAnyPermission: () => true,
-      hasAllPermissions: () => false,
-      isAdmin: () => false,
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      ...defaultPermissionDeps,
+      hasCapability: (capabilityKey) => capabilityKey === "admin.users.read",
     });
 
     render(<UsersPage />);
@@ -353,27 +364,21 @@ describe("UsersPage UI", () => {
   it("passes catalog access flags and enforces update dependencies", async () => {
     const user = userEvent.setup();
 
-    vi.mocked(usePermissions).mockReturnValue({
-      permissions: [
-        "admin:gestion:usuarios:read",
-        "admin:gestion:usuarios:update",
-      ],
-      hasPermission: (permission) =>
-        permission === "admin:gestion:usuarios:read" ||
-        permission === "admin:gestion:usuarios:update",
-      hasAnyPermission: () => true,
-      hasAllPermissions: () => false,
-      isAdmin: () => false,
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      ...defaultPermissionDeps,
+      hasCapability: (capabilityKey) =>
+        capabilityKey === "admin.users.read" ||
+        capabilityKey === "admin.users.update",
     });
 
     render(<UsersPage />);
 
     await user.click(screen.getByText("Juan Perez"));
 
-    expect(userDetailsDialogPropsSpy).toHaveBeenCalledWith(
+    expect(userDetailsDialogPropsSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
         open: true,
-        canEdit: false,
+        canEdit: true,
         canReadRolesCatalog: false,
         canReadPermissionsCatalog: false,
       }),
@@ -382,5 +387,68 @@ describe("UsersPage UI", () => {
     await user.click(screen.getByRole("button", { name: "Filtros" }));
     const filtersMenu = screen.getByRole("menu");
     expect(within(filtersMenu).queryByText("Rol")).toBeNull();
+  });
+
+  it("disables users and catalog queries when read capability is denied", () => {
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      ...defaultPermissionDeps,
+      hasCapability: () => false,
+      hasPermission: () => false,
+      hasEffectivePermission: () => false,
+    });
+
+    render(<UsersPage />);
+
+    expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
+
+    expect(vi.mocked(useRolesList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
+
+    expect(vi.mocked(useCentrosAtencionList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
+  });
+
+  it("keeps privileged actions disabled while capabilities are loading", () => {
+    vi.mocked(useAuthCapabilities).mockReturnValue({
+      isLoading: true,
+      isError: false,
+      refetch: refetchCapabilities,
+    } as ReturnType<typeof useAuthCapabilities>);
+
+    render(<UsersPage />);
+
+    expect(screen.queryByRole("button", { name: "Nuevo" })).toBeNull();
+    expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
+  });
+
+  it("shows degraded-safe message and avoids privileged fetches on capabilities error", () => {
+    vi.mocked(useAuthCapabilities).mockReturnValue({
+      isLoading: false,
+      isError: true,
+      refetch: refetchCapabilities,
+    } as ReturnType<typeof useAuthCapabilities>);
+
+    render(<UsersPage />);
+
+    expect(screen.getByText("No se pudo validar permisos")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Se deshabilitaron acciones de usuarios de forma segura. Reintenta para refrescar capacidades.",
+      ),
+    ).toBeVisible();
+    expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ enabled: false }),
+    );
   });
 });

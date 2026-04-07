@@ -3,7 +3,7 @@ import {
   evaluatePermissionDependencies,
   evaluatePermissionRequirement,
   getPermissionDependencyClosure,
-} from "@/features/auth/domain/permission-dependencies";
+} from "@/domains/auth-access/types/permission-dependencies";
 
 describe("permission dependencies", () => {
   it("resolves explicit and inferred dependencies for users update", () => {

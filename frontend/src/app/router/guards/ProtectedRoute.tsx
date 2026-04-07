@@ -1,8 +1,9 @@
 import { Navigate, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
-import { useAuthSession } from "@features/auth/queries/useAuthSession";
-import { usePermissions } from "@features/auth/queries/usePermissions";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
+import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
+import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { LoadingSpinner } from "@shared/components/LoadingSpinner";
 
 interface ProtectedRouteProps {
@@ -31,13 +32,20 @@ export const ProtectedRoute = ({
   dependencyAware = false,
 }: ProtectedRouteProps) => {
   const { data: sessionUser, isLoading } = useAuthSession();
+  const isAuthenticated = Boolean(sessionUser);
+  const shouldResolveCapabilities =
+    Boolean(requiredCapability) && !isLoading && isAuthenticated;
+  const {
+    hasCapability: hasCapabilityFromProjection,
+    isLoading: isCapabilitiesLoading,
+    isError: isCapabilitiesError,
+  } = useAuthCapabilities({ enabled: shouldResolveCapabilities });
   const { hasPermission, hasAllPermissions, hasAnyPermission } =
     usePermissions();
-  const { hasCapability, hasEffectivePermission, hasEffectiveRequirement } =
+  const { hasEffectivePermission, hasEffectiveRequirement } =
     usePermissionDependencies();
   const location = useLocation();
   // La sesion cacheada es la unica fuente de verdad.
-  const isAuthenticated = Boolean(sessionUser);
   const requiresOnboarding = Boolean(
     sessionUser?.requiresOnboarding ?? sessionUser?.mustChangePassword,
   );
@@ -49,6 +57,10 @@ export const ProtectedRoute = ({
   // Si no está autenticado, redirigir a login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requiredCapability && isCapabilitiesLoading) {
+    return <LoadingSpinner fullScreen />;
   }
 
   // LÓGICA DE ONBOARDING
@@ -64,7 +76,11 @@ export const ProtectedRoute = ({
 
   const hasAccess = (() => {
     if (requiredCapability) {
-      return hasCapability(requiredCapability);
+      if (isCapabilitiesError) {
+        return false;
+      }
+
+      return hasCapabilityFromProjection(requiredCapability);
     }
 
     if (requiredPermission) {

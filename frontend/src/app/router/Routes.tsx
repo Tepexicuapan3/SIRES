@@ -8,12 +8,12 @@ import { SuspenseWrapper } from "@shared/components/SuspenseWrapper";
 
 // Core auth
 const LoginPage = lazy(() =>
-  import("@features/auth/pages/LoginPage").then((m) => ({
+  import("@/domains/auth-access/pages/LoginPage").then((m) => ({
     default: m.LoginPage,
   })),
 );
 const OnboardingPage = lazy(() =>
-  import("@/features/auth/pages/OnboardingPage").then((m) => ({
+  import("@/domains/auth-access/pages/OnboardingPage").then((m) => ({
     default: m.OnboardingPage,
   })),
 );

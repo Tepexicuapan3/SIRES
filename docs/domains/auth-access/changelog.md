@@ -1,5 +1,83 @@
 # auth-access - Changelog
 
+## 2026-04-06 (migración estructural frontend domain-first auth-access - Lote 5 cleanup reintento validado)
+
+- Se reejecuta barrido repo-wide de consumidores para paths legacy:
+  - `@/features/auth/**`
+  - `@/features/admin/modules/rbac/**`
+  - resultado: **0 consumidores runtime/test** (solo referencias documentales históricas).
+- Se verifica que `frontend/src/features/auth/**` y `frontend/src/features/admin/modules/rbac/**` no conservan wrappers activos.
+- Se confirma canon de consumo en `frontend/src/domains/auth-access/**` para auth + RBAC.
+- Validación Docker-first focalizada ejecutada:
+  - `docker compose exec frontend bun run test:run src/test/unit/auth/useAuthCapabilities.test.tsx src/test/unit/router/ProtectedRoute.capabilities.test.tsx src/test/unit/auth/auth-mutations-sync.test.tsx src/test/integration/users/UsersPage.ui.test.tsx src/test/integration/roles/RolesPage.ui.test.tsx`
+  - resultado: `5 files passed`, `42 tests passed`.
+
+## 2026-04-06 (migración estructural frontend domain-first auth-access - Lote 5 cleanup final)
+
+- Se ejecuta barrido repo-wide de consumidores legacy de wrappers en frontend.
+- Se migran consumidores restantes de `@features/auth/**` y `@/features/auth/**` hacia imports domain-first `@/domains/auth-access/**` en runtime y tests impactados.
+- Se eliminan wrappers `@deprecated` sin consumidores en:
+  - `frontend/src/features/auth/**`
+  - `frontend/src/features/admin/modules/rbac/**`
+- Estado final explícito: **no quedan wrappers legacy activos** para auth/rbac en `frontend/src/features/**`; la implementación/canon queda en `frontend/src/domains/auth-access/**`.
+- Se actualiza documentación de migración/changelog y referencias API para reflejar retiro de wrappers.
+
+## 2026-04-06 (migración estructural frontend domain-first auth-access - Lote 4 RBAC restante)
+
+- Se migra RBAC restante movible de `frontend/src/features/admin/modules/rbac/**` hacia `frontend/src/domains/auth-access/**`:
+  - `components/admin/rbac/{users,roles,shared}`
+  - `hooks/rbac/{users,roles,permissions}` (queries/mutations/keys)
+  - `adapters/rbac/{users,roles,shared}`
+  - `types/rbac/{users.schemas,roles.schemas}`
+- Se actualizan consumidores (rutas, páginas domain-first y tests unit/integration RBAC) para usar imports `@/domains/auth-access/**`.
+- Se mantienen wrappers `@deprecated` en `frontend/src/features/admin/modules/rbac/**` únicamente como compatibilidad transicional.
+- Estado remanente explícito: no queda implementación RBAC activa en `features/admin/modules/rbac/**`; queda deuda de retiro de wrappers cuando no existan consumidores legacy.
+
+## 2026-04-06 (migración estructural frontend domain-first auth-access - Lote 3)
+
+- Se migra remanente auth UI `ParticlesBackground` desde `frontend/src/features/auth/animations/ParticlesBackground.tsx` hacia `frontend/src/domains/auth-access/components/shared/ParticlesBackground.tsx`.
+- Se migra núcleo RBAC movible de KAN-65 a domain-first:
+  - `frontend/src/features/admin/modules/rbac/users/pages/UsersPage.tsx` -> `frontend/src/domains/auth-access/pages/admin/users/UsersPage.tsx`
+  - `frontend/src/features/admin/modules/rbac/roles/pages/RolesPage.tsx` -> `frontend/src/domains/auth-access/pages/admin/roles/RolesPage.tsx`
+- Se actualizan consumidores a path domain-first en rutas/tests:
+  - `frontend/src/app/router/modules/admin.routes.config.tsx`
+  - `frontend/src/test/integration/users/UsersPage.ui.test.tsx`
+  - `frontend/src/test/integration/roles/RolesPage.ui.test.tsx`
+  - tests auth UI mockean `ParticlesBackground` desde `domains/auth-access`.
+- Se mantienen wrappers `@deprecated` en paths legacy (`features/auth/animations` y `features/admin/modules/rbac/*/pages`) para compatibilidad incremental sin big-bang.
+
+## 2026-04-06 (migración estructural frontend domain-first auth UI - Lote 2)
+
+- Se migran páginas de auth UI a `frontend/src/domains/auth-access/pages`: `LoginPage.tsx`, `OnboardingPage.tsx`.
+- Se migran componentes de auth UI a `frontend/src/domains/auth-access/components`:
+  - `login/LoginForm.tsx`
+  - `recovery/RequestCodeForm.tsx`, `recovery/VerifyOtpForm.tsx`
+  - `onboarding/TermsStep.tsx`
+  - `shared/AuthCard.tsx`, `shared/SessionObserver.tsx`
+  - `shared/password/AuthPasswordForm.tsx`, `shared/password/PasswordRequirements.tsx`
+- Se actualizan rutas e imports consumidores a path domain-first (`Routes.tsx`, `RootLayout.tsx`, tests de integración auth).
+- Se mantienen wrappers `@deprecated` en `frontend/src/features/auth/pages/*` y `frontend/src/features/auth/components/**/*` para compatibilidad incremental.
+- Remanente explícito post-Lote 2: `frontend/src/features/auth/animations/ParticlesBackground.tsx`.
+
+## 2026-04-06 (migración estructural frontend domain-first auth-access)
+
+- Se migra núcleo frontend de `auth-access` a `frontend/src/domains/auth-access` con estructura target por capa:
+  - `hooks/`: `useAuthSession`, `usePermissions`, `usePermissionDependencies`, `useAuthCapabilities`, `useLogin`, `useLogout`, `useRefreshSession`, `hooks/rbac/users/useUsersList`.
+  - `adapters/`: `auth-cache`, `auth-session-sync`, `auth-query-invalidation`, `session-events`, `rbac/capabilities-gating`.
+  - `types/`: `auth.messages`, `auth.rules`, `auth.schemas`, `permission-dependencies`.
+  - `state/`: `auth.keys`.
+- Se actualizan imports críticos (guardas, interceptor API, páginas RBAC users/roles y tests focalizados auth/admin) para consumir rutas domain-first.
+- Se reintroducen wrappers temporales `@deprecated` en `frontend/src/features/auth/**` y `frontend/src/features/admin/modules/rbac/**` para compatibilidad incremental sin big-bang.
+- Se actualiza estado de migración de Auth & Access a `hybrid` en `docs/guides/incremental-domain-migration.md`.
+
+## 2026-04-06 (KAN-65 Block E cierre documental + evidencia PR)
+
+- Se agrega `kan-65-admin-capabilities-apply-evidence.md` con cierre de evidencia TDD-first por bloques A-D (RED/GREEN/REFACTOR), trazabilidad de AC `KAN-65-AC1..AC5`, riesgos y rollback.
+- Se agrega `kan-65-pr-evidence-draft.md` con borrador evidence-first listo para descripción de PR (sin abrir PR en esta fase).
+- Se actualiza `permissions-source-of-truth.md` con delta KAN-65 para dejar explícito el boundary: `/auth/capabilities` como source of truth UX admin y `/auth/me` para sesión/identidad.
+- Se actualiza `docs/api/modules/auth.md` para reflejar uso operativo KAN-65 y fail-closed en estado error/degraded de capacidades.
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
+
 ## 2026-03-30 (KAN-61 cierre de feedback bloqueante PR #51)
 
 - Se actualiza `kan-61-rbac-critical-use-cases-apply-evidence.md` con evidencia TDD verificable **RED -> GREEN -> REFACTOR** para riesgo `P1`, incluyendo comandos exactos, resultados y run refs locales trazables.

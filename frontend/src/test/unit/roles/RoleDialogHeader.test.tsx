@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@/test/utils";
-import { RoleDialogHeader } from "@features/admin/modules/rbac/roles/components/RoleDialogHeader";
+import { RoleDialogHeader } from "@/domains/auth-access/components/admin/rbac/roles/RoleDialogHeader";
 
 describe("RoleDialogHeader", () => {
   it("renders title and subtitle", () => {

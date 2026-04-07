@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@/test/utils";
-import { UserDialogHeader } from "@features/admin/modules/rbac/users/components/UserDialogHeader";
+import { UserDialogHeader } from "@/domains/auth-access/components/admin/rbac/users/UserDialogHeader";
 
 describe("UserDialogHeader", () => {
   it("renders initials when no avatar is provided", () => {

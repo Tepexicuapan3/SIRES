@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { render, screen } from "@/test/utils";
-import { UserDetailsGeneralTab } from "@features/admin/modules/rbac/users/components/UserDetailsGeneralTab";
+import { UserDetailsGeneralTab } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsGeneralTab";
 import { createMockUserDetail } from "@/test/factories/users";
-import type { UserDetailsFormValues } from "@features/admin/modules/rbac/users/domain/users.schemas";
+import type { UserDetailsFormValues } from "@/domains/auth-access/types/rbac/users.schemas";
 import type { CentroAtencionListItem } from "@api/types";
 
 const createClinicOption = (

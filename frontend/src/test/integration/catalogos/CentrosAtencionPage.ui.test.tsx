@@ -5,7 +5,7 @@ import userEvent, {
 import { fireEvent, render, screen, waitFor, within } from "@/test/utils";
 import CentrosAtencionPage from "@features/admin/modules/catalogos/centros-atencion/pages/CentrosAtencionPage";
 import { toast } from "sonner";
-import { usePermissions } from "@features/auth/queries/usePermissions";
+import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useUpdateCentroAtencion } from "@features/admin/modules/catalogos/centros-atencion/mutations/useUpdateCentroAtencion";
 import { useDeleteCentroAtencion } from "@features/admin/modules/catalogos/centros-atencion/mutations/useDeleteCentroAtencion";
@@ -38,7 +38,7 @@ vi.mock(
   }),
 );
 
-vi.mock("@features/auth/queries/usePermissions", () => ({
+vi.mock("@/domains/auth-access/hooks/usePermissions", () => ({
   usePermissions: vi.fn(),
 }));
 

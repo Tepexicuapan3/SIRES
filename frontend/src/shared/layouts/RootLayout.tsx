@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
-import { SessionObserver } from "@/features/auth/components/shared/SessionObserver";
-import { useAuthSession } from "@/features/auth/queries/useAuthSession";
+import { SessionObserver } from "@/domains/auth-access/components/shared/SessionObserver";
+import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { NavigationProgressBar } from "@shared/components/NavigationProgressBar";
 
 /**

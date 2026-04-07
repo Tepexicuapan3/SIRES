@@ -79,7 +79,7 @@ Codigos observables en este slice para autorizacion:
 | AC KAN-49 | Evidencia |
 |---|---|
 | 1) Acciones protegidas autorizadas desde backend (sin logica dispersa) | `backend/apps/authentication/services/authorization_service.py`, `backend/apps/recepcion/uses_case/visit_queue_usecase.py` |
-| 2) Frontend consume contrato canonico | `frontend/src/features/auth/queries/usePermissionDependencies.ts` (sin fallback inseguro con proyeccion backend), `frontend/src/test/unit/auth/usePermissionDependencies.test.ts` |
+| 2) Frontend consume contrato canonico | `frontend/src/domains/auth-access/hooks/usePermissionDependencies.ts` (sin fallback inseguro con proyeccion backend), `frontend/src/test/unit/auth/usePermissionDependencies.test.ts` |
 | 3) Regla critica con punto unico de cambio + prueba | `backend/apps/authentication/tests/test_authorization_service.py::test_single_change_point_updates_runtime_behavior` |
 | 4) Continuidad runtime fuera de KAN-49 (KAN-57) | `backend/apps/somatometria/uses_case/capture_vitals_usecase.py`, `backend/apps/somatometria/tests/test_vitals_contract_api.py` |
 
@@ -111,3 +111,10 @@ Limites:
 
 - KAN-50 queda reservado para estrategia de datos RBAC (`managed=False`) en `rbac-db-ownership-migration-strategy.md`.
 - Este documento mantiene alcance runtime del slice KAN-49 y su continuidad en KAN-57.
+
+## 9) Delta aplicado en KAN-65 (frontend admin capability-first)
+
+- KAN-65 consolida el consumo frontend admin de `GET /api/v1/auth/capabilities` como source of truth UX para gating de rutas/acciones in-scope (`users/roles`).
+- `GET /api/v1/auth/me` se mantiene para identidad/sesión; no reemplaza la proyección de capacidades para decisiones UX de autorización en admin.
+- En estados `loading/error/degraded` de capacidades, el flujo admin in-scope aplica `deny by default` (fail-closed) para acciones privilegiadas.
+- La sincronía de cache `session + capabilities` (login/logout/refresh/auth-revision) reduce drift temporal entre identidad y autorización UX.

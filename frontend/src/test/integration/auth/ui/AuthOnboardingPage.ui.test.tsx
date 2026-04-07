@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
-import { OnboardingPage } from "@/features/auth/pages/OnboardingPage";
+import { OnboardingPage } from "@/domains/auth-access/pages/OnboardingPage";
 import { authAPI } from "@api/resources/auth.api";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-vi.mock("@/features/auth/mutations/useLogout", () => ({
+vi.mock("@/domains/auth-access/hooks/useLogout", () => ({
   useLogout: () => ({
     mutate: mockLogout,
     isPending: false,
@@ -47,7 +47,7 @@ vi.mock("@api/resources/auth.api", () => ({
   },
 }));
 
-vi.mock("@/features/auth/animations/ParticlesBackground", () => ({
+vi.mock("@/domains/auth-access/components/shared/ParticlesBackground", () => ({
   ParticlesBackground: () => null,
 }));
 

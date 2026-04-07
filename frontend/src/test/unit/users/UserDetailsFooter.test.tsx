@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen } from "@/test/utils";
-import { UserDetailsFooter } from "@features/admin/modules/rbac/users/components/UserDetailsFooter";
+import { UserDetailsFooter } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsFooter";
 
 describe("UserDetailsFooter", () => {
   it("shows clean state when there are no changes", () => {

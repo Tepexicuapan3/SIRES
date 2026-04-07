@@ -12,6 +12,11 @@ Guia corta para ubicarse en `frontend/src/` y evitar romper estandares de arquit
 - `app/router/`: enrutado y guards de navegacion.
 - `test/`: utilidades y estrategia de tests frontend.
 
+### Estado auth-access (migración incremental)
+
+- `frontend/src/domains/auth-access` concentra `hooks`, `adapters`, `types`, `state`, `pages` + `components` de auth UI y RBAC (`admin/users`, `admin/roles`, shared/components/queries/mutations/domain/utils movibles).
+- Lote 5 cleanup final: se retiraron wrappers legacy de `frontend/src/features/auth/**` y `frontend/src/features/admin/modules/rbac/**`; auth/rbac frontend queda canonizado en `domains/auth-access`.
+
 ## Aliases canonicos (Fase 4)
 
 - Base: `@/*` -> `src/*`

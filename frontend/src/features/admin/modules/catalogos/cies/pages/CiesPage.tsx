@@ -8,7 +8,7 @@ import {
   type CiesPreviewResponse,
   type CiesUploadRow,
 } from "@api/resources/catalogos/cies.api";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useCiesConfirmImport } from "@features/admin/modules/catalogos/cies/mutations/useCiesConfirmImport";
 import { CatalogModuleLayout } from "@features/admin/modules/catalogos/shared/components/CatalogModuleLayout";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";

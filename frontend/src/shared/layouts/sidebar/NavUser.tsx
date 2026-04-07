@@ -41,9 +41,9 @@ import {
   SidebarMenuItem,
 } from "@shared/ui/sidebar";
 import { useSidebar } from "@shared/ui/sidebar-context";
-import { useAuthSession } from "@features/auth/queries/useAuthSession";
+import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { useThemeStore } from "@app/state/ui/themeStore";
-import { useLogout } from "@features/auth/mutations/useLogout";
+import { useLogout } from "@/domains/auth-access/hooks/useLogout";
 
 /**
  * Genera iniciales desde un nombre completo.

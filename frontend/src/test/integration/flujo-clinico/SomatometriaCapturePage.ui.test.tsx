@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import SomatometriaCapturePage from "@features/somatometria/modules/captura/pages/SomatometriaCapturePage";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import type { VisitQueueItem } from "@api/types";
 
 vi.mock("sonner", () => ({
@@ -30,7 +30,7 @@ vi.mock(
   }),
 );
 
-vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
+vi.mock("@/domains/auth-access/hooks/usePermissionDependencies", () => ({
   usePermissionDependencies: vi.fn(),
 }));
 

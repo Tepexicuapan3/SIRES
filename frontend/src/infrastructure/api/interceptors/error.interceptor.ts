@@ -28,9 +28,9 @@ import Cookies from "js-cookie";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { createRequestId } from "@api/utils/request-id";
 import { queryClient } from "@app/config/query-client";
-import { clearAuthSession } from "@features/auth/utils/auth-cache";
-import { syncAuthSessionRevision } from "@features/auth/utils/auth-session-sync";
-import { emitSessionExpired } from "@features/auth/utils/session-events";
+import { clearAuthSession } from "@/domains/auth-access/adapters/auth-cache";
+import { syncAuthSessionRevision } from "@/domains/auth-access/adapters/auth-session-sync";
+import { emitSessionExpired } from "@/domains/auth-access/adapters/session-events";
 import { env } from "@app/config/env";
 
 // Endpoints que NO deben intentar refresh (evita loops infinitos)
@@ -158,7 +158,7 @@ function handleSessionExpired(): void {
  * Transforma AxiosError en ApiError normalizado
  */
 function transformToApiError(error: AxiosError): ApiError {
-  const requestId = error.config?.headers?.["X-Request-ID"] as string;
+  const requestId = resolveRequestId(error);
 
   // Error de red (sin conexión, timeout, etc.)
   if (!error.response) {
@@ -189,8 +189,38 @@ function transformToApiError(error: AxiosError): ApiError {
   );
 }
 
+function resolveRequestId(error: AxiosError): string | undefined {
+  const requestHeaderId = error.config?.headers?.["X-Request-ID"] as
+    | string
+    | undefined;
+  if (requestHeaderId) {
+    return requestHeaderId;
+  }
+
+  const responseData = error.response?.data as
+    | { requestId?: unknown }
+    | undefined;
+  if (typeof responseData?.requestId === "string" && responseData.requestId) {
+    return responseData.requestId;
+  }
+
+  const responseHeaders = error.response?.headers as
+    | Record<string, unknown>
+    | undefined;
+
+  const responseHeaderId =
+    responseHeaders?.["x-request-id"] ?? responseHeaders?.["X-Request-ID"];
+
+  return typeof responseHeaderId === "string" && responseHeaderId
+    ? responseHeaderId
+    : undefined;
+}
+
 /**
  * Código de error por defecto según HTTP status
+ *
+ * IMPORTANTE: El backend siempre debe enviar `errorData.code` específico.
+ * Estos defaults son solo fallback cuando el backend no informa código.
  */
 function getDefaultErrorCode(status: number): string {
   switch (status) {
@@ -201,9 +231,9 @@ function getDefaultErrorCode(status: number): string {
     case 403:
       return ERROR_CODES.PERMISSION_DENIED;
     case 404:
-      return ERROR_CODES.USER_NOT_FOUND;
+      return ERROR_CODES.NOT_FOUND; // Generic fallback - backend debe especificar USER_NOT_FOUND/ROLE_NOT_FOUND/etc.
     case 409:
-      return ERROR_CODES.USER_EXISTS;
+      return ERROR_CODES.CONFLICT; // Generic fallback - backend debe especificar USER_EXISTS/ROLE_EXISTS/etc.
     case 423:
       return ERROR_CODES.ACCOUNT_LOCKED;
     case 429:

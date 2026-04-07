@@ -24,6 +24,7 @@ import type {
   VerifyTokenResponse,
   LogoutResponse,
   MeResponse,
+  CapabilitiesResponse,
 } from "@api/types";
 
 const authAPI = {
@@ -65,6 +66,18 @@ const authAPI = {
    */
   getCurrentUser: async (): Promise<MeResponse> => {
     const response = await apiClient.get<MeResponse>("/auth/me");
+    return response.data;
+  },
+
+  /**
+   * Obtener proyección de permisos/capabilities para UX de autorización.
+   *
+   * @endpoint GET /api/v1/auth/capabilities
+   * @permission Auth (Token válido)
+   */
+  getCapabilities: async (): Promise<CapabilitiesResponse> => {
+    const response =
+      await apiClient.get<CapabilitiesResponse>("/auth/capabilities");
     return response.data;
   },
 

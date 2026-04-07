@@ -4,7 +4,7 @@ import {
   loginSchema,
   requestResetCodeSchema,
   verifyResetCodeSchema,
-} from "@/features/auth/domain/auth.schemas";
+} from "@/domains/auth-access/types/auth.schemas";
 
 describe("auth schemas", () => {
   it("accepts valid login data", () => {

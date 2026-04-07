@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@shared/ui/dialog";
 import { NAV_CONFIG, type NavItem } from "@app/navigation/nav-config";
-import { usePermissions } from "@features/auth/queries/usePermissions";
+import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
 import { cn } from "@shared/utils/styling/cn";
 
 interface SearchItem {

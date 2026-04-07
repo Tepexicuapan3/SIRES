@@ -43,6 +43,8 @@ export const ERROR_CODES = {
   TERMS_NOT_ACCEPTED: "TERMS_NOT_ACCEPTED",
 
   // Lógica de negocio (4xx)
+  NOT_FOUND: "NOT_FOUND", // Generic 404 fallback
+  CONFLICT: "CONFLICT", // Generic 409 fallback
   USER_EXISTS: "USER_EXISTS",
   USER_NOT_FOUND: "USER_NOT_FOUND",
   ROLE_NOT_FOUND: "ROLE_NOT_FOUND",
@@ -88,6 +90,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.CODE_EXPIRED]: "El código ha expirado o fue invalidado",
   [ERROR_CODES.INVALID_CODE]: "Código incorrecto",
   [ERROR_CODES.TERMS_NOT_ACCEPTED]: "Debes aceptar los términos y condiciones",
+  [ERROR_CODES.NOT_FOUND]: "Recurso no encontrado", // Generic 404
+  [ERROR_CODES.CONFLICT]: "El recurso ya existe o hay conflicto", // Generic 409
   [ERROR_CODES.USER_EXISTS]: "Ya existe un usuario con estos datos",
   [ERROR_CODES.USER_NOT_FOUND]: "Usuario no encontrado",
   [ERROR_CODES.ROLE_NOT_FOUND]: "Rol no encontrado",

@@ -23,7 +23,7 @@ import {
   type CaptureVitalsFormInput,
   type CaptureVitalsFormValues,
 } from "@features/somatometria/modules/captura/domain/capture-vitals.schemas";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
 

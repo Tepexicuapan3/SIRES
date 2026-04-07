@@ -6,7 +6,7 @@ import {
   getPasswordRequirementStatus,
   isPasswordStrong,
   obfuscateEmail,
-} from "@/features/auth/domain/auth.rules";
+} from "@/domains/auth-access/types/auth.rules";
 
 describe("auth rules", () => {
   it("exposes OTP constants used by UI", () => {

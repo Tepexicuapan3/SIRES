@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
-import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { LoginPage } from "@/domains/auth-access/pages/LoginPage";
 import { authAPI } from "@api/resources/auth.api";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { toast } from "sonner";
@@ -35,7 +35,7 @@ vi.mock("@api/resources/auth.api", () => ({
   },
 }));
 
-vi.mock("@/features/auth/animations/ParticlesBackground", () => ({
+vi.mock("@/domains/auth-access/components/shared/ParticlesBackground", () => ({
   ParticlesBackground: () => null,
 }));
 

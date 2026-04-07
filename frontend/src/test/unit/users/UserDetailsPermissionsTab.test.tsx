@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { fireEvent, render, screen, within } from "@/test/utils";
-import { UserDetailsPermissionsTab } from "@features/admin/modules/rbac/users/components/UserDetailsPermissionsTab";
+import { UserDetailsPermissionsTab } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsPermissionsTab";
 import type { Permission, UserOverride } from "@api/types";
 
 const createPermission = (overrides: Partial<Permission> = {}): Permission => ({

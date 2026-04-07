@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { usePermissionDependencies } from "@/features/auth/queries/usePermissionDependencies";
-import { usePermissions } from "@/features/auth/queries/usePermissions";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
+import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
 
-vi.mock("@/features/auth/queries/usePermissions", () => ({
+vi.mock("@/domains/auth-access/hooks/usePermissions", () => ({
   usePermissions: vi.fn(),
 }));
 

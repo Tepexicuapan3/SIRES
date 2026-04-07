@@ -152,6 +152,11 @@ Nota: `TOKEN_EXPIRED`, `TOKEN_INVALID`, `SESSION_EXPIRED` y `PERMISSION_DENIED` 
 Endpoint dedicado para UI admin cuando solo necesita proyeccion de permisos/capabilities.
 Mantiene compatibilidad con `/auth/me`: los campos documentados abajo son un subconjunto del `AuthUser` vigente.
 
+Uso operativo vigente (KAN-65):
+- Frontend admin in-scope (`users/roles`) consume esta proyección como fuente principal para decisiones UX de autorización.
+- Ante `error/degraded` en esta proyección, el gating privilegiado en admin aplica fail-closed (`deny by default`).
+- `/auth/me` continúa siendo contrato de identidad/sesión y no reemplaza la lectura de capacidades para authz UX.
+
 **200 OK**
 ```json
 {

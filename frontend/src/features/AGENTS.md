@@ -63,7 +63,7 @@
 
 ## Permission Dependency Model
 
-- Permission dependencies live in `frontend/src/features/auth/domain/permission-dependencies.ts`.
+- Permission dependencies live in `frontend/src/domains/auth-access/types/permission-dependencies.ts`.
 - For write actions, use dependency-aware checks via `usePermissionDependencies()`.
 - If adding a permission, update dependency rules and tests in `frontend/src/test/unit/auth/permission-dependencies.test.ts`.
 - Use `dependencyAware` mode in `PermissionGate` or `ProtectedRoute` when UX requires full capability.

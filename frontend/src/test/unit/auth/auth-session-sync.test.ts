@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { authKeys } from "@/features/auth/queries/auth.keys";
+import { authKeys } from "@/domains/auth-access/state/auth.keys";
 import {
   resetAuthSessionSyncState,
   syncAuthSessionRevision,
-} from "@/features/auth/utils/auth-session-sync";
+} from "@/domains/auth-access/adapters/auth-session-sync";
 import { queryClient } from "@app/config/query-client";
 import { createMockAuthUser } from "@/test/factories/users";
 
@@ -36,6 +36,10 @@ describe("auth-session-sync", () => {
 
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({
       queryKey: authKeys.session(),
+      refetchType: "active",
+    });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      queryKey: authKeys.capabilities(),
       refetchType: "active",
     });
   });
@@ -93,6 +97,10 @@ describe("auth-session-sync", () => {
 
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({
       queryKey: authKeys.session(),
+      refetchType: "active",
+    });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      queryKey: authKeys.capabilities(),
       refetchType: "active",
     });
   });

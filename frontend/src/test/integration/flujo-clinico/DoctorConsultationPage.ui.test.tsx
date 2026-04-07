@@ -7,7 +7,7 @@ import { ApiError } from "@api/utils/errors";
 import { toast } from "sonner";
 import { TooltipProvider } from "@shared/ui/tooltip";
 import DoctorConsultationPage from "@features/consulta-medica/modules/atencion/pages/DoctorConsultationPage";
-import { usePermissionDependencies } from "@features/auth/queries/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useCloseVisit } from "@features/consulta-medica/modules/atencion/mutations/useCloseVisit";
 import { useSaveDiagnosis } from "@features/consulta-medica/modules/atencion/mutations/useSaveDiagnosis";
 import { useSavePrescriptions } from "@features/consulta-medica/modules/atencion/mutations/useSavePrescriptions";
@@ -58,7 +58,7 @@ vi.mock(
   }),
 );
 
-vi.mock("@features/auth/queries/usePermissionDependencies", () => ({
+vi.mock("@/domains/auth-access/hooks/usePermissionDependencies", () => ({
   usePermissionDependencies: vi.fn(),
 }));
 

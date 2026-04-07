@@ -444,5 +444,5 @@ Decision de contrato para no romper:
 - `frontend/src/api/resources/roles.api.ts`
 - `frontend/src/api/resources/permissions.api.ts`
 - `frontend/src/api/resources/users.api.ts`
-- `frontend/src/features/admin/modules/rbac/roles/utils/roles.feedback.ts`
-- `frontend/src/features/admin/modules/rbac/users/utils/users.feedback.ts`
+- `frontend/src/domains/auth-access/adapters/rbac/roles/roles.feedback.ts`
+- `frontend/src/domains/auth-access/adapters/rbac/users/users.feedback.ts`

@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
-import { UserDetailsDialog } from "@features/admin/modules/rbac/users/components/UserDetailsDialog";
+import { UserDetailsDialog } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsDialog";
 import {
   createMockUser,
   createMockUserDetail,
   createMockUserRole,
 } from "@/test/factories/users";
-import { useUserDetail } from "@features/admin/modules/rbac/users/queries/useUserDetail";
-import { usePermissionsCatalog } from "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog";
-import { useAddUserOverride } from "@features/admin/modules/rbac/users/mutations/useAddUserOverride";
-import { useAssignRoles } from "@features/admin/modules/rbac/users/mutations/useAssignRoles";
-import { useRemoveUserOverride } from "@features/admin/modules/rbac/users/mutations/useRemoveUserOverride";
-import { useRevokeUserRole } from "@features/admin/modules/rbac/users/mutations/useRevokeUserRole";
-import { useSetPrimaryRole } from "@features/admin/modules/rbac/users/mutations/useSetPrimaryRole";
-import { useUpdateUser } from "@features/admin/modules/rbac/users/mutations/useUpdateUser";
+import { useUserDetail } from "@/domains/auth-access/hooks/rbac/users/useUserDetail";
+import { usePermissionsCatalog } from "@/domains/auth-access/hooks/rbac/permissions/usePermissionsCatalog";
+import { useAddUserOverride } from "@/domains/auth-access/hooks/rbac/users/useAddUserOverride";
+import { useAssignRoles } from "@/domains/auth-access/hooks/rbac/users/useAssignRoles";
+import { useRemoveUserOverride } from "@/domains/auth-access/hooks/rbac/users/useRemoveUserOverride";
+import { useRevokeUserRole } from "@/domains/auth-access/hooks/rbac/users/useRevokeUserRole";
+import { useSetPrimaryRole } from "@/domains/auth-access/hooks/rbac/users/useSetPrimaryRole";
+import { useUpdateUser } from "@/domains/auth-access/hooks/rbac/users/useUpdateUser";
 import { toast } from "sonner";
 import type { CentroAtencionListItem, RoleListItem } from "@api/types";
 
@@ -25,48 +25,48 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@features/admin/modules/rbac/users/queries/useUserDetail", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/users/useUserDetail", () => ({
   useUserDetail: vi.fn(),
 }));
 
 vi.mock(
-  "@features/admin/modules/rbac/permissions/queries/usePermissionsCatalog",
+  "@/domains/auth-access/hooks/rbac/permissions/usePermissionsCatalog",
   () => ({
     usePermissionsCatalog: vi.fn(),
   }),
 );
 
-vi.mock("@features/admin/modules/rbac/users/mutations/useUpdateUser", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/users/useUpdateUser", () => ({
   useUpdateUser: vi.fn(),
 }));
 
-vi.mock("@features/admin/modules/rbac/users/mutations/useAssignRoles", () => ({
+vi.mock("@/domains/auth-access/hooks/rbac/users/useAssignRoles", () => ({
   useAssignRoles: vi.fn(),
 }));
 
 vi.mock(
-  "@features/admin/modules/rbac/users/mutations/useSetPrimaryRole",
+  "@/domains/auth-access/hooks/rbac/users/useSetPrimaryRole",
   () => ({
     useSetPrimaryRole: vi.fn(),
   }),
 );
 
 vi.mock(
-  "@features/admin/modules/rbac/users/mutations/useRevokeUserRole",
+  "@/domains/auth-access/hooks/rbac/users/useRevokeUserRole",
   () => ({
     useRevokeUserRole: vi.fn(),
   }),
 );
 
 vi.mock(
-  "@features/admin/modules/rbac/users/mutations/useAddUserOverride",
+  "@/domains/auth-access/hooks/rbac/users/useAddUserOverride",
   () => ({
     useAddUserOverride: vi.fn(),
   }),
 );
 
 vi.mock(
-  "@features/admin/modules/rbac/users/mutations/useRemoveUserOverride",
+  "@/domains/auth-access/hooks/rbac/users/useRemoveUserOverride",
   () => ({
     useRemoveUserOverride: vi.fn(),
   }),

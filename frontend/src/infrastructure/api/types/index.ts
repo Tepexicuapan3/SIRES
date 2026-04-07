@@ -23,6 +23,8 @@ export type {
 export type {
   // Entidades
   AuthUser,
+  AuthCapabilityState,
+  AuthCapabilitiesResponse,
   // Requests
   LoginRequest,
   RequestResetCodeRequest,
@@ -39,6 +41,7 @@ export type {
   ResetPasswordResponse,
   CompleteOnboardingResponse,
   MeResponse,
+  CapabilitiesResponse,
 } from "@api/types/auth.types";
 
 // =============================================================================

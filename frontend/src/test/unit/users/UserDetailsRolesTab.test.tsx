@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { fireEvent, render, screen, within } from "@/test/utils";
-import { UserDetailsRolesTab } from "@features/admin/modules/rbac/users/components/UserDetailsRolesTab";
+import { UserDetailsRolesTab } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsRolesTab";
 import { createMockUserRole } from "@/test/factories/users";
 import type { RoleListItem } from "@api/types";
 
