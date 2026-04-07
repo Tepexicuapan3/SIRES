@@ -49,7 +49,11 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "usuarios",
     element: (
-      <ProtectedRoute requiredCapability="admin.users.read">
+      <ProtectedRoute
+        requiredCapability="admin.users.read"
+        fallbackRequirement={{ allOf: ["admin:gestion:usuarios:read"] }}
+        dependencyAware
+      >
         <UsersPage />
       </ProtectedRoute>
     ),
@@ -57,7 +61,11 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "roles",
     element: (
-      <ProtectedRoute requiredCapability="admin.roles.read">
+      <ProtectedRoute
+        requiredCapability="admin.roles.read"
+        fallbackRequirement={{ allOf: ["admin:gestion:roles:read"] }}
+        dependencyAware
+      >
         <RolesPage />
       </ProtectedRoute>
     ),
@@ -72,7 +80,11 @@ export const adminRoutes: RouteObject[] = [
       {
         path: "areas",
         element: (
-          <ProtectedRoute requiredPermission="admin:catalogos:areas:read">
+          <ProtectedRoute
+            requiredCapability="admin.catalogs.areas.read"
+            fallbackRequirement={{ allOf: ["admin:catalogos:areas:read"] }}
+            dependencyAware
+          >
             <AreasPage />
           </ProtectedRoute>
         ),
@@ -80,7 +92,13 @@ export const adminRoutes: RouteObject[] = [
       {
         path: "centros-atencion",
         element: (
-          <ProtectedRoute requiredPermission="admin:catalogos:centros_atencion:read">
+          <ProtectedRoute
+            requiredCapability="admin.catalogs.centers.read"
+            fallbackRequirement={{
+              allOf: ["admin:catalogos:centros_atencion:read"],
+            }}
+            dependencyAware
+          >
             <CentrosAtencionPage />
           </ProtectedRoute>
         ),

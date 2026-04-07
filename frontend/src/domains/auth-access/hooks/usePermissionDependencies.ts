@@ -10,6 +10,7 @@ import {
 const KAN49_STRICT_CAPABILITY_PREFIXES = [
   "flow.recepcion.",
   "flow.visits.",
+  "admin.",
 ] as const;
 
 export const usePermissionDependencies = () => {

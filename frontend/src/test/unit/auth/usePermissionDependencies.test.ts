@@ -46,4 +46,23 @@ describe("usePermissionDependencies capability source of truth", () => {
       }),
     ).toBe(true);
   });
+
+  it("denies admin capability by default when projection exists and capability is missing", () => {
+    const usePermissionsMock = usePermissions as unknown as Mock;
+    usePermissionsMock.mockReturnValue({
+      permissions: ["admin:gestion:usuarios:read"],
+      effectivePermissions: ["admin:gestion:usuarios:read"],
+      capabilities: {},
+      permissionDependenciesVersion: "v1",
+      strictCapabilityPrefixes: [],
+    } as ReturnType<typeof usePermissions>);
+
+    const { result } = renderHook(() => usePermissionDependencies());
+
+    expect(
+      result.current.hasCapability("admin.users.read", {
+        allOf: ["admin:gestion:usuarios:read"],
+      }),
+    ).toBe(false);
+  });
 });

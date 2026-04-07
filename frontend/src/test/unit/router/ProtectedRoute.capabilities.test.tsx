@@ -9,6 +9,7 @@ import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
+import type { PermissionRequirement } from "@/domains/auth-access/types/permission-dependencies";
 
 vi.mock("@/domains/auth-access/hooks/useAuthSession", () => ({
   useAuthSession: vi.fn(),
@@ -28,10 +29,15 @@ vi.mock("@/domains/auth-access/hooks/useAuthCapabilities", () => ({
 
 interface ProtectedRouteElementProps {
   requiredCapability?: string;
+  fallbackRequirement?: PermissionRequirement;
+  dependencyAware?: boolean;
   requiredPermission?: string;
 }
 
-const renderGuard = (options?: { requiredPermission?: string }) => {
+const renderGuard = (options?: {
+  requiredPermission?: string;
+  fallbackRequirement?: PermissionRequirement;
+}) => {
   return render(
     <MemoryRouter initialEntries={["/admin/usuarios"]}>
       <Routes>
@@ -40,6 +46,7 @@ const renderGuard = (options?: { requiredPermission?: string }) => {
           element={
             <ProtectedRoute
               requiredCapability="admin.users.read"
+              fallbackRequirement={options?.fallbackRequirement}
               requiredPermission={options?.requiredPermission}
             >
               <div>admin users page</div>
@@ -142,6 +149,38 @@ describe("ProtectedRoute capability-first", () => {
 
     expect(screen.getByText("Acceso Denegado")).toBeInTheDocument();
   });
+
+  it("fallback: concede acceso cuando capability falta y fallbackRequirement pasa", () => {
+    (useAuthCapabilities as unknown as Mock).mockReturnValue({
+      hasCapability: vi.fn(() => false),
+      isLoading: false,
+      isError: false,
+    });
+
+    (usePermissionDependencies as unknown as Mock).mockReturnValue({
+      hasCapability: vi.fn(() => false),
+      hasEffectivePermission: vi.fn(() => false),
+      hasEffectiveRequirement: vi.fn(() => true),
+    });
+
+    renderGuard({
+      fallbackRequirement: { allOf: ["admin:gestion:usuarios:read"] },
+    });
+
+    expect(screen.getByText("admin users page")).toBeInTheDocument();
+  });
+
+  it("auth-session error: muestra error de autenticación para fallo 500 sin sesión", () => {
+    (useAuthSession as unknown as Mock).mockReturnValue({
+      data: null,
+      error: { status: 500 },
+      isLoading: false,
+    });
+
+    renderGuard();
+
+    expect(screen.getByText("Error de autenticación")).toBeInTheDocument();
+  });
 });
 
 describe("admin routes config capability wiring", () => {
@@ -162,5 +201,52 @@ describe("admin routes config capability wiring", () => {
 
     expect(usersElement.props.requiredCapability).toBe("admin.users.read");
     expect(rolesElement.props.requiredCapability).toBe("admin.roles.read");
+    expect(usersElement.props.dependencyAware).toBe(true);
+    expect(rolesElement.props.dependencyAware).toBe(true);
+    expect(usersElement.props.fallbackRequirement).toEqual({
+      allOf: ["admin:gestion:usuarios:read"],
+    });
+    expect(rolesElement.props.fallbackRequirement).toEqual({
+      allOf: ["admin:gestion:roles:read"],
+    });
+  });
+
+  it("áreas y centros-atención migran a capability-first con fallbackRequirement", () => {
+    const catalogsRoute = adminRoutes.find(
+      (route) => route.path === "catalogos",
+    );
+
+    expect(catalogsRoute?.children).toBeDefined();
+    const areasRoute = catalogsRoute?.children?.find(
+      (route) => route.path === "areas",
+    );
+    const centersRoute = catalogsRoute?.children?.find(
+      (route) => route.path === "centros-atencion",
+    );
+
+    expect(areasRoute?.element).toBeDefined();
+    expect(centersRoute?.element).toBeDefined();
+    expect(isValidElement(areasRoute?.element)).toBe(true);
+    expect(isValidElement(centersRoute?.element)).toBe(true);
+
+    const areasElement =
+      areasRoute?.element as ReactElement<ProtectedRouteElementProps>;
+    const centersElement =
+      centersRoute?.element as ReactElement<ProtectedRouteElementProps>;
+
+    expect(areasElement.props.requiredCapability).toBe(
+      "admin.catalogs.areas.read",
+    );
+    expect(centersElement.props.requiredCapability).toBe(
+      "admin.catalogs.centers.read",
+    );
+    expect(areasElement.props.dependencyAware).toBe(true);
+    expect(centersElement.props.dependencyAware).toBe(true);
+    expect(areasElement.props.fallbackRequirement).toEqual({
+      allOf: ["admin:catalogos:areas:read"],
+    });
+    expect(centersElement.props.fallbackRequirement).toEqual({
+      allOf: ["admin:catalogos:centros_atencion:read"],
+    });
   });
 });

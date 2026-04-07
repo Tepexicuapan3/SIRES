@@ -4,16 +4,44 @@ import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
 import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
+import type { PermissionRequirement } from "@/domains/auth-access/types/permission-dependencies";
 import { LoadingSpinner } from "@shared/components/LoadingSpinner";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredCapability?: string;
+  fallbackRequirement?: PermissionRequirement;
   requiredPermission?: string;
   requiredAllPermissions?: string[];
   requiredAnyPermissions?: string[];
   dependencyAware?: boolean;
 }
+
+const AccessDeniedView = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <h1 className="text-4xl font-bold text-status-critical mb-4">
+        Acceso Denegado
+      </h1>
+      <p className="text-txt-muted">
+        No tienes permisos suficientes para acceder a esta seccion.
+      </p>
+    </div>
+  </div>
+);
+
+const AuthErrorView = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <h1 className="text-4xl font-bold text-status-warning mb-4">
+        Error de autenticación
+      </h1>
+      <p className="text-txt-muted">
+        No pudimos validar tu sesión en este momento. Intentá nuevamente.
+      </p>
+    </div>
+  </div>
+);
 
 /**
  * Guard de rutas para autenticacion y permisos.
@@ -26,12 +54,13 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({
   children,
   requiredCapability,
+  fallbackRequirement,
   requiredPermission,
   requiredAllPermissions,
   requiredAnyPermissions,
   dependencyAware = false,
 }: ProtectedRouteProps) => {
-  const { data: sessionUser, isLoading } = useAuthSession();
+  const { data: sessionUser, isLoading, error } = useAuthSession();
   const isAuthenticated = Boolean(sessionUser);
   const shouldResolveCapabilities =
     Boolean(requiredCapability) && !isLoading && isAuthenticated;
@@ -52,6 +81,14 @@ export const ProtectedRoute = ({
 
   if (isLoading && !sessionUser) {
     return <LoadingSpinner fullScreen />;
+  }
+
+  const isAuthTransportError = Boolean(
+    error && error.status !== 401 && error.status !== 403,
+  );
+
+  if (isAuthTransportError && !sessionUser) {
+    return <AuthErrorView />;
   }
 
   // Si no está autenticado, redirigir a login
@@ -80,7 +117,15 @@ export const ProtectedRoute = ({
         return false;
       }
 
-      return hasCapabilityFromProjection(requiredCapability);
+      if (hasCapabilityFromProjection(requiredCapability)) {
+        return true;
+      }
+
+      if (fallbackRequirement) {
+        return hasEffectiveRequirement(fallbackRequirement);
+      }
+
+      return false;
     }
 
     if (requiredPermission) {
@@ -106,18 +151,7 @@ export const ProtectedRoute = ({
 
   // RBAC: Verificación de permisos
   if (!hasAccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-status-critical mb-4">
-            Acceso Denegado
-          </h1>
-          <p className="text-txt-muted">
-            No tienes permisos suficientes para acceder a esta seccion.
-          </p>
-        </div>
-      </div>
-    );
+    return <AccessDeniedView />;
   }
 
   return <>{children}</>;
