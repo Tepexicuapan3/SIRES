@@ -1,5 +1,12 @@
 # auth-access - Changelog
 
+## 2026-04-07 (KAN-62 hardening switch operativo read-only RBAC)
+
+- Se agrega `kan-62-read-source-switch-hardening.md` con contrato operativo del nuevo switch `RBAC_READ_SLICE_SOURCE` (`legacy|s1|auto`).
+- Se documenta precedencia oficial entre `RBAC_READ_SLICE_SOURCE` y `RBAC_READ_S1_ENABLED` con matriz de decisión explícita.
+- Se agrega runbook de rollback inmediato a legacy (pasos + verificación de `meta.source="legacy"`).
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
+
 ## 2026-04-06 (migración estructural frontend domain-first auth-access - Lote 5 cleanup reintento validado)
 
 - Se reejecuta barrido repo-wide de consumidores para paths legacy:

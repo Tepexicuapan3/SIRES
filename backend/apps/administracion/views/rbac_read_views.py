@@ -1,6 +1,4 @@
 import uuid
-
-from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,11 +20,12 @@ from apps.administracion.use_cases.rbac_read.list_permissions import (
     ListPermissionsUseCase,
 )
 from apps.administracion.use_cases.rbac_read.list_roles import ListRolesUseCase
+from apps.administracion.services.rbac_feature_flags import resolve_rbac_read_source
 from apps.authentication.services.response_service import error_response, get_request_id
 
 
 def resolve_read_source():
-    return "s1" if getattr(settings, "RBAC_READ_S1_ENABLED", False) else "legacy"
+    return resolve_rbac_read_source()
 
 
 def _request_id(request):

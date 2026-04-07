@@ -42,6 +42,7 @@ from apps.administracion.use_cases.rbac_write import (
     RemoveUserOverrideUseCase,
     RbacWriteError,
 )
+from apps.administracion.services.rbac_feature_flags import is_rbac_read_s1_enabled
 
 
 TEMP_PASSWORD_LENGTH = 12
@@ -58,7 +59,7 @@ def _request_id(request):
 
 
 def _is_rbac_read_s1_enabled():
-    return getattr(settings, "RBAC_READ_S1_ENABLED", False)
+    return is_rbac_read_s1_enabled()
 
 
 def _is_rbac_role_mutation_s2_enabled():

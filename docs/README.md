@@ -34,6 +34,7 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 - `docs/domains/auth-access/tdd-evidence-templates.md` - plantillas de evidencia Red->Green->Refactor para Jira/PR (KAN-55).
 - `docs/domains/auth-access/tdd-exception-policy.md` - politica de excepciones TDD con aprobacion y controles compensatorios (KAN-55).
 - `docs/domains/auth-access/kan-56-s1-apply-evidence.md` - evidencia de apply KAN-56 (slice S1 read-only), checklist dark launch/canary/rollback y validacion contractual.
+- `docs/domains/auth-access/kan-62-read-source-switch-hardening.md` - hardening operativo del switch read-only RBAC (precedencia `RBAC_READ_SLICE_SOURCE` vs `RBAC_READ_S1_ENABLED` y rollback explícito a legacy).
 - `docs/domains/auth-access/kan-61-rbac-critical-use-cases-apply-evidence.md` - evidencia de apply KAN-61 para extraccion de mutaciones RBAC criticas a use_cases/policies.
 - `docs/domains/auth-access/jira-workflow-operating-model.md` - workflow operativo Jira de Auth-Access (columnas, gates, WIP, due dates, bloqueos, daily/cierre y reglas para agentes IA).
 - `docs/domains/auth-access/kan-58a-s2-apply-evidence.md` - evidencia de apply KAN-58A (slice S2 mutaciones de roles), TDD Red/Green/Refactor y rollback por flag.

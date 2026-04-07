@@ -289,6 +289,11 @@ RBAC_READ_S1_ENABLED = config(
     cast=bool,
 )
 
+RBAC_READ_SLICE_SOURCE = config(
+    "RBAC_READ_SLICE_SOURCE",
+    default="auto",
+)
+
 RBAC_ROLE_MUTATION_S2_ENABLED = config(
     "RBAC_ROLE_MUTATION_S2_ENABLED",
     default=False,

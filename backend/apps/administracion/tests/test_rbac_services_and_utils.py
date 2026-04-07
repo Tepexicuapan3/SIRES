@@ -22,6 +22,10 @@ from apps.administracion.models import (
 from apps.administracion.serializers.role_serializers import RoleDetailSerializer
 from apps.administracion.services.audit_service import AuditService
 from apps.administracion.services.rbac_resolver import RBACResolver
+from apps.administracion.services.rbac_feature_flags import (
+    is_rbac_read_s1_enabled,
+    resolve_rbac_read_source,
+)
 from apps.administracion.use_cases.roles.create_role import CreateRoleUseCase
 from apps.administracion.use_cases.users.assign_roles import AssignRolesUseCase
 from apps.administracion.use_cases.rbac_write.set_user_primary_role import (
@@ -626,13 +630,35 @@ class RbacReadPolicyAndUseCaseTests(TestCase):
 
 
 class RbacReadToggleTests(SimpleTestCase):
-    @override_settings(RBAC_READ_S1_ENABLED=True)
-    def test_resolve_read_source_returns_s1_when_enabled(self):
+    @override_settings(RBAC_READ_SLICE_SOURCE="s1", RBAC_READ_S1_ENABLED=False)
+    def test_resolve_read_source_prioritizes_explicit_s1(self):
         self.assertEqual(resolve_read_source(), "s1")
+        self.assertEqual(resolve_rbac_read_source(), "s1")
+        self.assertTrue(is_rbac_read_s1_enabled())
 
-    @override_settings(RBAC_READ_S1_ENABLED=False)
-    def test_resolve_read_source_returns_legacy_when_disabled(self):
+    @override_settings(RBAC_READ_SLICE_SOURCE="legacy", RBAC_READ_S1_ENABLED=True)
+    def test_resolve_read_source_prioritizes_explicit_legacy(self):
         self.assertEqual(resolve_read_source(), "legacy")
+        self.assertEqual(resolve_rbac_read_source(), "legacy")
+        self.assertFalse(is_rbac_read_s1_enabled())
+
+    @override_settings(RBAC_READ_SLICE_SOURCE="auto", RBAC_READ_S1_ENABLED=True)
+    def test_resolve_read_source_falls_back_to_legacy_flag_when_auto(self):
+        self.assertEqual(resolve_read_source(), "s1")
+        self.assertEqual(resolve_rbac_read_source(), "s1")
+        self.assertTrue(is_rbac_read_s1_enabled())
+
+    @override_settings(RBAC_READ_SLICE_SOURCE="invalid", RBAC_READ_S1_ENABLED=False)
+    def test_resolve_read_source_uses_legacy_for_invalid_value(self):
+        self.assertEqual(resolve_read_source(), "legacy")
+        self.assertEqual(resolve_rbac_read_source(), "legacy")
+        self.assertFalse(is_rbac_read_s1_enabled())
+
+    @override_settings(RBAC_READ_SLICE_SOURCE="  S1  ", RBAC_READ_S1_ENABLED=False)
+    def test_resolve_read_source_normalizes_whitespace_and_case(self):
+        self.assertEqual(resolve_read_source(), "s1")
+        self.assertEqual(resolve_rbac_read_source(), "s1")
+        self.assertTrue(is_rbac_read_s1_enabled())
 
 
 class RbacRoleMutationToggleTests(SimpleTestCase):
