@@ -8,6 +8,8 @@ from types import MappingProxyType
 from .models import *
 from .serializers import *
 from .permissions import CatalogPermissionMixin
+from .repositories.consultorios_repository import ConsultoriosRepository
+
 
 class ErrorMixin:
     def _error(self, request, *, code, message, http_status, details=None):
@@ -20,18 +22,22 @@ class ErrorMixin:
                 "requestId": request.headers.get("X-Request-ID"),
                 "timestamp": timezone.now().isoformat().replace("+00:00", "Z"),
             },
-            status=http_status,)
+            status=http_status,
+        )
+
 
 class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
     model = None
     list_serializer = None
     write_serializer = None
     name_field = "name"
-    error_codes = MappingProxyType ({})
-    sort_map = MappingProxyType ({
-        "name": "name",
-        "isActive": "is_active",
-    })
+    error_codes = MappingProxyType({})
+    sort_map = MappingProxyType(
+        {
+            "name": "name",
+            "isActive": "is_active",
+        }
+    )
 
     def get_queryset(self):
         return self.model.objects.all()
@@ -41,7 +47,7 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
         if model_meta is None:
             return set()
         return {field.name for field in model_meta.get_fields()}
-     
+
     def get(self, request):
         qs = self.get_queryset()
         raw_page = request.query_params.get("page", "1")
@@ -50,7 +56,7 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
         try:
             page = int(raw_page)
             page_size = int(raw_page_size)
-        
+
         except (TypeError, ValueError):
             return self._error(
                 request,
@@ -87,7 +93,9 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
                 message="Parámetro sortBy inválido",
                 http_status=status.HTTP_400_BAD_REQUEST,
                 details={
-                    "sortBy": [f"Campo inválido. Permitidos: {', '.join(self.sort_map.keys())}"],
+                    "sortBy": [
+                        f"Campo inválido. Permitidos: {', '.join(self.sort_map.keys())}"
+                    ],
                 },
             )
 
@@ -138,7 +146,7 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
             },
             status=status.HTTP_200_OK,
         )
-   
+
     def post(self, request):
         serializer = self.write_serializer(data=request.data)
         if not serializer.is_valid():
@@ -158,7 +166,9 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
                 http_status=status.HTTP_409_CONFLICT,
                 details={"name": ["Duplicado"]},
             )
-        actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(
+            request.user, "id", None
+        )
         model_fields = self._model_field_names()
         save_kwargs = {}
         if "created_at" in model_fields:
@@ -176,8 +186,9 @@ class CatalogBaseListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
         if item_name is None:
             item_name = getattr(item, "rol", None) or getattr(item, "descripcion", None)
 
-        return Response({"id": item_id, "name": item_name}, status=status.HTTP_201_CREATED)
-
+        return Response(
+            {"id": item_id, "name": item_name}, status=status.HTTP_201_CREATED
+        )
 
 
 class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
@@ -188,7 +199,7 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
     name_field = "name"
     pk_field = None
     error_codes = MappingProxyType({})
-    
+
     def get_object(self, pk):
         pk_name = self.pk_field or self.model._meta.pk.name
         return self.model.objects.filter(**{pk_name: pk}).first()
@@ -198,7 +209,7 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
         if model_meta is None:
             return set()
         return {field.name for field in model_meta.get_fields()}
-    
+
     def get(self, request, pk):
         item = self.get_object(pk)
         if not item:
@@ -210,7 +221,7 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
             )
         serializer = self.detail_serializer(item)
         return Response({self.wrapper_key: serializer.data}, status=status.HTTP_200_OK)
-    
+
     def put(self, request, pk):
         item = self.get_object(pk)
         if not item:
@@ -232,7 +243,12 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
         name = serializer.validated_data.get(self.name_field)
         pk_name = self.pk_field or self.model._meta.pk.name
         item_pk = getattr(item, pk_name)
-        if name and self.model.objects.filter(**{self.name_field: name}).exclude(**{pk_name: item_pk}).exists():
+        if (
+            name
+            and self.model.objects.filter(**{self.name_field: name})
+            .exclude(**{pk_name: item_pk})
+            .exists()
+        ):
             return self._error(
                 request,
                 code=self.error_codes.get("exists", "ITEM_EXISTS"),
@@ -240,7 +256,9 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
                 http_status=status.HTTP_409_CONFLICT,
                 details={"name": ["Duplicado"]},
             )
-        actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(
+            request.user, "id", None
+        )
         model_fields = self._model_field_names()
         save_kwargs = {}
         if "updated_at" in model_fields:
@@ -251,7 +269,7 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
         item = serializer.save(**save_kwargs)
         detail = self.detail_serializer(item)
         return Response({self.wrapper_key: detail.data}, status=status.HTTP_200_OK)
-    
+
     def delete(self, request, pk):
         item = self.get_object(pk)
         if not item:
@@ -271,7 +289,9 @@ class CatalogBaseDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
             item.deleted_at = timezone.now()
             update_fields.append("deleted_at")
         if "deleted_by_id" in model_fields:
-            item.deleted_by_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+            item.deleted_by_id = getattr(request.user, "id_usuario", None) or getattr(
+                request.user, "id", None
+            )
             update_fields.append("deleted_by_id")
 
         item.save(update_fields=update_fields)
@@ -285,7 +305,8 @@ class AreasListCreateView(CatalogBaseListCreateView):
     list_serializer = AreasListSerializer
     write_serializer = AreasWriteSerializer
     error_codes = {"exists": "AREAS_EXISTS"}
-    
+
+
 class AreasDetailView(CatalogBaseDetailView):
     catalog = "areas"
     model = Areas
@@ -302,14 +323,18 @@ class AutorizadoresListCreateView(CatalogBaseListCreateView):
     list_serializer = AutorizadoresListSerializer
     write_serializer = AutorizadoresWriteSerializer
     error_codes = {"exists": "AUTHORIZER_STUDIES_EXISTS"}
-    
+
+
 class AutorizadoresDetailView(CatalogBaseDetailView):
     catalog = "autorizadores"
     model = Autorizadores
     detail_serializer = AutorizadoresDetailSerializer
     write_serializer = AutorizadoresWriteSerializer
     wrapper_key = "authorizer"
-    error_codes = {"not_found": "AUTHORIZER_NOT_FOUND", "exists": "AUTHORIZER_STUDIES_EXISTS"}
+    error_codes = {
+        "not_found": "AUTHORIZER_NOT_FOUND",
+        "exists": "AUTHORIZER_STUDIES_EXISTS",
+    }
 
 
 #####Views Bajas
@@ -319,14 +344,18 @@ class BajasListCreateView(CatalogBaseListCreateView):
     list_serializer = BajasListSerializer
     write_serializer = BajasWriteSerializer
     error_codes = {"exists": "DISCHARGE_REASON_EXISTS"}
-    
+
+
 class BajasDetailView(CatalogBaseDetailView):
     catalog = "bajas"
     model = Bajas
     detail_serializer = BajasDetailSerializer
     write_serializer = BajasWriteSerializer
     wrapper_key = "dischargeReason"
-    error_codes = {"not_found": "DISCHARGE_REASON_NOT_FOUND", "exists": "DISCHARGE_REASON_EXISTS"}
+    error_codes = {
+        "not_found": "DISCHARGE_REASON_NOT_FOUND",
+        "exists": "DISCHARGE_REASON_EXISTS",
+    }
 
 
 #####Views CalidadLaboral
@@ -336,14 +365,18 @@ class CalidadLaboralListCreateView(CatalogBaseListCreateView):
     list_serializer = CalidadLaboralListSerializer
     write_serializer = CalidadLaboralWriteSerializer
     error_codes = {"exists": "LABOR_QUALITY_EXISTS"}
-    
+
+
 class CalidadLaboralDetailView(CatalogBaseDetailView):
     catalog = "calidad_laboral"
     model = CalidadLaboral
     detail_serializer = CalidadLaboralDetailSerializer
     write_serializer = CalidadLaboralWriteSerializer
     wrapper_key = "laborQuality"
-    error_codes = {"not_found": "LABOR_QUALITY_NOT_FOUND", "exists": "LABOR_QUALITY_EXISTS"}
+    error_codes = {
+        "not_found": "LABOR_QUALITY_NOT_FOUND",
+        "exists": "LABOR_QUALITY_EXISTS",
+    }
 
 
 #####Views Centros de Atencion
@@ -353,7 +386,8 @@ class CentrosAtencionListCreateView(CatalogBaseListCreateView):
     list_serializer = CatCentroAtencionListSerializer
     write_serializer = CatCentroAtencionWriteSerializer
     error_codes = {"exists": "CARE_CENTER_EXISTS"}
-    
+
+
 class CentrosAtencionDetailView(CatalogBaseDetailView):
     catalog = "centros_atencion"
     model = CatCentroAtencion
@@ -364,20 +398,176 @@ class CentrosAtencionDetailView(CatalogBaseDetailView):
 
 
 #####Views Consultorios
-class ConsultoriosListCreateView(CatalogBaseListCreateView):
+class ConsultoriosListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
     catalog = "consultorios"
-    model = Consultorios
-    list_serializer = ConsultoriosListSerializer
-    write_serializer = ConsultoriosWriteSerializer
-    error_codes = {"exists": "CONSULTING_ROOM_EXISTS"}
-    
-class ConsultoriosDetailView(CatalogBaseDetailView):
+    repository = ConsultoriosRepository()
+
+    def get(self, request):
+        raw_page = request.query_params.get("page", "1")
+        raw_page_size = request.query_params.get("pageSize", "20")
+
+        try:
+            page = int(raw_page)
+            page_size = int(raw_page_size)
+        except (TypeError, ValueError):
+            return self._error(
+                request,
+                code="INVALID_FORMAT",
+                message="Parámetros de paginación inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details={
+                    "page": ["Debe ser un entero"],
+                    "pageSize": ["Debe ser un entero"],
+                },
+            )
+
+        if page < 1 or page_size < 1 or page_size > 100:
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Parámetros de paginación fuera de rango",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details={
+                    "page": ["Debe ser mayor o igual a 1"],
+                    "pageSize": ["Debe estar entre 1 y 100"],
+                },
+            )
+
+        search = request.query_params.get("search")
+        is_active = request.query_params.get("isActive")
+        sort_by = request.query_params.get("sortBy", "code")
+        sort_order = request.query_params.get("sortOrder", "asc")
+
+        est_activo = None
+        if is_active is not None:
+            normalized_is_active = is_active.lower()
+            if normalized_is_active not in ("true", "false"):
+                return self._error(
+                    request,
+                    code="VALIDATION_ERROR",
+                    message="Parámetro isActive inválido",
+                    http_status=status.HTTP_400_BAD_REQUEST,
+                    details={
+                        "isActive": ["Debe ser 'true' o 'false'"],
+                    },
+                )
+            est_activo = normalized_is_active == "true"
+
+        queryset = self.repository.get_all(
+            search=search,
+            est_activo=est_activo,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+
+        total = queryset.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        serializer = ConsultoriosListSerializer(queryset[start:end], many=True)
+        total_pages = (total + page_size - 1) // page_size
+
+        return Response(
+            {
+                "items": serializer.data,
+                "page": page,
+                "pageSize": page_size,
+                "total": total,
+                "totalPages": total_pages,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        serializer = ConsultoriosWriteSerializer(data=request.data)
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(
+            request.user, "id", None
+        )
+        consultorio = self.repository.create(
+            validated_data=serializer.validated_data,
+            actor_id=actor_id,
+        )
+
+        return Response(
+            {"id": consultorio.id, "name": consultorio.name},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ConsultoriosDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
     catalog = "consultorios"
-    model = Consultorios
-    detail_serializer = ConsultoriosDetailSerializer
-    write_serializer = ConsultoriosWriteSerializer
-    wrapper_key = "consultingRoom"
-    error_codes = {"not_found": "CONSULTING_ROOM_NOT_FOUND", "exists": "CONSULTING_ROOM_EXISTS"} 
+    repository = ConsultoriosRepository()
+
+    def get(self, request, pk):
+        consultorio = self.repository.get_by_id(pk)
+        if not consultorio:
+            return self._error(
+                request,
+                code="CONSULTING_ROOM_NOT_FOUND",
+                message="Consultorio no encontrado",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ConsultoriosDetailSerializer(consultorio)
+        return Response({"consultingRoom": serializer.data}, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        consultorio = self.repository.get_by_id(pk)
+        if not consultorio:
+            return self._error(
+                request,
+                code="CONSULTING_ROOM_NOT_FOUND",
+                message="Consultorio no encontrado",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ConsultoriosWriteSerializer(
+            consultorio, data=request.data, partial=True
+        )
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(
+            request.user, "id", None
+        )
+        updated = self.repository.update(
+            consultorio=consultorio,
+            validated_data=serializer.validated_data,
+            actor_id=actor_id,
+        )
+
+        detail = ConsultoriosDetailSerializer(updated)
+        return Response({"consultingRoom": detail.data}, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        consultorio = self.repository.get_by_id(pk)
+        if not consultorio:
+            return self._error(
+                request,
+                code="CONSULTING_ROOM_NOT_FOUND",
+                message="Consultorio no encontrado",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(
+            request.user, "id", None
+        )
+        self.repository.delete(consultorio=consultorio, actor_id=actor_id)
+        return Response({"success": True}, status=status.HTTP_200_OK)
 
 
 #####Views EdoCivil
@@ -387,14 +577,18 @@ class EdoCivilListCreateView(CatalogBaseListCreateView):
     list_serializer = EdoCivilListSerializer
     write_serializer = EdoCivilWriteSerializer
     error_codes = {"exists": "CIVIL_STATUS_EXISTS"}
-    
+
+
 class EdoCivilDetailView(CatalogBaseDetailView):
     catalog = "edo_civil"
     model = EdoCivil
     detail_serializer = EdoCivilDetailSerializer
     write_serializer = EdoCivilWriteSerializer
     wrapper_key = "civilStatus"
-    error_codes = {"not_found": "CIVIL_STATUS_NOT_FOUND", "exists": "CIVIL_STATUS_EXISTS"}
+    error_codes = {
+        "not_found": "CIVIL_STATUS_NOT_FOUND",
+        "exists": "CIVIL_STATUS_EXISTS",
+    }
 
 
 #####Views Enfermedades
@@ -404,7 +598,8 @@ class EnfermedadesListCreateView(CatalogBaseListCreateView):
     list_serializer = EnfermedadesListSerializer
     write_serializer = EnfermedadesWriteSerializer
     error_codes = {"exists": "DISEASE_EXISTS"}
-    
+
+
 class EnfermedadesDetailView(CatalogBaseDetailView):
     catalog = "enfermedades"
     model = Enfermedades
@@ -421,14 +616,18 @@ class EscolaridadListCreateView(CatalogBaseListCreateView):
     list_serializer = EscolaridadListSerializer
     write_serializer = EscolaridadWriteSerializer
     error_codes = {"exists": "EDUCATION_LEVEL_EXISTS"}
-    
+
+
 class EscolaridadDetailView(CatalogBaseDetailView):
     catalog = "escolaridad"
     model = Escolaridad
     detail_serializer = EscolaridadDetailSerializer
     write_serializer = EscolaridadWriteSerializer
     wrapper_key = "educationLevel"
-    error_codes = {"not_found": "EDUCATION_LEVEL_NOT_FOUND", "exists": "EDUCATION_LEVEL_EXISTS"}
+    error_codes = {
+        "not_found": "EDUCATION_LEVEL_NOT_FOUND",
+        "exists": "EDUCATION_LEVEL_EXISTS",
+    }
 
 
 #####Views Escuelas
@@ -438,7 +637,8 @@ class EscuelasListCreateView(CatalogBaseListCreateView):
     list_serializer = EscuelasListSerializer
     write_serializer = EscuelasWriteSerializer
     error_codes = {"exists": "SCHOOL_EXISTS"}
-    
+
+
 class EscuelasDetailView(CatalogBaseDetailView):
     catalog = "escuelas"
     model = Escuelas
@@ -455,7 +655,8 @@ class EspecialidadesListCreateView(CatalogBaseListCreateView):
     list_serializer = EspecialidadesListSerializer
     write_serializer = EspecialidadesWriteSerializer
     error_codes = {"exists": "SPECIALTY_EXISTS"}
-    
+
+
 class EspecialidadesDetailView(CatalogBaseDetailView):
     catalog = "especialidades"
     model = Especialidades
@@ -472,14 +673,18 @@ class EstudiosMedListCreateView(CatalogBaseListCreateView):
     list_serializer = EstudiosMedListSerializer
     write_serializer = EstudiosMedWriteSerializer
     error_codes = {"exists": "MEDICAL_STUDIES_EXISTS"}
-    
+
+
 class EstudiosMedDetailView(CatalogBaseDetailView):
     catalog = "estudios_med"
     model = EstudiosMed
     detail_serializer = EstudiosMedDetailSerializer
     write_serializer = EstudiosMedWriteSerializer
     wrapper_key = "medicalStudy"
-    error_codes = {"not_found": "MEDICAL_STUDIES_NOT_FOUND", "exists": "MEDICAL_STUDIES_EXISTS"}
+    error_codes = {
+        "not_found": "MEDICAL_STUDIES_NOT_FOUND",
+        "exists": "MEDICAL_STUDIES_EXISTS",
+    }
 
 
 #####Views GruposDeMedicamentos
@@ -489,7 +694,8 @@ class GruposDeMedicamentosListCreateView(CatalogBaseListCreateView):
     list_serializer = GruposDeMedicamentosListSerializer
     write_serializer = GruposDeMedicamentosWriteSerializer
     error_codes = {"exists": "MED_GROUP_EXISTS"}
-    
+
+
 class GruposDeMedicamentosDetailView(CatalogBaseDetailView):
     catalog = "grupos_medicamentos"
     model = GruposDeMedicamentos
@@ -506,7 +712,8 @@ class OcupacionesListCreateView(CatalogBaseListCreateView):
     list_serializer = OcupacionesListSerializer
     write_serializer = OcupacionesWriteSerializer
     error_codes = {"exists": "OCCUPATIONS_EXISTS"}
-    
+
+
 class OcupacionesDetailView(CatalogBaseDetailView):
     catalog = "ocupaciones"
     model = Ocupaciones
@@ -524,13 +731,17 @@ class OrigenConsListCreateView(CatalogBaseListCreateView):
     write_serializer = OrigenConsWriteSerializer
     error_codes = {"exists": "CONSULTATION_ORIGIN_EXISTS"}
 
+
 class OrigenConsDetailView(CatalogBaseDetailView):
     catalog = "origen_cons"
     model = OrigenCons
     detail_serializer = OrigenConsDetailSerializer
     write_serializer = OrigenConsWriteSerializer
     wrapper_key = "consultationOrigin"
-    error_codes = {"not_found": "CONSULTATION_ORIGIN_NOT_FOUND", "exists": "CONSULTATION_ORIGIN_EXISTS"}
+    error_codes = {
+        "not_found": "CONSULTATION_ORIGIN_NOT_FOUND",
+        "exists": "CONSULTATION_ORIGIN_EXISTS",
+    }
 
 
 #####Views Parentesco
@@ -540,7 +751,8 @@ class ParentescoListCreateView(CatalogBaseListCreateView):
     list_serializer = ParentescoListSerializer
     write_serializer = ParentescoWriteSerializer
     error_codes = {"exists": "KINSHIP_EXISTS"}
-    
+
+
 class ParentescoDetailView(CatalogBaseDetailView):
     catalog = "parentescos"
     model = Parentesco
@@ -557,7 +769,8 @@ class PasesListCreateView(CatalogBaseListCreateView):
     list_serializer = PasesListSerializer
     write_serializer = PasesWriteSerializer
     error_codes = {"exists": "PASS_EXISTS"}
-    
+
+
 class PasesDetailView(CatalogBaseDetailView):
     catalog = "pases"
     model = Pases
@@ -576,7 +789,8 @@ class PermisosListCreateView(CatalogBaseListCreateView):
     name_field = "descripcion"
     sort_map = MappingProxyType({"name": "descripcion", "isActive": "is_active"})
     error_codes = {"exists": "PERMISSIONS_EXISTS"}
-    
+
+
 class PermisosDetailView(CatalogBaseDetailView):
     catalog = "permisos"
     model = Permisos
@@ -597,7 +811,8 @@ class RolesListCreateView(CatalogBaseListCreateView):
     name_field = "rol"
     sort_map = MappingProxyType({"name": "rol", "isActive": "is_active"})
     error_codes = {"exists": "ROLE_EXISTS"}
-    
+
+
 class RolesDetailView(CatalogBaseDetailView):
     catalog = "roles"
     model = Roles
@@ -616,7 +831,8 @@ class TiposAreasListCreateView(CatalogBaseListCreateView):
     list_serializer = TiposAreasListSerializer
     write_serializer = TiposAreasWriteSerializer
     error_codes = {"exists": "AREA_TYPE_EXISTS"}
-    
+
+
 class TiposAreasDetailView(CatalogBaseDetailView):
     catalog = "tipos_areas"
     model = TiposAreas
@@ -633,14 +849,18 @@ class TpAutorizacionListCreateView(CatalogBaseListCreateView):
     list_serializer = TpAutorizacionListSerializer
     write_serializer = TpAutorizacionWriteSerializer
     error_codes = {"exists": "AUTH_TYPE_STUDIES_EXISTS"}
-    
+
+
 class TpAutorizacionDetailView(CatalogBaseDetailView):
     catalog = "tp_autorizacion"
     model = TpAutorizacion
     detail_serializer = TpAutorizacionDetailSerializer
     write_serializer = TpAutorizacionWriteSerializer
     wrapper_key = "authorizationType"
-    error_codes = {"not_found": "AUTH_TYPE_NOT_FOUND", "exists": "AUTH_TYPE_STUDIES_EXISTS"}
+    error_codes = {
+        "not_found": "AUTH_TYPE_NOT_FOUND",
+        "exists": "AUTH_TYPE_STUDIES_EXISTS",
+    }
 
 
 #####Views TipoDeCitas
@@ -650,14 +870,18 @@ class TipoDeCitasListCreateView(CatalogBaseListCreateView):
     list_serializer = TipoDeCitasListSerializer
     write_serializer = TipoDeCitasWriteSerializer
     error_codes = {"exists": "APPOINTMENT_TYPE_EXISTS"}
-    
+
+
 class TipoDeCitasDetailView(CatalogBaseDetailView):
     catalog = "tipo_citas"
     model = TipoDeCitas
     detail_serializer = TipoDeCitasDetailSerializer
     write_serializer = TipoDeCitasWriteSerializer
     wrapper_key = "appointmentType"
-    error_codes = {"not_found": "APPOINTMENT_TYPE_NOT_FOUND", "exists": "APPOINTMENT_TYPE_EXISTS"}    
+    error_codes = {
+        "not_found": "APPOINTMENT_TYPE_NOT_FOUND",
+        "exists": "APPOINTMENT_TYPE_EXISTS",
+    }
 
 
 #####Views Licencias
@@ -667,7 +891,8 @@ class LicenciasListCreateView(CatalogBaseListCreateView):
     list_serializer = LicenciasListSerializer
     write_serializer = LicenciasWriteSerializer
     error_codes = {"exists": "LICENSE_EXISTS"}
-    
+
+
 class LicenciasDetailView(CatalogBaseDetailView):
     catalog = "licencias"
     model = Licencias
@@ -684,7 +909,8 @@ class TiposSanguineoListCreateView(CatalogBaseListCreateView):
     list_serializer = TiposSanguineoListSerializer
     write_serializer = TiposSanguineoWriteSerializer
     error_codes = {"exists": "BLOOD_TYPE_EXISTS"}
-    
+
+
 class TiposSanguineoDetailView(CatalogBaseDetailView):
     catalog = "tipos_sanguineo"
     model = TiposSanguineo
@@ -701,7 +927,8 @@ class TurnosListCreateView(CatalogBaseListCreateView):
     list_serializer = TurnosListSerializer
     write_serializer = TurnosWriteSerializer
     error_codes = {"exists": "SHIFT_EXISTS"}
-    
+
+
 class TurnosDetailView(CatalogBaseDetailView):
     catalog = "turnos"
     model = Turnos
@@ -711,7 +938,7 @@ class TurnosDetailView(CatalogBaseDetailView):
     error_codes = {"not_found": "SHIFT_NOT_FOUND", "exists": "SHIFT_EXISTS"}
 
 
-#VIEWS PARA CIES
+# VIEWS PARA CIES
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -731,6 +958,7 @@ from apps.catalogos.serializers import CatCiesSerializer
 from apps.catalogos.uses_case.upload_cies_use_case import PreviewCiesUseCase
 from apps.catalogos.uses_case.confirm_cies_use_case import ConfirmCiesUseCase
 
+
 class ErrorMixin:
     def _error(self, request, *, code, message, http_status, details=None):
         return Response(
@@ -745,9 +973,11 @@ class ErrorMixin:
             status=http_status,
         )
 
+
 # ... todo tu código existente sin cambios ...
 
 ###############cies#######################
+
 
 # PASO 1 — Preview: valida el Excel, NO guarda nada
 # POST /api/v1/catalogos/cies/upload/
@@ -776,13 +1006,14 @@ class CatCiesUploadAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
 
         except Exception as e:
             traceback.print_exc()
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # PASO 2 — Confirm: guarda las filas válidas en la BD
 # POST /api/v1/catalogos/cies/confirm/
 class CatCiesConfirmAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
-
     def post(self, request):
         try:
             rows = request.data.get("rows", [])
@@ -802,7 +1033,9 @@ class CatCiesConfirmAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
 
         except Exception as e:
             traceback.print_exc()
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # CRUD estándar
@@ -814,7 +1047,9 @@ class CatCiesListCreateView(CatalogPermissionMixin, ErrorMixin, ListCreateAPIVie
         serializer.save()
 
 
-class CatCiesDetailView(CatalogPermissionMixin, ErrorMixin, RetrieveUpdateDestroyAPIView):
+class CatCiesDetailView(
+    CatalogPermissionMixin, ErrorMixin, RetrieveUpdateDestroyAPIView
+):
     queryset = CatCies.objects.all()
     serializer_class = CatCiesSerializer
     lookup_field = "code"

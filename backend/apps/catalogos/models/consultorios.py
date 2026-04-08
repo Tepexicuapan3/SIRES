@@ -1,6 +1,6 @@
-# Author: Victor Hugo Alpizar Cedillo 
 from django.db import models
 from .base import CatalogBase
+
 
 class Consultorios(CatalogBase):
     id = models.BigAutoField(primary_key=True, db_column="id_consult")
@@ -15,7 +15,8 @@ class Consultorios(CatalogBase):
         "catalogos.CatCentroAtencion",
         db_column="id_centro_atencion",
         on_delete=models.PROTECT,
-    )     
+    )
+
     class Meta:
         db_table = "cat_consultorios"
         managed = False

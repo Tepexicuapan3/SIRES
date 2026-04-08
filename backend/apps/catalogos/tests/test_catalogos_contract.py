@@ -6,7 +6,14 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelUsuarioRol
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
-from apps.catalogos.models import Areas, CatCentroAtencion, Permisos, Roles
+from apps.catalogos.models import (
+    Areas,
+    CatCentroAtencion,
+    Consultorios,
+    Permisos,
+    Roles,
+    Turnos,
+)
 
 
 class CatalogosContractTests(APITestCase):
@@ -18,6 +25,39 @@ class CatalogosContractTests(APITestCase):
                     id_area INTEGER PRIMARY KEY AUTOINCREMENT,
                     area VARCHAR(150) NOT NULL,
                     id_tparea BIGINT NOT NULL,
+                    est_activo BOOLEAN NOT NULL DEFAULT 1,
+                    fch_alta DATETIME,
+                    fch_modf DATETIME,
+                    fch_baja DATETIME,
+                    usr_alta BIGINT,
+                    usr_modf BIGINT,
+                    usr_baja BIGINT
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS cat_turnos (
+                    id_trno INTEGER PRIMARY KEY AUTOINCREMENT,
+                    turno VARCHAR(50) NOT NULL,
+                    est_activo BOOLEAN NOT NULL DEFAULT 1,
+                    fch_alta DATETIME,
+                    fch_modf DATETIME,
+                    fch_baja DATETIME,
+                    usr_alta BIGINT,
+                    usr_modf BIGINT,
+                    usr_baja BIGINT
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS cat_consultorios (
+                    id_consult INTEGER PRIMARY KEY AUTOINCREMENT,
+                    no_consult INTEGER NOT NULL,
+                    id_trno BIGINT NOT NULL,
+                    id_centro_atencion BIGINT NOT NULL,
+                    consult VARCHAR(50) NOT NULL,
                     est_activo BOOLEAN NOT NULL DEFAULT 1,
                     fch_alta DATETIME,
                     fch_modf DATETIME,
@@ -81,6 +121,19 @@ class CatalogosContractTests(APITestCase):
         self.area = Areas.objects.create(
             name="Urgencias",
             code=10,
+            is_active=True,
+            created_by_id=self.user.id_usuario,
+        )
+        self.turn = Turnos.objects.create(
+            name="Matutino",
+            is_active=True,
+            created_by_id=self.user.id_usuario,
+        )
+        self.consultorio = Consultorios.objects.create(
+            name="Consultorio Contract",
+            code=301,
+            id_turn=self.turn,
+            id_center=self.center,
             is_active=True,
             created_by_id=self.user.id_usuario,
         )
@@ -379,3 +432,49 @@ class CatalogosContractTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(response.data["code"], "AREAS_EXISTS")
+
+    def test_consulting_rooms_list_contract(self):
+        response = self.client.get("/api/v1/consulting-rooms")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("items", response.data)
+        self.assertGreaterEqual(len(response.data["items"]), 1)
+
+        item = response.data["items"][0]
+        self.assertIn("id", item)
+        self.assertIn("name", item)
+        self.assertIn("code", item)
+        self.assertIn("isActive", item)
+
+    def test_consulting_room_detail_contract(self):
+        response = self.client.get(f"/api/v1/consulting-rooms/{self.consultorio.id}")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("consultingRoom", response.data)
+        consultorio = response.data["consultingRoom"]
+
+        self.assertEqual(consultorio["id"], self.consultorio.id)
+        self.assertEqual(consultorio["name"], self.consultorio.name)
+        self.assertEqual(consultorio["code"], self.consultorio.code)
+        self.assertIn("turn", consultorio)
+        self.assertIn("center", consultorio)
+        self.assertIn("createdAt", consultorio)
+        self.assertIn("updatedAt", consultorio)
+
+    def test_create_consulting_room_contract(self):
+        response = self.client.post(
+            "/api/v1/consulting-rooms",
+            {
+                "name": "Consultorio Norte",
+                "code": 401,
+                "idTurn": self.turn.id,
+                "idCenter": self.center.id,
+                "isActive": True,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("id", response.data)
+        self.assertEqual(response.data["name"], "Consultorio Norte")
