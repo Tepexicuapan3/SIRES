@@ -254,28 +254,81 @@ class CalidadLaboralWriteSerializer(CatalogWriteSerializer):
 
 
 #######Consultorios
-class ConsultoriosListSerializer(CatalogListWithCodeSerializer):
-    class Meta(CatalogListWithCodeSerializer.Meta):
-        model = Consultorios
+class ConsultoriosListSerializer(serializers.ModelSerializer):
+    idConsult = serializers.IntegerField(source="id_consult", read_only=True)
+    noConsult = serializers.IntegerField(source="no_consult")
+    idTrno = serializers.IntegerField(source="id_trno_id")
+    idCentroAtencion = serializers.IntegerField(source="id_centro_atencion_id")
+    estActivo = serializers.BooleanField(source="est_activo")
 
-class ConsultoriosDetailSerializer(CatalogDetailWithCodeSerializer):
-    turn = CatalogRefSerializer(source="id_turn", read_only=True)
-    center = CatalogRefSerializer(source="id_center", read_only=True)
-    class Meta(CatalogDetailWithCodeSerializer.Meta):
+    class Meta:
         model = Consultorios
-        fields = CatalogDetailWithCodeSerializer.Meta.fields + (
+        fields = (
+            "idConsult",
+            "noConsult",
+            "idTrno",
+            "idCentroAtencion",
+            "consult",
+            "estActivo",
+        )
+
+
+class ConsultoriosDetailSerializer(serializers.ModelSerializer):
+    idConsult = serializers.IntegerField(source="id_consult", read_only=True)
+    noConsult = serializers.IntegerField(source="no_consult")
+    idTrno = serializers.IntegerField(source="id_trno_id")
+    idCentroAtencion = serializers.IntegerField(source="id_centro_atencion_id")
+    estActivo = serializers.BooleanField(source="est_activo")
+    fchAlta = serializers.DateTimeField(source="fch_alta", allow_null=True)
+    fchModf = serializers.DateTimeField(source="fch_modf", allow_null=True)
+    fchBaja = serializers.DateTimeField(source="fch_baja", allow_null=True)
+    usrAlta = serializers.IntegerField(source="usr_alta", allow_null=True)
+    usrModf = serializers.IntegerField(source="usr_modf", allow_null=True)
+    usrBaja = serializers.IntegerField(source="usr_baja", allow_null=True)
+    turn = serializers.SerializerMethodField()
+    center = serializers.SerializerMethodField()
+
+    def get_turn(self, obj):
+        turn = obj.id_trno
+        if not turn:
+            return None
+        return {"id": turn.id, "name": turn.name}
+
+    def get_center(self, obj):
+        center = obj.id_centro_atencion
+        if not center:
+            return None
+        return {"id": center.id, "name": center.name}
+
+    class Meta:
+        model = Consultorios
+        fields = (
+            "idConsult",
+            "noConsult",
+            "idTrno",
+            "idCentroAtencion",
+            "consult",
+            "estActivo",
+            "fchAlta",
+            "fchModf",
+            "fchBaja",
+            "usrAlta",
+            "usrModf",
+            "usrBaja",
             "turn",
             "center",
         )
 
-class ConsultoriosWriteSerializer(CatalogWriteSerializer):
-    code = serializers.IntegerField()
-    idTurn = serializers.IntegerField(source="id_turn_id")
-    idCenter = serializers.IntegerField(source="id_center_id")
 
-    class Meta(CatalogWriteSerializer.Meta):
+class ConsultoriosWriteSerializer(serializers.ModelSerializer):
+    noConsult = serializers.IntegerField(source="no_consult")
+    idTrno = serializers.IntegerField(source="id_trno_id")
+    idCentroAtencion = serializers.IntegerField(source="id_centro_atencion_id")
+    estActivo = serializers.BooleanField(source="est_activo", required=False)
+
+    class Meta:
         model = Consultorios
-        fields = CatalogWriteSerializer.Meta.fields + ("code", "idTurn", "idCenter")
+        fields = ("noConsult", "idTrno", "idCentroAtencion", "consult", "estActivo")
 
 
 #######EdoCivil

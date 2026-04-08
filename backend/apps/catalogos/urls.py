@@ -9,6 +9,7 @@ routes = [
     ("discharge-reasons", BajasListCreateView, BajasDetailView, "int"),
     ("labor-quality", CalidadLaboralListCreateView, CalidadLaboralDetailView, "str"),
     ("consulting-rooms", ConsultoriosListCreateView, ConsultoriosDetailView, "int"),
+    ("consultorios", ConsultoriosListCreateView, ConsultoriosDetailView, "int"),
     ("civil-status", EdoCivilListCreateView, EdoCivilDetailView, "int"),
     ("diseases", EnfermedadesListCreateView, EnfermedadesDetailView, "int"),
     ("education-level", EscolaridadListCreateView, EscolaridadDetailView, "int"),

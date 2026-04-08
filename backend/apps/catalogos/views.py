@@ -8,6 +8,7 @@ from types import MappingProxyType
 from .models import *
 from .serializers import *
 from .permissions import CatalogPermissionMixin
+from .repositories.consultorios_repository import ConsultoriosRepository
 
 class ErrorMixin:
     def _error(self, request, *, code, message, http_status, details=None):
@@ -364,20 +365,167 @@ class CentrosAtencionDetailView(CatalogBaseDetailView):
 
 
 #####Views Consultorios
-class ConsultoriosListCreateView(CatalogBaseListCreateView):
+class ConsultoriosListCreateView(CatalogPermissionMixin, ErrorMixin, APIView):
     catalog = "consultorios"
-    model = Consultorios
-    list_serializer = ConsultoriosListSerializer
-    write_serializer = ConsultoriosWriteSerializer
-    error_codes = {"exists": "CONSULTING_ROOM_EXISTS"}
+    repository = ConsultoriosRepository()
+
+    def get(self, request):
+        raw_page = request.query_params.get("page", "1")
+        raw_page_size = request.query_params.get("pageSize", "20")
+
+        try:
+            page = int(raw_page)
+            page_size = int(raw_page_size)
+        except (TypeError, ValueError):
+            return self._error(
+                request,
+                code="INVALID_FORMAT",
+                message="Parámetros de paginación inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details={
+                    "page": ["Debe ser un entero"],
+                    "pageSize": ["Debe ser un entero"],
+                },
+            )
+
+        if page < 1 or page_size < 1 or page_size > 100:
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Parámetros de paginación fuera de rango",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details={
+                    "page": ["Debe ser mayor o igual a 1"],
+                    "pageSize": ["Debe estar entre 1 y 100"],
+                },
+            )
+
+        search = request.query_params.get("search")
+        is_active = request.query_params.get("isActive")
+        sort_by = request.query_params.get("sortBy", "no_consult")
+        sort_order = request.query_params.get("sortOrder", "asc")
+
+        est_activo = None
+        if is_active is not None:
+            normalized_is_active = is_active.lower()
+            if normalized_is_active not in ("true", "false"):
+                return self._error(
+                    request,
+                    code="VALIDATION_ERROR",
+                    message="Parámetro isActive inválido",
+                    http_status=status.HTTP_400_BAD_REQUEST,
+                    details={
+                        "isActive": ["Debe ser 'true' o 'false'"],
+                    },
+                )
+            est_activo = normalized_is_active == "true"
+
+        queryset = self.repository.get_all(
+            search=search,
+            est_activo=est_activo,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+
+        total = queryset.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        serializer = ConsultoriosListSerializer(queryset[start:end], many=True)
+        total_pages = (total + page_size - 1) // page_size
+
+        return Response(
+            {
+                "items": serializer.data,
+                "page": page,
+                "pageSize": page_size,
+                "total": total,
+                "totalPages": total_pages,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        serializer = ConsultoriosWriteSerializer(data=request.data)
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+        consultorio = self.repository.create(
+            validated_data=serializer.validated_data,
+            actor_id=actor_id,
+        )
+
+        return Response(
+            {"idConsult": consultorio.id_consult, "consult": consultorio.consult},
+            status=status.HTTP_201_CREATED,
+        )
     
-class ConsultoriosDetailView(CatalogBaseDetailView):
+class ConsultoriosDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
     catalog = "consultorios"
-    model = Consultorios
-    detail_serializer = ConsultoriosDetailSerializer
-    write_serializer = ConsultoriosWriteSerializer
-    wrapper_key = "consultingRoom"
-    error_codes = {"not_found": "CONSULTING_ROOM_NOT_FOUND", "exists": "CONSULTING_ROOM_EXISTS"} 
+    repository = ConsultoriosRepository()
+
+    def get(self, request, pk):
+        consultorio = self.repository.get_by_id(pk)
+        if not consultorio:
+            return self._error(
+                request,
+                code="CONSULTING_ROOM_NOT_FOUND",
+                message="Consultorio no encontrado",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ConsultoriosDetailSerializer(consultorio)
+        return Response({"consultingRoom": serializer.data}, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        consultorio = self.repository.get_by_id(pk)
+        if not consultorio:
+            return self._error(
+                request,
+                code="CONSULTING_ROOM_NOT_FOUND",
+                message="Consultorio no encontrado",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ConsultoriosWriteSerializer(consultorio, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+        updated = self.repository.update(
+            consultorio=consultorio,
+            validated_data=serializer.validated_data,
+            actor_id=actor_id,
+        )
+
+        detail = ConsultoriosDetailSerializer(updated)
+        return Response({"consultingRoom": detail.data}, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        consultorio = self.repository.get_by_id(pk)
+        if not consultorio:
+            return self._error(
+                request,
+                code="CONSULTING_ROOM_NOT_FOUND",
+                message="Consultorio no encontrado",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        actor_id = getattr(request.user, "id_usuario", None) or getattr(request.user, "id", None)
+        self.repository.delete(consultorio=consultorio, actor_id=actor_id)
+        return Response({"success": True}, status=status.HTTP_200_OK)
 
 
 #####Views EdoCivil
