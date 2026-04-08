@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 
 from django.contrib.auth.hashers import make_password
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -241,6 +242,7 @@ class RbacUsersApiTests(APITestCase):
         self.assertFalse(created_user.terminos_acept)
 
     @patch("apps.administracion.views.rbac_views.send_user_credentials_email")
+    @override_settings(ALLOW_USER_CREATE_WITHOUT_EMAIL=False)
     def test_create_user_email_failure_rolls_back_creation(self, send_email_mock):
         send_email_mock.return_value = False
 

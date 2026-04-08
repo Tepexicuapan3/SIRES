@@ -37,6 +37,7 @@ Este dominio cubre:
 - [`kan-66-concurrency-hardening-apply-evidence.md`](./kan-66-concurrency-hardening-apply-evidence.md) - evidencia de implementacion KAN-66 para concurrencia/idempotencia en hotspots RBAC write.
 - [`kan-67-cutover-legacy-retirement.md`](./kan-67-cutover-legacy-retirement.md) - evidencia de corte incremental KAN-67 sobre S3 para retiro controlado de lógica legacy inline en `rbac_views` con fallback por flag.
 - [`kan-69-observability-baseline.md`](./kan-69-observability-baseline.md) - baseline operativo de observabilidad auth-access (métricas, alertas mínimas y snapshot/tablero inicial).
+- [`kan-60-s1-qa-regression-go-no-go.md`](./kan-60-s1-qa-regression-go-no-go.md) - evidencia de regresión funcional Sprint 1 + checklist pre-deploy y dictamen QA Go/No-Go para KAN-60.
 - [`pending-decisions.md`](./pending-decisions.md) - acta de cierre de decisiones historicamente pendientes (estado final resuelto).
 - [`backlog-mapping.md`](./backlog-mapping.md) - mapeo entre PRD y backlog de ejecucion (Jira/SDD).
 - [`decision-log.md`](./decision-log.md) - registro de decisiones del dominio.

@@ -1,5 +1,11 @@
 # auth-access - Changelog
 
+## 2026-04-08 (KAN-60 regresión funcional + checklist pre-deploy)
+
+- Se agrega `kan-60-s1-qa-regression-go-no-go.md` como acta canónica de ejecución QA para Sprint 1 (matriz AC, checklist PASS/FAIL, evidencia Docker-first y dictamen final).
+- Se documenta y cierra hallazgo crítico de regresión en backend tests (`test_create_user_email_failure_rolls_back_creation`) endureciendo precondición con `@override_settings(ALLOW_USER_CREATE_WITHOUT_EMAIL=False)` y revalidación en verde (`155 tests / OK`).
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
+
 ## 2026-04-07 (KAN-70 cierre final 100%: Jira Finalizada + gaps cerrados)
 
 - Se crea `kan-59-apply-evidence.md` con evidencia TDD-first completa de KAN-59 (PRs #59/60/61, decisiones técnicas DEC-KAN-59-001 a DEC-KAN-59-004, ciclo RED→GREEN→REFACTOR, rollback baseline).
