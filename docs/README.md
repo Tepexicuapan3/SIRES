@@ -46,6 +46,7 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 - `docs/domains/auth-access/kan-68-startup-quality-gate.md` - evidencia de quality gate KAN-68 para pre-deploy validation, rollback rehearsal y checklist go/no-go.
 - `docs/domains/auth-access/kan-69-observability-baseline.md` - baseline operativo de observabilidad auth-access (métricas, alertas mínimas, tablero/snapshot inicial).
 - `docs/domains/auth-access/kan-60-s1-qa-regression-go-no-go.md` - evidencia de regresión funcional Sprint 1 con checklist pre-deploy y dictamen QA Go/No-Go (KAN-60).
+- `docs/domains/auth-access/kan-71-multi-sprint-demo-process.md` - guía institucional de demo multi-sprint (plantilla reusable, checklist mínimo y flujo operativo de cierre).
 - `docs/domains/auth-access/kan-70-evidence-matrix-template.md` - matriz plantilla AC->evidencia para cierre evidence-first y trazabilidad TDD por fase.
 - Nota de discoverability: los links legacy en `docs/guides/` para PRD de auth-access se mantienen como **deprecados** y redirigen a la ruta canonica del dominio.
 

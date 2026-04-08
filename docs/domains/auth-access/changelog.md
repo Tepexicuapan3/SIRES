@@ -1,5 +1,11 @@
 # auth-access - Changelog
 
+## 2026-04-08 (KAN-71 guía institucional demo multi-sprint)
+
+- Se agrega `kan-71-multi-sprint-demo-process.md` con proceso reusable para demos Sprint 2+ (plantilla `Demo Sprint X`, checklist mínimo de evidencia y flujo de cierre Jira/PR/docs).
+- Se incorpora aplicación de checklist a caso real Sprint 1 usando `kan-70-s1-document-closure-acta.md` y `kan-60-s1-qa-regression-go-no-go.md` como baseline de validación.
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
+
 ## 2026-04-08 (KAN-60 regresión funcional + checklist pre-deploy)
 
 - Se agrega `kan-60-s1-qa-regression-go-no-go.md` como acta canónica de ejecución QA para Sprint 1 (matriz AC, checklist PASS/FAIL, evidencia Docker-first y dictamen final).
