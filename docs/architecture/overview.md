@@ -1,6 +1,6 @@
-# Arquitectura SIRES (baseline vigente)
+# Arquitectura SISEM (baseline vigente)
 
-> TL;DR: SIRES opera como monolito modular evolutivo con frontend React 19 + backend Django/DRF. El delivery se organiza por dominio y la estrategia de datos es DB por dominio con PostgreSQL como target.
+> TL;DR: SISEM opera como monolito modular evolutivo con frontend React 19 + backend Django/DRF. El delivery se organiza por dominio y la estrategia de datos es DB por dominio con PostgreSQL como target.
 
 ## Problem / Context
 

@@ -96,7 +96,7 @@ export const AuthCard = ({
               <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full flex items-center justify-center shadow-xl shadow-brand/20 mb-6 transition-all duration-300 hover:scale-105 hover:rotate-2">
                 <img
                   src="/assets/brand/logos/primary/sires.webp"
-                  alt="Logo SIRES"
+                  alt="Logo SISEM"
                   className="w-32 h-32 sm:w-36 sm:h-36 object-contain"
                 />
               </div>

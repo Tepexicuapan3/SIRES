@@ -1,6 +1,6 @@
-# SIRES
+# SISEM
 
-![SIRES](frontend/public/SIRES.webp)
+![SISEM](frontend/public/SIRES.webp)
 
 ![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5+-0C4B33?logo=django&logoColor=white)
@@ -10,11 +10,11 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-auth--db-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-cache-DC382D?logo=redis&logoColor=white)
 
-Sistema de Informacion de Registros Electronicos de Salud para Metro CDMX. SIRES centraliza operacion clinica, seguridad y trazabilidad en una arquitectura moderna React + Django.
+Sistema de Informacion de Registros Electronicos de Salud para Metro CDMX. SISEM centraliza operacion clinica, seguridad y trazabilidad en una arquitectura moderna React + Django.
 
-## Que es SIRES
+## Que es SISEM
 
-SIRES es una plataforma web para gestion clinica y administrativa. Combina frontend React 19 con backend Django/DRF, usa JWT en cookies HttpOnly y protege operaciones mutables con CSRF (`X-CSRF-TOKEN`).
+SISEM es una plataforma web para gestion clinica y administrativa. Combina frontend React 19 con backend Django/DRF, usa JWT en cookies HttpOnly y protege operaciones mutables con CSRF (`X-CSRF-TOKEN`).
 
 ## Stack principal
 
@@ -48,7 +48,7 @@ Verificacion rapida:
 
 ### Opcion local (sin Docker)
 
-No recomendada. El contrato operativo de desarrollo en SIRES es docker-first.
+No recomendada. El contrato operativo de desarrollo en SISEM es docker-first.
 
 ## Flujo IA del equipo
 
@@ -98,7 +98,7 @@ No recomendada. El contrato operativo de desarrollo en SIRES es docker-first.
 
 ### 1) Arquitectura recomendada (obligatoria)
 
-- SIRES evoluciona como **monolito modular** con DDD pragmatico (sin sobre-ingenieria).
+- SISEM evoluciona como **monolito modular** con DDD pragmatico (sin sobre-ingenieria).
 - Capas obligatorias por modulo/dominio:
   - `presentation`: transporte (HTTP/UI), validacion y mapeo.
   - `application`: casos de uso, orquestacion y limites transaccionales.
@@ -170,7 +170,7 @@ No recomendada. El contrato operativo de desarrollo en SIRES es docker-first.
 
 ### 8) Estrategia de base de datos (integridad y seguridad primero)
 
-- Politica por etapas (sin contradiccion): en etapa temprana SIRES opera con una sola instancia/engine PostgreSQL, con ownership estricto por dominio y aislamiento logico; el aislamiento fisico por DB dedicada se evalua despues con criterios documentados.
+- Politica por etapas (sin contradiccion): en etapa temprana SISEM opera con una sola instancia/engine PostgreSQL, con ownership estricto por dominio y aislamiento logico; el aislamiento fisico por DB dedicada se evalua despues con criterios documentados.
 - Todo schema/tabla de dominio debe definir integridad explicita: PK/FK, unicidad, nullabilidad clara e indices alineados a queries reales.
 - Los limites transaccionales de flujos criticos se definen en `application`/casos de uso; evitar control transaccional ad-hoc en capas de transporte.
 - Para hotspots de concurrencia, documentar y aplicar patron seguro por caso (`SELECT ... FOR UPDATE`, versionado optimista, idempotency keys o serializacion en cola).
@@ -261,6 +261,7 @@ Playbook y onboarding:
 - `docs/getting-started/ai-team-workflow.md`
 - `docs/getting-started/onboarding-day-1-checklist.md`
 - `docs/getting-started/github-hardening-ci-cd-baseline.md`
+- `docs/guides/kan-74-legacy-naming-exceptions.md`
 
 ## Comandos utiles
 

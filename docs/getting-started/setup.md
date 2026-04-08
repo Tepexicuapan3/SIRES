@@ -1,6 +1,6 @@
-# Setup SIRES
+# Setup SISEM
 
-> TL;DR: Levantar SIRES con Docker es el camino oficial. El stack operativo usa Django/DRF + React 19 sobre PostgreSQL (dominio Auth) + Redis en contenedores.
+> TL;DR: Levantar SISEM con Docker es el camino oficial. El stack operativo usa Django/DRF + React 19 sobre PostgreSQL (dominio Auth) + Redis en contenedores.
 
 ## Prerequisitos
 
@@ -33,7 +33,7 @@ Notas clave del entorno docker-first:
 - Backend usa `DB_*` derivados de `AUTH_DB_*` en Docker (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
 - El seed demo (`backend/seed_e2e.py`) se ejecuta automaticamente en el arranque (`RUN_SEED_ON_BOOT=true`).
 - La data persiste en volumen Docker (`auth_db_data`).
-- SMTP y enlaces de email Auth se parametrizan con `EMAIL_*`, `SIRES_LOGIN_URL` y `SIRES_SUPPORT_EMAIL`.
+- SMTP y enlaces de email Auth se parametrizan con `EMAIL_*`; en KAN-74 se prefieren `SISEM_LOGIN_URL` y `SISEM_SUPPORT_EMAIL`, manteniendo `SIRES_*` temporalmente por compatibilidad.
 
 4. Verificacion rapida:
 

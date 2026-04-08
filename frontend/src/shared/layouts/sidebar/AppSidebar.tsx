@@ -1,10 +1,10 @@
 /**
  * AppSidebar.tsx
  *
- * Componente principal del sidebar de SIRES.
+ * Componente principal del sidebar de SISEM.
  *
  * Arquitectura:
- * - Header: Logo SIRES
+ * - Header: Logo SISEM
  * - Content: NavMain (secciones filtradas por permisos)
  * - Footer: NavSecondary (Support/Feedback) + NavUser
  * - Variante: "inset"
@@ -36,19 +36,19 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       {...props}
       aria-label="Menú de navegación principal"
     >
-      {/* ===== HEADER: Logo SIRES ===== */}
+      {/* ===== HEADER: Logo SISEM ===== */}
       <SidebarHeader>
         <div className="flex min-w-0 items-center gap-3 pl-4 pr-2 pt-3">
           <div className="flex h-12 w-12 items-center justify-center">
             <img
               src="/assets/brand/logos/primary/sires.webp"
-              alt="Logo SIRES"
+              alt="Logo SISEM"
               className="h-11 w-11 object-contain"
             />
           </div>
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-md font-display text-txt-body">
-              SIRES
+              SISEM
             </span>
             <span className="truncate text-xs text-txt-muted">
               STC Metro CDMX

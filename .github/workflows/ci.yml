@@ -23,7 +23,8 @@ jobs:
     name: frontend
     runs-on: ubuntu-latest
     env:
-      VITE_APP_NAME: SIRES
+      # KAN-74 Wave 2: prefer institutional name SISEM in CI surfaces.
+      VITE_APP_NAME: SISEM
       VITE_APP_VERSION: ci
       VITE_API_URL: /api/v1
       VITE_API_TIMEOUT: "3000"
@@ -47,6 +48,16 @@ jobs:
 
       - name: Test (no watch)
         run: bun run test:run
+
+  tooling-naming-compat:
+    name: tooling-naming-compat
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate SISEM naming + SIRES compatibility
+        run: bash .github/workflows/check-tooling-naming.sh
 
   backend:
     name: backend

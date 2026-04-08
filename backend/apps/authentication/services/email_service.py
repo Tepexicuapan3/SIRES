@@ -19,10 +19,11 @@ def send_reset_code_email(recipient_email, code, user_name=None):
     subject = "Código de recuperación"
     safe_name = user_name or recipient_email
     expiration_minutes = max(1, int(OTP_TTL_SECONDS / 60))
-    support_email = getattr(
-        settings,
+    support_email = _setting_with_legacy(
+        "SISEM_SUPPORT_EMAIL",
         "SIRES_SUPPORT_EMAIL",
-        settings.DEFAULT_FROM_EMAIL or "soporte@sires.local",
+        settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
+        primary_default=settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
     )
     message = (
         f"Hola {safe_name}, recibimos una solicitud para restablecer la contraseña de tu cuenta.\n\n"
@@ -32,11 +33,11 @@ def send_reset_code_email(recipient_email, code, user_name=None):
         "Si no solicitaste este código, puedes ignorar este correo con tranquilidad.\n"
         f"Soporte: {support_email}"
     )
-    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "SIRES STC Metro")
+    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "SISEM STC Metro")
     logo_url = getattr(
         settings,
         "EMAIL_LOGO_URL",
-        "https://i.ibb.co/zhdkzrZp/SIRES.webp",
+        "https://i.ibb.co/zhdkzrZp/SISEM.webp",
     )
     metro_logo_url = getattr(
         settings,
@@ -73,24 +74,32 @@ def send_reset_code_email(recipient_email, code, user_name=None):
     return True
 
 
-def send_user_credentials_email(recipient_email, username, temporary_password, user_name=None):
+def send_user_credentials_email(
+    recipient_email, username, temporary_password, user_name=None
+):
     if not _smtp_is_configured():
         logger.error("SMTP no configurado para enviar credenciales de usuario")
         return False
 
     safe_name = user_name or username or recipient_email
-    subject = "Credenciales de acceso a SIRES"
-    login_url = getattr(settings, "SIRES_LOGIN_URL", "http://localhost:5173/login")
-    support_email = getattr(
-        settings,
-        "SIRES_SUPPORT_EMAIL",
-        settings.DEFAULT_FROM_EMAIL or "soporte@sires.local",
+    subject = "Credenciales de acceso a SISEM"
+    login_url = _setting_with_legacy(
+        "SISEM_LOGIN_URL",
+        "SIRES_LOGIN_URL",
+        "http://localhost:5173/login",
+        primary_default="http://localhost:5173/login",
     )
-    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "SIRES STC Metro")
+    support_email = _setting_with_legacy(
+        "SISEM_SUPPORT_EMAIL",
+        "SIRES_SUPPORT_EMAIL",
+        settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
+        primary_default=settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
+    )
+    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "SISEM STC Metro")
     logo_url = getattr(
         settings,
         "EMAIL_LOGO_URL",
-        "https://i.ibb.co/zhdkzrZp/SIRES.webp",
+        "https://i.ibb.co/zhdkzrZp/SISEM.webp",
     )
     metro_logo_url = getattr(
         settings,
@@ -99,7 +108,7 @@ def send_user_credentials_email(recipient_email, username, temporary_password, u
     )
 
     message = (
-        f"Hola {safe_name}, tu cuenta de SIRES fue creada.\n\n"
+        f"Hola {safe_name}, tu cuenta de SISEM fue creada.\n\n"
         f"Usuario: {username}\n"
         f"Contraseña temporal: {temporary_password}\n\n"
         "Pasos para acceder:\n"
@@ -152,3 +161,15 @@ def _smtp_is_configured():
         and settings.EMAIL_HOST_USER
         and settings.EMAIL_HOST_PASSWORD
     )
+
+
+def _setting_with_legacy(primary_key, legacy_key, default, primary_default=None):
+    primary_value = getattr(settings, primary_key, None)
+    if primary_value and (primary_default is None or primary_value != primary_default):
+        return primary_value
+
+    legacy_value = getattr(settings, legacy_key, None)
+    if legacy_value:
+        return legacy_value
+
+    return primary_value or default

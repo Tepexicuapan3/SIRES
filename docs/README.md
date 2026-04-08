@@ -1,6 +1,6 @@
-# SIRES Docs
+# SISEM Docs
 
-Indice canonico de documentacion para operar SIRES con el modelo actual: monolito modular evolutivo, trabajo por dominios y flujo Jira + SDD-Orchestrator + Engram + GGA.
+Indice canonico de documentacion para operar SISEM con el modelo actual: monolito modular evolutivo, trabajo por dominios y flujo Jira + SDD-Orchestrator + Engram + GGA.
 
 ## Start Here
 
@@ -152,6 +152,8 @@ Indice canonico de documentacion para operar SIRES con el modelo actual: monolit
 - `docs/guides/domain-dor-dod.md` - Definition of Ready / Definition of Done por dominio.
 - `docs/guides/incremental-domain-migration.md` - coexistencia old/new y plan incremental.
 - `docs/guides/ai-skills-matrix.md` - matriz activa de skills y auto-invoke.
+- `docs/guides/kan-74-legacy-naming-exceptions.md` - registro de excepciones temporales SIRES legacy durante rename a SISEM (KAN-75/76).
+- `docs/guides/kan-74-phase4-closure-evidence.md` - evidencia final de cierre Fase 4 (scan allowlist, regression Docker-first, pack por subtask, notas Jira/SDD y plan de hygiene).
 - `docs/guides/prd-dominio-1-auth-access.md` - **DEPRECADO** (stub legacy). Ver ruta canonica en `docs/domains/auth-access/prd.md`.
 - `docs/guides/prd-dominio-1-auth-access-pendientes-reunion.md` - **DEPRECADO** (stub legacy). Ver ruta canonica en `docs/domains/auth-access/pending-decisions.md`.
 

@@ -272,11 +272,22 @@ EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=10, cast=int)
-SIRES_LOGIN_URL = config("SIRES_LOGIN_URL", default="http://localhost:5173/login")
-SIRES_SUPPORT_EMAIL = config(
-    "SIRES_SUPPORT_EMAIL",
-    default=DEFAULT_FROM_EMAIL or "soporte@sires.local",
+# Transitional aliases for institutional rename SIRES -> SISEM.
+# New keys (SISEM_*) are preferred while preserving legacy SIRES_* compatibility.
+SISEM_LOGIN_URL = config(
+    "SISEM_LOGIN_URL",
+    default=config("SIRES_LOGIN_URL", default="http://localhost:5173/login"),
 )
+SIRES_LOGIN_URL = config("SIRES_LOGIN_URL", default=SISEM_LOGIN_URL)
+
+SISEM_SUPPORT_EMAIL = config(
+    "SISEM_SUPPORT_EMAIL",
+    default=config(
+        "SIRES_SUPPORT_EMAIL",
+        default=DEFAULT_FROM_EMAIL or "soporte@sisem.local",
+    ),
+)
+SIRES_SUPPORT_EMAIL = config("SIRES_SUPPORT_EMAIL", default=SISEM_SUPPORT_EMAIL)
 ALLOW_USER_CREATE_WITHOUT_EMAIL = config(
     "ALLOW_USER_CREATE_WITHOUT_EMAIL",
     default=False,
