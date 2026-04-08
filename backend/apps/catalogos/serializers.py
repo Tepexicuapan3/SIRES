@@ -2,7 +2,8 @@
 from rest_framework import serializers
 from apps.authentication.repositories.user_repository import UserRepository
 from datetime import timezone as dt_timezone
-#from apps.catalogos.models import *
+
+# from apps.catalogos.models import *
 from apps.catalogos.models.cies import CatCies
 
 # importar el modelo
@@ -46,9 +47,13 @@ class CatalogListSerializer(serializers.ModelSerializer):
 
 class CatalogDetailSerializer(serializers.ModelSerializer):
     isActive = serializers.BooleanField(source="is_active")
-    createdAt = serializers.DateTimeField(source="created_at", format="%Y-%m-%dT%H:%M:%SZ")
+    createdAt = serializers.DateTimeField(
+        source="created_at", format="%Y-%m-%dT%H:%M:%SZ"
+    )
     createdBy = serializers.SerializerMethodField()
-    updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%dT%H:%M:%SZ")
+    updatedAt = serializers.DateTimeField(
+        source="updated_at", format="%Y-%m-%dT%H:%M:%SZ"
+    )
     updatedBy = serializers.SerializerMethodField()
 
     class Meta:
@@ -80,10 +85,14 @@ class CatalogDetailSerializer(serializers.ModelSerializer):
         # Case 2: repository returns SyUsuarios
         profile = getattr(user, "detalle", None) or getattr(user, "syusuarios", None)
         if profile:
-            name = " ".join([profile.nombre, profile.paterno, profile.materno or ""]).strip()
+            name = " ".join(
+                [profile.nombre, profile.paterno, profile.materno or ""]
+            ).strip()
         else:
             name = getattr(user, "usuario", "")
-        resolved_id = getattr(user, "id_usuario", None) or getattr(user, "id", None) or user_id
+        resolved_id = (
+            getattr(user, "id_usuario", None) or getattr(user, "id", None) or user_id
+        )
         return {"id": resolved_id, "name": name}
 
     def get_createdBy(self, obj):
@@ -123,9 +132,10 @@ class CatCentroAtencionListSerializer(CatalogListSerializer):
         model = CatCentroAtencion
         fields = ("id", "name", "code", "isExternal", "isActive")
 
+
 class CatCentroAtencionDetailSerializer(CatalogDetailSerializer):
     isExternal = serializers.BooleanField(source="is_external")
-    
+
     class Meta(CatalogDetailSerializer.Meta):
         model = CatCentroAtencion
         fields = (
@@ -142,9 +152,10 @@ class CatCentroAtencionDetailSerializer(CatalogDetailSerializer):
             "updatedBy",
         )
 
+
 class CatCentroAtencionWriteSerializer(CatalogWriteSerializer):
     isExternal = serializers.BooleanField(source="is_external", required=False)
-    
+
     class Meta(CatalogWriteSerializer.Meta):
         model = CatCentroAtencion
         fields = ("name", "code", "isExternal", "address", "schedule", "isActive")
@@ -155,9 +166,11 @@ class AreasListSerializer(CatalogListWithCodeSerializer):
     class Meta(CatalogListWithCodeSerializer.Meta):
         model = Areas
 
+
 class AreasDetailSerializer(CatalogDetailWithCodeSerializer):
     class Meta(CatalogDetailWithCodeSerializer.Meta):
         model = Areas
+
 
 class AreasWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -169,13 +182,18 @@ class AreasWriteSerializer(CatalogWriteSerializer):
 class AutorizadoresListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Autorizadores
-        
+
+
 class AutorizadoresDetailSerializer(CatalogDetailSerializer):
     center = serializers.SerializerMethodField()
     authorizationType = serializers.SerializerMethodField()
-    signatureImage = serializers.CharField(source="signature_image", allow_null=True, required=False, allow_blank=True)
+    signatureImage = serializers.CharField(
+        source="signature_image", allow_null=True, required=False, allow_blank=True
+    )
     user = serializers.SerializerMethodField()
-    fileNumber = serializers.CharField(source="file_number", allow_null=True, required=False, allow_blank=True)
+    fileNumber = serializers.CharField(
+        source="file_number", allow_null=True, required=False, allow_blank=True
+    )
 
     def _build_catalog_ref(self, ref_id, queryset):
         if not ref_id:
@@ -183,12 +201,13 @@ class AutorizadoresDetailSerializer(CatalogDetailSerializer):
         item = queryset.filter(pk=ref_id).only("id", "name").first()
         return {"id": ref_id, "name": item.name if item else ""}
 
-
     def get_center(self, obj):
         return self._build_catalog_ref(obj.center_id, CatCentroAtencion.objects)
 
     def get_authorizationType(self, obj):
-        return self._build_catalog_ref(obj.authorization_type_id, TpAutorizacion.objects)
+        return self._build_catalog_ref(
+            obj.authorization_type_id, TpAutorizacion.objects
+        )
 
     def get_user(self, obj):
         return self._build_user_ref(obj.user_id)
@@ -202,15 +221,23 @@ class AutorizadoresDetailSerializer(CatalogDetailSerializer):
             "signatureImage",
             "user",
             "fileNumber",
-    )
+        )
+
 
 class AutorizadoresWriteSerializer(CatalogWriteSerializer):
     centerId = serializers.IntegerField(source="center_id")
     authorizationTypeId = serializers.IntegerField(source="authorization_type_id")
-    signatureImage = serializers.CharField(source="signature_image", allow_null=True, required=False, allow_blank=True)
-    authorizerPassword = serializers.CharField(source="authorizer_password", write_only=True)
+    signatureImage = serializers.CharField(
+        source="signature_image", allow_null=True, required=False, allow_blank=True
+    )
+    authorizerPassword = serializers.CharField(
+        source="authorizer_password", write_only=True
+    )
     userId = serializers.IntegerField(source="user_id")
-    fileNumber = serializers.CharField(source="file_number", allow_null=True, required=False, allow_blank=True)
+    fileNumber = serializers.CharField(
+        source="file_number", allow_null=True, required=False, allow_blank=True
+    )
+
     class Meta(CatalogWriteSerializer.Meta):
         model = Autorizadores
         fields = CatalogWriteSerializer.Meta.fields + (
@@ -221,7 +248,7 @@ class AutorizadoresWriteSerializer(CatalogWriteSerializer):
             "authorizerPassword",
             "userId",
             "fileNumber",
-    )
+        )
 
 
 #######Bajas
@@ -229,9 +256,11 @@ class BajasListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Bajas
 
+
 class BajasDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Bajas
+
 
 class BajasWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -243,9 +272,11 @@ class CalidadLaboralListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = CalidadLaboral
 
+
 class CalidadLaboralDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = CalidadLaboral
+
 
 class CalidadLaboralWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -254,81 +285,31 @@ class CalidadLaboralWriteSerializer(CatalogWriteSerializer):
 
 
 #######Consultorios
-class ConsultoriosListSerializer(serializers.ModelSerializer):
-    idConsult = serializers.IntegerField(source="id_consult", read_only=True)
-    noConsult = serializers.IntegerField(source="no_consult")
-    idTrno = serializers.IntegerField(source="id_trno_id")
-    idCentroAtencion = serializers.IntegerField(source="id_centro_atencion_id")
-    estActivo = serializers.BooleanField(source="est_activo")
-
-    class Meta:
+class ConsultoriosListSerializer(CatalogListWithCodeSerializer):
+    class Meta(CatalogListWithCodeSerializer.Meta):
         model = Consultorios
-        fields = (
-            "idConsult",
-            "noConsult",
-            "idTrno",
-            "idCentroAtencion",
-            "consult",
-            "estActivo",
-        )
 
 
-class ConsultoriosDetailSerializer(serializers.ModelSerializer):
-    idConsult = serializers.IntegerField(source="id_consult", read_only=True)
-    noConsult = serializers.IntegerField(source="no_consult")
-    idTrno = serializers.IntegerField(source="id_trno_id")
-    idCentroAtencion = serializers.IntegerField(source="id_centro_atencion_id")
-    estActivo = serializers.BooleanField(source="est_activo")
-    fchAlta = serializers.DateTimeField(source="fch_alta", allow_null=True)
-    fchModf = serializers.DateTimeField(source="fch_modf", allow_null=True)
-    fchBaja = serializers.DateTimeField(source="fch_baja", allow_null=True)
-    usrAlta = serializers.IntegerField(source="usr_alta", allow_null=True)
-    usrModf = serializers.IntegerField(source="usr_modf", allow_null=True)
-    usrBaja = serializers.IntegerField(source="usr_baja", allow_null=True)
-    turn = serializers.SerializerMethodField()
-    center = serializers.SerializerMethodField()
+class ConsultoriosDetailSerializer(CatalogDetailWithCodeSerializer):
+    turn = CatalogRefSerializer(source="id_turn", read_only=True)
+    center = CatalogRefSerializer(source="id_center", read_only=True)
 
-    def get_turn(self, obj):
-        turn = obj.id_trno
-        if not turn:
-            return None
-        return {"id": turn.id, "name": turn.name}
-
-    def get_center(self, obj):
-        center = obj.id_centro_atencion
-        if not center:
-            return None
-        return {"id": center.id, "name": center.name}
-
-    class Meta:
+    class Meta(CatalogDetailWithCodeSerializer.Meta):
         model = Consultorios
-        fields = (
-            "idConsult",
-            "noConsult",
-            "idTrno",
-            "idCentroAtencion",
-            "consult",
-            "estActivo",
-            "fchAlta",
-            "fchModf",
-            "fchBaja",
-            "usrAlta",
-            "usrModf",
-            "usrBaja",
+        fields = CatalogDetailWithCodeSerializer.Meta.fields + (
             "turn",
             "center",
         )
 
 
-class ConsultoriosWriteSerializer(serializers.ModelSerializer):
-    noConsult = serializers.IntegerField(source="no_consult")
-    idTrno = serializers.IntegerField(source="id_trno_id")
-    idCentroAtencion = serializers.IntegerField(source="id_centro_atencion_id")
-    estActivo = serializers.BooleanField(source="est_activo", required=False)
+class ConsultoriosWriteSerializer(CatalogWriteSerializer):
+    code = serializers.IntegerField()
+    idTurn = serializers.IntegerField(source="id_turn_id")
+    idCenter = serializers.IntegerField(source="id_center_id")
 
-    class Meta:
+    class Meta(CatalogWriteSerializer.Meta):
         model = Consultorios
-        fields = ("noConsult", "idTrno", "idCentroAtencion", "consult", "estActivo")
+        fields = CatalogWriteSerializer.Meta.fields + ("code", "idTurn", "idCenter")
 
 
 #######EdoCivil
@@ -336,13 +317,15 @@ class EdoCivilListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = EdoCivil
 
+
 class EdoCivilDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = EdoCivil
 
+
 class EdoCivilWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
-        model = EdoCivil    
+        model = EdoCivil
 
 
 #######Enfermedades
@@ -350,9 +333,11 @@ class EnfermedadesListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Enfermedades
 
+
 class EnfermedadesDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Enfermedades
+
 
 class EnfermedadesWriteSerializer(CatalogWriteSerializer):
     cieVersion = serializers.CharField(source="cie_version")
@@ -367,13 +352,15 @@ class EscolaridadListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Escolaridad
 
+
 class EscolaridadDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Escolaridad
 
+
 class EscolaridadWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
-        model = Escolaridad     
+        model = Escolaridad
 
 
 #######Escuelas
@@ -381,12 +368,15 @@ class EscuelasListSerializer(CatalogListWithCodeSerializer):
     class Meta(CatalogListWithCodeSerializer.Meta):
         model = Escuelas
 
+
 class EscuelasDetailSerializer(CatalogDetailWithCodeSerializer):
     class Meta(CatalogDetailWithCodeSerializer.Meta):
         model = Escuelas
 
+
 class EscuelasWriteSerializer(CatalogWriteSerializer):
     code = serializers.CharField()
+
     class Meta(CatalogWriteSerializer.Meta):
         model = Escuelas
         fields = ("name", "code", "isActive")
@@ -397,9 +387,11 @@ class EspecialidadesListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Especialidades
 
+
 class EspecialidadesDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Especialidades
+
 
 class EspecialidadesWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -411,9 +403,11 @@ class EstudiosMedListSerializer(CatalogListWithCodeSerializer):
     class Meta(CatalogListWithCodeSerializer.Meta):
         model = EstudiosMed
 
+
 class EstudiosMedDetailSerializer(CatalogDetailWithCodeSerializer):
     class Meta(CatalogDetailWithCodeSerializer.Meta):
         model = EstudiosMed
+
 
 class EstudiosMedWriteSerializer(CatalogWriteSerializer):
     studyType = serializers.CharField(source="study_type")
@@ -422,15 +416,17 @@ class EstudiosMedWriteSerializer(CatalogWriteSerializer):
         model = EstudiosMed
         fields = CatalogWriteSerializer.Meta.fields + ("studyType", "indication")
 
-        
+
 #######Grupos de Medicamentos
 class GruposDeMedicamentosListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = GruposDeMedicamentos
 
+
 class GruposDeMedicamentosDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = GruposDeMedicamentos
+
 
 class GruposDeMedicamentosWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -442,9 +438,11 @@ class OcupacionesListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Ocupaciones
 
+
 class OcupacionesDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Ocupaciones
+
 
 class OcupacionesWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -456,9 +454,11 @@ class OrigenConsListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = OrigenCons
 
+
 class OrigenConsDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = OrigenCons
+
 
 class OrigenConsWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -471,9 +471,11 @@ class ParentescoListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Parentesco
 
+
 class ParentescoDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Parentesco
+
 
 class ParentescoWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -486,13 +488,15 @@ class PasesListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Pases
 
+
 class PasesDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Pases
 
+
 class PasesWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
-        model = Pases       
+        model = Pases
 
 
 #######Permisos
@@ -515,9 +519,13 @@ class PermisosDetailSerializer(serializers.ModelSerializer):
     description = serializers.CharField(source="descripcion")
     isActive = serializers.BooleanField(source="is_active")
     isSystem = serializers.BooleanField(source="es_sistema")
-    createdAt = serializers.DateTimeField(source="created_at", format="%Y-%m-%dT%H:%M:%SZ")
+    createdAt = serializers.DateTimeField(
+        source="created_at", format="%Y-%m-%dT%H:%M:%SZ"
+    )
     createdBy = serializers.SerializerMethodField()
-    updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%dT%H:%M:%SZ")
+    updatedAt = serializers.DateTimeField(
+        source="updated_at", format="%Y-%m-%dT%H:%M:%SZ"
+    )
     updatedBy = serializers.SerializerMethodField()
 
     class Meta:
@@ -536,10 +544,14 @@ class PermisosDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_createdBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "created_by_id", None))
+        return CatalogDetailSerializer._build_user_ref(
+            self, getattr(obj, "created_by_id", None)
+        )
 
     def get_updatedBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "updated_by_id", None))
+        return CatalogDetailSerializer._build_user_ref(
+            self, getattr(obj, "updated_by_id", None)
+        )
 
 
 class PermisosWriteSerializer(serializers.ModelSerializer):
@@ -575,9 +587,13 @@ class RolesDetailSerializer(serializers.ModelSerializer):
     isActive = serializers.BooleanField(source="is_active")
     isAdmin = serializers.BooleanField(source="is_admin")
     isSystem = serializers.BooleanField(source="es_sistema")
-    createdAt = serializers.DateTimeField(source="created_at", format="%Y-%m-%dT%H:%M:%SZ")
+    createdAt = serializers.DateTimeField(
+        source="created_at", format="%Y-%m-%dT%H:%M:%SZ"
+    )
     createdBy = serializers.SerializerMethodField()
-    updatedAt = serializers.DateTimeField(source="updated_at", format="%Y-%m-%dT%H:%M:%SZ")
+    updatedAt = serializers.DateTimeField(
+        source="updated_at", format="%Y-%m-%dT%H:%M:%SZ"
+    )
     updatedBy = serializers.SerializerMethodField()
 
     class Meta:
@@ -597,23 +613,36 @@ class RolesDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_createdBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "created_by_id", None))
+        return CatalogDetailSerializer._build_user_ref(
+            self, getattr(obj, "created_by_id", None)
+        )
 
     def get_updatedBy(self, obj):
-        return CatalogDetailSerializer._build_user_ref(self, getattr(obj, "updated_by_id", None))
+        return CatalogDetailSerializer._build_user_ref(
+            self, getattr(obj, "updated_by_id", None)
+        )
 
 
 class RolesWriteSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source="rol")
     description = serializers.CharField(source="desc_rol")
-    landingRoute = serializers.CharField(source="landing_route", required=False, allow_null=True, allow_blank=True)
+    landingRoute = serializers.CharField(
+        source="landing_route", required=False, allow_null=True, allow_blank=True
+    )
     isActive = serializers.BooleanField(source="is_active", required=False)
     isAdmin = serializers.BooleanField(source="is_admin", required=False)
     isSystem = serializers.BooleanField(source="es_sistema", required=False)
 
     class Meta:
         model = Roles
-        fields = ("name", "description", "landingRoute", "isActive", "isAdmin", "isSystem")
+        fields = (
+            "name",
+            "description",
+            "landingRoute",
+            "isActive",
+            "isAdmin",
+            "isSystem",
+        )
 
 
 #######Tipo de areas
@@ -621,9 +650,11 @@ class TiposAreasListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = TiposAreas
 
+
 class TiposAreasDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = TiposAreas
+
 
 class TiposAreasWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -635,9 +666,11 @@ class TpAutorizacionListSerializer(CatalogListWithCodeSerializer):
     class Meta(CatalogListWithCodeSerializer.Meta):
         model = TpAutorizacion
 
+
 class TpAutorizacionDetailSerializer(CatalogDetailWithCodeSerializer):
     class Meta(CatalogDetailWithCodeSerializer.Meta):
         model = TpAutorizacion
+
 
 class TpAutorizacionWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -650,9 +683,11 @@ class TipoDeCitasListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = TipoDeCitas
 
+
 class TipoDeCitasDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = TipoDeCitas
+
 
 class TipoDeCitasWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -664,9 +699,11 @@ class LicenciasListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Licencias
 
+
 class LicenciasDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Licencias
+
 
 class LicenciasWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -678,9 +715,11 @@ class TiposSanguineoListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = TiposSanguineo
 
+
 class TiposSanguineoDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = TiposSanguineo
+
 
 class TiposSanguineoWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
@@ -692,13 +731,16 @@ class TurnosListSerializer(CatalogListSerializer):
     class Meta(CatalogListSerializer.Meta):
         model = Turnos
 
+
 class TurnosDetailSerializer(CatalogDetailSerializer):
     class Meta(CatalogDetailSerializer.Meta):
         model = Turnos
 
+
 class TurnosWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = Turnos
+
 
 class CatCiesSerializer(serializers.ModelSerializer):
     class Meta:

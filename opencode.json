@@ -43,7 +43,6 @@
       "enabled": true
     }
   },
-  "plugin": ["oc-chatgpt-multi-auth"],
   "formatter": {
     "prettier": {
       "command": ["bun", "x", "prettier", "--write", "$FILE"],
