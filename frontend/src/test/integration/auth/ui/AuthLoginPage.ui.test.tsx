@@ -3,8 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "@/test/utils";
 import { LoginPage } from "@/domains/auth-access/pages/LoginPage";
 import { authAPI } from "@api/resources/auth.api";
+import type { LoginResponse } from "@api/types";
 import { ApiError, ERROR_CODES } from "@api/utils/errors";
 import { toast } from "sonner";
+import { createMockAuthUser } from "@/test/factories/users";
+
+const createLoginResponse = (
+  overrides: Parameters<typeof createMockAuthUser>[0] = {},
+): LoginResponse => ({
+  user: createMockAuthUser(overrides),
+  requiresOnboarding: false,
+});
 
 const mockNavigate = vi.fn();
 
@@ -18,20 +27,7 @@ vi.mock("react-router-dom", async () => {
 
 vi.mock("@api/resources/auth.api", () => ({
   authAPI: {
-    login: vi.fn().mockResolvedValue({
-      user: {
-        id: 1,
-        username: "test_user",
-        fullName: "Test User",
-        email: "test@metro.cdmx.gob.mx",
-        primaryRole: "ADMIN",
-        landingRoute: "/dashboard",
-        roles: ["ADMIN"],
-        permissions: ["*"],
-        mustChangePassword: false,
-      },
-      requiresOnboarding: false,
-    }),
+    login: vi.fn(),
   },
 }));
 
@@ -52,8 +48,8 @@ describe("Auth UI - LoginPage", () => {
   beforeEach(() => {
     mockNavigate.mockClear();
     window.localStorage.clear();
-    vi.mocked(authAPI.login).mockResolvedValue({
-      user: {
+    vi.mocked(authAPI.login).mockResolvedValue(
+      createLoginResponse({
         id: 1,
         username: "testuser",
         fullName: "Test User",
@@ -62,10 +58,10 @@ describe("Auth UI - LoginPage", () => {
         landingRoute: "/dashboard",
         roles: ["ADMIN"],
         permissions: ["*"],
+        effectivePermissions: ["*"],
         mustChangePassword: false,
-      },
-      requiresOnboarding: false,
-    });
+      }),
+    );
     vi.mocked(toast.success).mockClear();
     vi.mocked(toast.error).mockClear();
   });
@@ -156,12 +152,12 @@ describe("Auth UI - LoginPage", () => {
   });
 
   it("disables the submit button while logging in", async () => {
-    let resolveLogin: ((value: unknown) => void) | undefined;
-    const pendingPromise = new Promise((resolve) => {
+    let resolveLogin: ((value: LoginResponse) => void) | undefined;
+    const pendingPromise = new Promise<LoginResponse>((resolve) => {
       resolveLogin = resolve;
     });
 
-    vi.mocked(authAPI.login).mockReturnValueOnce(pendingPromise as never);
+    vi.mocked(authAPI.login).mockReturnValueOnce(pendingPromise);
 
     const user = userEvent.setup();
     render(<LoginPage />);
@@ -182,8 +178,8 @@ describe("Auth UI - LoginPage", () => {
       expect(submitButton).toBeDisabled();
     });
 
-    resolveLogin?.({
-      user: {
+    resolveLogin?.(
+      createLoginResponse({
         id: 1,
         username: "testuser",
         fullName: "Test User",
@@ -192,10 +188,10 @@ describe("Auth UI - LoginPage", () => {
         landingRoute: "/dashboard",
         roles: ["ADMIN"],
         permissions: ["*"],
+        effectivePermissions: ["*"],
         mustChangePassword: false,
-      },
-      requiresOnboarding: false,
-    });
+      }),
+    );
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/dashboard");

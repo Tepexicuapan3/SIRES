@@ -603,7 +603,9 @@ export function PermissionsHierarchyExplorer<
   const rowsData = buildTreeRows(visibleTree.groups, effectiveExpandedIds);
   const shouldVirtualize = rowsData.actionsCount > VIRTUALIZATION_THRESHOLD;
   const actionRowHeight =
-    renderMeta && metaDisplay === "footer" ? 92 : PERMISSION_ROW_HEIGHT.ACTION;
+    renderMeta && metaDisplay === "footer"
+      ? 92
+      : PERMISSION_ROW_HEIGHT[PERMISSION_TREE_ROW_TYPE.ACTION];
 
   const getRowHeight = (row: PermissionTreeRow<TPermission>) =>
     row.type === PERMISSION_TREE_ROW_TYPE.ACTION
@@ -938,7 +940,7 @@ export function PermissionsHierarchyExplorer<
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line-struct/50 px-3 py-2 text-xs text-txt-muted">
-            {renderMeta(permission)}
+            {renderMeta?.(permission)}
           </div>
         </div>
       );

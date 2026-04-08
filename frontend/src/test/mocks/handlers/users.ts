@@ -95,11 +95,18 @@ const buildUserProfile = (fullname: string) => {
   return { firstName, paternalName, maternalName };
 };
 
+interface UserSecurityState {
+  termsAccepted: boolean;
+  mustChangePassword: boolean;
+  lastLoginAt: string | null;
+  lastIp: string | null;
+}
+
 const userProfilesDB = new Map(
   usersDB.map((user) => [user.id, buildUserProfile(user.fullname)]),
 );
 
-const userSecurityDB = new Map(
+const userSecurityDB = new Map<number, UserSecurityState>(
   usersDB.map((user, index) => [
     user.id,
     {
@@ -156,12 +163,9 @@ const cloneUserProfile = (
   profile: ReturnType<typeof buildUserProfile>,
 ): ReturnType<typeof buildUserProfile> => ({ ...profile });
 
-const cloneUserSecurity = (security: {
-  termsAccepted: boolean;
-  mustChangePassword: boolean;
-  lastLoginAt: string | null;
-  lastIp: string | null;
-}) => ({ ...security });
+const cloneUserSecurity = (security: UserSecurityState): UserSecurityState => ({
+  ...security,
+});
 
 const cloneUserRole = (role: ReturnType<typeof createMockUserRole>) => ({
   ...role,

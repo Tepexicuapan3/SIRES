@@ -5,18 +5,17 @@
  * Implementa filtrado recursivo para soportar N niveles de anidamiento.
  */
 
-import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
-import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
+import {
+  useAuthSession,
+  usePermissions,
+} from "@/domains/auth-access/contracts/navigation-auth";
 import { NAV_CONFIG, NAV_SECONDARY } from "@app/navigation/nav-config";
 import { filterNavigation } from "@features/navigation/domain/filterNavigation";
-import type {
-  NavigationItem,
-  NavigationSection,
-} from "@features/navigation/domain/navigation.types";
+import type { NavItem, NavSection } from "@app/navigation/nav-config";
 
 export interface UseNavigationReturn {
-  sections: NavigationSection[];
-  secondaryItems: NavigationItem[];
+  sections: NavSection[];
+  secondaryItems: NavItem[];
   isEmpty: boolean;
 }
 

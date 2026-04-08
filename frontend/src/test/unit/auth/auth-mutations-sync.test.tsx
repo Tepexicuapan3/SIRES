@@ -1,16 +1,41 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
+import type { UseMutationOptions, DefaultError } from "@tanstack/react-query";
+import type {
+  AuthUser,
+  LoginRequest,
+  LoginResponse,
+  LogoutResponse,
+  RefreshTokenResponse,
+} from "@api/types";
+import { createMockAuthUser } from "@/test/factories/users";
 
 const navigateMock = vi.fn();
-const useMutationMock = vi.fn((options: unknown) => options);
-const useQueryClientMock = vi.fn();
+const useMutationMock = vi.fn(
+  (options: UseMutationOptions<unknown, DefaultError, unknown, unknown>) =>
+    options,
+);
+const useQueryClientMock = vi.fn<() => QueryClient>();
 const invalidateAuthSessionAndCapabilitiesMock = vi.fn();
 const setAuthSessionMock = vi.fn();
 const clearAuthSessionMock = vi.fn();
 
-vi.mock("@tanstack/react-query", () => ({
-  useMutation: (options: unknown) => useMutationMock(options),
-  useQueryClient: () => useQueryClientMock(),
-}));
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
+    "@tanstack/react-query",
+  );
+
+  return {
+    ...actual,
+    useMutation: <TData, TVariables>(
+      options: UseMutationOptions<TData, DefaultError, TVariables, unknown>,
+    ) =>
+      useMutationMock(
+        options as UseMutationOptions<unknown, DefaultError, unknown, unknown>,
+      ) as UseMutationOptions<TData, DefaultError, TVariables, unknown>,
+    useQueryClient: () => useQueryClientMock(),
+  };
+});
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => navigateMock,
@@ -34,13 +59,15 @@ vi.mock("@api/resources/auth.api", () => ({
 }));
 
 vi.mock("@/domains/auth-access/adapters/auth-query-invalidation", () => ({
-  invalidateAuthSessionAndCapabilities: (queryClient: unknown) =>
+  invalidateAuthSessionAndCapabilities: (queryClient: QueryClient) =>
     invalidateAuthSessionAndCapabilitiesMock(queryClient),
 }));
 
 vi.mock("@/domains/auth-access/adapters/auth-cache", () => ({
-  setAuthSession: (...args: unknown[]) => setAuthSessionMock(...args),
-  clearAuthSession: (...args: unknown[]) => clearAuthSessionMock(...args),
+  setAuthSession: (queryClient: QueryClient, user: AuthUser) =>
+    setAuthSessionMock(queryClient, user),
+  clearAuthSession: (queryClient: QueryClient) =>
+    clearAuthSessionMock(queryClient),
 }));
 
 vi.mock("@app/state/ui/sidebarStore", () => ({
@@ -63,38 +90,52 @@ import { useLogin } from "@/domains/auth-access/hooks/useLogin";
 import { useLogout } from "@/domains/auth-access/hooks/useLogout";
 import { useRefreshSession } from "@/domains/auth-access/hooks/useRefreshSession";
 
+type LoginMutationVariables = LoginRequest & { rememberMe: boolean };
+
+type MutationLike<TData, TVariables> = {
+  onSuccess?: (
+    data: TData,
+    variables: TVariables,
+    context?: unknown,
+    mutation?: unknown,
+  ) => void;
+};
+
+const createQueryClientDouble = (): QueryClient => {
+  return new QueryClient();
+};
+
+const asMutationLike = <TData, TVariables>(
+  value: unknown,
+): MutationLike<TData, TVariables> => value as MutationLike<TData, TVariables>;
+
 describe("auth mutations sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useQueryClientMock.mockReturnValue({
-      cancelQueries: vi.fn(),
-      clear: vi.fn(),
-    });
+    useQueryClientMock.mockReturnValue(createQueryClientDouble());
   });
 
   it("invalidates session+capabilities after successful login", () => {
-    const queryClient = {
-      cancelQueries: vi.fn(),
-      clear: vi.fn(),
-    };
+    const queryClient = createQueryClientDouble();
     useQueryClientMock.mockReturnValue(queryClient);
 
-    const mutation = useLogin() as { onSuccess?: (...args: unknown[]) => void };
-
-    mutation.onSuccess?.(
-      {
-        user: {
-          fullName: "Admin User",
-          landingRoute: "/admin",
-        },
-        requiresOnboarding: false,
-      },
-      {
-        username: "admin",
-        password: "secret",
-        rememberMe: false,
-      },
+    const mutation = asMutationLike<LoginResponse, LoginMutationVariables>(
+      useLogin(),
     );
+
+    const loginResponse: LoginResponse = {
+      user: createMockAuthUser({
+        fullName: "Admin User",
+        landingRoute: "/admin",
+      }),
+      requiresOnboarding: false,
+    };
+
+    mutation.onSuccess?.(loginResponse, {
+      username: "admin",
+      password: "secret",
+      rememberMe: false,
+    });
 
     expect(setAuthSessionMock).toHaveBeenCalledWith(
       queryClient,
@@ -106,17 +147,14 @@ describe("auth mutations sync", () => {
   });
 
   it("invalidates session+capabilities after successful refresh", () => {
-    const queryClient = {
-      cancelQueries: vi.fn(),
-      clear: vi.fn(),
-    };
+    const queryClient = createQueryClientDouble();
     useQueryClientMock.mockReturnValue(queryClient);
 
-    const mutation = useRefreshSession() as {
-      onSuccess?: (...args: unknown[]) => void;
-    };
+    const mutation = asMutationLike<RefreshTokenResponse, void>(
+      useRefreshSession(),
+    );
 
-    mutation.onSuccess?.();
+    mutation.onSuccess?.({ success: true }, undefined, undefined, undefined);
 
     expect(invalidateAuthSessionAndCapabilitiesMock).toHaveBeenCalledWith(
       queryClient,
@@ -124,16 +162,11 @@ describe("auth mutations sync", () => {
   });
 
   it("clears auth caches on logout success", () => {
-    const queryClient = {
-      cancelQueries: vi.fn(),
-      clear: vi.fn(),
-    };
+    const queryClient = createQueryClientDouble();
     useQueryClientMock.mockReturnValue(queryClient);
 
-    const mutation = useLogout() as {
-      onSuccess?: (...args: unknown[]) => void;
-    };
-    mutation.onSuccess?.();
+    const mutation = asMutationLike<LogoutResponse, void>(useLogout());
+    mutation.onSuccess?.({ success: true }, undefined, undefined, undefined);
 
     expect(clearAuthSessionMock).toHaveBeenCalledWith(queryClient);
   });

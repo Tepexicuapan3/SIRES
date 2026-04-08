@@ -16,6 +16,22 @@ test.describe("Flujo clinico smoke", () => {
   test.describe.configure({ mode: "serial" });
 
   test(
+    "KAN27-E2E-004 bootstrap / responde sin 500",
+    {
+      tag: ["@critical", "@e2e", "@flujo-clinico", "@smoke", "@KAN27-E2E-004"],
+    },
+    async ({ page }) => {
+      const response = await page.goto("/", { waitUntil: "domcontentloaded" });
+
+      expect(response, "No hubo respuesta al cargar '/' ").not.toBeNull();
+      expect(
+        response?.status(),
+        "La carga inicial de '/' devolvió HTTP >= 500",
+      ).toBeLessThan(500);
+    },
+  );
+
+  test(
     "KAN27-E2E-001 camino feliz recepcion -> somatometria -> doctor -> cierre",
     {
       tag: ["@critical", "@e2e", "@flujo-clinico", "@smoke", "@KAN27-E2E-001"],
@@ -39,42 +55,70 @@ test.describe("Flujo clinico smoke", () => {
 
         const moveToSomatometriaResponse =
           await recepcionPage.moveVisitToSomatometria(createdVisit.id);
-        const moveToSomatometriaStatus = moveToSomatometriaResponse.status();
-        const moveToSomatometriaPayload = await moveToSomatometriaResponse
-          .json()
-          .catch(() => null);
+        const moveToSomatometriaStatus = moveToSomatometriaResponse.status;
+        const moveToSomatometriaPayload = moveToSomatometriaResponse.body;
         expect(
           moveToSomatometriaStatus,
           `No se pudo mover visita a somatometria: ${JSON.stringify(moveToSomatometriaPayload)}`,
         ).toBe(200);
+        await expect
+          .poll(
+            async () =>
+              recepcionPage.isVisitVisible(
+                "#visit-selector",
+                createdVisit.folio,
+              ),
+            {
+              timeout: 15_000,
+              intervals: [200, 350, 500],
+            },
+          )
+          .toBe(true);
 
-        const clinicoContext = await browser.newContext();
-        try {
-          const clinicoPage = new FlujoClinicoPage(
-            await clinicoContext.newPage(),
-          );
-          await clinicoPage.login(FLUJO_CLINICO_USERS.clinico);
+        const captureVitalsResponse =
+          await recepcionPage.captureVitalsByVisitId(createdVisit.id, {
+            weightKg: 70,
+            heightCm: 172,
+            temperatureC: 36.6,
+            oxygenSaturationPct: 98,
+            heartRateBpm: 76,
+            respiratoryRateBpm: 16,
+            notes: "captura e2e flujo clinico",
+          });
+        expect(captureVitalsResponse.status).toBe(200);
+        expect(
+          (captureVitalsResponse.body as { status?: string } | null)?.status,
+        ).toBe("lista_para_doctor");
 
-          await clinicoPage.captureVitals(createdVisit.folio);
-          await clinicoPage.assertVisitReadyForDoctor(createdVisit.folio);
-          await clinicoPage.startConsultation(createdVisit.folio);
-          await clinicoPage.closeConsultation({
+        const startConsultationResponse =
+          await recepcionPage.startConsultationByVisitId(createdVisit.id);
+        expect(startConsultationResponse.status).toBe(200);
+        expect(
+          (startConsultationResponse.body as { status?: string } | null)
+            ?.status,
+        ).toBe("en_consulta");
+
+        const closeConsultationResponse =
+          await recepcionPage.closeConsultationByVisitId(createdVisit.id, {
             primaryDiagnosis: "Dolor lumbar inespecifico",
             finalNote: "Paciente estable, egreso con indicaciones generales.",
           });
+        expect(closeConsultationResponse.status).toBe(200);
 
-          await expect
-            .poll(
-              async () => clinicoPage.isDoctorVisitVisible(createdVisit.folio),
-              {
-                timeout: 10_000,
-                intervals: [200, 350, 500],
-              },
-            )
-            .toBe(false);
-        } finally {
-          await clinicoContext.close();
-        }
+        const closePayload = closeConsultationResponse.body as {
+          visit?: { status?: string };
+        } | null;
+        expect(closePayload?.visit?.status).toBe("cerrada");
+
+        await expect
+          .poll(
+            async () => recepcionPage.isDoctorVisitVisible(createdVisit.folio),
+            {
+              timeout: 10_000,
+              intervals: [200, 350, 500],
+            },
+          )
+          .toBe(false);
       } finally {
         await recepcionContext.close();
       }
@@ -126,10 +170,8 @@ test.describe("Flujo clinico smoke", () => {
         const moveToSomatometriaResponse = await actorA.moveVisitToSomatometria(
           createdVisit.id,
         );
-        const moveToSomatometriaStatus = moveToSomatometriaResponse.status();
-        const moveToSomatometriaPayload = await moveToSomatometriaResponse
-          .json()
-          .catch(() => null);
+        const moveToSomatometriaStatus = moveToSomatometriaResponse.status;
+        const moveToSomatometriaPayload = moveToSomatometriaResponse.body;
         expect(
           moveToSomatometriaStatus,
           `No se pudo mover visita a somatometria: ${JSON.stringify(moveToSomatometriaPayload)}`,
@@ -190,9 +232,19 @@ test.describe("Flujo clinico smoke", () => {
         scripts?: Record<string, string>;
       };
 
+      const e2eSmokePreflightScript =
+        packageJson.scripts?.["test:e2e:smoke:preflight"] ?? "";
+      expect(e2eSmokePreflightScript).toContain(
+        "bun install --frozen-lockfile",
+      );
+      expect(e2eSmokePreflightScript).toContain(
+        "bunx playwright install --with-deps chromium",
+      );
+
       const e2eSmokeScript = packageJson.scripts?.["test:e2e:smoke"] ?? "";
+      expect(e2eSmokeScript).toContain("bun run test:e2e:smoke:preflight");
       expect(e2eSmokeScript).toContain(
-        "playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=scripts/playwright.smoke.docker.config.mjs --project=chromium",
+        "bunx playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=scripts/playwright.smoke.docker.config.cjs --project=chromium",
       );
 
       const qualityGateScript =

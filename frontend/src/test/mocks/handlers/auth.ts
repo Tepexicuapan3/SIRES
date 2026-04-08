@@ -103,6 +103,12 @@ const createRefreshHeaders = (username: string) => {
   return headers;
 };
 
+const createAuthRevisionHeaders = (authRevision: string) => {
+  const headers = new Headers();
+  headers.set("X-Auth-Revision", authRevision);
+  return headers;
+};
+
 const loginSuccessResponse = (user: AuthUser, requiresOnboarding = false) => {
   setMockSessionUser(user);
   return createLoginResponse(user, requiresOnboarding);
@@ -195,6 +201,33 @@ const buildLoginScenario = (username: string): LoginScenario => {
           "clinico:somatometria:read",
           "admin:catalogos:centros_atencion:read",
         ],
+        capabilities: {
+          "flow.somatometria.queue.read": {
+            granted: true,
+            missingAllOf: [],
+            missingAnyOf: [],
+          },
+          "flow.somatometria.capture": {
+            granted: true,
+            missingAllOf: [],
+            missingAnyOf: [],
+          },
+          "flow.doctor.queue.read": {
+            granted: true,
+            missingAllOf: [],
+            missingAnyOf: [],
+          },
+          "flow.doctor.consultation.start": {
+            granted: true,
+            missingAllOf: [],
+            missingAnyOf: [],
+          },
+          "flow.doctor.consultation.close": {
+            granted: true,
+            missingAllOf: [],
+            missingAnyOf: [],
+          },
+        },
       }),
     };
   }
@@ -212,8 +245,22 @@ const buildLoginScenario = (username: string): LoginScenario => {
           "recepcion:fichas:especialidad:create",
           "recepcion:fichas:urgencias:create",
           "recepcion:incapacidad:create",
+          "clinico:consultas:read",
+          "clinico:somatometria:read",
           "clinico:expedientes:read",
         ],
+        capabilities: {
+          "flow.visits.queue.read": {
+            granted: true,
+            missingAllOf: [],
+            missingAnyOf: [],
+          },
+          "flow.recepcion.queue.write": {
+            granted: true,
+            missingAllOf: [],
+            missingAnyOf: [],
+          },
+        },
       }),
     };
   }
@@ -445,7 +492,38 @@ export const authHandlers = [
       );
     }
 
-    return HttpResponse.json(user);
+    return HttpResponse.json(user, {
+      headers: createAuthRevisionHeaders(user.authRevision),
+    });
+  }),
+
+  http.get(getApiUrl("auth/capabilities"), async ({ request, cookies }) => {
+    await delay(MOCK_DELAY.short);
+    const user = resolveSessionUser(request, cookies);
+
+    if (!user) {
+      return HttpResponse.json(
+        {
+          code: "SESSION_EXPIRED",
+          message: "La sesion no es valida o ha expirado.",
+        },
+        { status: 401 },
+      );
+    }
+
+    return HttpResponse.json(
+      {
+        permissions: user.permissions,
+        effectivePermissions: user.effectivePermissions,
+        capabilities: user.capabilities,
+        permissionDependenciesVersion: user.permissionDependenciesVersion,
+        strictCapabilityPrefixes: user.strictCapabilityPrefixes,
+        authRevision: user.authRevision,
+      },
+      {
+        headers: createAuthRevisionHeaders(user.authRevision),
+      },
+    );
   }),
 
   http.post(getApiUrl("auth/refresh"), async ({ request, cookies }) => {

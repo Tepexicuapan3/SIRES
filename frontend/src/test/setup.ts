@@ -4,7 +4,9 @@ import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { server } from "./mocks/server";
 import { resetMockSessionUser } from "@/test/mocks/session";
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 // Iniciar servidor MSW antes de todos los tests
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));

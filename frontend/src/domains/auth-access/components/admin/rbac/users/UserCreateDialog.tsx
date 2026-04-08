@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Badge } from "@shared/ui/badge";
@@ -66,7 +66,7 @@ export function UserCreateDialog({
   const createUser = useCreateUser();
 
   const form = useForm<CreateUserFormValues>({
-    resolver: zodResolver(createUserSchema),
+    resolver: zodResolver(createUserSchema) as Resolver<CreateUserFormValues>,
     defaultValues: DEFAULT_VALUES,
   });
 

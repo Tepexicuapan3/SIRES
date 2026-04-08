@@ -16,6 +16,7 @@ El trabajo paralelo por dominios solo escala si cada cambio respeta fronteras y 
 4. **No HTTP fuera de `frontend/src/infrastructure/api/resources/`**.
 5. **No acceso DB cross-domain sin contrato** (facade, API o RFC aprobado).
 6. **Shared solo para cross-cutting** (logging, auth primitives, realtime infra).
+7. **Frontend quality gates desacoplados**: typecheck app/tests, contract-alignment y smoke docker corren como checks independientes y trazables.
 
 ## Reglas de coexistencia old/new
 
@@ -30,6 +31,7 @@ El trabajo paralelo por dominios solo escala si cada cambio respeta fronteras y 
 - Validar que no se agregan imports prohibidos.
 - Adjuntar RFC si hay cambio cross-domain de contratos o ownership.
 - Si hay migraciones estructurales de runtime frontend (`app/`, `infrastructure/`, `shared/`), incluir evidencia documental de impacto en este archivo o en `docs/guides/incremental-domain-migration.md`.
+- Si el PR toca auth/frontend stability, adjuntar evidencia de `typecheck:app`, `typecheck:tests`, `src/test/integration/contracts`, `test:e2e:bootstrap`, `test:e2e:smoke` y `test:guard:legacy-alias` en Docker con preflight.
 
 ## References
 

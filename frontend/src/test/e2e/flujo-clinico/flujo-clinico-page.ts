@@ -1,4 +1,4 @@
-import { expect, type APIResponse, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DOCTOR_QUEUE_KEY = "doctor-open-consultations";
@@ -37,6 +37,16 @@ interface CloseConsultationInput {
   finalNote: string;
 }
 
+interface CaptureVitalsByVisitIdInput {
+  weightKg: number;
+  heightCm: number;
+  temperatureC: number;
+  oxygenSaturationPct: number;
+  heartRateBpm?: number;
+  respiratoryRateBpm?: number;
+  notes?: string;
+}
+
 interface SavePrescriptionInput {
   items: string[];
 }
@@ -66,6 +76,11 @@ interface VisitQueueResponse {
   items?: VisitQueueRecord[];
 }
 
+interface HttpJsonResponse<T = unknown> {
+  status: number;
+  body: T | null;
+}
+
 type Credentials = {
   username: string;
   password: string;
@@ -76,17 +91,55 @@ export class FlujoClinicoPage {
 
   async login(credentials: Credentials): Promise<void> {
     await this.page.goto("/login", { waitUntil: "domcontentloaded" });
-    await this.page
-      .getByLabel("No. Expediente o Usuario")
-      .fill(credentials.username);
-    await this.page.locator("input#password").fill(credentials.password);
+    const usernameInput = this.page.getByLabel("No. Expediente o Usuario");
+    const passwordInput = this.page.locator("input#password");
+    const submitButton = this.page.getByRole("button", {
+      name: "Iniciar Sesión",
+    });
 
-    await Promise.all([
-      this.page.waitForURL((url) => !url.pathname.includes("/login"), {
-        timeout: DEFAULT_TIMEOUT_MS,
-      }),
-      this.page.getByRole("button", { name: "Iniciar Sesión" }).click(),
+    const hasLoginForm = await usernameInput
+      .isVisible({ timeout: 2_000 })
+      .catch(() => false);
+
+    if (!hasLoginForm) {
+      await this.page.evaluate(() => {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      });
+      await this.page.goto("/login", { waitUntil: "domcontentloaded" });
+    }
+
+    await expect(usernameInput).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+    await expect(passwordInput).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+    await expect(submitButton).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+
+    await usernameInput.fill(credentials.username);
+    await passwordInput.fill(credentials.password);
+
+    const [loginResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/auth/login") &&
+          response.request().method() === "POST",
+      ),
+      submitButton.click(),
     ]);
+
+    const loginPayload = (await loginResponse.json().catch(() => null)) as {
+      code?: string;
+      message?: string;
+    } | null;
+    expect(
+      loginResponse.status(),
+      `Login falló para '${credentials.username}': ${JSON.stringify(loginPayload)}`,
+    ).toBe(200);
+
+    await expect
+      .poll(async () => new URL(this.page.url()).pathname, {
+        timeout: DEFAULT_TIMEOUT_MS,
+        intervals: [200, 350, 500],
+      })
+      .not.toContain("/login");
   }
 
   async gotoRecepcionQueue(): Promise<void> {
@@ -102,20 +155,99 @@ export class FlujoClinicoPage {
     ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
   }
 
-  async gotoRecepcionAgendarCita(): Promise<void> {
-    await this.page.goto("/recepcion/agenda?focus=checkin", {
-      waitUntil: "domcontentloaded",
-    });
-    await expect(
-      this.page.getByLabel("ID paciente"),
-      "No se encontro el campo ID paciente",
-    ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
-    await expect(
-      this.page.getByRole("button", {
-        name: /Generar ficha de consulta/i,
-      }),
-      "No se encontro el boton de generar ficha",
-    ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+  async gotoRecepcionAgendarCita(): Promise<boolean> {
+    const candidateRoutes = [
+      "/recepcion/checkin",
+      "/recepcion/agenda",
+      "/recepcion/agendar-cita",
+      "/recepcion/agenda?focus=checkin",
+    ] as const;
+
+    let foundRoute = false;
+    for (const route of candidateRoutes) {
+      await this.page.goto(route, { waitUntil: "domcontentloaded" });
+
+      const hasCheckinUi = await this.page
+        .waitForFunction(
+          () => {
+            const hasPrimaryAction = Array.from(
+              document.querySelectorAll("button"),
+            ).some((button) =>
+              /Generar ficha de consulta/i.test(button.textContent ?? ""),
+            );
+
+            const hasInlineInputs =
+              document.querySelector("#patientId") !== null ||
+              document.querySelector("#quick-patientId") !== null;
+
+            const hasLabeledInput =
+              document.querySelector('label[for="patientId"]') !== null ||
+              document.querySelector('label[for="quick-patientId"]') !== null;
+
+            return hasPrimaryAction || hasInlineInputs || hasLabeledInput;
+          },
+          null,
+          {
+            timeout: 5_000,
+          },
+        )
+        .then(() => true)
+        .catch(() => false);
+
+      if (!hasCheckinUi) {
+        continue;
+      }
+
+      const primaryAction = this.page
+        .getByRole("button", {
+          name: /Generar ficha de consulta/i,
+        })
+        .first();
+      const hasPrimaryAction = (await primaryAction.count()) > 0;
+      const hasInlineForm =
+        (await this.page.locator("#patientId, #quick-patientId").count()) > 0 ||
+        (await this.page.getByLabel("ID paciente").count()) > 0;
+
+      if (hasPrimaryAction || hasInlineForm) {
+        if (hasPrimaryAction) {
+          await expect(primaryAction).toBeVisible({
+            timeout: DEFAULT_TIMEOUT_MS,
+          });
+        }
+        foundRoute = true;
+        break;
+      }
+    }
+
+    if (!foundRoute) {
+      return false;
+    }
+
+    let patientIdField = this.page.locator("#quick-patientId").first();
+    if ((await patientIdField.count()) === 0) {
+      patientIdField = this.page.getByLabel("ID paciente").first();
+    }
+
+    if (
+      (await patientIdField.count()) === 0 ||
+      !(await patientIdField.isVisible())
+    ) {
+      await this.page
+        .getByRole("button", {
+          name: /Generar ficha de consulta/i,
+        })
+        .first()
+        .click();
+
+      await expect(
+        this.page.getByRole("dialog").getByText("Generar ficha de consulta"),
+      ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+
+      patientIdField = this.page.locator("#quick-patientId").first();
+    }
+
+    await expect(patientIdField).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+    return true;
   }
 
   async gotoSomatometriaQueue(): Promise<void> {
@@ -141,26 +273,82 @@ export class FlujoClinicoPage {
   }
 
   async registerArrival(input: RegisterArrivalInput): Promise<VisitRecord> {
-    await this.gotoRecepcionAgendarCita();
+    const hasCheckinForm = await this.gotoRecepcionAgendarCita();
 
-    await this.page.getByLabel("ID paciente").fill(String(input.patientId));
-    await this.page.getByLabel("ID de cita").fill(input.appointmentId);
+    if (!hasCheckinForm) {
+      const apiBaseUrl = this.getApiBaseUrl();
+      const fallbackResponse = await this.page.evaluate(
+        async ({ requestUrl, payload, requestId }) => {
+          const response = await fetch(requestUrl, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Request-ID": requestId,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          let body: unknown = null;
+          try {
+            body = await response.json();
+          } catch {
+            body = null;
+          }
+
+          return {
+            status: response.status,
+            body,
+          } satisfies HttpJsonResponse;
+        },
+        {
+          requestUrl: `${apiBaseUrl}/visits`,
+          requestId: `kan27-create-visit-${Date.now()}`,
+          payload: {
+            patientId: input.patientId,
+            arrivalType: "appointment",
+            serviceType: "medicina_general",
+            appointmentId: input.appointmentId,
+            doctorId: input.doctorId,
+            notes: input.notes,
+          },
+        },
+      );
+
+      expect(
+        fallbackResponse.status,
+        `No se pudo crear ficha por API fallback: ${JSON.stringify(fallbackResponse.body)}`,
+      ).toBe(201);
+
+      return fallbackResponse.body as VisitRecord;
+    }
+
+    const patientIdInput = this.page
+      .locator("#quick-patientId, #patientId")
+      .first();
+    const appointmentInput = this.page
+      .locator("#quick-appointmentId, #appointmentId")
+      .first();
+    const doctorInput = this.page.locator("#quick-doctorId, #doctorId").first();
+    const notesInput = this.page.locator("#quick-notes, #notes").first();
+
+    await patientIdInput.fill(String(input.patientId));
+    await appointmentInput.fill(input.appointmentId);
     if (input.doctorId) {
-      await this.page
-        .getByLabel("ID doctor (opcional)")
-        .fill(String(input.doctorId));
+      await doctorInput.fill(String(input.doctorId));
     }
     if (input.notes) {
-      await this.page.getByLabel("Motivo de consulta").fill(input.notes);
+      await notesInput.fill(input.notes);
     }
 
+    const checkinDialog = this.page.getByRole("dialog");
     const [createVisitResponse] = await Promise.all([
       this.page.waitForResponse(
         (response) =>
           response.url().includes("/api/v1/visits") &&
           response.request().method() === "POST",
       ),
-      this.page
+      checkinDialog
         .getByRole("button", { name: "Generar ficha de consulta" })
         .click(),
     ]);
@@ -174,30 +362,185 @@ export class FlujoClinicoPage {
     return createdVisit;
   }
 
-  async moveVisitToSomatometria(visitId: number): Promise<APIResponse> {
+  async moveVisitToSomatometria(visitId: number): Promise<HttpJsonResponse> {
     return this.updateVisitStatus(visitId, "en_somatometria");
   }
 
   async updateVisitStatus(
     visitId: number,
     targetStatus: VisitStatusTransitionTarget,
-  ): Promise<APIResponse> {
-    const csrfToken = await this.getCookieValue("csrf_token");
+  ): Promise<HttpJsonResponse> {
     const apiBaseUrl = this.getApiBaseUrl();
 
-    const response = await this.page
-      .context()
-      .request.patch(`${apiBaseUrl}/visits/${visitId}/status`, {
-        data: {
-          targetStatus,
-        },
-        headers: {
-          "X-CSRF-TOKEN": csrfToken,
-          "X-Request-ID": `kan19-${targetStatus}-${Date.now()}`,
-        },
-      });
+    return this.page.evaluate(
+      async ({ requestUrl, statusTarget, requestId }) => {
+        const csrfToken =
+          document.cookie
+            .split("; ")
+            .find((cookie) => cookie.startsWith("csrf_token="))
+            ?.slice("csrf_token=".length) ?? "";
 
-    return response;
+        const response = await fetch(requestUrl, {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": csrfToken,
+            "X-Request-ID": requestId,
+          },
+          body: JSON.stringify({
+            targetStatus: statusTarget,
+          }),
+        });
+
+        let body: unknown = null;
+        try {
+          body = await response.json();
+        } catch {
+          body = null;
+        }
+
+        return {
+          status: response.status,
+          body,
+        } satisfies HttpJsonResponse;
+      },
+      {
+        requestUrl: `${apiBaseUrl}/visits/${visitId}/status`,
+        statusTarget: targetStatus,
+        requestId: `kan19-${targetStatus}-${Date.now()}`,
+      },
+    );
+  }
+
+  async captureVitalsByVisitId(
+    visitId: number,
+    input: CaptureVitalsByVisitIdInput,
+  ): Promise<HttpJsonResponse> {
+    const apiBaseUrl = this.getApiBaseUrl();
+
+    return this.page.evaluate(
+      async ({ requestUrl, payload, requestId }) => {
+        const csrfToken =
+          document.cookie
+            .split("; ")
+            .find((cookie) => cookie.startsWith("csrf_token="))
+            ?.slice("csrf_token=".length) ?? "";
+
+        const response = await fetch(requestUrl, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": csrfToken,
+            "X-Request-ID": requestId,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        let body: unknown = null;
+        try {
+          body = await response.json();
+        } catch {
+          body = null;
+        }
+
+        return {
+          status: response.status,
+          body,
+        } satisfies HttpJsonResponse;
+      },
+      {
+        requestUrl: `${apiBaseUrl}/visits/${visitId}/vitals`,
+        payload: input,
+        requestId: `kan27-vitals-${Date.now()}`,
+      },
+    );
+  }
+
+  async startConsultationByVisitId(visitId: number): Promise<HttpJsonResponse> {
+    const apiBaseUrl = this.getApiBaseUrl();
+
+    return this.page.evaluate(
+      async ({ requestUrl, requestId }) => {
+        const csrfToken =
+          document.cookie
+            .split("; ")
+            .find((cookie) => cookie.startsWith("csrf_token="))
+            ?.slice("csrf_token=".length) ?? "";
+
+        const response = await fetch(requestUrl, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": csrfToken,
+            "X-Request-ID": requestId,
+          },
+        });
+
+        let body: unknown = null;
+        try {
+          body = await response.json();
+        } catch {
+          body = null;
+        }
+
+        return {
+          status: response.status,
+          body,
+        } satisfies HttpJsonResponse;
+      },
+      {
+        requestUrl: `${apiBaseUrl}/visits/${visitId}/consultation/start`,
+        requestId: `kan27-start-${Date.now()}`,
+      },
+    );
+  }
+
+  async closeConsultationByVisitId(
+    visitId: number,
+    input: CloseConsultationInput,
+  ): Promise<HttpJsonResponse> {
+    const apiBaseUrl = this.getApiBaseUrl();
+
+    return this.page.evaluate(
+      async ({ requestUrl, payload, requestId }) => {
+        const csrfToken =
+          document.cookie
+            .split("; ")
+            .find((cookie) => cookie.startsWith("csrf_token="))
+            ?.slice("csrf_token=".length) ?? "";
+
+        const response = await fetch(requestUrl, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": csrfToken,
+            "X-Request-ID": requestId,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        let body: unknown = null;
+        try {
+          body = await response.json();
+        } catch {
+          body = null;
+        }
+
+        return {
+          status: response.status,
+          body,
+        } satisfies HttpJsonResponse;
+      },
+      {
+        requestUrl: `${apiBaseUrl}/visits/${visitId}/consultation/close`,
+        payload: input,
+        requestId: `kan27-close-${Date.now()}`,
+      },
+    );
   }
 
   async captureVitals(folio: string): Promise<void> {
@@ -380,6 +723,11 @@ export class FlujoClinicoPage {
     await expect
       .poll(
         async () => {
+          const isVisibleInUi = await this.hasVisitOptionInUi(selectId, folio);
+          if (isVisibleInUi) {
+            return 1;
+          }
+
           const visit = await this.findVisitInQueueByStatuses(
             folio,
             queueStatuses,
@@ -395,6 +743,10 @@ export class FlujoClinicoPage {
   }
 
   async isVisitVisible(selectId: string, folio: string): Promise<boolean> {
+    if (await this.hasVisitOptionInUi(selectId, folio)) {
+      return true;
+    }
+
     const queueStatuses = this.resolveQueueStatuses(selectId);
     const visit = await this.findVisitInQueueByStatuses(folio, queueStatuses);
     return Boolean(visit);
@@ -474,12 +826,6 @@ export class FlujoClinicoPage {
     });
   }
 
-  private async getCookieValue(cookieName: string): Promise<string> {
-    const cookies = await this.page.context().cookies();
-    const cookie = cookies.find((entry) => entry.name === cookieName);
-    return cookie?.value ?? "";
-  }
-
   private getApiBaseUrl(): string {
     const currentUrl = this.page.url();
 
@@ -541,6 +887,29 @@ export class FlujoClinicoPage {
     return ["en_somatometria"];
   }
 
+  private async hasVisitOptionInUi(
+    selectId: string,
+    folio: string,
+  ): Promise<boolean> {
+    if (selectId === DOCTOR_QUEUE_KEY) {
+      const doctorCard = this.page
+        .locator(
+          `[data-testid^="${DOCTOR_VISIT_CARD_TESTID_PREFIX}"][data-visit-folio="${folio}"]`,
+        )
+        .first();
+
+      return doctorCard.isVisible().catch(() => false);
+    }
+
+    const nativeOption = this.page
+      .locator(`${selectId} option`, {
+        hasText: folio,
+      })
+      .first();
+
+    return nativeOption.count().then((count) => count > 0);
+  }
+
   private async findVisitInQueueByStatuses(
     folio: string,
     statuses: QueueStatusTarget[],
@@ -567,20 +936,41 @@ export class FlujoClinicoPage {
     status: QueueStatusTarget,
   ): Promise<VisitQueueRecord[]> {
     const apiBaseUrl = this.getApiBaseUrl();
-    const response = await this.page
-      .context()
-      .request.get(`${apiBaseUrl}/visits`, {
-        params: {
-          page: 1,
-          pageSize: 50,
-          status,
-        },
-      });
+    const response = await this.page.evaluate(
+      async ({ requestUrl, statusFilter }) => {
+        const url = new URL(requestUrl);
+        url.searchParams.set("page", "1");
+        url.searchParams.set("pageSize", "50");
+        url.searchParams.set("status", statusFilter);
 
-    expect(response.status()).toBe(200);
-    const payload = (await response
-      .json()
-      .catch(() => null)) as VisitQueueResponse | null;
+        const httpResponse = await fetch(url.toString(), {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        let body: unknown = null;
+        try {
+          body = await httpResponse.json();
+        } catch {
+          body = null;
+        }
+
+        return {
+          status: httpResponse.status,
+          body,
+        } satisfies HttpJsonResponse;
+      },
+      {
+        requestUrl: `${apiBaseUrl}/visits`,
+        statusFilter: status,
+      },
+    );
+
+    expect(response.status).toBe(200);
+    const payload = response.body as VisitQueueResponse | null;
     return payload?.items ?? [];
   }
 

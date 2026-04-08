@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@shared/ui/sidebar";
-import type { NavItem } from "./nav-config";
+import type { NavItem } from "@app/navigation/nav-config";
 
 interface NavSecondaryProps {
   items: NavItem[];

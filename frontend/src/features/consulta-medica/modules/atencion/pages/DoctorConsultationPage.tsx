@@ -24,11 +24,11 @@ import {
   type VisitStatus,
 } from "@api/types";
 import { useDebounce } from "@shared/hooks/useDebounce";
-import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
+import { usePermissionDependencies } from "@/domains/auth-access/contracts/navigation-auth";
 import {
   canCloseConsultation,
   canStartConsultation,
-} from "@features/operativo/shared/domain/visit-flow.constants";
+} from "@features/operativo/shared/contracts/visit-flow";
 import {
   saveDiagnosisFormSchema,
   savePrescriptionsFormSchema,
@@ -949,7 +949,7 @@ export const DoctorConsultationPage = () => {
                             <VitalMetric
                               label="Frecuencia cardiaca"
                               value={formatMetricWithUnit(
-                                selectedVitals.heartRateBpm,
+                                selectedVitals?.heartRateBpm,
                                 "lpm",
                               )}
                             />
@@ -959,7 +959,7 @@ export const DoctorConsultationPage = () => {
                             <VitalMetric
                               label="Frecuencia respiratoria"
                               value={formatMetricWithUnit(
-                                selectedVitals.respiratoryRateBpm,
+                                selectedVitals?.respiratoryRateBpm,
                                 "rpm",
                               )}
                             />

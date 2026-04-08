@@ -31,6 +31,7 @@ Este dominio cubre:
 - [`kan-61-rbac-critical-use-cases-apply-evidence.md`](./kan-61-rbac-critical-use-cases-apply-evidence.md) - evidencia de KAN-61 para extraccion de mutaciones RBAC criticas a use_cases/policies conservando contrato.
 - [`jira-workflow-operating-model.md`](./jira-workflow-operating-model.md) - workflow operativo de Jira para Auth-Access (columnas, gates, WIP, due dates, bloqueos, daily/cierre, reglas IA y JQLs).
 - [`kan-58a-s2-apply-evidence.md`](./kan-58a-s2-apply-evidence.md) - evidencia de implementacion KAN-58A S2 mutaciones de roles (scope freeze, TDD, validacion y riesgos).
+- [`kan-59-apply-evidence.md`](./kan-59-apply-evidence.md) - evidencia de implementación KAN-59 para guards/routing capability-first, trazabilidad PRs #59/#60/#61 y validación TDD-first.
 - [`kan-65-admin-capabilities-apply-evidence.md`](./kan-65-admin-capabilities-apply-evidence.md) - evidencia de implementacion KAN-65 (capability-first en admin users/roles, trazabilidad AC y cierre TDD por bloques A-D).
 - [`kan-65-pr-evidence-draft.md`](./kan-65-pr-evidence-draft.md) - borrador evidence-first de descripcion de PR para KAN-65 (sin abrir PR).
 - [`kan-66-concurrency-hardening-apply-evidence.md`](./kan-66-concurrency-hardening-apply-evidence.md) - evidencia de implementacion KAN-66 para concurrencia/idempotencia en hotspots RBAC write.

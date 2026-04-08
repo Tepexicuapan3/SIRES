@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "vitest/globals", "node"]
+  },
+  "include": [
+    "src/test/unit/auth/**/*.ts",
+    "src/test/unit/auth/**/*.tsx",
+    "src/test/unit/router/**/*.ts",
+    "src/test/unit/router/**/*.tsx",
+    "src/test/integration/contracts/**/*.ts",
+    "src/test/integration/contracts/**/*.tsx",
+    "src/test/mocks/**/*.ts",
+    "src/test/factories/**/*.ts",
+    "src/test/setup.ts"
+  ]
+}

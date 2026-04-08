@@ -54,7 +54,7 @@ export const PermissionGate = ({
     allOf?.length ? 1 : 0,
   ].reduce((sum, value) => sum + value, 0);
 
-  if (process.env.NODE_ENV !== "production" && ruleCount > 1) {
+  if (import.meta.env.DEV && ruleCount > 1) {
     console.warn(
       "PermissionGate: usa solo una regla a la vez (requireAdmin, requiredCapability, permission, anyOf, allOf).",
     );

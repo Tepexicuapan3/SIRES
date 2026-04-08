@@ -1,0 +1,11 @@
+Phase: F2
+State: RED
+Baseline command:
+docker compose run --rm frontend sh -lc "bun install >/tmp/bun-install.log && bunx tsc --noEmit"
+
+Critical runtime-scope errors observed before fixes:
+- PermissionHierarchyExplorer.tsx: invalid enum-like access `PERMISSION_ROW_HEIGHT.ACTION` and possibly undefined `renderMeta` invocation.
+- UserCreateDialog.tsx / UserDetailsDialog.tsx: resolver generic mismatch around react-hook-form + zodResolver.
+- DoctorConsultationPage.tsx: `selectedVitals` possibly null.
+- AppSidebar.tsx flow: navigation icon typed as `unknown` via NavigationItem mismatch.
+- Missing dependency type resolution: `@radix-ui/react-switch`.

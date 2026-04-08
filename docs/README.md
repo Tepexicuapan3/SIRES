@@ -38,11 +38,13 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 - `docs/domains/auth-access/kan-61-rbac-critical-use-cases-apply-evidence.md` - evidencia de apply KAN-61 para extraccion de mutaciones RBAC criticas a use_cases/policies.
 - `docs/domains/auth-access/jira-workflow-operating-model.md` - workflow operativo Jira de Auth-Access (columnas, gates, WIP, due dates, bloqueos, daily/cierre y reglas para agentes IA).
 - `docs/domains/auth-access/kan-58a-s2-apply-evidence.md` - evidencia de apply KAN-58A (slice S2 mutaciones de roles), TDD Red/Green/Refactor y rollback por flag.
+- `docs/domains/auth-access/kan-59-apply-evidence.md` - evidencia de apply KAN-59 (frontend guards/routing capability-first), trazabilidad PRs #59/#60/#61 y ciclo TDD Red/Green/Refactor.
 - `docs/domains/auth-access/kan-65-admin-capabilities-apply-evidence.md` - evidencia de apply KAN-65 (capabilities admin users/roles, AC traceability y cierre documental).
 - `docs/domains/auth-access/kan-65-pr-evidence-draft.md` - borrador evidence-first de descripcion de PR para KAN-65.
 - `docs/domains/auth-access/kan-66-concurrency-hardening-apply-evidence.md` - evidencia de apply KAN-66 para hardening de concurrencia/idempotencia en RBAC write hotspots.
 - `docs/domains/auth-access/kan-67-cutover-legacy-retirement.md` - evidencia KAN-67 para cutover incremental y retiro controlado de porciones legacy en `rbac_views` (S3) con rollback por flag.
 - `docs/domains/auth-access/kan-69-observability-baseline.md` - baseline operativo de observabilidad auth-access (métricas, alertas mínimas, tablero/snapshot inicial).
+- `docs/domains/auth-access/kan-70-evidence-matrix-template.md` - matriz plantilla AC->evidencia para cierre evidence-first y trazabilidad TDD por fase.
 - Nota de discoverability: los links legacy en `docs/guides/` para PRD de auth-access se mantienen como **deprecados** y redirigen a la ruta canonica del dominio.
 
 ## Estandares operativos (arquitectura + organizacion + patrones)
@@ -173,6 +175,10 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 - `docs/getting-started/onboarding-day-1-checklist.md` - checklist day-1.
 - `docs/getting-started/engram-team-sync.md` - hooks y sincronizacion de memoria compartida.
 - `docs/getting-started/github-hardening-ci-cd-baseline.md` - guia practica para branch protection, checks requeridos y hardening en GitHub UI.
+
+## Runbooks
+
+- `docs/runbooks/frontend-hardening-worktree.md` - aislamiento operativo de worktree para cambios de estabilidad frontend.
 
 ## Templates
 

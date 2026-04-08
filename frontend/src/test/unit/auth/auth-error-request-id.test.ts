@@ -5,7 +5,7 @@ import { ApiError } from "@/infrastructure/api/utils/errors";
 
 type RejectionHandler = (error: unknown) => Promise<unknown>;
 
-const createInterceptorHarness = () => {
+const createInterceptorHarness = (): RejectionHandler => {
   let onRejected: RejectionHandler | null = null;
 
   const client = {
@@ -48,13 +48,11 @@ describe("auth error requestId normalization", () => {
       },
     };
 
-    await expect(onRejected(error)).rejects.toEqual(
-      expect.objectContaining<ApiError>({
-        code: "INTERNAL_SERVER_ERROR",
-        status: 500,
-        requestId: "req-payload-500",
-      }),
-    );
+    await expect(onRejected(error)).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      status: 500,
+      requestId: "req-payload-500",
+    } satisfies Pick<ApiError, "code" | "status" | "requestId">);
   });
 
   it("falls back to X-Request-ID response header when payload omits requestId", async () => {
@@ -77,12 +75,10 @@ describe("auth error requestId normalization", () => {
       },
     };
 
-    await expect(onRejected(error)).rejects.toEqual(
-      expect.objectContaining<ApiError>({
-        code: "PERMISSION_DENIED",
-        status: 403,
-        requestId: "req-header-403",
-      }),
-    );
+    await expect(onRejected(error)).rejects.toMatchObject({
+      code: "PERMISSION_DENIED",
+      status: 403,
+      requestId: "req-header-403",
+    } satisfies Pick<ApiError, "code" | "status" | "requestId">);
   });
 });

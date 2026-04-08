@@ -17,6 +17,12 @@ describe("usePermissionDependencies capability source of truth", () => {
       capabilities: {},
       permissionDependenciesVersion: "v1",
       strictCapabilityPrefixes: ["flow.somatometria."],
+      hasPermission: vi.fn(() => false),
+      hasEffectivePermission: vi.fn(() => false),
+      hasAnyPermission: vi.fn(() => false),
+      hasAllPermissions: vi.fn(() => false),
+      hasCapability: vi.fn(() => false),
+      isAdmin: vi.fn(() => false),
     } as ReturnType<typeof usePermissions>);
 
     const { result } = renderHook(() => usePermissionDependencies());
@@ -36,6 +42,12 @@ describe("usePermissionDependencies capability source of truth", () => {
       capabilities: {},
       permissionDependenciesVersion: "v1",
       strictCapabilityPrefixes: ["flow.somatometria."],
+      hasPermission: vi.fn(() => false),
+      hasEffectivePermission: vi.fn(() => false),
+      hasAnyPermission: vi.fn(() => false),
+      hasAllPermissions: vi.fn(() => false),
+      hasCapability: vi.fn(() => false),
+      isAdmin: vi.fn(() => false),
     } as ReturnType<typeof usePermissions>);
 
     const { result } = renderHook(() => usePermissionDependencies());
@@ -55,6 +67,12 @@ describe("usePermissionDependencies capability source of truth", () => {
       capabilities: {},
       permissionDependenciesVersion: "v1",
       strictCapabilityPrefixes: [],
+      hasPermission: vi.fn(() => false),
+      hasEffectivePermission: vi.fn(() => false),
+      hasAnyPermission: vi.fn(() => false),
+      hasAllPermissions: vi.fn(() => false),
+      hasCapability: vi.fn(() => false),
+      isAdmin: vi.fn(() => false),
     } as ReturnType<typeof usePermissions>);
 
     const { result } = renderHook(() => usePermissionDependencies());

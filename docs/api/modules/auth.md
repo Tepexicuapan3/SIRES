@@ -8,14 +8,17 @@ SIRES es un sistema medico critico sobre backend Django/DRF y frontend React. Un
 
 **Fuente de verdad**
 - `docs/api/standards.md`
-- `frontend/src/api/types/auth.types.ts`
-- `frontend/src/api/utils/errors.ts`
+- `frontend/src/infrastructure/api/types/auth.types.ts`
+- `frontend/src/infrastructure/api/utils/errors.ts`
 
 **Reglas clave**
 - JWT en cookies HttpOnly (no tokens en body ni storage).
 - CSRF obligatorio en mutaciones.
 - Errores siguen el formato `ApiError` del estandar.
 - El contrato API documenta solo errores HTTP del backend (no errores de red del cliente).
+- Gates de tipado frontend se validan por separado: `bun run typecheck:app` y `bun run typecheck:tests`.
+- Alineacion docs/tipos/mocks se valida con `src/test/integration/contracts/auth-contract-alignment.spec.ts`.
+- Smoke E2E se acepta solo en Docker con preflight (`bun run test:e2e:smoke`), no host-only.
 
 Base URL
 ```
@@ -480,6 +483,6 @@ Acciones recomendadas para clientes al recibir errores auth-access. Esta guia es
 
 ## References
 - `docs/api/standards.md`
-- `frontend/src/api/types/auth.types.ts`
-- `frontend/src/api/utils/errors.ts`
-- `frontend/src/api/resources/auth.api.ts`
+- `frontend/src/infrastructure/api/types/auth.types.ts`
+- `frontend/src/infrastructure/api/utils/errors.ts`
+- `frontend/src/infrastructure/api/resources/auth.api.ts`

@@ -58,6 +58,8 @@ nul
 # Testing
 coverage/
 .nyc_output/
+frontend/test-results/
+frontend/playwright-report/
 
 # Database
 *.db

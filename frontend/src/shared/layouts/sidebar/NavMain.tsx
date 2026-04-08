@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@shared/ui/tooltip";
 import { TruncatedTooltip } from "@shared/ui/truncated-tooltip";
 import { cn } from "@shared/utils/styling/cn";
 import { useSidebarStore } from "@app/state/ui/sidebarStore";
-import { type NavSection, type NavItem } from "./nav-config";
+import type { NavItem, NavSection } from "@app/navigation/nav-config";
 
 interface NavMainProps {
   sections: NavSection[];

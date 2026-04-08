@@ -1,0 +1,16 @@
+Phase: F2
+State: GREEN
+Type debt fixes applied in critical runtime scope:
+- auth-access:
+  - PermissionHierarchyExplorer optional-safe rendering + row-height key usage.
+  - UserCreateDialog/UserDetailsDialog resolver typing alignment.
+  - PermissionGate dev check moved to import.meta.env.DEV.
+- sidebar/navigation:
+  - NavigationItem icon typed with LucideIcon.
+  - useNavigation returns canonical NavItem/NavSection.
+- consulta:
+  - selectedVitals nullable access hardened with optional chaining.
+
+Validation:
+1) docker compose run --rm frontend sh -lc "bun install >/tmp/bun-install.log && bun run typecheck:app" -> PASS
+2) docker compose run --rm frontend sh -lc "bun install >/tmp/bun-install.log && bun run test:run src/test/unit/auth src/test/unit/router" -> PASS

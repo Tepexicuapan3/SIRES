@@ -1,5 +1,21 @@
 # auth-access - Changelog
 
+## 2026-04-07 (KAN-70 cierre final 100%: Jira Finalizada + gaps cerrados)
+
+- Se crea `kan-59-apply-evidence.md` con evidencia TDD-first completa de KAN-59 (PRs #59/60/61, decisiones técnicas DEC-KAN-59-001 a DEC-KAN-59-004, ciclo RED→GREEN→REFACTOR, rollback baseline).
+- Se actualiza `kan-70-s1-document-closure-acta.md` para cerrar G-002 (evidencia documental faltante) y reclasificar de `parcial` a `aceptado` (100% completeness, 3/3 AC validados).
+- Se actualizan `changelog.md` y `decision-log.md` con registro de cierre final ACEPTADO + cierre operativo en Jira.
+- Se publica comentario final en Jira KAN-70 (`commentId=11932`) con trazabilidad AC→evidencia.
+- Se ejecuta transición de workflow Jira `In Dev -> Finalizada` (transition id `31`).
+- Se cierran G-001/G-002/G-003 y se elimina riesgo residual operativo para KAN-70.
+- Estado final: KAN-70 **ACEPTADO** (100% completeness) y **Finalizada** en Jira.
+
+## 2026-04-07 (KAN-70 post-rebase: integración KAN-66/67/62)
+
+- Se ejecutó rebase de `chore/kan-70-apply` sobre `main` para integrar KAN-66 (PR #64), KAN-67 (PR #63) y KAN-62 (PR #62).
+- Se actualizó acta `kan-70-s1-document-closure-acta.md` para incluir KAN-66 en matriz AC→evidencia (AC-1).
+- Se mantiene estado `parcial` mientras persistan G-001/G-002/G-003.
+
 ## 2026-04-07 (KAN-67 cutover incremental + retiro controlado legacy)
 
 - Se retira lógica legacy inline del segmento S3 en `rbac_views.py` para `POST /permissions/assign` y `DELETE /permissions/roles/{roleId}/permissions/{permissionId}`.
@@ -11,6 +27,11 @@
   - `test_revoke_permission_records_legacy_source_when_flag_disabled`
 - Se agrega `kan-67-cutover-legacy-retirement.md` y se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
 
+## 2026-04-07 (KAN-66 hardening RBAC write concurrency + idempotency)
+
+- Se integró hardening de escritura RBAC con controles de concurrencia e idempotencia (KAN-66, PR #64).
+- Referencia: commit `fa6924f`.
+
 ## 2026-04-07 (KAN-62 hardening switch operativo read-only RBAC)
 
 - Se agrega `kan-62-read-source-switch-hardening.md` con contrato operativo del nuevo switch `RBAC_READ_SLICE_SOURCE` (`legacy|s1|auto`).
@@ -18,6 +39,19 @@
 - Se agrega runbook de rollback inmediato a legacy (pasos + verificación de `meta.source="legacy"`).
 - Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
 
+## 2026-04-07 (KAN-70 continuidad apply parcial)
+
+- Se actualiza `kan-70-s1-document-closure-acta.md` para dejar explícito el estado de continuidad apply: KAN-70 permanece en `parcial` y no se declara aceptación final.
+- Se agrega seguimiento explícito de fallback canónico (`F-001/F-002/F-003`) con owner, siguiente acción y ETA, marcado como deuda de governance **no bloqueante** para KAN-70.
+- Se mantiene criterio de cierre sin cambios: KAN-70 pasa a `aceptado` solo al cerrar G-001/G-002/G-003 y revalidar checklist completo.
+
+## 2026-04-07 (KAN-70 cierre documental operativo Sprint 1)
+
+- Se crea `kan-70-evidence-matrix-template.md` con contrato `ActaACRow`, filas base AC-1/AC-2/AC-3 y arranque RED con `resultado=gap` por defecto.
+- Se crea `kan-70-s1-document-closure-acta.md` como single-source de cierre evidence-first (matriz AC->evidencia, checklist operativo, reglas determinísticas de estado, gaps con owner/ETA y paquete PR).
+- Se clasifica estado final KAN-70 como **parcial** por dependencia externa Jira MCP (sin acceso para publicar comentario final/validar URLs) y gap documental de KAN-59, ambos con control compensatorio.
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
+- Se documenta fallback canónico por ausencia de `hexagonal-clean-framework`, `solid-enforcement` y `pattern-catalog` en la rama actual.
 ## 2026-04-06 (migración estructural frontend domain-first auth-access - Lote 5 cleanup reintento validado)
 
 - Se reejecuta barrido repo-wide de consumidores para paths legacy:
