@@ -54,4 +54,19 @@ describe("Auth Onboarding Flow (MSW)", () => {
 
     await expectApiError(promise, { code: "ONBOARDING_FAILED", status: 500 });
   });
+
+  it("keeps non-privileged session state after onboarding failure", async () => {
+    await authAPI.logout();
+
+    const promise = authAPI.completeOnboarding({
+      newPassword: "InvalidToken1!",
+      termsAccepted: true,
+    });
+
+    await expectApiError(promise, { code: "ONBOARDING_FAILED", status: 500 });
+    await expectApiError(authAPI.getCurrentUser(), {
+      code: "SESSION_EXPIRED",
+      status: 401,
+    });
+  });
 });

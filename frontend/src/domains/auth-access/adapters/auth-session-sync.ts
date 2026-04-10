@@ -9,16 +9,13 @@ import { invalidateAuthSessionAndCapabilities } from "@/domains/auth-access/adap
 import { queryClient } from "@app/config/query-client";
 
 const AUTH_REVISION_HEADER = "x-auth-revision";
-const INVALIDATION_COOLDOWN_MS = 10_000;
 
 let syncInFlight = false;
-let lastInvalidationRevision: string | null = null;
-let lastInvalidationAt = 0;
+let pendingInvalidationRevision: string | null = null;
 
 export const resetAuthSessionSyncState = () => {
   syncInFlight = false;
-  lastInvalidationRevision = null;
-  lastInvalidationAt = 0;
+  pendingInvalidationRevision = null;
 };
 
 type AuthRevisionHeaders =
@@ -70,13 +67,13 @@ const shouldSkipInvalidation = (
   }
 
   if (currentRevision === revision) {
+    if (pendingInvalidationRevision === revision) {
+      pendingInvalidationRevision = null;
+    }
     return true;
   }
 
-  return (
-    lastInvalidationRevision === revision &&
-    Date.now() - lastInvalidationAt < INVALIDATION_COOLDOWN_MS
-  );
+  return pendingInvalidationRevision === revision;
 };
 
 export const syncAuthSessionRevision = ({
@@ -103,8 +100,7 @@ export const syncAuthSessionRevision = ({
   }
 
   syncInFlight = true;
-  lastInvalidationRevision = revision;
-  lastInvalidationAt = Date.now();
+  pendingInvalidationRevision = revision;
 
   invalidateAuthSessionAndCapabilities(queryClient);
   syncInFlight = false;

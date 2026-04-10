@@ -9,11 +9,13 @@ import { createMockAuthUser } from "@/test/factories/users";
 
 describe("auth-session-sync", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     queryClient.clear();
     resetAuthSessionSyncState();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     queryClient.clear();
     resetAuthSessionSyncState();
@@ -100,6 +102,41 @@ describe("auth-session-sync", () => {
       refetchType: "active",
     });
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+      queryKey: authKeys.capabilities(),
+      refetchType: "active",
+    });
+  });
+
+  it("forces exactly one recompute gate when X-Auth-Revision changes and session cache is still stale", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-23T16:00:00.000Z"));
+
+    const invalidateQueriesSpy = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockResolvedValue(undefined);
+
+    queryClient.setQueryData(
+      authKeys.session(),
+      createMockAuthUser({ authRevision: "2026-02-23T16:00:00Z" }),
+    );
+
+    syncAuthSessionRevision({
+      headers: { "x-auth-revision": "2026-02-23T16:01:00Z" },
+      requestUrl: "/roles/permissions/assign",
+    });
+
+    vi.setSystemTime(new Date("2026-02-23T16:00:15.000Z"));
+    syncAuthSessionRevision({
+      headers: { "x-auth-revision": "2026-02-23T16:01:00Z" },
+      requestUrl: "/users/10/roles",
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledTimes(2);
+    expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(1, {
+      queryKey: authKeys.session(),
+      refetchType: "active",
+    });
+    expect(invalidateQueriesSpy).toHaveBeenNthCalledWith(2, {
       queryKey: authKeys.capabilities(),
       refetchType: "active",
     });

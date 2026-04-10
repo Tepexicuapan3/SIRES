@@ -101,4 +101,33 @@ describe("Auth Recovery Flow (MSW)", () => {
 
     await expectApiError(promise, { code: "PASSWORD_TOO_WEAK", status: 400 });
   });
+
+  it("keeps non-privileged state when reset password fails", async () => {
+    await authAPI.logout();
+
+    const promise = authAPI.resetPassword({
+      newPassword: "TokenInvalid1!",
+    });
+
+    await expectApiError(promise, { code: "TOKEN_INVALID", status: 401 });
+    await expectApiError(authAPI.getCurrentUser(), {
+      code: "SESSION_EXPIRED",
+      status: 401,
+    });
+  });
+
+  it(
+    "unlocks authenticated path after successful reset password",
+    { timeout: 10_000 },
+    async () => {
+      await authAPI.resetPassword({
+        newPassword: "NewPassword123!",
+      });
+
+      const sessionUser = await authAPI.getCurrentUser();
+      expect(sessionUser.id).toBeGreaterThan(0);
+      expect(sessionUser.requiresOnboarding).toBe(false);
+      expect(sessionUser.mustChangePassword).toBe(false);
+    },
+  );
 });

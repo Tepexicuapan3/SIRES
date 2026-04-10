@@ -6,6 +6,7 @@ import {
   type BrowserContext,
   type APIResponse,
 } from "@playwright/test";
+import { resolveApiBaseUrl } from "./auth-test-env";
 
 /**
  * BasePage - Clase base para todas las páginas
@@ -238,7 +239,9 @@ export class AuthPage extends BasePage {
       }
 
       if (attempt < retries) {
-        await this.page.waitForTimeout(retryDelayMs);
+        await expect(this.sendCodeButton).toBeEnabled({
+          timeout: Math.max(retryDelayMs, 1_000),
+        });
       }
     }
 
@@ -322,11 +325,21 @@ export class AuthPage extends BasePage {
 export class AuthAPI {
   private csrfToken: string = "";
   private cookies: string = "";
+  private apiBaseUrl: string;
 
   constructor(
     private request: APIRequestContext,
     private context?: BrowserContext, // BrowserContext opcional para extraer cookies
-  ) {}
+  ) {
+    const baseOrigin = this.context
+      ?.pages()
+      .at(0)
+      ?.url()
+      ?.split("/")
+      .slice(0, 3)
+      .join("/");
+    this.apiBaseUrl = resolveApiBaseUrl(baseOrigin);
+  }
 
   private async extractCsrfFromCookies() {
     if (this.context) {
@@ -360,13 +373,10 @@ export class AuthAPI {
   }
 
   async login(credentials: LoginData) {
-    const response = await this.request.post(
-      "http://localhost:5000/api/v1/auth/login",
-      {
-        data: credentials,
-        headers: this.getHeaders(),
-      },
-    );
+    const response = await this.request.post(`${this.apiBaseUrl}/auth/login`, {
+      data: credentials,
+      headers: this.getHeaders(),
+    });
 
     // Extraer cookies después del login
     await this.extractCsrfFromCookies();
@@ -375,66 +385,54 @@ export class AuthAPI {
   }
 
   async logout() {
-    return this.request.post("http://localhost:5000/api/v1/auth/logout", {
+    return this.request.post(`${this.apiBaseUrl}/auth/logout`, {
       headers: this.getHeaders(true),
     });
   }
 
   async me() {
-    return this.request.get("http://localhost:5000/api/v1/auth/me", {
+    return this.request.get(`${this.apiBaseUrl}/auth/me`, {
       headers: this.getHeaders(),
     });
   }
 
   async verify() {
-    return this.request.get("http://localhost:5000/api/v1/auth/verify", {
+    return this.request.get(`${this.apiBaseUrl}/auth/verify`, {
       headers: this.getHeaders(),
     });
   }
 
   async refresh() {
-    return this.request.post("http://localhost:5000/api/v1/auth/refresh", {
+    return this.request.post(`${this.apiBaseUrl}/auth/refresh`, {
       headers: this.getHeaders(true),
     });
   }
 
   async requestResetCode(email: string) {
-    return this.request.post(
-      "http://localhost:5000/api/v1/auth/request-reset-code",
-      {
-        data: { email },
-        headers: this.getHeaders(),
-      },
-    );
+    return this.request.post(`${this.apiBaseUrl}/auth/request-reset-code`, {
+      data: { email },
+      headers: this.getHeaders(),
+    });
   }
 
   async verifyResetCode(email: string, code: string) {
-    return this.request.post(
-      "http://localhost:5000/api/v1/auth/verify-reset-code",
-      {
-        data: { email, code },
-        headers: this.getHeaders(),
-      },
-    );
+    return this.request.post(`${this.apiBaseUrl}/auth/verify-reset-code`, {
+      data: { email, code },
+      headers: this.getHeaders(),
+    });
   }
 
   async resetPassword(newPassword: string) {
-    return this.request.post(
-      "http://localhost:5000/api/v1/auth/reset-password",
-      {
-        data: { newPassword },
-        headers: this.getHeaders(true),
-      },
-    );
+    return this.request.post(`${this.apiBaseUrl}/auth/reset-password`, {
+      data: { newPassword },
+      headers: this.getHeaders(true),
+    });
   }
 
   async completeOnboarding(newPassword: string, termsAccepted: boolean) {
-    return this.request.post(
-      "http://localhost:5000/api/v1/auth/complete-onboarding",
-      {
-        data: { newPassword, termsAccepted },
-        headers: this.getHeaders(true),
-      },
-    );
+    return this.request.post(`${this.apiBaseUrl}/auth/complete-onboarding`, {
+      data: { newPassword, termsAccepted },
+      headers: this.getHeaders(true),
+    });
   }
 }

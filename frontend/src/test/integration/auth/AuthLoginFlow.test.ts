@@ -39,6 +39,10 @@ describe("Auth Login Flow (MSW)", () => {
 
     expect(response.requiresOnboarding).toBe(true);
     expect(response.user.mustChangePassword).toBe(true);
+
+    const currentUser = await authAPI.getCurrentUser();
+    expect(currentUser.requiresOnboarding).toBe(true);
+    expect(currentUser.mustChangePassword).toBe(true);
   });
 
   it.each([

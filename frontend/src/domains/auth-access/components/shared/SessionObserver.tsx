@@ -14,6 +14,8 @@ export const SessionObserver = () => {
     const handleSessionExpired = () => {
       const isAlreadyOnLogin = location.pathname === "/login";
 
+      clearAuthSession(queryClient);
+
       if (!isAlreadyOnLogin) {
         toast.error("Tu sesión ha expirado. Por favor ingresa nuevamente.");
       }
@@ -21,8 +23,6 @@ export const SessionObserver = () => {
       if (!isAlreadyOnLogin) {
         navigate("/login", { replace: true });
       }
-
-      clearAuthSession(queryClient);
     };
 
     return subscribeSessionExpired(handleSessionExpired);

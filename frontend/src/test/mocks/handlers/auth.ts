@@ -109,6 +109,26 @@ const createAuthRevisionHeaders = (authRevision: string) => {
   return headers;
 };
 
+const createContractErrorResponse = (
+  status: number,
+  code: string,
+  message: string,
+  requestId = `req-${code.toLowerCase()}`,
+) => {
+  const headers = new Headers();
+  headers.set("X-Request-ID", requestId);
+
+  return HttpResponse.json(
+    {
+      code,
+      message,
+      status,
+      requestId,
+    },
+    { status, headers },
+  );
+};
+
 const loginSuccessResponse = (user: AuthUser, requiresOnboarding = false) => {
   setMockSessionUser(user);
   return createLoginResponse(user, requiresOnboarding);
@@ -388,68 +408,55 @@ export const authHandlers = [
 
     // 1. Credenciales Inválidas
     if (username === "error" || password === "wrong") {
-      return HttpResponse.json(
-        {
-          code: "INVALID_CREDENTIALS",
-          message: "Usuario o contraseña incorrectos",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "INVALID_CREDENTIALS",
+        "Usuario o contraseña incorrectos",
       );
     }
 
     // 2. Usuario Bloqueado
     if (username === "locked") {
-      return HttpResponse.json(
-        {
-          code: "ACCOUNT_LOCKED",
-          message:
-            "Tu cuenta ha sido bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
-        },
-        { status: 423 },
+      return createContractErrorResponse(
+        423,
+        "ACCOUNT_LOCKED",
+        "Tu cuenta ha sido bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
       );
     }
 
     // 3. Usuario Inactivo
     if (username === "inactive") {
-      return HttpResponse.json(
-        {
-          code: "USER_INACTIVE",
-          message: "Tu cuenta ha sido desactivada por un administrador.",
-        },
-        { status: 403 },
+      return createContractErrorResponse(
+        403,
+        "USER_INACTIVE",
+        "Tu cuenta ha sido desactivada por un administrador.",
       );
     }
 
     // 4. Cuenta Expirada (Nuevo)
     if (username === "expired") {
-      return HttpResponse.json(
-        {
-          code: "ACCOUNT_EXPIRED",
-          message: "Tu cuenta ha expirado. Contacta a soporte.",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "ACCOUNT_EXPIRED",
+        "Tu cuenta ha expirado. Contacta a soporte.",
       );
     }
 
     // 5. Mantenimiento (Nuevo)
     if (username === "maintenance") {
-      return HttpResponse.json(
-        {
-          code: "SERVICE_UNAVAILABLE",
-          message: "El sistema está en mantenimiento. Vuelve en unos minutos.",
-        },
-        { status: 503 },
+      return createContractErrorResponse(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "El sistema está en mantenimiento. Vuelve en unos minutos.",
       );
     }
 
     // 6. Error Interno
     if (username === "broken") {
-      return HttpResponse.json(
-        {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Error interno del servidor. Intente más tarde.",
-        },
-        { status: 500 },
+      return createContractErrorResponse(
+        500,
+        "INTERNAL_SERVER_ERROR",
+        "Error interno del servidor. Intente más tarde.",
       );
     }
 
@@ -483,12 +490,10 @@ export const authHandlers = [
     const user = resolveSessionUser(request, cookies);
 
     if (!user) {
-      return HttpResponse.json(
-        {
-          code: "SESSION_EXPIRED",
-          message: "La sesion no es valida o ha expirado.",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "SESSION_EXPIRED",
+        "La sesion no es valida o ha expirado.",
       );
     }
 
@@ -502,12 +507,10 @@ export const authHandlers = [
     const user = resolveSessionUser(request, cookies);
 
     if (!user) {
-      return HttpResponse.json(
-        {
-          code: "SESSION_EXPIRED",
-          message: "La sesion no es valida o ha expirado.",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "SESSION_EXPIRED",
+        "La sesion no es valida o ha expirado.",
       );
     }
 
@@ -531,12 +534,10 @@ export const authHandlers = [
     const user = resolveSessionUser(request, cookies);
 
     if (!user) {
-      return HttpResponse.json(
-        {
-          code: "REFRESH_TOKEN_EXPIRED",
-          message: "No hay refresh token valido.",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "REFRESH_TOKEN_EXPIRED",
+        "No hay refresh token valido.",
       );
     }
 
@@ -552,12 +553,10 @@ export const authHandlers = [
     const user = resolveSessionUser(request, cookies);
 
     if (!user) {
-      return HttpResponse.json(
-        {
-          code: "SESSION_EXPIRED",
-          message: "La sesion no es valida o ha expirado.",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "SESSION_EXPIRED",
+        "La sesion no es valida o ha expirado.",
       );
     }
 
@@ -576,12 +575,10 @@ export const authHandlers = [
       body.email === "error@fail.com" ||
       body.email.toLowerCase().includes("noexiste")
     ) {
-      return HttpResponse.json(
-        {
-          code: "USER_NOT_FOUND",
-          message: "No encontramos un usuario con ese correo.",
-        },
-        { status: 404 },
+      return createContractErrorResponse(
+        404,
+        "USER_NOT_FOUND",
+        "No encontramos un usuario con ese correo.",
       );
     }
 
@@ -612,32 +609,26 @@ export const authHandlers = [
     }
 
     if (code === "000000") {
-      return HttpResponse.json(
-        {
-          code: "CODE_EXPIRED",
-          message: "El código ha expirado. Solicita uno nuevo.",
-        },
-        { status: 400 },
+      return createContractErrorResponse(
+        400,
+        "CODE_EXPIRED",
+        "El código ha expirado. Solicita uno nuevo.",
       );
     }
 
     // Nuevo: Exceso de intentos
     if (code === "999999") {
-      return HttpResponse.json(
-        {
-          code: "CODE_EXPIRED",
-          message: "Código invalidado por demasiados intentos.",
-        },
-        { status: 400 },
+      return createContractErrorResponse(
+        400,
+        "CODE_EXPIRED",
+        "Código invalidado por demasiados intentos.",
       );
     }
 
-    return HttpResponse.json(
-      {
-        code: "INVALID_CODE",
-        message: "Código incorrecto. Verifica los 6 dígitos.",
-      },
-      { status: 400 },
+    return createContractErrorResponse(
+      400,
+      "INVALID_CODE",
+      "Código incorrecto. Verifica los 6 dígitos.",
     );
   }),
 
@@ -647,46 +638,37 @@ export const authHandlers = [
 
     // Simulación de Token Expirado
     if (body.newPassword === "ExpiredToken1!") {
-      return HttpResponse.json(
-        {
-          code: "TOKEN_EXPIRED",
-          message: "Tu sesión ha expirado. Solicita un nuevo código.",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "TOKEN_EXPIRED",
+        "Tu sesión ha expirado. Solicita un nuevo código.",
       );
     }
 
     // Simulación de Token Inválido
     if (body.newPassword === "TokenInvalid1!") {
-      return HttpResponse.json(
-        {
-          code: "TOKEN_INVALID",
-          message: "El token de restablecimiento es inválido o ha expirado.",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "TOKEN_INVALID",
+        "El token de restablecimiento es inválido o ha expirado.",
       );
     }
 
     // Simulación de Error Interno
     if (body.newPassword === "InvalidToken1!") {
-      return HttpResponse.json(
-        {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "No se pudo restablecer la contraseña. Intente nuevamente.",
-        },
-        { status: 500 },
+      return createContractErrorResponse(
+        500,
+        "INTERNAL_SERVER_ERROR",
+        "No se pudo restablecer la contraseña. Intente nuevamente.",
       );
     }
 
     // Validación Robusta de Contraseña
     if (!isPasswordStrong(body.newPassword)) {
-      return HttpResponse.json(
-        {
-          code: "PASSWORD_TOO_WEAK",
-          message:
-            "La contraseña no cumple con los requisitos de seguridad (mín 8 caracteres, mayúscula, número y símbolo).",
-        },
-        { status: 400 },
+      return createContractErrorResponse(
+        400,
+        "PASSWORD_TOO_WEAK",
+        "La contraseña no cumple con los requisitos de seguridad (mín 8 caracteres, mayúscula, número y símbolo).",
       );
     }
 
@@ -709,46 +691,38 @@ export const authHandlers = [
 
     // Validar Términos
     if (body.termsAccepted === false) {
-      return HttpResponse.json(
-        {
-          code: "TERMS_NOT_ACCEPTED",
-          message: "Debes aceptar los términos y condiciones.",
-        },
-        { status: 400 },
+      return createContractErrorResponse(
+        400,
+        "TERMS_NOT_ACCEPTED",
+        "Debes aceptar los términos y condiciones.",
       );
     }
 
     // Simulación de Token Expirado (Onboarding)
     if (body.newPassword === "ExpiredToken1!") {
-      return HttpResponse.json(
-        {
-          code: "TOKEN_EXPIRED",
-          message: "Tu sesión ha expirado. Inicia sesión nuevamente.",
-        },
-        { status: 401 },
+      return createContractErrorResponse(
+        401,
+        "TOKEN_EXPIRED",
+        "Tu sesión ha expirado. Inicia sesión nuevamente.",
       );
     }
 
     // Simulación de Fallo Genérico en Onboarding
     // Usamos la password mágica "InvalidToken1!" para simular que algo falló en el backend
     if (body.newPassword === "InvalidToken1!") {
-      return HttpResponse.json(
-        {
-          code: "ONBOARDING_FAILED",
-          message: "No se pudo completar el registro. Intente nuevamente.",
-        },
-        { status: 500 },
+      return createContractErrorResponse(
+        500,
+        "ONBOARDING_FAILED",
+        "No se pudo completar el registro. Intente nuevamente.",
       );
     }
 
     // Validación Robusta de Contraseña
     if (!isPasswordStrong(body.newPassword)) {
-      return HttpResponse.json(
-        {
-          code: "PASSWORD_TOO_WEAK",
-          message: "La contraseña no cumple con los requisitos de seguridad.",
-        },
-        { status: 400 },
+      return createContractErrorResponse(
+        400,
+        "PASSWORD_TOO_WEAK",
+        "La contraseña no cumple con los requisitos de seguridad.",
       );
     }
 

@@ -81,4 +81,57 @@ describe("auth error requestId normalization", () => {
       requestId: "req-header-403",
     } satisfies Pick<ApiError, "code" | "status" | "requestId">);
   });
+
+  it("prefers requestId from payload over response header when both are present", async () => {
+    const onRejected = createInterceptorHarness();
+
+    const error = {
+      config: {
+        url: "/auth/capabilities",
+        headers: {},
+      },
+      response: {
+        status: 401,
+        headers: {
+          "x-request-id": "req-header-401",
+        },
+        data: {
+          code: "SESSION_EXPIRED",
+          message: "Sesion expirada",
+          requestId: "req-payload-401",
+        },
+      },
+    };
+
+    await expect(onRejected(error)).rejects.toMatchObject({
+      code: "SESSION_EXPIRED",
+      status: 401,
+      requestId: "req-payload-401",
+    } satisfies Pick<ApiError, "code" | "status" | "requestId">);
+  });
+
+  it("keeps requestId undefined when payload and headers do not provide it", async () => {
+    const onRejected = createInterceptorHarness();
+
+    const error = {
+      config: {
+        url: "/auth/capabilities",
+        headers: {},
+      },
+      response: {
+        status: 500,
+        headers: {},
+        data: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Error temporal",
+        },
+      },
+    };
+
+    await expect(onRejected(error)).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      status: 500,
+      requestId: undefined,
+    } satisfies Pick<ApiError, "code" | "status" | "requestId">);
+  });
 });
