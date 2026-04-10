@@ -28,7 +28,7 @@ class AuthPermissionsTests(TestCase):
             nombre_completo="Admin User",
         )
 
-    def test_permissions_admin(self):
+    def test_build_auth_user_sets_admin_permissions_and_capabilities(self):
         role = Roles.objects.create(
             rol="ADMIN",
             desc_rol="Administrador",
@@ -55,7 +55,7 @@ class AuthPermissionsTests(TestCase):
         self.assertEqual(auth_user["roles"], ["ADMIN"])
         self.assertEqual(auth_user["primaryRole"], "ADMIN")
 
-    def test_permissions_admin_applies_active_deny_override(self):
+    def test_build_auth_user_applies_active_deny_override_for_admin_role(self):
         role = Roles.objects.create(
             rol="ADMIN_DENY",
             desc_rol="Administrador con deny",
@@ -89,7 +89,7 @@ class AuthPermissionsTests(TestCase):
         self.assertNotIn(denied_permission.codigo, auth_user["effectivePermissions"])
         self.assertFalse(auth_user["capabilities"]["admin.users.update"]["granted"])
 
-    def test_permissions_overrides(self):
+    def test_build_auth_user_applies_allow_and_deny_overrides(self):
         role = Roles.objects.create(
             rol="MEDICO",
             desc_rol="Medico",
@@ -129,7 +129,7 @@ class AuthPermissionsTests(TestCase):
         self.assertIn("pacientes:read", auth_user["permissions"])
         self.assertNotIn("expedientes:write", auth_user["permissions"])
 
-    def test_permissions_override_expired(self):
+    def test_build_auth_user_ignores_expired_overrides(self):
         role = Roles.objects.create(
             rol="MEDICO",
             desc_rol="Medico",
@@ -154,14 +154,14 @@ class AuthPermissionsTests(TestCase):
 
         self.assertIn("expedientes:read", auth_user["permissions"])
 
-    def test_no_roles_defaults(self):
+    def test_build_auth_user_returns_defaults_when_user_has_no_roles(self):
         auth_user = UserRepository.build_auth_user(self.user)
 
         self.assertEqual(auth_user["roles"], [])
         self.assertEqual(auth_user["permissions"], [])
         self.assertEqual(auth_user["landingRoute"], None)
 
-    def test_requires_onboarding_flag(self):
+    def test_build_auth_user_sets_requires_onboarding_flag_from_user_state(self):
         self.user.cambiar_clave = True
         self.user.terminos_acept = False
         self.user.save(update_fields=["cambiar_clave", "terminos_acept"])

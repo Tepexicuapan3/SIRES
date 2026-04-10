@@ -159,19 +159,24 @@ class AuthCoreServicesTests(TestCase):
         self.assertEqual(response.cookies["csrf_token"]["max-age"], 0)
         self.assertEqual(response.cookies[RESET_COOKIE]["max-age"], 0)
 
-    def test_authenticate_request_error_paths(self):
-        request_missing = self.factory.get("/api/test")
-        with self.assertRaises(AuthServiceError) as missing_ctx:
-            authenticate_request(request_missing)
-        self.assertEqual(missing_ctx.exception.code, "TOKEN_INVALID")
+    def test_authenticate_request_raises_token_invalid_when_access_cookie_is_missing(self):
+        request = self.factory.get("/api/test")
 
-        request_invalid = self.factory.get("/api/test")
-        request_invalid.COOKIES[ACCESS_COOKIE] = "token-invalido"
-        with self.assertRaises(AuthServiceError) as invalid_ctx:
-            authenticate_request(request_invalid)
-        self.assertEqual(invalid_ctx.exception.code, "TOKEN_INVALID")
+        with self.assertRaises(AuthServiceError) as ctx:
+            authenticate_request(request)
 
-    def test_authenticate_request_expired_and_user_state_paths(self):
+        self.assertEqual(ctx.exception.code, "TOKEN_INVALID")
+
+    def test_authenticate_request_raises_token_invalid_when_access_cookie_is_malformed(self):
+        request = self.factory.get("/api/test")
+        request.COOKIES[ACCESS_COOKIE] = "token-invalido"
+
+        with self.assertRaises(AuthServiceError) as ctx:
+            authenticate_request(request)
+
+        self.assertEqual(ctx.exception.code, "TOKEN_INVALID")
+
+    def test_authenticate_request_raises_token_expired_when_access_token_is_expired(self):
         expired = AccessToken.for_user(self.user)
         expired.set_exp(
             from_time=timezone.now() - timedelta(minutes=30),
@@ -180,27 +185,37 @@ class AuthCoreServicesTests(TestCase):
 
         request_expired = self.factory.get("/api/test")
         request_expired.COOKIES[ACCESS_COOKIE] = str(expired)
+
         with self.assertRaises(AuthServiceError) as expired_ctx:
             authenticate_request(request_expired)
+
         self.assertEqual(expired_ctx.exception.code, "TOKEN_EXPIRED")
 
+    def test_authenticate_request_raises_permission_denied_when_user_is_inactive(self):
         active_token = str(AccessToken.for_user(self.user))
 
         self.user.est_activo = False
         self.user.save(update_fields=["est_activo"])
         request_inactive = self.factory.get("/api/test")
         request_inactive.COOKIES[ACCESS_COOKIE] = active_token
+
         with self.assertRaises(AuthServiceError) as inactive_ctx:
             authenticate_request(request_inactive)
+
         self.assertEqual(inactive_ctx.exception.code, "PERMISSION_DENIED")
+
+    def test_authenticate_request_raises_session_expired_when_user_is_blocked(self):
+        active_token = str(AccessToken.for_user(self.user))
 
         self.user.est_activo = True
         self.user.est_bloqueado = True
         self.user.save(update_fields=["est_activo", "est_bloqueado"])
         request_blocked = self.factory.get("/api/test")
         request_blocked.COOKIES[ACCESS_COOKIE] = active_token
+
         with self.assertRaises(AuthServiceError) as blocked_ctx:
             authenticate_request(request_blocked)
+
         self.assertEqual(blocked_ctx.exception.code, "SESSION_EXPIRED")
 
     def test_authenticate_request_without_user_id_claim(self):

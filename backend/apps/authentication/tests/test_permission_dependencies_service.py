@@ -8,7 +8,7 @@ from apps.authentication.services.permission_dependencies import (
 
 
 class PermissionDependenciesServiceTests(SimpleTestCase):
-    def test_users_update_dependency_closure(self):
+    def test_get_permission_dependency_closure_returns_users_update_chain(self):
         closure = get_permission_dependency_closure("admin:gestion:usuarios:update")
 
         self.assertEqual(
@@ -21,7 +21,7 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
             ],
         )
 
-    def test_incomplete_dependency_chain_is_not_granted(self):
+    def test_evaluate_permission_dependencies_denies_when_chain_is_incomplete(self):
         state = evaluate_permission_dependencies(
             "admin:gestion:usuarios:update",
             [
@@ -36,7 +36,7 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
             ["admin:gestion:permisos:read", "admin:gestion:roles:read"],
         )
 
-    def test_permission_context_projects_effective_permissions(self):
+    def test_build_permission_context_projects_effective_permissions(self):
         context = build_permission_context(
             [
                 "admin:gestion:usuarios:update",
@@ -51,13 +51,13 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
         self.assertFalse(context["capabilities"]["admin.users.update"]["granted"])
         self.assertTrue(context["capabilities"]["admin.users.read"]["granted"])
 
-    def test_permission_context_with_wildcard_marks_capabilities_as_granted(self):
+    def test_build_permission_context_with_wildcard_marks_capabilities_as_granted(self):
         context = build_permission_context(["*"])
 
         self.assertEqual(context["effectivePermissions"], ["*"])
         self.assertTrue(context["capabilities"]["admin.users.editFull"]["granted"])
 
-    def test_permission_context_exposes_strict_capability_prefixes(self):
+    def test_build_permission_context_exposes_strict_capability_prefixes(self):
         context = build_permission_context(["clinico:somatometria:read"])
 
         self.assertEqual(
@@ -69,14 +69,14 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
             ],
         )
 
-    def test_flow_somatometria_capabilities_resolve_from_clinico_permission(self):
+    def test_build_permission_context_resolves_flow_somatometria_capabilities(self):
         context = build_permission_context(["clinico:somatometria:read"])
 
         self.assertTrue(context["capabilities"]["flow.somatometria.queue.read"]["granted"])
         self.assertTrue(context["capabilities"]["flow.somatometria.capture"]["granted"])
         self.assertTrue(context["capabilities"]["flow.visits.queue.read"]["granted"])
 
-    def test_flow_doctor_capabilities_resolve_from_consultas_permission(self):
+    def test_build_permission_context_resolves_flow_doctor_capabilities(self):
         context = build_permission_context(["clinico:consultas:read"])
 
         self.assertTrue(context["capabilities"]["flow.doctor.queue.read"]["granted"])
@@ -87,7 +87,7 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
             context["capabilities"]["flow.doctor.consultation.close"]["granted"]
         )
 
-    def test_flow_visits_queue_capability_requires_dependency_complete(self):
+    def test_build_permission_context_denies_flow_visits_when_dependencies_are_incomplete(self):
         context = build_permission_context(["recepcion:fichas:medicina_general:create"])
 
         self.assertFalse(context["capabilities"]["flow.visits.queue.read"]["granted"])
@@ -102,7 +102,7 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
 
         self.assertTrue(complete_context["capabilities"]["flow.visits.queue.read"]["granted"])
 
-    def test_flow_recepcion_write_capability_requires_dependency_complete(self):
+    def test_build_permission_context_denies_flow_recepcion_write_when_dependencies_are_incomplete(self):
         context = build_permission_context(["recepcion:fichas:especialidad:create"])
 
         self.assertFalse(context["capabilities"]["flow.recepcion.queue.write"]["granted"])
@@ -117,3 +117,18 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
         self.assertTrue(
             complete_context["capabilities"]["flow.recepcion.queue.write"]["granted"]
         )
+
+    def test_evaluate_permission_dependencies_handles_empty_permission_code(self):
+        state = evaluate_permission_dependencies("   ", ["admin:gestion:usuarios:read"])
+
+        self.assertEqual(
+            state,
+            {
+                "granted": False,
+                "requiredPermissions": [],
+                "missingPermissions": [],
+            },
+        )
+
+    def test_get_permission_dependency_closure_returns_empty_for_blank_permission_code(self):
+        self.assertEqual(get_permission_dependency_closure("   "), [])
