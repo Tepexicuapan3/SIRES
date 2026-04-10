@@ -446,6 +446,18 @@ class CatalogosContractTests(APITestCase):
         self.assertIn("code", item)
         self.assertIn("isActive", item)
 
+    def test_consulting_rooms_list_regression_no_ghost_folio_column_error(self):
+        """
+        Regression guard:
+        GET /consulting-rooms must not raise 500 due to stale center column mapping
+        (legacy `folio` vs current `clues`).
+        """
+        response = self.client.get("/api/v1/consulting-rooms?page=1&pageSize=10")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("items", response.data)
+        self.assertIsInstance(response.data["items"], list)
+
     def test_consulting_room_detail_contract(self):
         response = self.client.get(f"/api/v1/consulting-rooms/{self.consultorio.id}")
 
