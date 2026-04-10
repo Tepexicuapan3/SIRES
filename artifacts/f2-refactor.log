@@ -1,9 +1,0 @@
-Phase: F2
-State: REFACTOR
-Refactor scope:
-- Tightened test typing helpers in auth unit tests and test setup to remove unsafe globals/casts in touched scope.
-- Added explicit UserSecurityState typing in users MSW handler map cloning path.
-
-Validation:
-1) docker compose run --rm frontend sh -lc "bun install >/tmp/bun-install.log && bun run typecheck:tests" -> PASS
-2) docker compose run --rm frontend sh -lc "bun install >/tmp/bun-install.log && bun run lint" -> PASS (warning only)

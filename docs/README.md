@@ -119,6 +119,7 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 - Ownership explicito por dominio (primario/secundario en backend, frontend, DB y docs).
 - Un DoD base unico para todos los dominios/slices.
 - Review de PR con gates de compliance arquitectonico + evidencia de testing proporcional al riesgo.
+- Higiene de repositorio: source of truth trackeado, efimero ignorado y excepciones controladas segun `docs/governance/repo-hygiene-policy.md`.
 
 ### Testing por riesgo (Part 3)
 
@@ -161,6 +162,10 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 - `docs/guides/kan-74-phase4-closure-evidence.md` - evidencia final de cierre Fase 4 (scan allowlist, regression Docker-first, pack por subtask, notas Jira/SDD y plan de hygiene).
 - `docs/guides/prd-dominio-1-auth-access.md` - **DEPRECADO** (stub legacy). Ver ruta canonica en `docs/domains/auth-access/prd.md`.
 - `docs/guides/prd-dominio-1-auth-access-pendientes-reunion.md` - **DEPRECADO** (stub legacy). Ver ruta canonica en `docs/domains/auth-access/pending-decisions.md`.
+
+## Governance
+
+- `docs/governance/repo-hygiene-policy.md` - politica de higiene de repo (trackeado vs efimero vs excepciones condicionadas).
 
 ## API
 

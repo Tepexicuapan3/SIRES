@@ -1,9 +1,0 @@
-Phase: F0
-State: REFACTOR
-Change:
-- Added runbook: docs/runbooks/frontend-hardening-worktree.md
-- Linked runbook from docs/README.md
-
-Validation:
-Command: docker compose run --rm frontend sh -lc "bun install >/tmp/bun-install.log && bun run lint"
-Result: PASS (0 errors, 1 existing warning in DoctorConsultationPage react-hooks/incompatible-library).

@@ -1,7 +1,0 @@
-Phase: F1
-State: RED
-Command: docker compose run --rm frontend sh -lc "bun install >/tmp/bun-install.log && bun run test:run src/test/unit/router/sidebar-imports.spec.ts"
-
-Result before F1 fix:
-- FAILED due to unresolved sidebar barrel import.
-- Missing module reference: ./nav-config from src/shared/layouts/sidebar/index.ts.

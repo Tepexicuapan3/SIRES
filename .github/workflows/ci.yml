@@ -19,6 +19,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prohibited-tracked-files:
+    name: prohibited-tracked-files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check prohibited tracked files
+        run: bash .github/workflows/check-prohibited-tracked-files.sh
+
   frontend:
     name: frontend
     runs-on: ubuntu-latest

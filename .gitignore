@@ -40,6 +40,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Generated evidence artifacts
+artifacts/
+.play*/
+
 # IDE
 .vscode/
 .idea/
@@ -74,4 +78,14 @@ frontend/playwright-report/
 # Tool cache
 .cache/
 .ruff_cache/
-.opencode/
+
+# OpenCode policy: track reusable skills, ignore runtime bootstrap noise
+.opencode/*
+!.opencode/skill/
+!.opencode/skill/**
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
+.opencode/pnpm-lock.yaml
+.opencode/yarn.lock

@@ -58,6 +58,8 @@ En cada `git commit` se mantiene esta automatizacion:
 
 El `pre-commit` se mantiene sin validaciones bloqueantes adicionales en este proyecto.
 
+Importante: los hooks en `.githooks/` automatizan hygiene/sync local de Engram; no reemplazan CI/CD ni branch protection de PR.
+
 ### Cierre de PR
 
 1. Vincular ticket Jira y cambio SDD.

@@ -70,6 +70,7 @@ No recomendada. El contrato operativo de desarrollo en SISEM es docker-first.
 
 - Hooks versionados en `.githooks/` para automatizar el sync de Engram.
 - Activacion one-time con `./.engram/scripts/install-hooks.sh`.
+- Alcance: automatizacion local de sync/memoria; no reemplaza CI/CD ni los checks de PR.
 
 ### Jira
 
@@ -289,6 +290,7 @@ cd backend && python manage.py test
 - `docs/architecture/repo-navigation-map.md` - navegacion del repo por capas
 - `docs/architecture/db-ownership-migration-policy.md` - ownership DB + politica de migraciones
 - `docs/guides/pr-merge-governance.md` - politica de PR/merge
+- `docs/governance/repo-hygiene-policy.md` - higiene de repo (trackeado vs efimero + excepciones)
 - `docs/guides/domain-dor-dod.md` - DoR/DoD por dominio
 - `docs/guides/incremental-domain-migration.md` - estrategia old -> new
 - `docs/getting-started/onboarding-day-1-checklist.md` - checklist day-1 IA-first

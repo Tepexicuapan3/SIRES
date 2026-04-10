@@ -1,9 +1,0 @@
-Phase: F1
-State: REFACTOR
-Refactor scope:
-- Consolidated sidebar type exports onto canonical source @app/navigation/nav-config.
-- Kept runtime behavior unchanged; only import/type wiring and quality gate separation.
-
-Validation:
-Command: docker compose run --rm frontend sh -lc "bun install >/tmp/bun-install.log && bun run lint"
-Result: PASS with existing non-blocking warning.
