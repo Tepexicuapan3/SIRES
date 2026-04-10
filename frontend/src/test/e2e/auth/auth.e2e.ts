@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { AuthPage, AuthAPI } from "./auth-page";
+import { resetAuthE2EHarness } from "./auth-harness";
 import {
   resolveApiBaseUrl,
   waitForPasswordResetForm,
@@ -96,27 +97,6 @@ const getResetEmail = (testId: ResetTestId, projectName: string) => {
   return (mapping as Record<string, string>)[projectName] ?? EMAILS.admin;
 };
 
-const resetTestUser = async (
-  request: APIRequestContext,
-  payload: {
-    username: string;
-    requiresOnboarding?: boolean;
-    mustChangePassword?: boolean;
-  },
-) => {
-  const response = await request.post(
-    `${resolveApiBaseUrl(PLAYWRIGHT_APP_ORIGIN)}/auth/test-reset-user`,
-    { data: payload },
-  );
-
-  if (response.status() === 404) {
-    return false;
-  }
-
-  expect(response.status()).toBe(200);
-  return true;
-};
-
 const getResetOtpCode = async (request: APIRequestContext, email: string) => {
   const response = await request.get(
     `${resolveApiBaseUrl(PLAYWRIGHT_APP_ORIGIN)}/auth/test-get-otp?email=${encodeURIComponent(email)}`,
@@ -129,14 +109,19 @@ const getResetOtpCode = async (request: APIRequestContext, email: string) => {
 
   return body.code as string;
 };
-
 // ============================================================================
 // TEST SUITE: LOGIN / LOGOUT
 // ============================================================================
 test.describe("Auth: Login / Logout", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
+    await resetAuthE2EHarness(page, request);
+
     const authPage = new AuthPage(page);
     await authPage.gotoLogin();
+  });
+
+  test.afterEach(async ({ page, request }) => {
+    await resetAuthE2EHarness(page, request);
   });
 
   test(
@@ -285,17 +270,19 @@ test.describe("Auth: Login / Logout", () => {
 // TEST SUITE: ONBOARDING
 // ============================================================================
 test.describe.serial("Auth: Onboarding", () => {
+  test.beforeEach(async ({ page, request }) => {
+    await resetAuthE2EHarness(page, request);
+  });
+
+  test.afterEach(async ({ page, request }) => {
+    await resetAuthE2EHarness(page, request);
+  });
+
   test(
     "TC007: Onboarding completo - Aceptar términos y cambiar contraseña",
     { tag: ["@critical", "@e2e", "@auth", "@onboarding", "@AUTH-E2E-007"] },
-    async ({ page, request }) => {
+    async ({ page }) => {
       const authPage = new AuthPage(page);
-
-      await resetTestUser(request, {
-        username: TEST_USERS.onboarding.username,
-        requiresOnboarding: true,
-        mustChangePassword: false,
-      });
 
       // Login with user requiring onboarding
       await authPage.gotoLogin();
@@ -323,14 +310,8 @@ test.describe.serial("Auth: Onboarding", () => {
   test(
     "TC008: Onboarding - Usuario que debe cambiar contraseña",
     { tag: ["@high", "@e2e", "@auth", "@onboarding", "@AUTH-E2E-008"] },
-    async ({ page, request }) => {
+    async ({ page }) => {
       const authPage = new AuthPage(page);
-
-      await resetTestUser(request, {
-        username: TEST_USERS.cambiarClaveClinico.username,
-        requiresOnboarding: true,
-        mustChangePassword: true,
-      });
 
       // Login with user requiring password change
       await authPage.gotoLogin();
@@ -362,14 +343,8 @@ test.describe.serial("Auth: Onboarding", () => {
   test(
     "TC009: Onboarding - Validación de contraseña en tiempo real",
     { tag: ["@medium", "@e2e", "@auth", "@onboarding", "@AUTH-E2E-009"] },
-    async ({ page, request }) => {
+    async ({ page }) => {
       const authPage = new AuthPage(page);
-
-      await resetTestUser(request, {
-        username: TEST_USERS.onboardingClinico.username,
-        requiresOnboarding: true,
-        mustChangePassword: false,
-      });
 
       // Login and reach onboarding
       await authPage.gotoLogin();
@@ -403,9 +378,15 @@ test.describe.serial("Auth: Onboarding", () => {
 // TEST SUITE: PASSWORD RESET
 // ============================================================================
 test.describe.serial("Auth: Password Reset", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
+    await resetAuthE2EHarness(page, request);
+
     const authPage = new AuthPage(page);
     await authPage.gotoLogin();
+  });
+
+  test.afterEach(async ({ page, request }) => {
+    await resetAuthE2EHarness(page, request);
   });
 
   test(
@@ -474,7 +455,7 @@ test.describe.serial("Auth: Password Reset", () => {
       await authPage.expectOtpVerificationScreen();
 
       // Enter wrong OTP
-      await authPage.enterOtpCode("000000");
+      await authPage.enterOtpCode("111111");
 
       // Should show error
       const toast = await authPage.waitForToast("error");
