@@ -176,6 +176,25 @@ class AuthApiTests(APITestCase):
         self.assertTrue(response_request_id)
         self.assertEqual(response.data["requestId"], response_request_id)
 
+    def test_login_failed_audit_event_carries_request_id(self):
+        response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "ClaveMala1"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-login-audit",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["requestId"], "req-login-audit")
+        self.assertTrue(
+            AuditoriaEvento.objects.filter(
+                accion="LOGIN_FAILED",
+                resultado="FAIL",
+                codigo_error="INVALID_CREDENTIALS",
+                request_id="req-login-audit",
+            ).exists()
+        )
+
     def test_me_returns_user(self):
         self._login()
 
@@ -352,6 +371,26 @@ class AuthApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["code"], "PASSWORD_TOO_WEAK")
 
+    def test_complete_onboarding_auth_error_is_audited_with_request_id(self):
+        response = self.client.post(
+            "/api/v1/auth/complete-onboarding",
+            {"newPassword": "Abel_180903", "termsAccepted": True},
+            format="json",
+            HTTP_X_REQUEST_ID="req-onboarding-auth",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["code"], "TOKEN_INVALID")
+        self.assertEqual(response.data["requestId"], "req-onboarding-auth")
+        self.assertTrue(
+            AuditoriaEvento.objects.filter(
+                accion="ONBOARDING_FAILED",
+                resultado="FAIL",
+                codigo_error="TOKEN_INVALID",
+                request_id="req-onboarding-auth",
+            ).exists()
+        )
+
     def test_request_reset_code(self):
         response = self.client.post(
             "/api/v1/auth/request-reset-code",
@@ -490,6 +529,26 @@ class AuthApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["code"], "TOKEN_INVALID")
+
+    def test_reset_password_missing_token_is_audited_with_request_id(self):
+        response = self.client.post(
+            "/api/v1/auth/reset-password",
+            {"newPassword": "Nueva_Clave_123"},
+            format="json",
+            HTTP_X_REQUEST_ID="req-reset-missing-token",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["code"], "TOKEN_INVALID")
+        self.assertEqual(response.data["requestId"], "req-reset-missing-token")
+        self.assertTrue(
+            AuditoriaEvento.objects.filter(
+                accion="PASSWORD_RESET_FAILED",
+                resultado="FAIL",
+                codigo_error="TOKEN_INVALID",
+                request_id="req-reset-missing-token",
+            ).exists()
+        )
 
     @override_settings(
         AUTH_PASSWORD_VALIDATORS=[

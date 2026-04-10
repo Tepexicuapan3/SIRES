@@ -509,6 +509,13 @@ class CompleteOnboardingView(APIView):
         try:
             user = authenticate_request(request)
         except AuthServiceError as exc:
+            log_event(
+                request,
+                "ONBOARDING_FAILED",
+                "FAIL",
+                error_code=exc.code,
+                meta={"endpoint": "/auth/complete-onboarding"},
+            )
             return error_response(
                 exc.code,
                 exc.message,
