@@ -160,6 +160,26 @@ export type {
   AreaDetailResponse,
 } from "@api/types/catalogos/areas.types";
 
+export type {
+  // Entidades
+  ConsultorioRef,
+  ConsultorioCatalogRef,
+  ConsultorioListItem,
+  ConsultorioDetail,
+  // CRUD Requests
+  CreateConsultorioRequest,
+  UpdateConsultorioRequest,
+  // CRUD Responses
+  CreateConsultorioResponse,
+  UpdateConsultorioResponse,
+  DeleteConsultorioResponse,
+  // Listados
+  ConsultoriosListParams,
+  ConsultoriosListResponse,
+  // Detalle
+  ConsultorioDetailResponse,
+} from "@api/types/catalogos/consultorios.types";
+
 // =============================================================================
 // CLINICAL FLOW TYPES (visits, vitals, doctor flow)
 // =============================================================================

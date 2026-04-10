@@ -3,6 +3,7 @@ import { authHandlers } from "./handlers/auth";
 import { usersHandlers } from "./handlers/users";
 import { centrosAtencionHandlers } from "./handlers/centros-atencion";
 import { areasHandlers } from "./handlers/areas";
+import { consultoriosHandlers } from "./handlers/consultorios";
 import { rolesHandlers } from "./handlers/roles";
 import { permissionsHandlers } from "./handlers/permissions";
 import { visitsHandlers } from "./handlers/visits";
@@ -40,6 +41,7 @@ export const handlers = [
   ...usersHandlers,
   ...centrosAtencionHandlers,
   ...areasHandlers,
+  ...consultoriosHandlers,
   ...rolesHandlers,
   ...permissionsHandlers,
   ...visitsHandlers,
