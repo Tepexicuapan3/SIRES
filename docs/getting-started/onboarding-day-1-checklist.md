@@ -1,6 +1,6 @@
 # Onboarding Day-1 Checklist (IA-First)
 
-> TL;DR: Este checklist deja a cualquier developer listo para trabajar en SIRES con flujo Jira + SDD + Engram + GGA desde el primer dia.
+> TL;DR: Este checklist deja a cualquier developer listo para trabajar en SIRES con flujo Jira + SDD + Engram desde el primer dia.
 
 ## Objetivo
 
@@ -17,13 +17,11 @@ Garantizar que una persona nueva pueda iniciar una tarea por dominio sin romper 
 ### 2) Tooling y gates
 
 - [ ] Ejecutar `./.engram/scripts/install-hooks.sh`.
-- [ ] Instalar GGA (`brew install gentleman-programming/tap/gga` o metodo equivalente).
 - [ ] Verificar hooks y binarios:
 
 ```bash
 git config --get core.hooksPath
 ls .githooks
-which gga
 ```
 
 ### 3) Jira + SDD

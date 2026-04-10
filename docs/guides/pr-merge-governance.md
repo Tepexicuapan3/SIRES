@@ -53,7 +53,7 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 - Confirmacion de actualizacion de docs cuando cambia la operativa.
 - Evidencia de memoria high-signal guardada en Engram (`SIRES_SHARED`) cuando corresponda.
 - Cuando se reporte evidencia Engram, incluir `topic_key` estable segun convencion (`feature/{slug}/decision`, `feature/{slug}/progress`, `bug/{id-or-slug}/fix`, `ops/{area}/config`, `docs/{topic}/note`).
-- Gate de `pre-commit` con GGA ejecutado sin bloqueos pendientes.
+- Hooks Git requeridos activos y sincronizacion de Engram operativa.
 - Checklist de datos completo: ownership por dominio en PostgreSQL, sin SQL cross-domain directo, y plan de rollback en cambios de alto riesgo.
 
 ### Gate explicito KAN-55: TDD-first por riesgo (auth-access)
@@ -96,15 +96,6 @@ Checklist obligatorio de alineacion:
 - Estandares de arquitectura y governance se tratan como artefactos vivos; no se difieren updates de docs a "PR posterior".
 - DoD de dominio es unico y se evalua con la misma base en todo el repo.
 - Review de arquitectura no es opcional: PRs con impacto de boundaries/flows requieren validacion explicita de compliance (no solo lint/format).
-
-### Como leer bloqueos de GGA
-
-- `blocker:domain-boundary` -> corregir acoplamiento cross-domain via contratos (API/evento/read-model).
-- `blocker:db-ownership` -> corregir ownership por dominio, eliminar SQL cross-domain y alinear migracion a PostgreSQL.
-- `blocker:contract-error-policy` -> unificar contrato/API y manejo de errores segun politica vigente.
-- `blocker:traceability` -> agregar RFC/ADR/docs cuando cambia arquitectura, boundaries o politica de datos.
-
-Un warning no bloquea commit, pero debe quedar en checklist de PR con responsable y fecha objetivo.
 
 ## Checklist de impacto de datos/migraciones
 

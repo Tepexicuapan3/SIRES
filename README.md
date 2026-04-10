@@ -66,12 +66,10 @@ No recomendada. El contrato operativo de desarrollo en SISEM es docker-first.
 - Sync automatico con hooks Git para export/import de memoria compartida.
 - Topic key estable por dominio o feature para mantener trazabilidad real.
 
-### GGA
+### Git Hooks
 
-- Code review asistido por IA en pre-commit.
-- Config repo-local de GGA en `.gga/gga/config`.
-- Ruleset de GGA en `.gga/rules.md`.
-- Hook activo en `.githooks/pre-commit`.
+- Hooks versionados en `.githooks/` para automatizar el sync de Engram.
+- Activacion one-time con `./.engram/scripts/install-hooks.sh`.
 
 ### Jira
 
@@ -81,7 +79,7 @@ No recomendada. El contrato operativo de desarrollo en SISEM es docker-first.
 ## Baseline operativo Fase 1 (cerrado)
 
 - Modelo operativo oficial: **monolito modular evolutivo** con estrategia de datos **DB por dominio en PostgreSQL**.
-- Flujo de entrega obligatorio: **Jira -> SDD -> planificacion TDD-first -> implementacion por dominio -> Engram -> GGA -> PR/Merge**.
+- Flujo de entrega obligatorio: **Jira -> SDD -> planificacion TDD-first -> implementacion por dominio -> Engram -> PR/Merge**.
 - No se ejecutan movimientos big-bang `old -> new`; runtime actual sigue activo mientras avanza la migracion incremental.
 - El refactor funcional de Auth se planifica despues de Fase 1, con tickets Jira y criterios de aceptacion explicitos.
 
@@ -255,7 +253,7 @@ No recomendada. El contrato operativo de desarrollo en SISEM es docker-first.
 2. Implementa siguiendo el AGENTS mas especifico del area.
 3. Corre checks minimos: `bun lint`, `bun test`, `python manage.py test`.
 4. Guarda decisiones/fixes relevantes en Engram (`SIRES_SHARED`).
-5. Commitea: pre-commit ejecuta GGA antes de cerrar el cambio.
+5. Commitea: verifica hooks activos y sincronizacion de Engram.
 
 Playbook y onboarding:
 - `docs/getting-started/ai-team-workflow.md`

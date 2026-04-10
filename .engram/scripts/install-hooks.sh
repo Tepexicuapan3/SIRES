@@ -23,16 +23,11 @@ chmod +x \
   "$HOOKS_PATH/post-rewrite" \
   "$ROOT_DIR/.engram/scripts/export-on-commit-msg.sh" \
   "$ROOT_DIR/.engram/scripts/import-on-repo-update.sh" \
-  "$ROOT_DIR/.engram/scripts/install-hooks.sh" \
-  "$ROOT_DIR/.gga/scripts/gga.sh"
+  "$ROOT_DIR/.engram/scripts/install-hooks.sh"
 
 git -C "$ROOT_DIR" config core.hooksPath ".githooks"
 
 echo "core.hooksPath configurado en .githooks"
-echo "Hook pre-commit (GGA) habilitado"
+echo "Hook pre-commit habilitado"
 echo "Hooks listos para export/import automatico de Engram"
 echo "Proyecto compartido por defecto: ${ENGRAM_SHARED_PROJECT_NAME:-SIRES_SHARED}"
-
-if ! command -v gga >/dev/null 2>&1; then
-  echo "Aviso: gga no esta instalado en este entorno. Instalala para ejecutar el pre-commit de GGA."
-fi

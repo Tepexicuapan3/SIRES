@@ -1,6 +1,6 @@
-# Flujo IA del Equipo (Jira + SDD-Orchestrator + Engram + GGA)
+# Flujo IA del Equipo (Jira + SDD-Orchestrator + Engram)
 
-> TL;DR: En SIRES, el flujo oficial de delivery es Jira + SDD-Orchestrator + Engram + GGA. El trabajo se planifica y ejecuta por dominio completo, con ownership explicito y gates de calidad antes de merge.
+> TL;DR: En SIRES, el flujo oficial de delivery es Jira + SDD-Orchestrator + Engram. El trabajo se planifica y ejecuta por dominio completo, con ownership explicito y gates de calidad antes de merge.
 
 ## Problem / Context
 
@@ -16,7 +16,6 @@ Persona
   -> SDD-Orchestrator (explore/propose/spec/design/tasks/apply/verify)
   -> Implementacion por dominio
   -> Engram (memoria compartida high-signal)
-  -> GGA (pre-commit gate)
   -> PR/Merge
 ```
 
@@ -46,26 +45,18 @@ Persona
 
 ### Antes de PR
 
-1. Verificar hooks activos y GGA disponible.
+1. Verificar hooks activos.
 2. Revisar cambios por dominio.
 3. Validar checklist de dependencia, datos y seguridad.
 4. Adjuntar evidencia TDD-first cuando aplique (fallo inicial + progresion + verde final) o excepcion aprobada con controles compensatorios.
 
-### Gate de commit (GGA + hooks)
+### Gate de commit (hooks)
 
-En cada `git commit` deben ejecutarse dos validaciones automatizadas:
+En cada `git commit` se mantiene esta automatizacion:
 
-1. `pre-commit` ejecuta `./.gga/scripts/gga.sh run` con config en `.gga/gga/config` y rules en `.gga/rules.md`.
-2. `commit-msg` ejecuta `.engram/scripts/export-on-commit-msg.sh` y sincroniza `SIRES_SHARED` en `.engram/`.
+1. `commit-msg` ejecuta `.engram/scripts/export-on-commit-msg.sh` y sincroniza `SIRES_SHARED` en `.engram/`.
 
-Si GGA falla, corregi primero la causa raiz:
-
-- **Domain boundary**: mover integracion a contrato (API/evento/read-model) y eliminar acoplamiento directo.
-- **DB ownership**: reasignar cambio al dominio owner, eliminar SQL cross-domain y documentar migracion por dominio.
-- **Contrato/error policy**: normalizar manejo de errores y contratos entre dominios.
-- **Traceability**: agregar RFC/ADR/docs cuando el cambio afecta arquitectura, boundaries o estrategia de datos.
-
-No se debe bypassear el hook. El fix minimo correcto siempre es preferible a forzar el commit.
+El `pre-commit` se mantiene sin validaciones bloqueantes adicionales en este proyecto.
 
 ### Cierre de PR
 
@@ -105,7 +96,7 @@ Usar formato:
 Ejemplos concretos:
 
 - `feature/auth-domain/decision` para un cambio de contrato auth entre dominios.
-- `feature/repo-operating-model/progress` para ajustar GGA/hooks/flujo operativo.
+- `feature/repo-operating-model/progress` para ajustar hooks/flujo operativo.
 - `ops/postgresql-domain-ownership/config` para reglas de ownership y migraciones.
 
 ## Verificaciones rapidas
@@ -113,7 +104,6 @@ Ejemplos concretos:
 ```bash
 git config --get core.hooksPath
 ls .githooks
-which gga
 ```
 
 ## References

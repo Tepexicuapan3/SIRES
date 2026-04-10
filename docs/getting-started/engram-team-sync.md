@@ -1,6 +1,6 @@
 # Engram Team Sync
 
-> TL;DR: SIRES usa hooks Git versionados para exportar/importar memoria compartida automaticamente. Para el flujo completo diario con SDD-Orchestrator + GGA, ver `docs/getting-started/ai-team-workflow.md`.
+> TL;DR: SIRES usa hooks Git versionados para exportar/importar memoria compartida automaticamente. Para el flujo completo diario con SDD-Orchestrator, ver `docs/getting-started/ai-team-workflow.md`.
 
 ## Problem / Context
 

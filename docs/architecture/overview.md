@@ -102,7 +102,7 @@ Priorizar evolucion incremental disciplinada: reforzar boundaries, integridad y 
 
 ## Flujo de entrega
 
-Jira -> SDD-Orchestrator -> implementacion por dominio -> Engram -> GGA -> PR/Merge.
+Jira -> SDD-Orchestrator -> implementacion por dominio -> Engram -> PR/Merge.
 
 ## References
 

@@ -16,7 +16,7 @@
 - [ ] SDD artifacts are current for the change phase (proposal/spec/design/tasks/apply/verify).
 - [ ] Relevant decisions/discoveries are persisted in Engram (`SIRES_SHARED`).
 - [ ] Engram saves use required `topic_key` convention (`feature/{slug}/decision`, `feature/{slug}/progress`, `bug/{id-or-slug}/fix`, `ops/{area}/config`, `docs/{topic}/note`).
-- [ ] GGA pre-commit checks pass before PR/merge.
+- [ ] Required git hooks are active before PR/merge.
 - [ ] NEW feature/NEW functionality/LARGE refactor uses tests-first planning and Red -> Green -> Refactor execution evidence.
 
 ## Architecture Guardrails (Part 1-3 baseline)

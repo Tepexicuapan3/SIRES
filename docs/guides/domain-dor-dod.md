@@ -34,7 +34,7 @@ La migracion por dominios falla si no hay criterio comun para empezar y terminar
 - Para NEW feature/NEW functionality/LARGE refactor: evidencia TDD-first (Red -> Green -> Refactor) anexada en tareas/PR.
 - Toda excepcion TDD documentada con racional explicito + controles compensatorios + aprobacion en Jira/PR.
 - Engram actualizado con decisiones/fixes relevantes (`SIRES_SHARED`).
-- Gate de GGA en pre-commit ejecutado y sin bloqueos pendientes.
+- Hooks Git requeridos activos y sincronizacion de Engram operativa.
 - PR mergeable con checklist completo y reviewers correctos.
 
 ### DoD adicional por riesgo (KAN-55)

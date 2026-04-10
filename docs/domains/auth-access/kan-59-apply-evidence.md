@@ -216,7 +216,7 @@ docker compose run --rm \
 
 2. **Gate anti-legacy detecta acoplamiento temprano:**
    - Validación `rg "@/?features/auth"` antes de PR evita merge de imports prohibidos
-   - Automatizar gate en pre-commit (GGA) reduciría fricción manual
+   - Automatizar gate de pre-commit reduciría fricción manual
 
 3. **Dependency-aware fallback reduce false-negatives de authz:**
    - Metadata `fallbackRequirement` permite UX progresivo mientras backend completa proyección de capabilities

@@ -1,6 +1,6 @@
 # SISEM Docs
 
-Indice canonico de documentacion para operar SISEM con el modelo actual: monolito modular evolutivo, trabajo por dominios y flujo Jira + SDD-Orchestrator + Engram + GGA.
+Indice canonico de documentacion para operar SISEM con el modelo actual: monolito modular evolutivo, trabajo por dominios y flujo Jira + SDD-Orchestrator + Engram.
 
 ## Start Here
 
@@ -17,7 +17,7 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 
 - Estrategia de arquitectura: monolito modular evolutivo (sin migracion a microservicios full en esta fase).
 - Estrategia de datos: DB por dominio con PostgreSQL como target estrategico.
-- Flujo de entrega obligatorio: Jira -> SDD-Orchestrator -> planificacion TDD-first -> Engram -> GGA -> PR/Merge.
+- Flujo de entrega obligatorio: Jira -> SDD-Orchestrator -> planificacion TDD-first -> Engram -> PR/Merge.
 - Entrega por dominios completos con ownership explicito (backend + frontend + DB + docs).
 
 ## Dominios

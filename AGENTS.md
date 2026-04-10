@@ -13,7 +13,7 @@ All new backend functionality must be built for Django/DRF.
 ## Operating Baseline (Phase 1)
 
 - Official strategy: evolutionary modular monolith + `DB per domain` with PostgreSQL as target engine.
-- Mandatory delivery flow: Jira ticketing + SDD phases + TDD-first planning/execution + Engram persistence + GGA pre-commit gate.
+- Mandatory delivery flow: Jira ticketing + SDD phases + TDD-first planning/execution + Engram persistence.
 - Runtime remains on current routes/modules until each domain reaches DoD (no big-bang cutover).
 - Auth functional refactor starts only after planning artifacts and Jira acceptance criteria are ready.
 
@@ -426,11 +426,11 @@ This is the minimum required Engram protocol at repository level and applies eve
 - `commit-msg` hook auto-exports shared memory via `engram sync --project SIRES_SHARED` and stages `.engram/` updates.
 - `post-merge`, `post-checkout`, and `post-rewrite` hooks auto-import with `engram sync --import`.
 
-### GGA Code Review Automation
+### Git Hooks Automation
 
-- The project includes repo-local GGA config in `.gga/gga/config` and rules in `.gga/rules.md`.
-- `pre-commit` hook runs `./.gga/scripts/gga.sh run` through `.githooks/pre-commit` on every commit.
-- Each developer must install GGA globally once (`brew install gentleman-programming/tap/gga` or manual install) so the hook can execute.
+- The project uses repo hooks from `.githooks/`.
+- `commit-msg` hook auto-exports shared memory via `engram sync --project SIRES_SHARED` and stages `.engram/` updates.
+- `post-merge`, `post-checkout`, and `post-rewrite` hooks auto-import with `engram sync --import`.
 
 ## Backend Guardrails
 

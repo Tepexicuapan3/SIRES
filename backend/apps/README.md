@@ -14,7 +14,7 @@ Este README es la entrada rapida para el arbol `backend/apps/` (runtime legado +
 2. Artefactos SDD al dia (proposal/spec/design/tasks segun fase).
 3. Contexto y decisiones relevantes persistidas en Engram (`SIRES_SHARED`).
 4. Persistencias de Engram con `topic_key` obligatorio (`feature/{slug}/decision`, `feature/{slug}/progress`, `bug/{id-or-slug}/fix`, `ops/{area}/config`, `docs/{topic}/note`).
-5. Pre-commit con GGA en verde antes de merge.
+5. Hooks Git activos y sincronizacion de Engram antes de merge.
 6. Si el alcance es nueva feature/nueva funcionalidad/refactor grande: plan de tareas visible con tests primero y evidencia Red -> Green -> Refactor (o excepcion con rationale + controles compensatorios + aprobacion).
 
 ## Reglas no negociables
