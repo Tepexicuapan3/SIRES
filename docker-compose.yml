@@ -71,6 +71,7 @@ services:
       SISEM_SUPPORT_EMAIL: ${SISEM_SUPPORT_EMAIL:-soporte@sisem.local}
       ALLOW_USER_CREATE_WITHOUT_EMAIL: ${ALLOW_USER_CREATE_WITHOUT_EMAIL:-true}
       RUN_SEED_ON_BOOT: ${RUN_SEED_ON_BOOT:-true}
+      RUN_E2E_SEED_ON_BOOT: ${RUN_E2E_SEED_ON_BOOT:-false}
     depends_on:
       auth-db:
         condition: service_healthy

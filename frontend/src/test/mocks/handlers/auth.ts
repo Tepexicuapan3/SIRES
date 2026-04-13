@@ -10,11 +10,32 @@ import {
 } from "../session";
 import { resetRolesMockState } from "./roles";
 import { resetUsersMockState } from "./users";
+import { getScenarioCredentials } from "@/test/e2e/auth/auth-dataset";
 
 interface LoginScenario {
   user: AuthUser;
   requiresOnboarding?: boolean;
 }
+
+const INACTIVE_SCENARIO_USERNAMES = new Set([
+  getScenarioCredentials("backend-real", "inactive_user").username,
+  getScenarioCredentials("hybrid", "inactive_user").username,
+]);
+
+const BLOCKED_SCENARIO_USERNAMES = new Set([
+  getScenarioCredentials("backend-real", "blocked_user").username,
+  getScenarioCredentials("hybrid", "blocked_user").username,
+]);
+
+const ONBOARDING_SCENARIO_USERNAMES = new Set([
+  getScenarioCredentials("backend-real", "onboarding_user").username,
+  getScenarioCredentials("hybrid", "onboarding_user").username,
+]);
+
+const PASSWORD_RESET_SCENARIO_USERNAMES = new Set([
+  getScenarioCredentials("backend-real", "password_reset_user").username,
+  getScenarioCredentials("hybrid", "password_reset_user").username,
+]);
 
 const MOCK_DELAY = {
   auth: 900,
@@ -329,14 +350,24 @@ const buildLoginScenario = (username: string): LoginScenario => {
     };
   }
 
-  if (username === "newuser") {
+  if (ONBOARDING_SCENARIO_USERNAMES.has(username)) {
     return {
       user: createMockAuthUser({
-        username: "newuser",
+        username,
         mustChangePassword: true,
         requiresOnboarding: true,
       }),
       requiresOnboarding: true,
+    };
+  }
+
+  if (PASSWORD_RESET_SCENARIO_USERNAMES.has(username)) {
+    return {
+      user: createMockAuthUser({
+        username,
+        mustChangePassword: true,
+      }),
+      requiresOnboarding: false,
     };
   }
 
@@ -416,7 +447,7 @@ export const authHandlers = [
     }
 
     // 2. Usuario Bloqueado
-    if (username === "locked") {
+    if (BLOCKED_SCENARIO_USERNAMES.has(username)) {
       return createContractErrorResponse(
         423,
         "ACCOUNT_LOCKED",
@@ -425,7 +456,7 @@ export const authHandlers = [
     }
 
     // 3. Usuario Inactivo
-    if (username === "inactive") {
+    if (INACTIVE_SCENARIO_USERNAMES.has(username)) {
       return createContractErrorResponse(
         403,
         "USER_INACTIVE",

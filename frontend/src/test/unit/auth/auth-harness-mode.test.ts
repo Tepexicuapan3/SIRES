@@ -74,4 +74,15 @@ describe("auth-harness mode", () => {
     ).resolves.toBeUndefined();
     expect(post).toHaveBeenCalled();
   }, 15000);
+
+  it("expone metadata de corrida con mode y dataset version", async () => {
+    process.env.PLAYWRIGHT_AUTH_HARNESS_MODE = "backend-real";
+
+    const { getAuthHarnessRuntimeMetadata } = await importHarness();
+    const metadata = getAuthHarnessRuntimeMetadata();
+
+    expect(metadata.mode).toBe("backend-real");
+    expect(metadata.datasetVersion).toBeTruthy();
+    expect(metadata.datasetVersion).toMatch(/^kan-89-/);
+  });
 });

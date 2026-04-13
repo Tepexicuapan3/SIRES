@@ -3,6 +3,12 @@ import type { LoginResponse, MeResponse } from "@api/types/auth.types";
 import { AuthPage, AuthAPI } from "./auth-page";
 import { resetAuthE2EHarness } from "./auth-harness";
 import {
+  AUTH_TEST_EMAILS,
+  getAuthE2ETestUsers,
+  getResetEmail,
+  type AuthHarnessMode,
+} from "./auth-dataset";
+import {
   resolveApiBaseUrl,
   waitForPasswordResetForm,
   waitForSessionExpiredRedirect,
@@ -11,6 +17,10 @@ import {
 const PLAYWRIGHT_APP_ORIGIN =
   process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4173";
 const ENABLE_TEST_OTP = Boolean(process.env.SISEM_ENABLE_TEST_OTP);
+const ACTIVE_AUTH_HARNESS_MODE: AuthHarnessMode =
+  process.env.PLAYWRIGHT_AUTH_HARNESS_MODE === "backend-real"
+    ? "backend-real"
+    : "hybrid";
 
 /**
  * ============================================================
@@ -27,80 +37,11 @@ const ENABLE_TEST_OTP = Boolean(process.env.SISEM_ENABLE_TEST_OTP);
  * Total: 21 tests
  */
 
-// Test data - Based on seed_e2e.py
-const TEST_USERS = {
-  admin: { username: "admin", password: "Sisem_123456" },
-  clinico: { username: "clinico", password: "Sisem_123456" },
-  recepcion: { username: "recepcion", password: "Sisem_123456" },
-  farmacia: { username: "farmacia", password: "Sisem_123456" },
-  urgencias: { username: "urgencias", password: "Sisem_123456" },
-  inactivo: { username: "inactive", password: "Sisem_123456" },
-  bloqueado: { username: "locked", password: "Sisem_123456" },
-  onboarding: { username: "newuser", password: "Sisem_123456" },
-  onboardingClinico: {
-    username: "newuser",
-    password: "Sisem_123456",
-  },
-  onboardingRecepcion: {
-    username: "newuser",
-    password: "Sisem_123456",
-  },
-  cambiarClave: { username: "newuser", password: "Sisem_123456" },
-  cambiarClaveClinico: {
-    username: "newuser",
-    password: "Sisem_123456",
-  },
-};
-
-const EMAILS = {
-  admin: "admin@sisem.local",
-  clinico: "clinico@sisem.local",
-  recepcion: "recepcion@sisem.local",
-  farmacia: "farmacia@sisem.local",
-  urgencias: "urgencias@sisem.local",
-  unknown: "noexiste@sisem.local",
-};
-
-const RESET_EMAIL_MATRIX = {
-  TC010: {
-    chromium: EMAILS.admin,
-    firefox: EMAILS.clinico,
-    webkit: EMAILS.recepcion,
-    chrome: EMAILS.farmacia,
-    zen: EMAILS.urgencias,
-  },
-  TC012: {
-    chromium: EMAILS.clinico,
-    firefox: EMAILS.recepcion,
-    webkit: EMAILS.farmacia,
-    chrome: EMAILS.urgencias,
-    zen: EMAILS.admin,
-  },
-  TC013: {
-    chromium: EMAILS.recepcion,
-    firefox: EMAILS.farmacia,
-    webkit: EMAILS.urgencias,
-    chrome: EMAILS.admin,
-    zen: EMAILS.clinico,
-  },
-  TC014: {
-    chromium: EMAILS.farmacia,
-    firefox: EMAILS.urgencias,
-    webkit: EMAILS.admin,
-    chrome: EMAILS.clinico,
-    zen: EMAILS.recepcion,
-  },
-} as const;
-
-type ResetTestId = keyof typeof RESET_EMAIL_MATRIX;
+const TEST_USERS = getAuthE2ETestUsers(ACTIVE_AUTH_HARNESS_MODE);
+const EMAILS = AUTH_TEST_EMAILS;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-const getResetEmail = (testId: ResetTestId, projectName: string) => {
-  const mapping = RESET_EMAIL_MATRIX[testId];
-  return (mapping as Record<string, string>)[projectName] ?? EMAILS.admin;
-};
 
 const getResetOtpCode = async (request: APIRequestContext, email: string) => {
   const response = await request.get(

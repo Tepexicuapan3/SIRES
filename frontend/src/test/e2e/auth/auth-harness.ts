@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import type { HttpJsonResponse } from "../shared/http-json-response";
+import { AUTH_DATASET_VERSION } from "./auth-dataset";
 
 const configuredAuthBaseUrl = process.env.PLAYWRIGHT_AUTH_TEST_API_BASE_URL;
 const configuredFrontendBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
@@ -43,6 +44,19 @@ type AuthUserOverridePayload = {
   requiresOnboarding?: boolean;
   mustChangePassword?: boolean;
 };
+
+export interface AuthHarnessRuntimeMetadata {
+  mode: AuthHarnessMode;
+  datasetVersion: string;
+  timestamp: string;
+}
+
+export const getAuthHarnessRuntimeMetadata =
+  (): AuthHarnessRuntimeMetadata => ({
+    mode: AUTH_HARNESS_MODE,
+    datasetVersion: AUTH_DATASET_VERSION,
+    timestamp: new Date().toISOString(),
+  });
 
 type PostAttemptResult = {
   ok: boolean;
@@ -261,6 +275,11 @@ export async function resetAuthE2EHarness(
   page: Page,
   request: APIRequestContext,
 ): Promise<void> {
+  const metadata = getAuthHarnessRuntimeMetadata();
+  console.info(
+    `[AUTH-HARNESS] mode=${metadata.mode} dataset=${metadata.datasetVersion} timestamp=${metadata.timestamp}`,
+  );
+
   await clearAuthClientState(page);
   await ensureFrontendContext(page);
   await resetAuthTestState(request, page);

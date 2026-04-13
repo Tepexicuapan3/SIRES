@@ -633,6 +633,14 @@ USER_DEFS = [
     },
 ]
 
+KAN89_REPRO_BASELINE_USERNAMES = (
+    "admin",
+    "usuario_inactivo_clinico",
+    "usuario_bloqueado_clinico",
+    "usuario_onboarding_clinico",
+    "usuario_cambiar_clave_clinico",
+)
+
 
 USER_OVERRIDE_DEFS = [
     {
@@ -1148,6 +1156,29 @@ def _seed_demo_visits():
     print(f"[SEED] Visitas demo aseguradas: {total}")
 
 
+def build_kan89_user_subset_snapshot(user_defs=USER_DEFS):
+    baseline = []
+    allowlist = set(KAN89_REPRO_BASELINE_USERNAMES)
+
+    for user_def in user_defs:
+        if user_def["username"] not in allowlist:
+            continue
+
+        baseline.append(
+            {
+                "username": user_def["username"],
+                "email": user_def["email"],
+                "is_active": user_def.get("is_active", True),
+                "is_blocked": user_def.get("is_blocked", False),
+                "requires_onboarding": user_def.get("requires_onboarding", False),
+                "must_change_password": user_def.get("must_change_password", False),
+            }
+        )
+
+    baseline.sort(key=lambda item: item["username"])
+    return baseline
+
+
 @transaction.atomic
 def run():
     _ensure_seed_tables()
@@ -1259,6 +1290,11 @@ def run():
 
     _seed_user_overrides(users_by_username, permissions_map, admin_user)
     _seed_demo_visits()
+
+    baseline_snapshot = build_kan89_user_subset_snapshot()
+    print(
+        f"[SEED][KAN-89] baseline users ({len(baseline_snapshot)}): {baseline_snapshot}"
+    )
 
 
 if __name__ == "__main__":
