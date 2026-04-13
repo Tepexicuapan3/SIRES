@@ -3,7 +3,7 @@ from django.test import TestCase
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import SyUsuario
-from apps.catalogos.models import Permisos, Roles
+from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
 
 
 class SeedAuthAccessCommandTests(TestCase):
@@ -59,3 +59,36 @@ class SeedAuthAccessCommandTests(TestCase):
             usuario__startswith="factory_user_"
         ).count()
         self.assertEqual(generated, 6)
+
+    def test_seed_flows_do_not_mutate_cross_domain_centers_catalog(self):
+        center = CatCentroAtencion.objects.create(
+            name="Centro Contrato",
+            code="CTR-CONTRACT-001",
+            is_external=False,
+            address="Calle Contrato 123",
+            schedule={"mon": "08:00-14:00"},
+        )
+
+        before_snapshot = list(
+            CatCentroAtencion.objects.order_by("id").values_list(
+                "id", "name", "code", "is_external", "address"
+            )
+        )
+
+        call_command(
+            "seed_auth_access",
+            "--base",
+            "--demo",
+            "--edge-cases",
+            "--factory-users",
+            "2",
+        )
+
+        after_snapshot = list(
+            CatCentroAtencion.objects.order_by("id").values_list(
+                "id", "name", "code", "is_external", "address"
+            )
+        )
+
+        self.assertEqual(before_snapshot, after_snapshot)
+        self.assertTrue(CatCentroAtencion.objects.filter(id=center.id).exists())

@@ -53,7 +53,7 @@ La transicion a aislamiento fisico no implica romper el monolito modular: el con
 | Recepcion | legacy (scaffold listo en `backend/domains/recepcion` y `frontend/src/domains/recepcion`) | iniciar slice piloto en `hybrid` |
 | Somatometria | legacy | iniciar slice piloto en `hybrid` |
 | Consulta Medica | legacy | mapear dependencias antes de migrar |
-| Auth & Access | domain-first (backend domain scaffold + frontend auth/rbac operativo en `frontend/src/domains/auth-access/**`; Lote 5 retira wrappers legacy en `features/auth/**` y `features/admin/modules/rbac/**`; reintento Lote 5 validado sin consumidores runtime/test) | mantener guardrail de no-regresión (suites auth/rbac focalizadas en Docker), usar bootstrap reproducible local (`seed_auth_access` + `setup_auth_access_local`) y limpiar referencias documentales legacy cuando se cierre PR |
+| Auth & Access | hybrid (frontend auth/rbac operativo en `frontend/src/domains/auth-access/**`, pero backend principal sigue en `backend/apps/**` y ownership DB sigue en transición planificada) | ejecutar plan TO-BE de datos definido en `docs/domains/auth-access/db-domain-to-be-map.md` (KAN-103/KAN-104/KAN-105) y mantener guardrail de no-regresión en Docker |
 
 ## References
 

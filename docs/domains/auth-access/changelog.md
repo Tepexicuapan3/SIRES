@@ -1,5 +1,32 @@
 # auth-access - Changelog
 
+## 2026-04-13 (KAN-103 ajuste de trazabilidad Jira + gap analysis AC)
+
+- Se corrige mapeo de subtareas Jira en artefactos KAN-103 para reflejar IDs reales: `S1=KAN-107`, `S2=KAN-106`, `S3=KAN-109`, `S4=KAN-105`, `S5=KAN-108`, `S6=KAN-104`.
+- Se agrega `db-gap-analysis-prioritization.md` con priorización explícita `must/should/could` para cumplir AC de KAN-103.
+- Se actualizan referencias cruzadas en `docs/README.md`, `docs/domains/auth-access/README.md`, `backlog-mapping.md`, `db-domain-to-be-map.md`, `db-domain-execution-plan-s1-s6.md` y `kan-103-go-no-go-checklist.md`.
+
+## 2026-04-13 (KAN-103 Batch 3: cierre S5/S6 bootstrap + Go/No-Go)
+
+- Se actualiza `local-db-bootstrap-strategy.md` para alinear estrategia de seeds/bootstrap al TO-BE de KAN-103, reforzando guardrail contractual (sin mutación de datos cross-domain no owner).
+- Se agrega validación automatizada Docker-first en `Makefile` con targets `test-seed-auth-command` y `validate-auth-access-bootstrap`.
+- Se amplía cobertura en `test_seed_auth_access_command.py` para verificar que seeds auth-access no alteran `cat_centros_atencion`.
+- Se crea `kan-103-go-no-go-checklist.md` con criterios de salida S1..S6, evidencia requerida y clasificación bloqueante/no-bloqueante.
+- Se actualiza `db-domain-execution-plan-s1-s6.md` con consolidación de cierre Batch 3 (S5/S6: KAN-108/KAN-104).
+
+## 2026-04-13 (KAN-103 Batch 2: plan ejecutable S1..S6 + contratos cross-domain)
+
+- Se agrega `db-domain-execution-plan-s1-s6.md` con matriz por subtarea S1..S6 (S1=KAN-107, S2=KAN-106, S3=KAN-109, S4=KAN-105, S5=KAN-108, S6=KAN-104), entregables, AC verificables, evidencia esperada y plan por fases `expand -> migrate -> contract`.
+- Se agrega `db-cross-domain-contracts.md` con contratos permitidos para datos no owner de auth-access (incluyendo `cat_centros_atencion`), anti-patrones prohibidos y guía de transición `FK legacy -> contract reference`.
+- Se consolida trazabilidad Jira↔Docs actualizando `README.md`, `decision-log.md` y `backlog-mapping.md` del dominio.
+- Se actualiza discoverability en `docs/README.md` y `docs/domains/auth-access/README.md`.
+
+## 2026-04-13 (KAN-103 Batch 1: DB-domain TO-BE + consistencia de estado)
+
+- Se agrega `db-domain-to-be-map.md` como mapa TO-BE de ownership DB para Auth-Access con matriz AS-IS vs TO-BE, owner actual/objetivo, clasificación `keep/move/consume-by-contract/split`, riesgos y frontera cross-domain.
+- Se alinea el estado del dominio Auth & Access en artefactos canónicos: `docs/architecture/domain-map.md` y `docs/guides/incremental-domain-migration.md` quedan consistentes en estado **hybrid**.
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md` con trazabilidad explícita KAN-103 y S1/S2 (KAN-107/KAN-106).
+
 ## 2026-04-08 (KAN-71 guía institucional demo multi-sprint)
 
 - Se agrega `kan-71-multi-sprint-demo-process.md` con proceso reusable para demos Sprint 2+ (plantilla `Demo Sprint X`, checklist mínimo de evidencia y flujo de cierre Jira/PR/docs).

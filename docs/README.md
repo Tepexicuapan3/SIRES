@@ -27,7 +27,12 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 - `docs/domains/auth-access/cierre-formal-mvp-fase2.md` - cierre documental formal validado con cliente (MVP/Fase 2, reglas operativas, excepciones, trazabilidad, KPIs y DoR).
 - `docs/domains/auth-access/baseline-as-is.md` - baseline tecnico AS-IS (KAN-47) con trazabilidad de flujos/modulos/endpoints/permisos/deuda.
 - `docs/domains/auth-access/boundary-map-acl.md` - boundary map + ACL tecnico canonico (KAN-48) para fronteras, contratos permitidos y guardrails de ejecucion.
+- `docs/domains/auth-access/db-domain-to-be-map.md` - mapa TO-BE DB-domain de Auth-Access para KAN-103 Batch 1 (S1+S2), con trazabilidad KAN-107/KAN-106 y fases `expand -> migrate -> contract`.
+- `docs/domains/auth-access/db-domain-execution-plan-s1-s6.md` - plan ejecutable KAN-103 Batch 2 para subtareas S1..S6 (S3/S4: KAN-109/KAN-105), con checkpoints, AC/DoD/TDD-first y rollback por fase.
+- `docs/domains/auth-access/db-cross-domain-contracts.md` - contratos cross-domain permitidos para datos fuera de auth-access (ej. centros de atención), anti-patrones SQL prohibidos y transición FK->contract reference.
+- `docs/domains/auth-access/db-gap-analysis-prioritization.md` - gap analysis de datos Auth-Access con prioridad explícita `must/should/could` (criterio de aceptación obligatorio KAN-103).
 - `docs/domains/auth-access/local-db-bootstrap-strategy.md` - estrategia reproducible de DB local para auth-access (migraciones, seeders, factories y setup/reset Docker).
+- `docs/domains/auth-access/kan-103-go-no-go-checklist.md` - checklist final KAN-103 (S1..S6) con evidencia requerida y criterios bloqueantes/no-bloqueantes para dictamen Go/No-Go.
 - `docs/domains/auth-access/permissions-source-of-truth.md` - slice runtime inicial de KAN-49 para backend source of truth de permisos/capabilities.
 - `docs/domains/auth-access/request-id-traceability-contract.md` - contrato canonico de trazabilidad `X-Request-ID` para KAN-51.
 - `docs/domains/auth-access/rbac-views-extraction-slices-plan.md` - plan de extraccion incremental de `rbac_views` por slices con coexistencia y rollback (KAN-52).

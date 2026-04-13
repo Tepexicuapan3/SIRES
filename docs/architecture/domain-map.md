@@ -12,7 +12,7 @@ El repo crecio por modulos y features, con riesgo de colisiones cuando varios eq
 
 | Dominio | Backend actual | Frontend actual | Data ownership (PostgreSQL target) | Estado migracion |
 |---|---|---|---|---|
-| Auth & Access | `backend/apps/authentication`, `backend/apps/core` | `frontend/src/features/auth`, `frontend/src/features/admin` | Schema/logical ownership dedicado por dominio | Legacy activo |
+| Auth & Access | `backend/apps/authentication`, `backend/apps/core` | `frontend/src/features/auth`, `frontend/src/features/admin` + `frontend/src/domains/auth-access` | Schema/logical ownership dedicado por dominio (TO-BE detallado en `docs/domains/auth-access/db-domain-to-be-map.md`) | Hybrid |
 | Recepcion | `backend/apps/recepcion` | `frontend/src/features/recepcion` | Schema/logical ownership dedicado por dominio | Piloto recomendado |
 | Somatometria | `backend/apps/somatometria` | `frontend/src/features/somatometria` | Schema/logical ownership dedicado por dominio | Piloto recomendado |
 | Consulta Medica | `backend/apps/consulta_medica` | `frontend/src/features/consulta-medica`, `frontend/src/features/consultas` | Schema/logical ownership dedicado por dominio | Legacy activo |

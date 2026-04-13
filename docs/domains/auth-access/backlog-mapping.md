@@ -51,3 +51,20 @@ Cada ticket Jira de este dominio debe incluir referencia explicita a:
 - KAN-52 documenta plan incremental de extraccion de `rbac_views` en [`rbac-views-extraction-slices-plan.md`](./rbac-views-extraction-slices-plan.md).
 
 Regla operativa: cualquier implementacion KAN-49/KAN-50/KAN-52/KAN-57 que contradiga KAN-48 requiere decision previa registrada en `decision-log.md`.
+
+## Programa KAN-103 (DB-domain map plan) - Trazabilidad S1..S6
+
+| Subtarea | Ticket Jira | Objetivo | Artefacto documental canónico |
+|---|---|---|---|
+| S1 | KAN-107 | Definir mapa TO-BE de ownership DB por grupo | [`db-domain-to-be-map.md`](./db-domain-to-be-map.md) |
+| S2 | KAN-106 | Alinear estado y trackers de migración del dominio | [`db-domain-to-be-map.md`](./db-domain-to-be-map.md) + trackers de arquitectura |
+| S3 | KAN-109 | Formalizar contratos cross-domain para datos no owner | [`db-cross-domain-contracts.md`](./db-cross-domain-contracts.md) |
+| S4 | KAN-105 | Definir plan ejecutable por fases con AC/DoD/TDD-first/rollback | [`db-domain-execution-plan-s1-s6.md`](./db-domain-execution-plan-s1-s6.md) |
+| S5 | KAN-108 | Ejecutar migración incremental con reconciliación de datos | Evidencia de apply (batch de ejecución futuro) |
+| S6 | KAN-104 | Contracción y retiro de acoplamientos legacy | Evidencia de cierre/cutover (batch de ejecución futuro) |
+
+Regla operativa KAN-103:
+
+- S3/S4 son prerrequisitos documentales obligatorios para ejecutar S5/S6.
+- Ninguna subtarea S5/S6 puede aprobarse sin evidencia TDD-first y rollback por fase (`expand -> migrate -> contract`).
+- Si aparece conflicto de ownership/contrato, prevalece el criterio más restrictivo y se registra decisión en `decision-log.md`.

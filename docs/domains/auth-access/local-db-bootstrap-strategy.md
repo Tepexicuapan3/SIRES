@@ -1,6 +1,6 @@
 # Auth-Access - Local DB Bootstrap & Seed Strategy
 
-> TL;DR: este playbook deja un flujo reproducible de DB local para auth-access usando Docker, migraciones versionadas y seeders idempotentes (`base`, `demo`, `edge-cases`, `factory`).
+> TL;DR: este playbook deja un flujo reproducible Docker-first para auth-access, con migraciones versionadas, seeders idempotentes (`base`, `demo`, `edge-cases`, `factory`) y validación automatizada alineada al TO-BE de KAN-103 (sin dependencias cross-domain indebidas).
 
 ## Contexto
 
@@ -41,6 +41,12 @@ La estrategia mantiene el baseline actual de SISEM:
 4. No existe tabla de sesión persistente porque arquitectura actual es JWT cookie stateless (válido por diseño actual).
 
 ## Estrategia implementada
+
+## Guardrail de contratos cross-domain (KAN-103 S3/S5)
+
+- Los seeders de auth-access se limitan al alcance owner definido en KAN-103 (`users/profile`, `roles`, `permissions`, `user-role`, `role-permission`, `overrides`) y **no mutan** catálogos externos fuera de ese alcance.
+- Para datos no owner (ej. `cat_centros_atencion`) aplica el contrato de [`db-cross-domain-contracts.md`](./db-cross-domain-contracts.md): consumo por contrato formal, nunca por SQL directo en paths transaccionales de auth-access.
+- Se agrega validación automatizada en tests para garantizar que la ejecución de seeds (`base/demo/edge/factory`) no altera `cat_centros_atencion`.
 
 ## 1) Migraciones (estructura)
 
@@ -102,6 +108,8 @@ Se agregó `Makefile` en raíz con targets:
 - `make setup` -> Docker up + migrate + seed base
 - `make setup-auth-demo` -> setup + demo
 - `make setup-auth-full` -> setup + demo + edge + factories
+- `make test-seed-auth-command` -> ejecuta tests del comando `seed_auth_access` en contenedor backend
+- `make validate-auth-access-bootstrap` -> corrida automatizada `setup-auth-full` + tests de seed command
 - `make reset-db` -> recrea DB + seed base
 - `make reset-db-demo`
 - `make reset-db-full`
@@ -139,6 +147,19 @@ make seed-auth-edge
 make seed-auth-factory AUTH_FACTORY_USERS=75
 ```
 
+## Validación Docker-first automatizada (Batch 3)
+
+```bash
+make validate-auth-access-bootstrap AUTH_FACTORY_USERS=25
+```
+
+Equivale a:
+
+1. `make setup-auth-full AUTH_FACTORY_USERS=25`
+2. `make test-seed-auth-command`
+
+Con esto se valida reproducibilidad del bootstrap y no-regresión contractual del seeding.
+
 ## Reglas de separación (reutilizable para otros dominios)
 
 Patrón replicable para cualquier dominio `X`:
@@ -166,5 +187,6 @@ En Auth-Access, la implementación vive en:
 - `docs/architecture/db-ownership-migration-policy.md`
 - `docs/guides/incremental-domain-migration.md`
 - `docs/domains/auth-access/rbac-db-ownership-migration-strategy.md`
+- `docs/domains/auth-access/db-cross-domain-contracts.md`
 - `backend/apps/authentication/management/commands/seed_auth_access.py`
 - `backend/apps/authentication/management/commands/setup_auth_access_local.py`

@@ -21,7 +21,12 @@ Este dominio cubre:
 - [`boundary-map-acl.md`](./boundary-map-acl.md) - boundary map + ACL tecnico canonico de `auth_access` (KAN-48) con guardrails para KAN-49/KAN-50/KAN-52/KAN-57.
 - [`permissions-source-of-truth.md`](./permissions-source-of-truth.md) - slice runtime minimo de KAN-49 para consolidar backend source of truth de permisos efectivos/capabilities.
 - [`rbac-db-ownership-migration-strategy.md`](./rbac-db-ownership-migration-strategy.md) - estrategia canonica de KAN-50 (ownership/migracion DB RBAC `managed=False`) en fases `expand -> migrate -> contract`.
+- [`db-domain-to-be-map.md`](./db-domain-to-be-map.md) - mapa TO-BE de ownership DB para Auth-Access (KAN-103 Batch 1; trazabilidad S1/S2: KAN-107/KAN-106, clasificación keep/move/consume-by-contract/split y fases sugeridas).
+- [`db-domain-execution-plan-s1-s6.md`](./db-domain-execution-plan-s1-s6.md) - plan ejecutable KAN-103 Batch 2 para subtareas S1..S6 con fases `expand -> migrate -> contract`, checkpoints, AC/DoD/TDD-first y rollback (S3/S4: KAN-109/KAN-105).
+- [`db-cross-domain-contracts.md`](./db-cross-domain-contracts.md) - contratos permitidos para datos fuera de auth-access, anti-patrones prohibidos y guía de transición `FK legacy -> contract reference`.
+- [`db-gap-analysis-prioritization.md`](./db-gap-analysis-prioritization.md) - priorización explícita de gaps de datos (`must/should/could`) exigida por KAN-103 para secuenciar S5/S6 sin scope creep.
 - [`local-db-bootstrap-strategy.md`](./local-db-bootstrap-strategy.md) - estrategia reproducible de DB local para auth-access (migrate + seed base/demo/edge/factory + setup/reset Docker).
+- [`kan-103-go-no-go-checklist.md`](./kan-103-go-no-go-checklist.md) - checklist final de salida KAN-103 (S1..S6), evidencia mínima y criterios bloqueantes/no-bloqueantes para dictamen Go/No-Go.
 - [`request-id-traceability-contract.md`](./request-id-traceability-contract.md) - contrato transversal de correlacion `X-Request-ID` para KAN-51 (preserva/genera/devuelve).
 - [`rbac-views-extraction-slices-plan.md`](./rbac-views-extraction-slices-plan.md) - plan incremental de extraccion de `rbac_views` por slices desplegables con estrategia de coexistencia/rollback (KAN-52).
 - [`tdd-risk-strategy-kan-55.md`](./tdd-risk-strategy-kan-55.md) - matriz TDD-first por riesgo (P0/P1/P2) por slice `S0..S6` y gate go/no-go (KAN-55).

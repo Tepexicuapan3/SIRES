@@ -1,4 +1,4 @@
-.PHONY: setup setup-auth-demo setup-auth-full reset-db reset-db-demo reset-db-full seed-auth-base seed-auth-demo seed-auth-edge seed-auth-factory
+.PHONY: setup setup-auth-demo setup-auth-full reset-db reset-db-demo reset-db-full seed-auth-base seed-auth-demo seed-auth-edge seed-auth-factory test-seed-auth-command validate-auth-access-bootstrap
 
 AUTH_FACTORY_USERS ?= 50
 
@@ -25,6 +25,13 @@ seed-auth-edge:
 
 seed-auth-factory:
 	docker compose exec backend python manage.py seed_auth_access --factory-users $(AUTH_FACTORY_USERS)
+
+test-seed-auth-command:
+	docker compose exec backend python manage.py test apps.authentication.tests.test_seed_auth_access_command
+
+validate-auth-access-bootstrap:
+	$(MAKE) setup-auth-full AUTH_FACTORY_USERS=$(AUTH_FACTORY_USERS)
+	$(MAKE) test-seed-auth-command
 
 reset-db:
 	docker compose down -v
