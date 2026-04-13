@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "bun run typecheck:app && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck:app": "tsc -p tsconfig.app.json --noEmit",
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
+    "typecheck:e2e": "tsc -p tsconfig.e2e.json --noEmit",
+    "typecheck:bun": "tsc -p tsconfig.bun.json --noEmit",
     "typecheck:kan-92": "tsc -p tsconfig.kan-92.json --noEmit",
+    "quality:types": "bun run typecheck:app && bun run typecheck:tests && bun run typecheck:e2e && bun run typecheck:bun",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
@@ -26,8 +29,10 @@
     "quality:kan4:smoke": "bun run test:run src/test/integration/flujo-clinico/RecepcionQueuePage.ui.test.tsx src/test/integration/flujo-clinico/SomatometriaCapturePage.ui.test.tsx src/test/integration/flujo-clinico/DoctorConsultationPage.ui.test.tsx src/test/integration/flujo-clinico/CaptureVitals.api.test.ts src/test/integration/flujo-clinico/useVisitRealtimeSync.test.tsx && bun run test:e2e:smoke",
     "quality:kan4:release": "bun run test:run src/test/integration/flujo-clinico/RecepcionQueuePage.ui.test.tsx src/test/integration/flujo-clinico/SomatometriaCapturePage.ui.test.tsx src/test/integration/flujo-clinico/DoctorConsultationPage.ui.test.tsx src/test/integration/flujo-clinico/CaptureVitals.api.test.ts src/test/integration/flujo-clinico/useVisitRealtimeSync.test.tsx && bun run test:e2e:kan4",
     "quality:kan-92:go-no-go": "bun run test:e2e:auth:critical:real || bun run test:e2e:auth:critical:hybrid",
-    "quality:kan-92:go-no-go:strict": "bun run typecheck:app && bun run typecheck:tests && bun run typecheck:kan-92 && bun run quality:kan-92:go-no-go",
-    "test:guard:legacy-alias": "bun install --frozen-lockfile && bun run test:run src/test/unit/architecture/legacy-alias-guard.spec.ts"
+    "quality:kan-92:go-no-go:strict": "bun run quality:types && bun run test:guard:ts-debt-detection && bun run test:guard:ts-anti-bypass && bun run quality:kan-92:go-no-go",
+    "test:guard:legacy-alias": "bun install --frozen-lockfile && bun run test:run src/test/unit/architecture/legacy-alias-guard.spec.ts",
+    "test:guard:ts-anti-bypass": "bun install --frozen-lockfile && bun run test:run src/test/unit/architecture/ts-anti-bypass-guard.spec.ts",
+    "test:guard:ts-debt-detection": "bun install --frozen-lockfile && bun run test:run src/test/unit/architecture/ts-debt-detection-guard.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -76,6 +81,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
+    "@types/bun": "^1.3.2",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^24.10.1",
     "@types/nprogress": "^0.2.3",

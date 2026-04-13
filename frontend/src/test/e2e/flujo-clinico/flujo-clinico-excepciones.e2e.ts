@@ -11,10 +11,20 @@ const createAppointmentId = (patientId: number): string => {
   return `APP-KAN19-${patientId}`;
 };
 
+const isVisitStatusPayload = (
+  payload: unknown,
+): payload is { status?: string; code?: string } =>
+  typeof payload === "object" && payload !== null;
+
 const VISIBILITY_TIMEOUT = {
   timeout: 5_000,
   intervals: [200, 350, 500],
-} as const;
+};
+
+interface VisitStatusPayload {
+  status?: string;
+  code?: string;
+}
 
 test.describe("Flujo clinico excepciones", () => {
   test.describe.configure({ mode: "serial" });
@@ -48,17 +58,21 @@ test.describe("Flujo clinico excepciones", () => {
           notes: "KAN-19 cancelada exception",
         });
 
-        const cancelResponse = await recepcionPage.updateVisitStatus(
-          visit.id,
-          "cancelada",
-        );
-        const cancelPayload = await cancelResponse.json().catch(() => null);
+        const cancelResponse =
+          await recepcionPage.updateVisitStatus<VisitStatusPayload>(
+            visit.id,
+            "cancelada",
+          );
+        const cancelPayload = cancelResponse.body;
+        const cancelStatusPayload = isVisitStatusPayload(cancelPayload)
+          ? cancelPayload
+          : null;
 
         expect(
-          cancelResponse.status(),
+          cancelResponse.status,
           `No se pudo marcar cancelada: ${JSON.stringify(cancelPayload)}`,
         ).toBe(200);
-        expect(cancelPayload?.status).toBe("cancelada");
+        expect(cancelStatusPayload?.status).toBe("cancelada");
 
         const clinicoPage = new FlujoClinicoPage(
           await clinicoContext.newPage(),
@@ -117,17 +131,21 @@ test.describe("Flujo clinico excepciones", () => {
           notes: "KAN-19 no_show exception",
         });
 
-        const noShowResponse = await recepcionPage.updateVisitStatus(
-          visit.id,
-          "no_show",
-        );
-        const noShowPayload = await noShowResponse.json().catch(() => null);
+        const noShowResponse =
+          await recepcionPage.updateVisitStatus<VisitStatusPayload>(
+            visit.id,
+            "no_show",
+          );
+        const noShowPayload = noShowResponse.body;
+        const noShowStatusPayload = isVisitStatusPayload(noShowPayload)
+          ? noShowPayload
+          : null;
 
         expect(
-          noShowResponse.status(),
+          noShowResponse.status,
           `No se pudo marcar no_show: ${JSON.stringify(noShowPayload)}`,
         ).toBe(200);
-        expect(noShowPayload?.status).toBe("no_show");
+        expect(noShowStatusPayload?.status).toBe("no_show");
 
         const clinicoPage = new FlujoClinicoPage(
           await clinicoContext.newPage(),
@@ -185,26 +203,31 @@ test.describe("Flujo clinico excepciones", () => {
           notes: "KAN-19 invalid transition",
         });
 
-        const moveResponse = await recepcionPage.moveVisitToSomatometria(
-          visit.id,
-        );
-        const movePayload = await moveResponse.json().catch(() => null);
+        const moveResponse =
+          await recepcionPage.moveVisitToSomatometria<VisitStatusPayload>(
+            visit.id,
+          );
+        const movePayload = moveResponse.body;
         expect(
-          moveResponse.status(),
+          moveResponse.status,
           `No se pudo mover a somatometria: ${JSON.stringify(movePayload)}`,
         ).toBe(200);
 
-        const invalidResponse = await recepcionPage.updateVisitStatus(
-          visit.id,
-          "cancelada",
-        );
-        const invalidPayload = await invalidResponse.json().catch(() => null);
+        const invalidResponse =
+          await recepcionPage.updateVisitStatus<VisitStatusPayload>(
+            visit.id,
+            "cancelada",
+          );
+        const invalidPayload = invalidResponse.body;
+        const invalidStatusPayload = isVisitStatusPayload(invalidPayload)
+          ? invalidPayload
+          : null;
 
         expect(
-          invalidResponse.status(),
+          invalidResponse.status,
           `Se esperaba 409 en transicion invalida: ${JSON.stringify(invalidPayload)}`,
         ).toBe(409);
-        expect(invalidPayload?.code).toBe("VISIT_STATE_INVALID");
+        expect(invalidStatusPayload?.code).toBe("VISIT_STATE_INVALID");
       } finally {
         await recepcionContext.close();
       }

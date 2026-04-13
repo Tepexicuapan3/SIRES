@@ -1,4 +1,5 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import type { HttpJsonResponse } from "../shared/http-json-response";
 
 const configuredAuthBaseUrl = process.env.PLAYWRIGHT_AUTH_TEST_API_BASE_URL;
 const configuredFrontendBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
@@ -114,12 +115,22 @@ async function postFromPage(
             body: payload ? JSON.stringify(payload) : undefined,
           });
 
-          return response.ok;
+          let body: unknown = null;
+          try {
+            body = await response.json();
+          } catch {
+            body = null;
+          }
+
+          return {
+            status: response.status,
+            body,
+          } satisfies HttpJsonResponse;
         },
         { endpointUrl, payload },
       );
 
-      if (requestOk) {
+      if (requestOk.status >= 200 && requestOk.status < 300) {
         return true;
       }
     } catch {

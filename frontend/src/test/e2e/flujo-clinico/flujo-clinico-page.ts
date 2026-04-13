@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import type { HttpJsonResponse } from "../shared/http-json-response";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DOCTOR_QUEUE_KEY = "doctor-open-consultations";
@@ -74,11 +75,6 @@ interface VisitQueueRecord {
 
 interface VisitQueueResponse {
   items?: VisitQueueRecord[];
-}
-
-interface HttpJsonResponse<T = unknown> {
-  status: number;
-  body: T | null;
 }
 
 type Credentials = {
@@ -362,14 +358,16 @@ export class FlujoClinicoPage {
     return createdVisit;
   }
 
-  async moveVisitToSomatometria(visitId: number): Promise<HttpJsonResponse> {
+  async moveVisitToSomatometria<TBody = unknown>(
+    visitId: number,
+  ): Promise<HttpJsonResponse<TBody>> {
     return this.updateVisitStatus(visitId, "en_somatometria");
   }
 
-  async updateVisitStatus(
+  async updateVisitStatus<TBody = unknown>(
     visitId: number,
     targetStatus: VisitStatusTransitionTarget,
-  ): Promise<HttpJsonResponse> {
+  ): Promise<HttpJsonResponse<TBody>> {
     const apiBaseUrl = this.getApiBaseUrl();
 
     return this.page.evaluate(
@@ -402,8 +400,8 @@ export class FlujoClinicoPage {
 
         return {
           status: response.status,
-          body,
-        } satisfies HttpJsonResponse;
+          body: body as TBody | null,
+        } satisfies HttpJsonResponse<TBody>;
       },
       {
         requestUrl: `${apiBaseUrl}/visits/${visitId}/status`,
@@ -813,8 +811,7 @@ export class FlujoClinicoPage {
       await this.page.locator(`${selectId} option`).first().textContent()
     )
       ?.trim()
-      .split(" - ")
-      .at(0);
+      .split(" - ")[0];
 
     expect(firstOptionText).toBeTruthy();
     return firstOptionText as string;

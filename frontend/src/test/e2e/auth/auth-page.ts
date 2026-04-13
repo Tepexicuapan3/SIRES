@@ -3,9 +3,14 @@ import {
   Locator,
   expect,
   APIRequestContext,
+  type APIResponse,
   type BrowserContext,
   type Response,
 } from "@playwright/test";
+import {
+  safeJsonParse,
+  type HttpJsonResponse,
+} from "../shared/http-json-response";
 import { resolveApiBaseUrl } from "./auth-test-env";
 
 /**
@@ -371,7 +376,16 @@ export class AuthAPI {
     return headers;
   }
 
-  async login(credentials: LoginData) {
+  private async asJsonResponse<TBody>(
+    response: APIResponse,
+  ): Promise<HttpJsonResponse<TBody>> {
+    return {
+      status: response.status(),
+      body: await safeJsonParse<TBody>(() => response.json()),
+    };
+  }
+
+  async login(credentials: LoginData): Promise<HttpJsonResponse> {
     const response = await this.request.post(`${this.apiBaseUrl}/auth/login`, {
       data: credentials,
       headers: this.getHeaders(),
@@ -380,58 +394,87 @@ export class AuthAPI {
     // Extraer cookies después del login
     await this.extractCsrfFromCookies();
 
-    return response;
+    return this.asJsonResponse(response);
   }
 
-  async logout() {
-    return this.request.post(`${this.apiBaseUrl}/auth/logout`, {
+  async logout(): Promise<HttpJsonResponse> {
+    const response = await this.request.post(`${this.apiBaseUrl}/auth/logout`, {
       headers: this.getHeaders(true),
     });
+    return this.asJsonResponse(response);
   }
 
-  async me() {
-    return this.request.get(`${this.apiBaseUrl}/auth/me`, {
+  async me(): Promise<HttpJsonResponse> {
+    const response = await this.request.get(`${this.apiBaseUrl}/auth/me`, {
       headers: this.getHeaders(),
     });
+    return this.asJsonResponse(response);
   }
 
-  async verify() {
-    return this.request.get(`${this.apiBaseUrl}/auth/verify`, {
+  async verify(): Promise<HttpJsonResponse> {
+    const response = await this.request.get(`${this.apiBaseUrl}/auth/verify`, {
       headers: this.getHeaders(),
     });
+    return this.asJsonResponse(response);
   }
 
-  async refresh() {
-    return this.request.post(`${this.apiBaseUrl}/auth/refresh`, {
-      headers: this.getHeaders(true),
-    });
+  async refresh(): Promise<HttpJsonResponse> {
+    const response = await this.request.post(
+      `${this.apiBaseUrl}/auth/refresh`,
+      {
+        headers: this.getHeaders(true),
+      },
+    );
+    return this.asJsonResponse(response);
   }
 
-  async requestResetCode(email: string) {
-    return this.request.post(`${this.apiBaseUrl}/auth/request-reset-code`, {
-      data: { email },
-      headers: this.getHeaders(),
-    });
+  async requestResetCode(email: string): Promise<HttpJsonResponse> {
+    const response = await this.request.post(
+      `${this.apiBaseUrl}/auth/request-reset-code`,
+      {
+        data: { email },
+        headers: this.getHeaders(),
+      },
+    );
+    return this.asJsonResponse(response);
   }
 
-  async verifyResetCode(email: string, code: string) {
-    return this.request.post(`${this.apiBaseUrl}/auth/verify-reset-code`, {
-      data: { email, code },
-      headers: this.getHeaders(),
-    });
+  async verifyResetCode(
+    email: string,
+    code: string,
+  ): Promise<HttpJsonResponse> {
+    const response = await this.request.post(
+      `${this.apiBaseUrl}/auth/verify-reset-code`,
+      {
+        data: { email, code },
+        headers: this.getHeaders(),
+      },
+    );
+    return this.asJsonResponse(response);
   }
 
-  async resetPassword(newPassword: string) {
-    return this.request.post(`${this.apiBaseUrl}/auth/reset-password`, {
-      data: { newPassword },
-      headers: this.getHeaders(true),
-    });
+  async resetPassword(newPassword: string): Promise<HttpJsonResponse> {
+    const response = await this.request.post(
+      `${this.apiBaseUrl}/auth/reset-password`,
+      {
+        data: { newPassword },
+        headers: this.getHeaders(true),
+      },
+    );
+    return this.asJsonResponse(response);
   }
 
-  async completeOnboarding(newPassword: string, termsAccepted: boolean) {
-    return this.request.post(`${this.apiBaseUrl}/auth/complete-onboarding`, {
-      data: { newPassword, termsAccepted },
-      headers: this.getHeaders(true),
-    });
+  async completeOnboarding(
+    newPassword: string,
+    termsAccepted: boolean,
+  ): Promise<HttpJsonResponse> {
+    const response = await this.request.post(
+      `${this.apiBaseUrl}/auth/complete-onboarding`,
+      {
+        data: { newPassword, termsAccepted },
+        headers: this.getHeaders(true),
+      },
+    );
+    return this.asJsonResponse(response);
   }
 }

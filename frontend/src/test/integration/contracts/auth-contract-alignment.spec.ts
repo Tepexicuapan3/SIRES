@@ -72,6 +72,10 @@ describe("auth contract alignment", () => {
     for (const field of AUTH_CAPABILITY_FIELDS_FROM_TYPES) {
       expect(capabilitySample).toHaveProperty(field);
     }
+
+    expect(typeof capabilitySample.granted).toBe("boolean");
+    expect(Array.isArray(capabilitySample.missingAllOf)).toBe(true);
+    expect(Array.isArray(capabilitySample.missingAnyOf)).toBe(true);
   });
 
   it("normalizes auth errors with code/message/status/requestId for invalid credentials", async () => {

@@ -44,7 +44,9 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 - Validacion de reglas de dependencia (`docs/architecture/dependency-rules.md`).
 - Evidencia de testing relevante (sin necesidad de build completo en docs-only PR).
 - Evidencia de testing proporcional al riesgo para features criticas (unit/integration/API/E2E segun impacto).
-- En frontend, reportar typecheck split como gates separados (`typecheck:app` y `typecheck:tests`).
+- En frontend, reportar typecheck split como gates separados (`typecheck:app`, `typecheck:tests`, `typecheck:e2e` y `typecheck:bun`).
+- En frontend, adjuntar evidencia negativa automatizada de detección de deuda TS (`test:guard:ts-debt-detection`) para evitar falsos verdes de typecheck.
+- En frontend, adjuntar enforcement automatizado anti-bypass (`test:guard:ts-anti-bypass`) contra `any`, `as unknown as`, `@ts-ignore` y `@ts-nocheck` en fronteras críticas de tests.
 - Si hay cambios de contrato auth/frontend, incluir evidencia de `src/test/integration/contracts/auth-contract-alignment.spec.ts`.
 - Smoke E2E de cierre se valida en Docker con preflight reproducible (`bun run test:e2e:bootstrap`, `bun run test:e2e:smoke` / `test:e2e:kan4`); ejecucion host-only no cuenta como evidencia final.
 - Para hardening de aliases/frontend structure, incluir guard automatizado ejecutable contra reintroduccion de aliases legacy (`bun run test:guard:legacy-alias`).

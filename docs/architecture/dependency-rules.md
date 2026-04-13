@@ -31,7 +31,7 @@ El trabajo paralelo por dominios solo escala si cada cambio respeta fronteras y 
 - Validar que no se agregan imports prohibidos.
 - Adjuntar RFC si hay cambio cross-domain de contratos o ownership.
 - Si hay migraciones estructurales de runtime frontend (`app/`, `infrastructure/`, `shared/`), incluir evidencia documental de impacto en este archivo o en `docs/guides/incremental-domain-migration.md`.
-- Si el PR toca auth/frontend stability, adjuntar evidencia de `typecheck:app`, `typecheck:tests`, `src/test/integration/contracts`, `test:e2e:bootstrap`, `test:e2e:smoke` y `test:guard:legacy-alias` en Docker con preflight.
+- Si el PR toca auth/frontend stability, adjuntar evidencia de `typecheck:app`, `typecheck:tests`, `typecheck:e2e`, `typecheck:bun`, `test:guard:ts-debt-detection`, `test:guard:ts-anti-bypass`, `src/test/integration/contracts`, `test:e2e:bootstrap`, `test:e2e:smoke` y `test:guard:legacy-alias` en Docker con preflight.
 
 ## References
 

@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.tests.json",
+  "include": ["src/test/quality-gates/fixtures/negative-tests.fixture.ts"]
+}

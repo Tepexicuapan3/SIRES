@@ -44,10 +44,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          admin: ["./src/features/admin"],
-          clinico: ["./src/features/consultas", "./src/features/expedientes"],
           placeholders: ["./src/shared/components/PlaceholderPage.tsx"],
-          auth: ["./src/features/auth"],
           vendors: [
             "react",
             "react-dom",

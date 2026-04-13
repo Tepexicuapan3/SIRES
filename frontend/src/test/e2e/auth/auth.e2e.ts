@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import type { LoginResponse, MeResponse } from "@api/types/auth.types";
 import { AuthPage, AuthAPI } from "./auth-page";
 import { resetAuthE2EHarness } from "./auth-harness";
 import {
@@ -93,6 +94,9 @@ const RESET_EMAIL_MATRIX = {
 
 type ResetTestId = keyof typeof RESET_EMAIL_MATRIX;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const getResetEmail = (testId: ResetTestId, projectName: string) => {
   const mapping = RESET_EMAIL_MATRIX[testId];
   return (mapping as Record<string, string>)[projectName] ?? EMAILS.admin;
@@ -104,11 +108,15 @@ const getResetOtpCode = async (request: APIRequestContext, email: string) => {
   );
 
   expect(response.status()).toBe(200);
-  const body = (await response.json()) as { code?: string };
-  expect(body.code).toBeDefined();
-  expect(body.code).toHaveLength(6);
+  const body = await response.json();
+  expect(isRecord(body)).toBe(true);
 
-  return body.code as string;
+  const otpCode =
+    isRecord(body) && typeof body.code === "string" ? body.code : null;
+  expect(otpCode).toBeTruthy();
+  expect(otpCode).toHaveLength(6);
+
+  return otpCode as string;
 };
 // ============================================================================
 // TEST SUITE: LOGIN / LOGOUT
@@ -666,9 +674,9 @@ test.describe("Auth: API Contract", () => {
       const api = new AuthAPI(request);
 
       const response = await api.login(TEST_USERS.admin);
-      expect(response.status()).toBe(200);
+      expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = response.body as LoginResponse;
 
       // Verify contract structure
       expect(body).toHaveProperty("user");
@@ -694,9 +702,9 @@ test.describe("Auth: API Contract", () => {
 
       // Get me
       const response = await api.me();
-      expect(response.status()).toBe(200);
+      expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = response.body as MeResponse;
 
       // Verify contract
       expect(body).toHaveProperty("username");
@@ -716,14 +724,14 @@ test.describe("Auth: API Contract", () => {
 
       // Without auth should fail
       const unauthResponse = await api.verify();
-      expect(unauthResponse.status()).toBe(401);
+      expect(unauthResponse.status).toBe(401);
 
       // Login
       await api.login(TEST_USERS.admin);
 
       // With auth should succeed
       const authResponse = await api.verify();
-      expect(authResponse.status()).toBe(200);
+      expect(authResponse.status).toBe(200);
     },
   );
 

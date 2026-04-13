@@ -12,8 +12,11 @@ export const expectNormalizedAuthApiError = (
   expectation: AuthErrorExpectation,
 ) => {
   expect(error).toBeInstanceOf(ApiError);
+  if (!(error instanceof ApiError)) {
+    throw new Error("Expected ApiError instance");
+  }
 
-  const apiError = error as ApiError;
+  const apiError = error;
   expect(apiError.code).toBe(expectation.code);
   expect(apiError.status).toBe(expectation.status);
   expect(typeof apiError.message).toBe("string");
