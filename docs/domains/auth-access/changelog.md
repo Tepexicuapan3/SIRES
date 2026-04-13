@@ -1,5 +1,12 @@
 # auth-access - Changelog
 
+## 2026-04-13 (KAN-91 cierre orquestación DoD Módulo 1)
+
+- Se agrega `kan-91-module-1-closure-acta.md` como fuente canónica docs/ops para cierre KAN-91 con matriz `dependencia -> evidencia -> estado` sobre KAN-86/KAN-89/KAN-92.
+- Se aplica regla determinística compuesta de sign-off y se emite dictamen `NO-GO` por ausencia de dictamen final reproducible en KAN-89 (estado Jira `En revisión`).
+- Se documenta bloqueo operativo con owner+ETA y transición objetivo de Jira KAN-91 a `Blocked` hasta completar evidencia mínima obligatoria.
+- Se actualiza discoverability en `docs/domains/auth-access/README.md` y `docs/README.md`.
+
 ## 2026-04-13 (KAN-103 ajuste de trazabilidad Jira + gap analysis AC)
 
 - Se corrige mapeo de subtareas Jira en artefactos KAN-103 para reflejar IDs reales: `S1=KAN-107`, `S2=KAN-106`, `S3=KAN-109`, `S4=KAN-105`, `S5=KAN-108`, `S6=KAN-104`.
