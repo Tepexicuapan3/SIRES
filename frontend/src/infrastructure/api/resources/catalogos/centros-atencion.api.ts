@@ -17,6 +17,70 @@ import type {
   DeleteCentroAtencionResponse,
 } from "@api/types";
 
+type ApiCentroAtencionListItem = Omit<
+  CentrosAtencionListResponse["items"][number],
+  "folioCode"
+> & {
+  code: string;
+};
+
+type ApiCentroAtencionDetail = Omit<
+  CentroAtencionDetailResponse["center"],
+  "folioCode"
+> & {
+  code: string;
+};
+
+type ApiCentrosAtencionListResponse = Omit<CentrosAtencionListResponse, "items"> & {
+  items: ApiCentroAtencionListItem[];
+};
+
+type ApiCentroAtencionDetailResponse = {
+  center: ApiCentroAtencionDetail;
+};
+
+type ApiUpdateCentroAtencionResponse = {
+  center: ApiCentroAtencionDetail;
+};
+
+type ApiCreateCentroAtencionRequest = Omit<CreateCentroAtencionRequest, "folioCode"> & {
+  code: string;
+};
+
+type ApiUpdateCentroAtencionRequest = Omit<UpdateCentroAtencionRequest, "folioCode"> & {
+  code?: string;
+};
+
+const mapCenterFromApi = <T extends { code: string }>(
+  center: T,
+): Omit<T, "code"> & { folioCode: string } => {
+  const { code, ...rest } = center;
+  return {
+    ...rest,
+    folioCode: code,
+  };
+};
+
+const mapCreatePayloadToApi = (
+  payload: CreateCentroAtencionRequest,
+): ApiCreateCentroAtencionRequest => {
+  const { folioCode, ...rest } = payload;
+  return {
+    ...rest,
+    code: folioCode,
+  };
+};
+
+const mapUpdatePayloadToApi = (
+  payload: UpdateCentroAtencionRequest,
+): ApiUpdateCentroAtencionRequest => {
+  const { folioCode, ...rest } = payload;
+  return {
+    ...rest,
+    ...(folioCode !== undefined ? { code: folioCode } : {}),
+  };
+};
+
 export const centrosAtencionAPI = {
   // ==========================================
   // 1. CORE: CRUD
@@ -30,13 +94,16 @@ export const centrosAtencionAPI = {
   getAll: async (
     params?: CentrosAtencionListParams,
   ): Promise<CentrosAtencionListResponse> => {
-    const response = await apiClient.get<CentrosAtencionListResponse>(
+    const response = await apiClient.get<ApiCentrosAtencionListResponse>(
       "/care-centers",
       {
         params,
       },
     );
-    return response.data;
+    return {
+      ...response.data,
+      items: response.data.items.map((item) => mapCenterFromApi(item)),
+    };
   },
 
   /**
@@ -45,10 +112,12 @@ export const centrosAtencionAPI = {
    * @permission admin:catalogos:centros_atencion:read
    */
   getById: async (centerId: number): Promise<CentroAtencionDetailResponse> => {
-    const response = await apiClient.get<CentroAtencionDetailResponse>(
+    const response = await apiClient.get<ApiCentroAtencionDetailResponse>(
       `/care-centers/${centerId}`,
     );
-    return response.data;
+    return {
+      center: mapCenterFromApi(response.data.center),
+    };
   },
 
   /**
@@ -61,7 +130,7 @@ export const centrosAtencionAPI = {
   ): Promise<CreateCentroAtencionResponse> => {
     const response = await apiClient.post<CreateCentroAtencionResponse>(
       "/care-centers",
-      data,
+      mapCreatePayloadToApi(data),
     );
     return response.data;
   },
@@ -75,11 +144,13 @@ export const centrosAtencionAPI = {
     centerId: number,
     data: UpdateCentroAtencionRequest,
   ): Promise<UpdateCentroAtencionResponse> => {
-    const response = await apiClient.put<UpdateCentroAtencionResponse>(
+    const response = await apiClient.put<ApiUpdateCentroAtencionResponse>(
       `/care-centers/${centerId}`,
-      data,
+      mapUpdatePayloadToApi(data),
     );
-    return response.data;
+    return {
+      center: mapCenterFromApi(response.data.center),
+    };
   },
 
   /**
