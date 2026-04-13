@@ -55,7 +55,7 @@ if (process.env.ZEN_BROWSER_PATH) {
 }
 
 /**
- * Playwright Configuration - SIRES E2E Tests
+ * Playwright Configuration - SISEM E2E Tests
  */
 export default defineConfig({
   testDir: "/app/src/test/e2e",

@@ -1,7 +1,7 @@
 /**
  * API Error Utilities
  *
- * Clase ApiError y códigos de error estandarizados para SIRES.
+ * Clase ApiError y códigos de error estandarizados para SISEM.
  *
  * ¿POR QUÉ UNA CLASE CUSTOM?
  * Sin ApiError, cada componente interpreta errores diferente:
@@ -117,7 +117,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
 // ==========================================
 
 /**
- * Error normalizado de la API de SIRES
+ * Error normalizado de la API de SISEM
  *
  * @example
  * ```typescript

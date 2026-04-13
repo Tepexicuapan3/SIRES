@@ -5,7 +5,7 @@ description: Use when creating new UI interfaces, layout direction, visual hiera
 
 # Interface Design
 
-Design interfaces intentionally so they feel crafted for SIRES, not generic templates.
+Design interfaces intentionally so they feel crafted for SISEM, not generic templates.
 
 ## When to Use
 
@@ -48,7 +48,7 @@ Before implementation, provide:
 
 ## Quality Checklist
 
-- The UI matches SIRES style and domain context
+- The UI matches SISEM style and domain context
 - No generic dashboard boilerplate
 - Error and empty states are defined
 - Accessibility and keyboard behavior are considered

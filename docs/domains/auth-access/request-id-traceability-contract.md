@@ -78,9 +78,9 @@ Para investigar incidentes de auth-access:
 
 ## 7) Trazabilidad Engram obligatoria (KAN-51)
 
-Para cumplimiento operativo de SIRES, este cambio debe registrarse en Engram con:
+Para cumplimiento operativo de SISEM, este cambio debe registrarse en Engram con:
 
-- `project: SIRES_SHARED`
+- `project: SISEM_SHARED`
 - `topic_key: feature/kan-51-request-id/decision`
 - `topic_key: feature/kan-51-request-id/progress`
 

@@ -53,7 +53,7 @@
 - [ ] No direct cross-domain table/schema access from application code
 - [ ] Data migration/rollback plan documented for high-risk changes
 - [ ] Docs updated if behavior or operation changed
-- [ ] Engram high-signal decisions/fixes saved to `SIRES_SHARED`
+- [ ] Engram high-signal decisions/fixes saved to `SISEM_SHARED`
 - [ ] Tests/evidence attached (or N/A explained)
 - [ ] TDD-first evidence included for applicable scope (tests-first plan + Red/Green/Refactor)
 - [ ] Any TDD exception includes rationale, compensating controls/tests, and explicit approval

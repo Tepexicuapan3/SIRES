@@ -8,9 +8,9 @@ import psycopg2
 
 host = os.getenv("DB_HOST", "auth-db")
 port = int(os.getenv("DB_PORT", "5432"))
-user = os.getenv("DB_USER", "sires_auth")
-password = os.getenv("DB_PASSWORD", "sires_auth_dev_password")
-database = os.getenv("DB_NAME", "sires_auth")
+user = os.getenv("DB_USER", "sisem_auth")
+password = os.getenv("DB_PASSWORD", "sisem_auth_dev_password")
+database = os.getenv("DB_NAME", "sisem_auth")
 
 def connect():
     conn = psycopg2.connect(

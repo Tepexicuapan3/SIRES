@@ -11,14 +11,14 @@ Aislar `frontend-stability-hardening` sin tocar el working tree sucio de `chore/
 2. Crear rama fix desde `main` (sin checkout en rama sucia):
    - `git branch fix/frontend-stability-hardening main`
 3. Crear o reutilizar worktree dedicado:
-   - `git worktree add ../SIRES-worktrees/frontend-stability-hardening fix/frontend-stability-hardening`
+   - `git worktree add ../SISEM-worktrees/frontend-stability-hardening fix/frontend-stability-hardening`
 4. Ejecutar implementación y validaciones desde el worktree:
    - `docker compose run --rm frontend sh -lc "bun install && bun run <command>"`
 
 ## Validación mínima
 
 - Rama aislada activa en worktree:
-  - `git -C ../SIRES-worktrees/frontend-stability-hardening status --short --branch`
+  - `git -C ../SISEM-worktrees/frontend-stability-hardening status --short --branch`
 - Rama original intacta:
   - `git -C . status --short --branch`
 
@@ -26,4 +26,4 @@ Aislar `frontend-stability-hardening` sin tocar el working tree sucio de `chore/
 
 1. Revertir commits problemáticos en `fix/frontend-stability-hardening`.
 2. Si el aislamiento ya no se necesita:
-   - `git worktree remove ../SIRES-worktrees/frontend-stability-hardening`
+   - `git worktree remove ../SISEM-worktrees/frontend-stability-hardening`

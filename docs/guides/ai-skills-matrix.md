@@ -1,6 +1,6 @@
 # Matriz Maestra de Skills (IA)
 
-> Estado actual de skills activas y reglas de auto-invoke en SIRES.
+> Estado actual de skills activas y reglas de auto-invoke en SISEM.
 
 ## Objetivo
 
@@ -32,8 +32,8 @@ La fuente de verdad operativa sigue siendo la jerarquia de `AGENTS.md`.
 | `playwright` | E2E | Crear/mantener pruebas E2E |
 | `jira-task` | Tickets de tarea/bug | Crear tarea en formato Jira |
 | `jira-epic` | Epicas | Crear epica/initiative en Jira |
-| `pr-create-sires` | Creacion estandarizada de PRs SIRES | Crear/abrir PRs con evidencia completa y formato uniforme |
-| `pr-review-sires` | Review de PRs con governance SIRES | Revisar PRs y decidir approve/request-changes/squash |
+| `pr-create-sisem` | Creacion estandarizada de PRs SISEM | Crear/abrir PRs con evidencia completa y formato uniforme |
+| `pr-review-sisem` | Review de PRs con governance SISEM | Revisar PRs y decidir approve/request-changes/squash |
 | `find-skills` | Descubrir/instalar skills | Usuario pide buscar o instalar nuevas skills |
 
 ## Auto-invoke Global (Root)
@@ -56,8 +56,8 @@ La fuente de verdad operativa sigue siendo la jerarquia de `AGENTS.md`.
 | E2E tests | `playwright` |
 | Create project epics | `jira-epic` |
 | Create tasks/bugs | `jira-task` |
-| Create/open PR with standardized SIRES structure and evidence | `pr-create-sires` |
-| Review/audit PRs and decide approve/request-changes/squash | `pr-review-sires` |
+| Create/open PR with standardized SISEM structure and evidence | `pr-create-sisem` |
+| Review/audit PRs and decide approve/request-changes/squash | `pr-review-sisem` |
 | User asks to discover/install skills | `find-skills` |
 
 ## Prioridad por Alcance (AGENTS)

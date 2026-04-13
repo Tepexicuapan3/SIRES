@@ -33,7 +33,7 @@ Alinear guards/permisos del frontend con el slice piloto auth-access para consol
 ## 2) Trazabilidad PRs y Commits
 
 ### PR #59 (Superseded - Cerrado sin merge)
-- **URL:** https://github.com/Luis-Ant/SIRES/pull/59
+- **URL:** https://github.com/Luis-Ant/SISEM/pull/59
 - **Título:** feat(auth): close KAN-59 operational flow and evidence [KAN-59]
 - **Estado:** CLOSED (sin merge)
 - **Commit principal:** `5f13d2e9b4cfe30a638a94e39e2ea69658766af0`
@@ -49,7 +49,7 @@ Alinear guards/permisos del frontend con el slice piloto auth-access para consol
   - `frontend/src/test/unit/router/admin.routes.config.test.tsx` (+77, nuevo)
 
 ### PR #60 (Superseded - Cerrado sin merge)
-- **URL:** https://github.com/Luis-Ant/SIRES/pull/60
+- **URL:** https://github.com/Luis-Ant/SISEM/pull/60
 - **Título:** fix(auth-access): remediate KAN-59 domain alignment v2 [KAN-59]
 - **Estado:** CLOSED (auto-cerrado tras merge de base temporal)
 - **Commit principal:** `1aba3930012ea3521a38a95f0552844d6435b2ae`
@@ -63,7 +63,7 @@ Alinear guards/permisos del frontend con el slice piloto auth-access para consol
   - `frontend/src/test/unit/router/ProtectedRoute.capabilities.test.tsx` (+87/-1)
 
 ### PR #61 (MERGED - Implementación final)
-- **URL:** https://github.com/Luis-Ant/SIRES/pull/61
+- **URL:** https://github.com/Luis-Ant/SISEM/pull/61
 - **Título:** fix(auth-access): remediate KAN-59 domain alignment v2 [KAN-59]
 - **Estado:** MERGED
 - **Commit final:** `924ce8c5588e11c2d18ecfa8bdfe7b0da2698a5c`
@@ -293,9 +293,9 @@ docker compose run --rm \
 - **KAN-55 Risk Gate:** `docs/domains/auth-access/tdd-risk-strategy-kan-55.md`
 
 ### PRs y Commits
-- **PR #59 (superseded):** https://github.com/Luis-Ant/SIRES/pull/59
-- **PR #60 (superseded):** https://github.com/Luis-Ant/SIRES/pull/60
-- **PR #61 (merged):** https://github.com/Luis-Ant/SIRES/pull/61
+- **PR #59 (superseded):** https://github.com/Luis-Ant/SISEM/pull/59
+- **PR #60 (superseded):** https://github.com/Luis-Ant/SISEM/pull/60
+- **PR #61 (merged):** https://github.com/Luis-Ant/SISEM/pull/61
 - **Commit final merged:** `924ce8c` (branch `feat/auth/KAN-59-v2-domain-alignment`)
 
 ### Jira

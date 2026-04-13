@@ -1,4 +1,4 @@
-# [DEPRECADO] PRD - Dominio 1: Auth Access (SIRES)
+# [DEPRECADO] PRD - Dominio 1: Auth Access (SISEM)
 
 > Este archivo legacy se mantiene temporalmente por compatibilidad de enlaces.
 

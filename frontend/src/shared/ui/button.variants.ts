@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 /**
  * Button Variants - Sistema Metro CDMX
  *
- * Basado en shadcn/ui pero adaptado al sistema de diseño SIRES:
+ * Basado en shadcn/ui pero adaptado al sistema de diseño SISEM:
  * - bg-brand: Color institucional Metro (#fe5000)
  * - status-critical/alert/stable/info: Estados clínicos
  * - txt-body/muted/inverse: Jerarquía de texto

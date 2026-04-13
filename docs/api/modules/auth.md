@@ -4,7 +4,7 @@
 
 ## Problem / Context
 
-SIRES es un sistema medico critico sobre backend Django/DRF y frontend React. Un mismatch en auth rompe sesiones, permisos y auditoria. Este documento define contratos HTTP para mantener consistencia entre clientes y backend.
+SISEM es un sistema medico critico sobre backend Django/DRF y frontend React. Un mismatch en auth rompe sesiones, permisos y auditoria. Este documento define contratos HTTP para mantener consistencia entre clientes y backend.
 
 **Fuente de verdad**
 - `docs/api/standards.md`

@@ -1,6 +1,6 @@
 /**
  * Common API Types
- * Tipos compartidos para requests/responses de la API SIRES.
+ * Tipos compartidos para requests/responses de la API SISEM.
  *
  * @description Interfaces para paginación y respuestas estándar.
  * Todos los campos usan camelCase según el estándar de la API.

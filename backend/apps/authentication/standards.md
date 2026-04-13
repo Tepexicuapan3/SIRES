@@ -4,7 +4,7 @@
 
 ## Problem / Context
 
-SIRES es un sistema medico critico. Un mismatch en auth rompe sesiones, permisos y auditoria. Este documento define la forma exacta de los payloads y los errores (con mensajes de toast) para asegurar consistencia.
+SISEM es un sistema medico critico. Un mismatch en auth rompe sesiones, permisos y auditoria. Este documento define la forma exacta de los payloads y los errores (con mensajes de toast) para asegurar consistencia.
 
 **Fuente de verdad**
 

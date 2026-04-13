@@ -1,6 +1,6 @@
 # SISEM
 
-![SISEM](frontend/public/SIRES.webp)
+![SISEM](frontend/public/assets/brand/logos/primary/sisem.webp)
 
 ![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5+-0C4B33?logo=django&logoColor=white)
@@ -28,8 +28,8 @@ SISEM es una plataforma web para gestion clinica y administrativa. Combina front
 ### Opcion recomendada: Docker
 
 ```bash
-git clone https://github.com/Luis-Ant/SIRES.git
-cd SIRES
+git clone https://github.com/Luis-Ant/SISEM.git
+cd <repo-dir>
 
 cp .env.example .env
 docker compose up --build
@@ -40,7 +40,7 @@ Notas del contrato docker-first de desarrollo:
 - Backend consume `DB_*` derivados de `AUTH_DB_*` en `docker-compose.yml`.
 - Seed automatico al iniciar contenedores (`backend/seed_e2e.py`).
 - Persistencia activa de datos en volumen nombrado `auth_db_data`.
-- SMTP y enlaces de correo de Auth se controlan con `EMAIL_*`, `SIRES_LOGIN_URL`, `SIRES_SUPPORT_EMAIL`.
+- SMTP y enlaces de correo de Auth se controlan con `EMAIL_*`, `SISEM_LOGIN_URL`, `SISEM_SUPPORT_EMAIL`.
 
 Verificacion rapida:
 - Frontend: `http://localhost:5173`
@@ -62,7 +62,7 @@ No recomendada. El contrato operativo de desarrollo en SISEM es docker-first.
 ### Engram
 
 - Memoria compartida de equipo para decisiones, fixes y hallazgos clave.
-- Convencion de proyectos: `SIRES_SHARED` (equipo) y `SIRES_LOCAL` (notas locales).
+- Convencion de proyectos: `SISEM_SHARED` (equipo) y `SISEM_LOCAL` (notas locales).
 - Sync automatico con hooks Git para export/import de memoria compartida.
 - Topic key estable por dominio o feature para mantener trazabilidad real.
 
@@ -253,7 +253,7 @@ No recomendada. El contrato operativo de desarrollo en SISEM es docker-first.
 1. Levanta entorno (`docker compose up --build`).
 2. Implementa siguiendo el AGENTS mas especifico del area.
 3. Corre checks minimos: `bun lint`, `bun test`, `python manage.py test`.
-4. Guarda decisiones/fixes relevantes en Engram (`SIRES_SHARED`).
+4. Guarda decisiones/fixes relevantes en Engram (`SISEM_SHARED`).
 5. Commitea: verifica hooks activos y sincronizacion de Engram.
 
 Playbook y onboarding:

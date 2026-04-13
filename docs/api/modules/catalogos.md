@@ -1,6 +1,6 @@
 # API Catalogos - Contratos
 
-> TL;DR: Contratos REST del dominio Catalogos para SIRES (backend Django/DRF + frontend React), alineados con `docs/api/standards.md` y el modelo operativo domain-first.
+> TL;DR: Contratos REST del dominio Catalogos para SISEM (backend Django/DRF + frontend React), alineados con `docs/api/standards.md` y el modelo operativo domain-first.
 
 ## Scope
 

@@ -1,4 +1,4 @@
-# API Standards - SIRES
+# API Standards - SISEM
 
 > TL;DR: Estandares transversales para contratos REST consumidos por frontend. Priorizar consistencia de recursos, errores, seguridad y versionado.
 

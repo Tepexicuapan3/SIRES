@@ -48,8 +48,8 @@ Regla: si hay conflicto entre PRD y este documento sobre limites de integracion,
 |---|---|---|
 | Usuario final autenticable | Humano | Login, renovacion de sesion, recovery, onboarding, logout |
 | Admin RBAC | Humano | Gestion de roles/permisos/asignaciones/overrides |
-| Frontend SIRES | Sistema interno | Consumidor de APIs de auth/rbac y aplicacion de gating UX |
-| Servicios backend SIRES (otros dominios) | Sistema interno | Consulta/validacion por contratos autorizados |
+| Frontend SISEM | Sistema interno | Consumidor de APIs de auth/rbac y aplicacion de gating UX |
+| Servicios backend SISEM (otros dominios) | Sistema interno | Consulta/validacion por contratos autorizados |
 | Auditoria/Compliance | Actor de control | Consulta de trazabilidad de eventos de acceso |
 
 ### 4.2 Vecinos de dominio y relacion esperada
@@ -209,7 +209,7 @@ Campos minimos:
 
 ## 12) Traceability (Engram)
 
-- **Project**: `SIRES_SHARED`
+- **Project**: `SISEM_SHARED`
 - **Topic keys recomendados**:
   - `feature/dominio-1-acceso/decision`
   - `docs/auth-access/boundary-acl/note`

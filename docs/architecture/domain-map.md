@@ -1,6 +1,6 @@
 # Domain Map (Phase 1 + base Phase 2)
 
-> TL;DR: SIRES mantiene runtime actual, pero el delivery se organiza por dominios con ownership explicito para backend, frontend, DB y docs bajo estrategia `DB por dominio` con PostgreSQL como target.
+> TL;DR: SISEM mantiene runtime actual, pero el delivery se organiza por dominios con ownership explicito para backend, frontend, DB y docs bajo estrategia `DB por dominio` con PostgreSQL como target.
 
 ## Problem / Context
 

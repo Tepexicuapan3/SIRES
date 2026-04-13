@@ -190,7 +190,7 @@ export function parseUtcIso(value: UtcIsoString): Date {
     "name": "Urgencias",
     "isActive": true,
     "createdAt": "2025-01-19T14:30:00Z",
-    "createdBy": { "id": 7, "name": "Admin SIRES" },
+    "createdBy": { "id": 7, "name": "Admin SISEM" },
     "updatedAt": null,
     "updatedBy": null,
     "code": 10
@@ -243,7 +243,7 @@ async function loadArea(id: number): Promise<AreaDetailResponse> {
     "name": "Laboratorio Central",
     "isActive": true,
     "createdAt": "2025-01-19T14:30:00Z",
-    "createdBy": { "id": 7, "name": "Admin SIRES" },
+    "createdBy": { "id": 7, "name": "Admin SISEM" },
     "updatedAt": "2025-01-20T09:12:00Z",
     "updatedBy": { "id": 12, "name": "Supervisor" },
     "code": 30

@@ -6,7 +6,7 @@
 
 - Ticket principal de alcance: `KAN-58` (`58-A`, sprint demo S1).
 - Ticket relacionado y explicitamente fuera de alcance de esta PR: `KAN-72` (`58-B`, sprint 2+).
-- PR asociada: `https://github.com/Luis-Ant/SIRES/pull/50`.
+- PR asociada: `https://github.com/Luis-Ant/SISEM/pull/50`.
 - Declaracion operativa: esta PR mantiene `58-A` como alcance contractual; lo diferido de mutaciones/hardening extendido permanece en `KAN-72`.
 
 ## 1) Scope freeze 58-A

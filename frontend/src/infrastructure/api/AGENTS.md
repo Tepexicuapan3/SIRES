@@ -1,4 +1,4 @@
-# AGENTS.md - SIRES Frontend API Ruleset
+# AGENTS.md - SISEM Frontend API Ruleset
 
 ## How to Use This Guide
 

@@ -4,7 +4,7 @@
 
 ## Contexto
 
-El dominio `auth-access` establece los controles de acceso de SIRES bajo el baseline de monolito modular evolutivo, con ownership por dominio y gobernanza Jira + SDD + TDD-first.
+El dominio `auth-access` establece los controles de acceso de SISEM bajo el baseline de monolito modular evolutivo, con ownership por dominio y gobernanza Jira + SDD + TDD-first.
 
 ## Limites (in-scope)
 
@@ -18,7 +18,7 @@ El dominio `auth-access` establece los controles de acceso de SIRES bajo el base
 ## Fuera de alcance
 
 - Rediseno funcional de dominios clinicos fuera de auth-access.
-- Integraciones IAM corporativas no necesarias para SIRES en esta fase.
+- Integraciones IAM corporativas no necesarias para SISEM en esta fase.
 - Funcionalidad de pacientes en MVP (se aborda en Fase 2).
 
 ## Principios operativos

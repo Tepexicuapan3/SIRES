@@ -12,8 +12,8 @@
 1. Clonar repositorio:
 
 ```bash
-git clone https://github.com/Luis-Ant/SIRES.git
-cd SIRES
+git clone https://github.com/Luis-Ant/SISEM.git
+cd <repo-dir>
 ```
 
 2. Crear env desde ejemplo:
@@ -33,7 +33,7 @@ Notas clave del entorno docker-first:
 - Backend usa `DB_*` derivados de `AUTH_DB_*` en Docker (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
 - El seed demo (`backend/seed_e2e.py`) se ejecuta automaticamente en el arranque (`RUN_SEED_ON_BOOT=true`).
 - La data persiste en volumen Docker (`auth_db_data`).
-- SMTP y enlaces de email Auth se parametrizan con `EMAIL_*`; en KAN-74 se prefieren `SISEM_LOGIN_URL` y `SISEM_SUPPORT_EMAIL`, manteniendo `SIRES_*` temporalmente por compatibilidad.
+- SMTP y enlaces de email Auth se parametrizan con `EMAIL_*`, `SISEM_LOGIN_URL` y `SISEM_SUPPORT_EMAIL`.
 
 4. Verificacion rapida:
 

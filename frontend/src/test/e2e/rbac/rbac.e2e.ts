@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { RbacPage } from "./rbac-page";
 
-const TEST_PASSWORD = "Sires_123456";
+const TEST_PASSWORD = "Sisem_123456";
 
 test.describe("RBAC UI (MSW)", () => {
   test.describe.configure({ mode: "serial" });

@@ -325,7 +325,7 @@ Estos codigos adicionales ya son consumidos por frontend RBAC:
 ### Seed E2E relevante (`backend/seed_e2e.py`)
 
 Datos utiles para pruebas de contrato:
-- Password default: `Sires_123456`.
+- Password default: `Sisem_123456`.
 - Usuario multirol: `usuario_multirol` (CLINICO + RECEPCION + FARMACIA).
 - Usuarios de estado: `usuario_inactivo*`, `usuario_bloqueado*`, `usuario_onboarding*`, `usuario_cambiar_clave*`.
 
@@ -352,7 +352,7 @@ Decision de contrato para no romper:
   "firstName": "Ana",
   "paternalName": "Lopez",
   "maternalName": "Garcia",
-  "email": "ana.lopez@sires.local",
+  "email": "ana.lopez@sisem.local",
   "clinicId": 1,
   "primaryRoleId": 6
 }
@@ -375,7 +375,7 @@ Decision de contrato para no romper:
     "username": "recepcion",
     "fullname": "Recepcion Demo",
     "fullName": "Recepcion Demo",
-    "email": "recepcion@sires.local",
+    "email": "recepcion@sisem.local",
     "clinic": { "id": 1, "name": "Centro de Atencion Local" },
     "primaryRole": "RECEPCION",
     "isActive": true,
@@ -419,8 +419,8 @@ Decision de contrato para no romper:
   "target_nombre": "Recepcion Demo",
   "ip_origen": "10.10.0.25",
   "user_agent": "Mozilla/5.0",
-  "datos_antes": { "email": "old@sires.local" },
-  "datos_despues": { "email": "new@sires.local" },
+  "datos_antes": { "email": "old@sisem.local" },
+  "datos_despues": { "email": "new@sisem.local" },
   "meta": {
     "module": "rbac",
     "endpoint": "/users/12",

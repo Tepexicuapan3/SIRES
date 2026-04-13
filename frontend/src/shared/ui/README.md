@@ -1,4 +1,4 @@
-# UI Primitives (shadcn + SIRES)
+# UI Primitives (shadcn + SISEM)
 
 Esta carpeta contiene componentes primitivos reutilizables para toda la app.
 
@@ -16,7 +16,7 @@ cd frontend
 bunx --bun shadcn@latest add button
 ```
 
-Luego adaptar estilos a tokens del sistema SIRES.
+Luego adaptar estilos a tokens del sistema SISEM.
 
 ## Estructura Tipica
 

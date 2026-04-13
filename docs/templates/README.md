@@ -1,6 +1,6 @@
 # Templates de Documentacion
 
-Plantillas para mantener consistencia en la documentacion de SIRES.
+Plantillas para mantener consistencia en la documentacion de SISEM.
 
 ## Templates Disponibles
 

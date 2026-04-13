@@ -1,6 +1,6 @@
-export const SESSION_EXPIRED_EVENT = "sires:session-expired";
-const SESSION_EXPIRED_STORAGE_KEY = "sires:session-expired";
-const SESSION_EXPIRED_CHANNEL = "sires:session-expired";
+export const SESSION_EXPIRED_EVENT = "sisem:session-expired";
+const SESSION_EXPIRED_STORAGE_KEY = "sisem:session-expired";
+const SESSION_EXPIRED_CHANNEL = "sisem:session-expired";
 
 export const emitSessionExpired = () => {
   if (typeof window === "undefined") return;

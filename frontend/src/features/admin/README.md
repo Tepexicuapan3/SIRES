@@ -1,6 +1,6 @@
 # Admin Feature
 
-Modulo administrativo de SIRES, organizado por submodulos con estructura repetible.
+Modulo administrativo de SISEM, organizado por submodulos con estructura repetible.
 
 ## Alcance
 

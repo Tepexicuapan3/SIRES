@@ -41,7 +41,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
         <div className="flex min-w-0 items-center gap-3 pl-4 pr-2 pt-3">
           <div className="flex h-12 w-12 items-center justify-center">
             <img
-              src="/assets/brand/logos/primary/sires.webp"
+              src="/assets/brand/logos/primary/sisem.webp"
               alt="Logo SISEM"
               className="h-11 w-11 object-contain"
             />

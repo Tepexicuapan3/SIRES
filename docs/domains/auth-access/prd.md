@@ -1,10 +1,10 @@
-# PRD - Dominio 1: Auth Access (SIRES)
+# PRD - Dominio 1: Auth Access (SISEM)
 
-> TL;DR: Este PRD define el alcance, decisiones preliminares y plan por olas para el Dominio 1 (auth/access) de SIRES: autenticacion, identidad, autorizacion, recuperacion de acceso y trazabilidad.
+> TL;DR: Este PRD define el alcance, decisiones preliminares y plan por olas para el Dominio 1 (auth/access) de SISEM: autenticacion, identidad, autorizacion, recuperacion de acceso y trazabilidad.
 
 ## 1) Proposito
 
-Definir un marco funcional y operativo, listo para ejecucion, para gobernar el acceso a SIRES con controles de seguridad, auditoria y cumplimiento normativo.
+Definir un marco funcional y operativo, listo para ejecucion, para gobernar el acceso a SISEM con controles de seguridad, auditoria y cumplimiento normativo.
 
 ## 2) Alcance
 
@@ -16,7 +16,7 @@ Definir un marco funcional y operativo, listo para ejecucion, para gobernar el a
 **No incluye (fuera de alcance):**
 - Rediseno funcional de dominios clinicos no-auth.
 - Funcionalidad para pacientes en MVP (se mueve a Fase 2).
-- Proyectos de IAM corporativo fuera del perimetro SIRES.
+- Proyectos de IAM corporativo fuera del perimetro SISEM.
 
 ## 3) Ownership y aprobadores
 

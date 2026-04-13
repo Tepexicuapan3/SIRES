@@ -6,7 +6,7 @@ const createDefaultSessionUser = (): AuthUser =>
     id: 999,
     username: "mock_admin",
     fullName: "Mock Admin",
-    email: "mock.admin@sires.local",
+    email: "mock.admin@sisem.local",
     avatarUrl: null,
     landingRoute: "/dashboard",
     roles: ["Admin"],

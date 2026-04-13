@@ -31,7 +31,7 @@ const buildVisit = (
   ...overrides,
 });
 
-const VISITS_STATE_KEY = "__SIRES_VISITS_MSW_STATE__" as const;
+const VISITS_STATE_KEY = "__SISEM_VISITS_MSW_STATE__" as const;
 
 const globalWithVisitsState = globalThis as typeof globalThis & {
   [VISITS_STATE_KEY]?: VisitsMockState;

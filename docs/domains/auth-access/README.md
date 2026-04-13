@@ -1,6 +1,6 @@
 # Dominio auth-access
 
-Hub canonico del Dominio 1 de SIRES.
+Hub canonico del Dominio 1 de SISEM.
 
 ## Alcance del dominio
 

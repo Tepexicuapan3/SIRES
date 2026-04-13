@@ -1,7 +1,7 @@
 ---
-name: pr-review-sires
+name: pr-review-sisem
 description: >
-  Revisión de Pull Requests en SIRES con enforcement de governance, arquitectura,
+  Revisión de Pull Requests en SISEM con enforcement de governance, arquitectura,
   seguridad y evidencia TDD-first. Trigger: cuando el usuario pida revisar PRs,
   auditar PRs pendientes, decidir aprobación, o ejecutar approve + squash.
 license: Apache-2.0
@@ -26,7 +26,7 @@ Triggers típicos:
 - "auditá el backlog de PRs"
 - "si está bien, aprobá y squash"
 
-## SIRES Non-Negotiables
+## SISEM Non-Negotiables
 
 1. **No inventar evidencia**: todo hallazgo debe estar respaldado por diff, checks, tests o docs.
 2. **Governance primero**: aplicar gates de `docs/guides/pr-merge-governance.md`.
@@ -65,7 +65,7 @@ gh pr checks {number}
 gh pr diff {number} --patch
 ```
 
-### Phase 2 — Load SIRES documentary baseline
+### Phase 2 — Load SISEM documentary baseline
 
 Mínimo obligatorio para dictamen:
 
@@ -79,7 +79,7 @@ Cuando el PR toca contratos/API o auth-access, sumar:
 - `docs/api/standards.md` + módulo afectado
 - `docs/domains/auth-access/*` (si aplica)
 
-### Phase 3 — SIRES compliance checklist
+### Phase 3 — SISEM compliance checklist
 
 #### A) Governance & Traceability
 
@@ -228,4 +228,4 @@ Si cualquiera falla, no mergear y explicar el bloqueo con evidencia.
 
 ## Keywords
 
-pr, review, github, governance, sires, tdd, compliance, squash, approval
+pr, review, github, governance, sisem, tdd, compliance, squash, approval

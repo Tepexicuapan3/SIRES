@@ -11,7 +11,7 @@ Con refactor activo, hay rutas legacy y rutas target. Sin mapa, el equipo pierde
 ## Vista de alto nivel
 
 ```text
-SIRES/
+SISEM/
   backend/
     apps/              # runtime actual
     domains/           # target incremental por dominio

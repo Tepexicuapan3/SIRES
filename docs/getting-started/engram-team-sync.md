@@ -1,12 +1,12 @@
 # Engram Team Sync
 
-> TL;DR: SIRES usa hooks Git versionados para exportar/importar memoria compartida automaticamente. Para el flujo completo diario con SDD-Orchestrator, ver `docs/getting-started/ai-team-workflow.md`.
+> TL;DR: SISEM usa hooks Git versionados para exportar/importar memoria compartida automaticamente. Para el flujo completo diario con SDD-Orchestrator, ver `docs/getting-started/ai-team-workflow.md`.
 
 ## Problem / Context
 
 Sin hooks versionados, cada dev guarda memoria en su base local y el contexto compartido en `.engram/` queda desactualizado o depende de pasos manuales.
 
-En SIRES, el objetivo es compartir decisiones importantes de arquitectura, fixes y descubrimientos (no ruido operativo) con el menor mantenimiento manual posible.
+En SISEM, el objetivo es compartir decisiones importantes de arquitectura, fixes y descubrimientos (no ruido operativo) con el menor mantenimiento manual posible.
 
 ## Solution / Implementation
 
@@ -20,10 +20,11 @@ Se versionaron hooks en `.githooks/` y scripts en `.engram/scripts/`:
 
 La separacion se hace por proyecto de Engram:
 
-- `project: SIRES_SHARED` -> conocimiento de alto valor para el equipo (esto si se exporta a `.engram/`).
-- `project: SIRES_LOCAL` -> notas personales o ruido operativo (no forma parte del sync compartido).
+- `project: SISEM_SHARED` -> conocimiento de alto valor para el equipo (esto si se exporta a `.engram/`).
+- `project: SISEM_LOCAL` -> notas personales o ruido operativo (no forma parte del sync compartido).
 
-El hook exporta en cada commit solo el proyecto compartido (`SIRES_SHARED` por defecto). Asi evitamos subir ruido local sin pedir pasos manuales.
+El hook exporta en cada commit solo el proyecto compartido (`SISEM_SHARED` por defecto). Asi evitamos subir ruido local sin pedir pasos manuales.
+Compatibilidad: el script acepta `ENGRAM_SHARED_PROJECT_NAME` (preferido) y mantiene fallback con `SISEM_SHARED_PROJECT_NAME`.
 
 Si necesitas el runbook operativo completo (inicio/durante/cierre/PR), usa la guia principal: `docs/getting-started/ai-team-workflow.md`.
 
@@ -39,7 +40,7 @@ git config --get core.hooksPath
 Opcional: cambiar proyecto compartido por entorno:
 
 ```bash
-export ENGRAM_SHARED_PROJECT_NAME="SIRES_SHARED"
+export ENGRAM_SHARED_PROJECT_NAME="SISEM_SHARED"
 ```
 
 Desactivar temporalmente la exportacion automatica en un commit puntual:

@@ -34,9 +34,9 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 - Formato recomendado: `<tipo>/<dominio>/<jira-key>-<slug>`.
 - Tipos permitidos: `feat`, `fix`, `chore`.
 - Ejemplos:
-  - `feat/auth/SIRES-142-jwt-refresh-rotation`
-  - `fix/consulta/SIRES-287-validacion-receta`
-  - `chore/docs/SIRES-310-ajuste-pr-governance`
+  - `feat/auth/KAN-142-jwt-refresh-rotation`
+  - `fix/consulta/KAN-287-validacion-receta`
+  - `chore/docs/KAN-310-ajuste-pr-governance`
 
 ## Gates minimos de merge
 
@@ -51,7 +51,7 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 - Evidencia test-first cuando aplique TDD estricto: fallo inicial, progresion de implementacion y estado final en verde.
 - Si hubo excepcion TDD, incluir racional explicito, controles/tests compensatorios y aprobacion registrada en Jira/PR.
 - Confirmacion de actualizacion de docs cuando cambia la operativa.
-- Evidencia de memoria high-signal guardada en Engram (`SIRES_SHARED`) cuando corresponda.
+- Evidencia de memoria high-signal guardada en Engram (`SISEM_SHARED`) cuando corresponda.
 - Cuando se reporte evidencia Engram, incluir `topic_key` estable segun convencion (`feature/{slug}/decision`, `feature/{slug}/progress`, `bug/{id-or-slug}/fix`, `ops/{area}/config`, `docs/{topic}/note`).
 - Hooks Git requeridos activos y sincronizacion de Engram operativa.
 - Checklist de datos completo: ownership por dominio en PostgreSQL, sin SQL cross-domain directo, y plan de rollback en cambios de alto riesgo.

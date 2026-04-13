@@ -66,5 +66,5 @@ Describe el problema y por que NO se puede resolver dentro de un solo dominio.
 - [ ] Owner de DB aprobó (si aplica)
 - [ ] Criterio logico -> fisico evaluado para dominios de alta carga
 - [ ] Docs actualizadas
-- [ ] Decision/riesgo high-signal guardado en Engram (`SIRES_SHARED`)
+- [ ] Decision/riesgo high-signal guardado en Engram (`SISEM_SHARED`)
 - [ ] PR template completado con referencias al RFC

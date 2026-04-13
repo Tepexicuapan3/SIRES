@@ -9,7 +9,7 @@ from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Areas, CatCentroAtencion, Permisos, Roles, TiposAreas
 from apps.recepcion.models import Visit
 
-DEFAULT_PASSWORD = "Sires_123456"
+DEFAULT_PASSWORD = "Sisem_123456"
 
 REQUIRED_TABLES = {
     "sy_usuarios",
@@ -394,119 +394,119 @@ AREA_DEFS = [
 USER_DEFS = [
     {
         "username": "admin",
-        "email": "admin@sires.local",
+        "email": "admin@sisem.local",
         "full_name": "Admin Sistema",
         "role": "ADMIN",
         "center_code": "CA-001",
     },
     {
         "username": "admin_usuarios",
-        "email": "admin.usuarios@sires.local",
+        "email": "admin.usuarios@sisem.local",
         "full_name": "Admin Usuarios",
         "role": "ADMIN_USUARIOS",
         "center_code": "HGR-002",
     },
     {
         "username": "admin_expedientes",
-        "email": "admin.expedientes@sires.local",
+        "email": "admin.expedientes@sisem.local",
         "full_name": "Admin Expedientes",
         "role": "ADMIN_EXPEDIENTES",
         "center_code": "CLI-003",
     },
     {
         "username": "admin_roles",
-        "email": "admin.roles@sires.local",
+        "email": "admin.roles@sisem.local",
         "full_name": "Admin Roles",
         "role": "ADMIN_ROLES",
         "center_code": "CA-001",
     },
     {
         "username": "admin_catalogos",
-        "email": "admin.catalogos@sires.local",
+        "email": "admin.catalogos@sisem.local",
         "full_name": "Admin Catalogos",
         "role": "ADMIN_CATALOGOS",
         "center_code": "SAN-004",
     },
     {
         "username": "admin_reportes",
-        "email": "admin.reportes@sires.local",
+        "email": "admin.reportes@sisem.local",
         "full_name": "Admin Reportes",
         "role": "ADMIN_REPORTES",
         "center_code": "CA-001",
     },
     {
         "username": "admin_estadisticas",
-        "email": "admin.estadisticas@sires.local",
+        "email": "admin.estadisticas@sisem.local",
         "full_name": "Admin Estadisticas",
         "role": "ADMIN_ESTADISTICAS",
         "center_code": "UMO-005",
     },
     {
         "username": "admin_autorizacion",
-        "email": "admin.autorizacion@sires.local",
+        "email": "admin.autorizacion@sisem.local",
         "full_name": "Admin Autorizacion",
         "role": "ADMIN_AUTORIZACION",
         "center_code": "URG-006",
     },
     {
         "username": "admin_licencias",
-        "email": "admin.licencias@sires.local",
+        "email": "admin.licencias@sisem.local",
         "full_name": "Admin Licencias",
         "role": "ADMIN_LICENCIAS",
         "center_code": "HGR-002",
     },
     {
         "username": "admin_conciliacion",
-        "email": "admin.conciliacion@sires.local",
+        "email": "admin.conciliacion@sisem.local",
         "full_name": "Admin Conciliacion",
         "role": "ADMIN_CONCILIACION",
         "center_code": "CLI-003",
     },
     {
         "username": "admin_lectura",
-        "email": "admin.lectura@sires.local",
+        "email": "admin.lectura@sisem.local",
         "full_name": "Admin Lectura",
         "role": "ADMIN_SOLO_LECTURA",
         "center_code": "CA-001",
     },
     {
         "username": "auditor_sistema",
-        "email": "auditor.sistema@sires.local",
+        "email": "auditor.sistema@sisem.local",
         "full_name": "Auditor Sistema",
         "role": "SISTEMA_AUDITORIA",
         "center_code": "CA-001",
     },
     {
         "username": "clinico",
-        "email": "clinico@sires.local",
+        "email": "clinico@sisem.local",
         "full_name": "Clinico Demo",
         "role": "CLINICO",
         "center_code": "HGR-002",
     },
     {
         "username": "recepcion",
-        "email": "recepcion@sires.local",
+        "email": "recepcion@sisem.local",
         "full_name": "Recepcion Demo",
         "role": "RECEPCION",
         "center_code": "CLI-003",
     },
     {
         "username": "farmacia",
-        "email": "farmacia@sires.local",
+        "email": "farmacia@sisem.local",
         "full_name": "Farmacia Demo",
         "role": "FARMACIA",
         "center_code": "SAN-004",
     },
     {
         "username": "urgencias",
-        "email": "urgencias@sires.local",
+        "email": "urgencias@sisem.local",
         "full_name": "Urgencias Demo",
         "role": "URGENCIAS",
         "center_code": "URG-006",
     },
     {
         "username": "usuario_inactivo",
-        "email": "inactivo@sires.local",
+        "email": "inactivo@sisem.local",
         "full_name": "Usuario Inactivo",
         "role": "CLINICO",
         "is_active": False,
@@ -514,7 +514,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_bloqueado",
-        "email": "bloqueado@sires.local",
+        "email": "bloqueado@sisem.local",
         "full_name": "Usuario Bloqueado",
         "role": "RECEPCION",
         "is_blocked": True,
@@ -522,7 +522,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_onboarding",
-        "email": "onboarding@sires.local",
+        "email": "onboarding@sisem.local",
         "full_name": "Usuario Onboarding",
         "role": "FARMACIA",
         "requires_onboarding": True,
@@ -530,7 +530,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_cambiar_clave",
-        "email": "cambiar@sires.local",
+        "email": "cambiar@sisem.local",
         "full_name": "Usuario Cambiar Clave",
         "role": "URGENCIAS",
         "must_change_password": True,
@@ -538,14 +538,14 @@ USER_DEFS = [
     },
     {
         "username": "usuario_sin_centros",
-        "email": "sincentro@sires.local",
+        "email": "sincentro@sisem.local",
         "full_name": "Usuario Sin Centro",
         "role": "ADMIN_ROLES",
         "center_code": None,
     },
     {
         "username": "usuario_onboarding_clinico",
-        "email": "onboarding.clinico@sires.local",
+        "email": "onboarding.clinico@sisem.local",
         "full_name": "Onboarding Clinico",
         "role": "CLINICO",
         "requires_onboarding": True,
@@ -553,7 +553,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_onboarding_recepcion",
-        "email": "onboarding.recepcion@sires.local",
+        "email": "onboarding.recepcion@sisem.local",
         "full_name": "Onboarding Recepcion",
         "role": "RECEPCION",
         "requires_onboarding": True,
@@ -561,7 +561,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_onboarding_farmacia",
-        "email": "onboarding.farmacia@sires.local",
+        "email": "onboarding.farmacia@sisem.local",
         "full_name": "Onboarding Farmacia",
         "role": "FARMACIA",
         "requires_onboarding": True,
@@ -569,7 +569,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_onboarding_urgencias",
-        "email": "onboarding.urgencias@sires.local",
+        "email": "onboarding.urgencias@sisem.local",
         "full_name": "Onboarding Urgencias",
         "role": "URGENCIAS",
         "requires_onboarding": True,
@@ -577,7 +577,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_cambiar_clave_clinico",
-        "email": "changepass.clinico@sires.local",
+        "email": "changepass.clinico@sisem.local",
         "full_name": "Cambiar Clave Clinico",
         "role": "CLINICO",
         "must_change_password": True,
@@ -585,7 +585,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_cambiar_clave_admin",
-        "email": "changepass.admin@sires.local",
+        "email": "changepass.admin@sisem.local",
         "full_name": "Cambiar Clave Admin",
         "role": "ADMIN_REPORTES",
         "must_change_password": True,
@@ -593,7 +593,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_inactivo_clinico",
-        "email": "inactivo.clinico@sires.local",
+        "email": "inactivo.clinico@sisem.local",
         "full_name": "Clinico Inactivo",
         "role": "CLINICO",
         "is_active": False,
@@ -601,7 +601,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_inactivo_admin",
-        "email": "inactivo.admin@sires.local",
+        "email": "inactivo.admin@sisem.local",
         "full_name": "Admin Inactivo",
         "role": "ADMIN_CATALOGOS",
         "is_active": False,
@@ -609,7 +609,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_bloqueado_clinico",
-        "email": "bloqueado.clinico@sires.local",
+        "email": "bloqueado.clinico@sisem.local",
         "full_name": "Clinico Bloqueado",
         "role": "CLINICO",
         "is_blocked": True,
@@ -617,7 +617,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_bloqueado_admin",
-        "email": "bloqueado.admin@sires.local",
+        "email": "bloqueado.admin@sisem.local",
         "full_name": "Admin Bloqueado",
         "role": "ADMIN_ESTADISTICAS",
         "is_blocked": True,
@@ -625,7 +625,7 @@ USER_DEFS = [
     },
     {
         "username": "usuario_multirol",
-        "email": "multirol@sires.local",
+        "email": "multirol@sisem.local",
         "full_name": "Usuario Multirol",
         "role": "CLINICO",
         "extra_roles": ["RECEPCION", "FARMACIA"],
@@ -1155,7 +1155,7 @@ def run():
 
     admin_user = _get_or_create_user(
         "admin",
-        "admin@sires.local",
+        "admin@sisem.local",
         "Admin Sistema",
         center=None,
         admin_user=None,

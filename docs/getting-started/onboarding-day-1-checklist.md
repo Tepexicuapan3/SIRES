@@ -1,6 +1,6 @@
 # Onboarding Day-1 Checklist (IA-First)
 
-> TL;DR: Este checklist deja a cualquier developer listo para trabajar en SIRES con flujo Jira + SDD + Engram desde el primer dia.
+> TL;DR: Este checklist deja a cualquier developer listo para trabajar en SISEM con flujo Jira + SDD + Engram desde el primer dia.
 
 ## Objetivo
 
@@ -35,7 +35,7 @@ ls .githooks
 
 ### 4) Engram (memoria de equipo)
 
-- [ ] Revisar contexto previo en `SIRES_SHARED` antes de implementar.
+- [ ] Revisar contexto previo en `SISEM_SHARED` antes de implementar.
 - [ ] Guardar solo eventos high-signal (decisiones, bugfix raiz, convenciones, config compartida).
 - [ ] Usar `topic_key` estable para evitar duplicados.
 

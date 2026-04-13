@@ -1,4 +1,4 @@
-# AGENTS.md - SIRES Operating Guide
+# AGENTS.md - SISEM Operating Guide
 
 ## Scope
 
@@ -7,7 +7,7 @@
 
 ## Project Snapshot
 
-SIRES is a clinical system with React 19 + Vite on frontend and Django 5 + DRF on backend.
+SISEM is a clinical system with React 19 + Vite on frontend and Django 5 + DRF on backend.
 All new backend functionality must be built for Django/DRF.
 
 ## Operating Baseline (Phase 1)
@@ -50,7 +50,7 @@ These rules convert team standards into mandatory repository behavior for AI age
 
 ### 1) Recommended Architecture (mandatory)
 
-- Keep SIRES as an evolutionary modular monolith with pragmatic, lightweight DDD.
+- Keep SISEM as an evolutionary modular monolith with pragmatic, lightweight DDD.
 - Apply layered architecture in every domain/module:
   - `presentation` (API/UI transport, validation, mapping)
   - `application` (use cases, orchestration, transaction boundaries)
@@ -125,7 +125,7 @@ These rules convert team standards into mandatory repository behavior for AI age
 
 ### 8) Database Strategy (integrity and safety first)
 
-- Stage policy (non-contradictory baseline): SIRES runs on a single PostgreSQL engine/instance in early stages, with strict domain ownership and logical isolation now; physical DB separation is evaluated later with documented criteria.
+- Stage policy (non-contradictory baseline): SISEM runs on a single PostgreSQL engine/instance in early stages, with strict domain ownership and logical isolation now; physical DB separation is evaluated later with documented criteria.
 - Every domain-owned schema/table must enforce integrity intentionally: PK/FK constraints, uniqueness, explicit nullability, and indexes aligned with real query patterns.
 - Application services/use cases define transaction boundaries for critical workflows; avoid ad-hoc transaction control in transport layers.
 - For concurrency hotspots, document and apply safe update patterns (`SELECT ... FOR UPDATE`, optimistic version checks, idempotency keys, or queue serialization) per use case.
@@ -328,7 +328,7 @@ Si persiste contradicción:
 - [ ] Se actualizó documentación impactada en el mismo cambio (si cambió behavior/boundary/contrato).
 - [ ] Se verifica que no hubo cambios fuera de alcance en código de aplicación.
 
-## Active Skills (SIRES)
+## Active Skills (SISEM)
 
 | Skill | Recommended use | Path |
 | --- | --- | --- |
@@ -348,8 +348,8 @@ Si persiste contradicción:
 | `playwright` | E2E with Page Objects + MCP | `.opencode/skill/playwright/SKILL.md` |
 | `jira-epic` | Large epics definition | `.opencode/skill/jira-epic/SKILL.md` |
 | `jira-task` | Tasks/bugs definition | `.opencode/skill/jira-task/SKILL.md` |
-| `pr-create-sires` | PR creation with SIRES evidence-first structure | `.opencode/skill/pr-create-sires/SKILL.md` |
-| `pr-review-sires` | PR review with SIRES governance + approve/squash actions | `.opencode/skill/pr-review-sires/SKILL.md` |
+| `pr-create-sisem` | PR creation with SISEM evidence-first structure | `.opencode/skill/pr-create-sisem/SKILL.md` |
+| `pr-review-sisem` | PR review with SISEM governance + approve/squash actions | `.opencode/skill/pr-review-sisem/SKILL.md` |
 | `find-skills` | Discover/install skills when requested | `.opencode/skill/find-skills/SKILL.md` |
 
 ## Auto-invoke Matrix
@@ -372,8 +372,8 @@ Si persiste contradicción:
 | E2E tests | `playwright` |
 | Create project epics | `jira-epic` |
 | Create tasks/bugs | `jira-task` |
-| Create/open PR with standardized SIRES structure and evidence | `pr-create-sires` |
-| Review/audit PRs and decide approve/request-changes/squash | `pr-review-sires` |
+| Create/open PR with standardized SISEM structure and evidence | `pr-create-sisem` |
+| Review/audit PRs and decide approve/request-changes/squash | `pr-review-sisem` |
 | User asks to discover/install skills | `find-skills` |
 
 ## Engram Protocol (Mandatory Repo Baseline)
@@ -383,8 +383,8 @@ This is the minimum required Engram protocol at repository level and applies eve
 ### Session Start (before coding, when applicable)
 
 - Review prior context before starting work on an existing topic/feature/bug.
-- Use `mem_context` and/or `mem_search` on `project: SIRES_SHARED` before starting when prior team context may exist.
-- Use `project: SIRES_LOCAL` only when you need your own local continuity.
+- Use `mem_context` and/or `mem_search` on `project: SISEM_SHARED` before starting when prior team context may exist.
+- Use `project: SISEM_LOCAL` only when you need your own local continuity.
 - If `mem_search` returns a match, call `mem_get_observation` before acting on it (search results may be truncated).
 
 ### During Work (mandatory saves)
@@ -394,9 +394,9 @@ This is the minimum required Engram protocol at repository level and applies eve
   - bug fixes with root cause and prevention notes
   - shared conventions/patterns that others must follow
   - config/environment changes that affect other developers
-- Save shared items with `project: SIRES_SHARED` (this project is exported to `.engram/`).
-- Save temporary/local notes with `project: SIRES_LOCAL` and `scope: personal`.
-- Do not save routine low-value progress updates to `SIRES_SHARED`.
+- Save shared items with `project: SISEM_SHARED` (this project is exported to `.engram/`).
+- Save temporary/local notes with `project: SISEM_LOCAL` and `scope: personal`.
+- Do not save routine low-value progress updates to `SISEM_SHARED`.
 
 ### Session Close (mandatory)
 
@@ -415,21 +415,21 @@ This is the minimum required Engram protocol at repository level and applies eve
 
 ### Operational Checklist
 
-- Start: `mem_context`/`mem_search` on `SIRES_SHARED`; check `SIRES_LOCAL` only if needed.
-- During: `mem_save` to `SIRES_SHARED` only for high-signal team decisions; keep local noise in `SIRES_LOCAL`.
+- Start: `mem_context`/`mem_search` on `SISEM_SHARED`; check `SISEM_LOCAL` only if needed.
+- During: `mem_save` to `SISEM_SHARED` only for high-signal team decisions; keep local noise in `SISEM_LOCAL`.
 - Search safety: after `mem_search`, use `mem_get_observation` for full content.
 - Close: `mem_session_summary` before handing off or ending the session.
 
 ### Team Sync Automation
 
 - One-time per clone: run `./.engram/scripts/install-hooks.sh`.
-- `commit-msg` hook auto-exports shared memory via `engram sync --project SIRES_SHARED` and stages `.engram/` updates.
+- `commit-msg` hook auto-exports shared memory via `engram sync --project SISEM_SHARED` and stages `.engram/` updates.
 - `post-merge`, `post-checkout`, and `post-rewrite` hooks auto-import with `engram sync --import`.
 
 ### Git Hooks Automation
 
 - The project uses repo hooks from `.githooks/`.
-- `commit-msg` hook auto-exports shared memory via `engram sync --project SIRES_SHARED` and stages `.engram/` updates.
+- `commit-msg` hook auto-exports shared memory via `engram sync --project SISEM_SHARED` and stages `.engram/` updates.
 - `post-merge`, `post-checkout`, and `post-rewrite` hooks auto-import with `engram sync --import`.
 
 ## Backend Guardrails

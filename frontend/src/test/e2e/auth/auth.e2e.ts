@@ -9,10 +9,11 @@ import {
 
 const PLAYWRIGHT_APP_ORIGIN =
   process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4173";
+const ENABLE_TEST_OTP = Boolean(process.env.SISEM_ENABLE_TEST_OTP);
 
 /**
  * ============================================================
- * SUITE E2E EXHAUSTIVA: AUTHENTICATION (SIRES)
+ * SUITE E2E EXHAUSTIVA: AUTHENTICATION (SISEM)
  * ============================================================
  *
  * Coverage total de la feature Auth:
@@ -27,36 +28,36 @@ const PLAYWRIGHT_APP_ORIGIN =
 
 // Test data - Based on seed_e2e.py
 const TEST_USERS = {
-  admin: { username: "admin", password: "Sires_123456" },
-  clinico: { username: "clinico", password: "Sires_123456" },
-  recepcion: { username: "recepcion", password: "Sires_123456" },
-  farmacia: { username: "farmacia", password: "Sires_123456" },
-  urgencias: { username: "urgencias", password: "Sires_123456" },
-  inactivo: { username: "inactive", password: "Sires_123456" },
-  bloqueado: { username: "locked", password: "Sires_123456" },
-  onboarding: { username: "newuser", password: "Sires_123456" },
+  admin: { username: "admin", password: "Sisem_123456" },
+  clinico: { username: "clinico", password: "Sisem_123456" },
+  recepcion: { username: "recepcion", password: "Sisem_123456" },
+  farmacia: { username: "farmacia", password: "Sisem_123456" },
+  urgencias: { username: "urgencias", password: "Sisem_123456" },
+  inactivo: { username: "inactive", password: "Sisem_123456" },
+  bloqueado: { username: "locked", password: "Sisem_123456" },
+  onboarding: { username: "newuser", password: "Sisem_123456" },
   onboardingClinico: {
     username: "newuser",
-    password: "Sires_123456",
+    password: "Sisem_123456",
   },
   onboardingRecepcion: {
     username: "newuser",
-    password: "Sires_123456",
+    password: "Sisem_123456",
   },
-  cambiarClave: { username: "newuser", password: "Sires_123456" },
+  cambiarClave: { username: "newuser", password: "Sisem_123456" },
   cambiarClaveClinico: {
     username: "newuser",
-    password: "Sires_123456",
+    password: "Sisem_123456",
   },
 };
 
 const EMAILS = {
-  admin: "admin@sires.local",
-  clinico: "clinico@sires.local",
-  recepcion: "recepcion@sires.local",
-  farmacia: "farmacia@sires.local",
-  urgencias: "urgencias@sires.local",
-  unknown: "noexiste@sires.local",
+  admin: "admin@sisem.local",
+  clinico: "clinico@sisem.local",
+  recepcion: "recepcion@sisem.local",
+  farmacia: "farmacia@sisem.local",
+  urgencias: "urgencias@sisem.local",
+  unknown: "noexiste@sisem.local",
 };
 
 const RESET_EMAIL_MATRIX = {
@@ -430,10 +431,7 @@ test.describe.serial("Auth: Password Reset", () => {
     "TC010: Password reset - Solicitar código con email registrado",
     { tag: ["@critical", "@e2e", "@auth", "@password-reset", "@AUTH-E2E-010"] },
     async ({ page, request }) => {
-      test.skip(
-        !process.env.SIRES_ENABLE_TEST_OTP,
-        "Requires SIRES_ENABLE_TEST_OTP",
-      );
+      test.skip(!ENABLE_TEST_OTP, "Requires SISEM_ENABLE_TEST_OTP");
 
       const authPage = new AuthPage(page);
 
@@ -504,10 +502,7 @@ test.describe.serial("Auth: Password Reset", () => {
     "TC013: Password reset - Validación de complejidad de contraseña",
     { tag: ["@medium", "@e2e", "@auth", "@password-reset", "@AUTH-E2E-013"] },
     async ({ page, request }) => {
-      test.skip(
-        !process.env.SIRES_ENABLE_TEST_OTP,
-        "Requires SIRES_ENABLE_TEST_OTP",
-      );
+      test.skip(!ENABLE_TEST_OTP, "Requires SISEM_ENABLE_TEST_OTP");
 
       const authPage = new AuthPage(page);
 
@@ -540,10 +535,7 @@ test.describe.serial("Auth: Password Reset", () => {
     "TC014: Password reset - Contraseñas no coinciden",
     { tag: ["@medium", "@e2e", "@auth", "@password-reset", "@AUTH-E2E-014"] },
     async ({ page, request }) => {
-      test.skip(
-        !process.env.SIRES_ENABLE_TEST_OTP,
-        "Requires SIRES_ENABLE_TEST_OTP",
-      );
+      test.skip(!ENABLE_TEST_OTP, "Requires SISEM_ENABLE_TEST_OTP");
 
       const authPage = new AuthPage(page);
 
@@ -597,7 +589,7 @@ test.describe("Auth: Session Management", () => {
 
       // Trigger session expired event via localStorage (cross-tab communication)
       await newPage.evaluate(() => {
-        const key = "sires:session-expired";
+        const key = "sisem:session-expired";
         localStorage.setItem(key, Date.now().toString());
         localStorage.removeItem(key);
       });

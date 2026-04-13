@@ -182,7 +182,7 @@ export default function ComponentShowcase() {
           </CardHeader>
           <CardContent>
             <Table>
-              <TableCaption>Roles del sistema SIRES</TableCaption>
+              <TableCaption>Roles del sistema SISEM</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead>Rol</TableHead>

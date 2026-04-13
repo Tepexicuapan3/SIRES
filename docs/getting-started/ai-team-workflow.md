@@ -1,6 +1,6 @@
 # Flujo IA del Equipo (Jira + SDD-Orchestrator + Engram)
 
-> TL;DR: En SIRES, el flujo oficial de delivery es Jira + SDD-Orchestrator + Engram. El trabajo se planifica y ejecuta por dominio completo, con ownership explicito y gates de calidad antes de merge.
+> TL;DR: En SISEM, el flujo oficial de delivery es Jira + SDD-Orchestrator + Engram. El trabajo se planifica y ejecuta por dominio completo, con ownership explicito y gates de calidad antes de merge.
 
 ## Problem / Context
 
@@ -33,7 +33,7 @@ Persona
 ### Inicio
 
 1. Validar ticket Jira y dominio owner.
-2. Traer contexto en Engram (`SIRES_SHARED`).
+2. Traer contexto en Engram (`SISEM_SHARED`).
 3. Ejecutar fase SDD segun alcance (`/sdd-new`, `/sdd-continue`, `/sdd-apply`).
 
 ### Durante
@@ -54,7 +54,7 @@ Persona
 
 En cada `git commit` se mantiene esta automatizacion:
 
-1. `commit-msg` ejecuta `.engram/scripts/export-on-commit-msg.sh` y sincroniza `SIRES_SHARED` en `.engram/`.
+1. `commit-msg` ejecuta `.engram/scripts/export-on-commit-msg.sh` y sincroniza `SISEM_SHARED` en `.engram/`.
 
 El `pre-commit` se mantiene sin validaciones bloqueantes adicionales en este proyecto.
 
@@ -68,12 +68,12 @@ Importante: los hooks en `.githooks/` automatizan hygiene/sync local de Engram; 
 
 ## Engram (convencion minima)
 
-- Proyecto compartido: `SIRES_SHARED`.
-- Proyecto local: `SIRES_LOCAL`.
+- Proyecto compartido: `SISEM_SHARED`.
+- Proyecto local: `SISEM_LOCAL`.
 
 ### Cuando guardar decisiones tecnicas/arquitectura
 
-Guardar en `SIRES_SHARED` cuando haya impacto reutilizable para el equipo:
+Guardar en `SISEM_SHARED` cuando haya impacto reutilizable para el equipo:
 
 - Decision de arquitectura o trade-off cross-domain.
 - Cambio de politica tecnica (errores, contratos, ownership de datos, seguridad operativa).

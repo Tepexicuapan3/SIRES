@@ -5,8 +5,8 @@ const DOCTOR_QUEUE_KEY = "doctor-open-consultations";
 const DOCTOR_VISIT_CARD_TESTID_PREFIX = "doctor-visit-card-";
 
 export const FLUJO_CLINICO_USERS = {
-  recepcion: { username: "recepcion", password: "Sires_123456" },
-  clinico: { username: "clinico", password: "Sires_123456" },
+  recepcion: { username: "recepcion", password: "Sisem_123456" },
+  clinico: { username: "clinico", password: "Sisem_123456" },
 } as const;
 
 export const DEFAULT_VITALS_INPUT = {

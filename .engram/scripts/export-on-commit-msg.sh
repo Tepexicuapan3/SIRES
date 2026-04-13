@@ -21,7 +21,7 @@ fi
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
-PROJECT_NAME="${ENGRAM_SHARED_PROJECT_NAME:-SIRES_SHARED}"
+PROJECT_NAME="${ENGRAM_SHARED_PROJECT_NAME:-${SISEM_SHARED_PROJECT_NAME:-SISEM_SHARED}}"
 
 if ! engram sync --project "$PROJECT_NAME" >/dev/null 2>&1; then
   exit 0

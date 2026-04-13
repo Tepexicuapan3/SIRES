@@ -1,6 +1,6 @@
 # Politica de Higiene de Repositorio
 
-> TL;DR: En SIRES se versiona solo el source of truth operativo. Todo lo generado/efimero se ignora. Las excepciones son explicitas, temporales y trazables.
+> TL;DR: En SISEM se versiona solo el source of truth operativo. Todo lo generado/efimero se ignora. Las excepciones son explicitas, temporales y trazables.
 
 ## Objetivo y alcance
 
@@ -16,7 +16,7 @@ Se versiona todo artefacto que represente contrato, decision operativa o automat
 
 Reglas explicitas por carpeta:
 
-- `.engram/`: se trackean exports compartidos de `SIRES_SHARED` y scripts versionados de sync.
+- `.engram/`: se trackean exports compartidos de `SISEM_SHARED` y scripts versionados de sync.
 - `.githooks/`: se trackean hooks del repo porque automatizan el sync de Engram y estandarizan el flujo local.
 - `.github/`: se trackean templates, configuraciones y workflows de GitHub como parte del gobierno del repositorio.
 - `.opencode/`: se trackean skills, instrucciones y metadatos de configuracion del equipo (por ejemplo, `skill/`, matrices y docs de skilling).

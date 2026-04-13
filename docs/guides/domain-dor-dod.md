@@ -33,7 +33,7 @@ La migracion por dominios falla si no hay criterio comun para empezar y terminar
 - Features criticas con cobertura automatizada proporcional al riesgo (unit/service, integration/API, E2E segun impacto).
 - Para NEW feature/NEW functionality/LARGE refactor: evidencia TDD-first (Red -> Green -> Refactor) anexada en tareas/PR.
 - Toda excepcion TDD documentada con racional explicito + controles compensatorios + aprobacion en Jira/PR.
-- Engram actualizado con decisiones/fixes relevantes (`SIRES_SHARED`).
+- Engram actualizado con decisiones/fixes relevantes (`SISEM_SHARED`).
 - Hooks Git requeridos activos y sincronizacion de Engram operativa.
 - PR mergeable con checklist completo y reviewers correctos.
 

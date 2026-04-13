@@ -2,7 +2,7 @@
  * API Types - Barrel Export
  * Re-exports all API types from domain modules.
  *
- * @description Punto de entrada único para todos los tipos de la API SIRES.
+ * @description Punto de entrada único para todos los tipos de la API SISEM.
  * Los tipos están organizados por dominio funcional.
  * Todos los campos usan camelCase en inglés según el estándar de la API.
  */

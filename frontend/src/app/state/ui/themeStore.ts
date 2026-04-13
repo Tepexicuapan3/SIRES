@@ -21,7 +21,7 @@ export const useThemeStore = create<ThemeState>()(
       resetTheme: () => set({ theme: INITIAL_STATE.theme }),
     }),
     {
-      name: "sires-theme-storage",
+      name: "sisem-theme-storage",
     },
   ),
 );

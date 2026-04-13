@@ -1,10 +1,10 @@
 # DB Ownership & Migration Policy
 
-> TL;DR: SIRES adopta `DB por dominio` con PostgreSQL como target. Se mantiene monolito modular, pero con ownership estricto por dominio, sin acceso SQL cross-domain y migracion incremental desde el estado legacy.
+> TL;DR: SISEM adopta `DB por dominio` con PostgreSQL como target. Se mantiene monolito modular, pero con ownership estricto por dominio, sin acceso SQL cross-domain y migracion incremental desde el estado legacy.
 
 ## Problem / Context
 
-La sobrecarga de datos en SIRES exige una estrategia de escalado mas robusta. El esquema actual legacy no separa ownership de datos por dominio de forma suficiente para soportar el plan de evolucion del monolito modular.
+La sobrecarga de datos en SISEM exige una estrategia de escalado mas robusta. El esquema actual legacy no separa ownership de datos por dominio de forma suficiente para soportar el plan de evolucion del monolito modular.
 
 Necesitamos reglas explicitas para:
 
@@ -14,13 +14,13 @@ Necesitamos reglas explicitas para:
 
 ## Solution / Implementation
 
-## Definicion practica de DB por dominio (SIRES)
+## Definicion practica de DB por dominio (SISEM)
 
-`DB por dominio` en SIRES significa separar ownership de datos por dominio con dos niveles evolutivos:
+`DB por dominio` en SISEM significa separar ownership de datos por dominio con dos niveles evolutivos:
 
 1. **Aislamiento logico (etapa actual/preferida en Fase 1)**
    - Cada dominio tiene ownership de su modelo de datos en PostgreSQL (schemas, tablas, migraciones e indices).
-   - SIRES usa una sola instancia/engine PostgreSQL como fuente transaccional en esta etapa, con fronteras de ownership y aislamiento logico estrictos.
+   - SISEM usa una sola instancia/engine PostgreSQL como fuente transaccional en esta etapa, con fronteras de ownership y aislamiento logico estrictos.
 2. **Aislamiento fisico (etapa futura por dominio)**
    - Un dominio pasa a DB dedicada cuando su carga/criticidad lo justifica.
    - El contrato entre dominios no cambia: API/eventos/read-models.

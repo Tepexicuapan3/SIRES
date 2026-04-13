@@ -13,7 +13,7 @@ import { buttonVariants } from "./button.variants";
  * - status-critical/alert/stable/info: Estados clínicos
  * - txt-body/muted/inverse: Jerarquía de texto
  *
- * Basado en shadcn/ui pero personalizado para SIRES.
+ * Basado en shadcn/ui pero personalizado para SISEM.
  */
 
 type ButtonProps = ComponentPropsWithRef<"button"> &

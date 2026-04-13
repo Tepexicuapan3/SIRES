@@ -79,6 +79,9 @@ frontend/playwright-report/
 .cache/
 .ruff_cache/
 
+# Agent registry artifacts
+.atl/
+
 # OpenCode policy: track reusable skills, ignore runtime bootstrap noise
 .opencode/*
 !.opencode/skill/

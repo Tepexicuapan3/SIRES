@@ -1,4 +1,4 @@
-# Frontend API Layer (SIRES)
+# Frontend API Layer (SISEM)
 
 Capa de transporte del frontend: contratos, recursos HTTP y manejo de errores.
 

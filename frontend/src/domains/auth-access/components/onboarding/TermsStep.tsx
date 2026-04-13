@@ -78,7 +78,7 @@ export const TermsStep = ({ onAccept }: Props) => {
               </span>
               <p className="text-xs text-txt-muted leading-relaxed">
                 Declaro que entiendo mis responsabilidades como usuario del
-                sistema SIRES.
+                sistema SISEM.
               </p>
             </div>
           </Label>
@@ -121,7 +121,7 @@ const TermsContent = () => (
     <div className="space-y-4">
       <p className="text-sm sm:text-base text-txt-body leading-relaxed">
         Por este conducto, hago constar que he recibido la clave de ingreso al{" "}
-        <strong>Sistema SIRES</strong> y me comprometo a utilizarla de manera
+        <strong>Sistema SISEM</strong> y me comprometo a utilizarla de manera
         responsable, confidencial y exclusivamente para los fines autorizados
         por el Sistema de Transporte Colectivo.
       </p>

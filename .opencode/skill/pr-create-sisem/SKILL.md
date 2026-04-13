@@ -1,7 +1,7 @@
 ---
-name: pr-create-sires
+name: pr-create-sisem
 description: >
-  Crea Pull Requests estandarizadas para SIRES con estructura obligatoria,
+  Crea Pull Requests estandarizadas para SISEM con estructura obligatoria,
   trazabilidad Jira/SDD y evidencia completa para reducir rechazos por
   redacción incompleta. Trigger: cuando el usuario pida crear, abrir o
   preparar una PR para revisión.
@@ -18,7 +18,7 @@ Usar esta skill cuando el usuario pida:
 - Crear/abrir una PR
 - Preparar cuerpo de PR (aunque todavía no la abra)
 - Estandarizar descripción para evitar rechazos de governance
-- Dejar una PR "review-ready" para `pr-review-sires`
+- Dejar una PR "review-ready" para `pr-review-sisem`
 
 Triggers típicos:
 
@@ -29,9 +29,9 @@ Triggers típicos:
 
 ## Goal
 
-Entregar PRs consistentes, completas y verificables para que `pr-review-sires` pueda validarlas sin pedir información faltante.
+Entregar PRs consistentes, completas y verificables para que `pr-review-sisem` pueda validarlas sin pedir información faltante.
 
-## SIRES Non-Negotiables
+## SISEM Non-Negotiables
 
 1. **Sin PR desde `main`**: trabajar siempre desde rama de ticket.
 2. **Trazabilidad obligatoria**: Jira + SDD (si aplica) + dominios impactados.
@@ -67,7 +67,7 @@ Si falta algo, solicitarlo antes de abrir la PR.
 
 ### Branch
 
-Usar convención SIRES:
+Usar convención SISEM:
 
 ```text
 <tipo>/<dominio>/<jira-key>-<slug>
@@ -148,7 +148,7 @@ EOF
   - Evidencia documental
   - Risks/Rollback
 
-## Alignment Contract with `pr-review-sires`
+## Alignment Contract with `pr-review-sisem`
 
 La PR DEBE permitir validar explícitamente:
 
@@ -188,4 +188,4 @@ gh pr edit <number> --body-file /tmp/pr-body.md
 - **Governance**: `docs/guides/pr-merge-governance.md`
 - **Dependency rules**: `docs/architecture/dependency-rules.md`
 - **PR template**: `.github/pull_request_template.md`
-- **Review contract**: `.opencode/skill/pr-review-sires/SKILL.md`
+- **Review contract**: `.opencode/skill/pr-review-sisem/SKILL.md`

@@ -19,9 +19,8 @@ def send_reset_code_email(recipient_email, code, user_name=None):
     subject = "Código de recuperación"
     safe_name = user_name or recipient_email
     expiration_minutes = max(1, int(OTP_TTL_SECONDS / 60))
-    support_email = _setting_with_legacy(
+    support_email = _setting_value(
         "SISEM_SUPPORT_EMAIL",
-        "SIRES_SUPPORT_EMAIL",
         settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
         primary_default=settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
     )
@@ -83,15 +82,13 @@ def send_user_credentials_email(
 
     safe_name = user_name or username or recipient_email
     subject = "Credenciales de acceso a SISEM"
-    login_url = _setting_with_legacy(
+    login_url = _setting_value(
         "SISEM_LOGIN_URL",
-        "SIRES_LOGIN_URL",
         "http://localhost:5173/login",
         primary_default="http://localhost:5173/login",
     )
-    support_email = _setting_with_legacy(
+    support_email = _setting_value(
         "SISEM_SUPPORT_EMAIL",
-        "SIRES_SUPPORT_EMAIL",
         settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
         primary_default=settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
     )
@@ -163,13 +160,9 @@ def _smtp_is_configured():
     )
 
 
-def _setting_with_legacy(primary_key, legacy_key, default, primary_default=None):
+def _setting_value(primary_key, default, primary_default=None):
     primary_value = getattr(settings, primary_key, None)
     if primary_value and (primary_default is None or primary_value != primary_default):
         return primary_value
-
-    legacy_value = getattr(settings, legacy_key, None)
-    if legacy_value:
-        return legacy_value
 
     return primary_value or default

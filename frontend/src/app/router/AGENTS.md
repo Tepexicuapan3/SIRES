@@ -1,4 +1,4 @@
-# AGENTS.md - SIRES Frontend Routes Ruleset
+# AGENTS.md - SISEM Frontend Routes Ruleset
 
 ## How to Use This Guide
 

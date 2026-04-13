@@ -1,4 +1,4 @@
-# AGENTS.md - SIRES Documentation Ruleset
+# AGENTS.md - SISEM Documentation Ruleset
 
 ## Scope
 

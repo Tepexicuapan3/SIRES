@@ -1,18 +1,18 @@
 services:
   auth-db:
     image: postgres:16-alpine
-    container_name: sires-auth-db
+    container_name: sisem-auth-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${AUTH_DB_NAME:-sires_auth}
-      POSTGRES_USER: ${AUTH_DB_USER:-sires_auth}
-      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-sires_auth_dev_password}
+      POSTGRES_DB: ${AUTH_DB_NAME:-sisem_auth}
+      POSTGRES_USER: ${AUTH_DB_USER:-sisem_auth}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-sisem_auth_dev_password}
     ports:
       - "${AUTH_DB_PORT:-5432}:5432"
     volumes:
       - auth_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-sires_auth} -d ${AUTH_DB_NAME:-sires_auth}"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-sisem_auth} -d ${AUTH_DB_NAME:-sisem_auth}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -20,7 +20,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: sires-redis
+    container_name: sisem-redis
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -34,7 +34,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sires-backend
+    container_name: sisem-backend
     restart: unless-stopped
     command: sh /app/start-docker.sh
     ports:
@@ -53,9 +53,9 @@ services:
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-}
       DB_HOST: ${AUTH_DB_HOST:-auth-db}
       DB_PORT: ${AUTH_DB_PORT:-5432}
-      DB_NAME: ${AUTH_DB_NAME:-sires_auth}
-      DB_USER: ${AUTH_DB_USER:-sires_auth}
-      DB_PASSWORD: ${AUTH_DB_PASSWORD:-sires_auth_dev_password}
+      DB_NAME: ${AUTH_DB_NAME:-sisem_auth}
+      DB_USER: ${AUTH_DB_USER:-sisem_auth}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-sisem_auth_dev_password}
       CHANNEL_REDIS_URL: redis://redis:6379/1
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
       EMAIL_HOST: ${EMAIL_HOST:-}
@@ -64,13 +64,11 @@ services:
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
       EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
-      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-no-reply@sires.local}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-no-reply@sisem.local}
       EMAIL_TIMEOUT: ${EMAIL_TIMEOUT:-10}
-      # KAN-74 Wave 2 compatibility: prefer SISEM_* keys and keep SIRES_* aliases.
-      SISEM_LOGIN_URL: ${SISEM_LOGIN_URL:-${SIRES_LOGIN_URL:-http://localhost:5173/login}}
-      SIRES_LOGIN_URL: ${SIRES_LOGIN_URL:-${SISEM_LOGIN_URL:-http://localhost:5173/login}}
-      SISEM_SUPPORT_EMAIL: ${SISEM_SUPPORT_EMAIL:-${SIRES_SUPPORT_EMAIL:-soporte@sisem.local}}
-      SIRES_SUPPORT_EMAIL: ${SIRES_SUPPORT_EMAIL:-${SISEM_SUPPORT_EMAIL:-soporte@sisem.local}}
+      # Branding SISEM.
+      SISEM_LOGIN_URL: ${SISEM_LOGIN_URL:-http://localhost:5173/login}
+      SISEM_SUPPORT_EMAIL: ${SISEM_SUPPORT_EMAIL:-soporte@sisem.local}
       ALLOW_USER_CREATE_WITHOUT_EMAIL: ${ALLOW_USER_CREATE_WITHOUT_EMAIL:-true}
       RUN_SEED_ON_BOOT: ${RUN_SEED_ON_BOOT:-true}
     depends_on:
@@ -89,7 +87,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: sires-frontend
+    container_name: sisem-frontend
     restart: unless-stopped
     command: sh -lc "bun install && bun run dev -- --host 0.0.0.0 --port 5173"
     ports:

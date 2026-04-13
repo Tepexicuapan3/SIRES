@@ -127,9 +127,7 @@ class EmailServiceTests(SimpleTestCase):
         EMAIL_HOST_PASSWORD="secret",
         DEFAULT_FROM_EMAIL="mailer@example.com",
         SISEM_LOGIN_URL="https://sisem.example.com/login",
-        SIRES_LOGIN_URL="https://legacy-sires.example.com/login",
         SISEM_SUPPORT_EMAIL="soporte@sisem.example.com",
-        SIRES_SUPPORT_EMAIL="soporte@sires.example.com",
     )
     @patch("apps.authentication.services.email_service.send_mail")
     @patch("apps.authentication.services.email_service.render_to_string")
@@ -157,16 +155,12 @@ class EmailServiceTests(SimpleTestCase):
         EMAIL_HOST_USER="mailer@example.com",
         EMAIL_HOST_PASSWORD="secret",
         DEFAULT_FROM_EMAIL="mailer@example.com",
-        SISEM_LOGIN_URL="",
-        SISEM_SUPPORT_EMAIL="",
-        SIRES_LOGIN_URL="https://legacy-sires.example.com/login",
-        SIRES_SUPPORT_EMAIL="soporte@sires.example.com",
+        SISEM_LOGIN_URL="https://sisem.example.com/login",
+        SISEM_SUPPORT_EMAIL="soporte@sisem.example.com",
     )
     @patch("apps.authentication.services.email_service.send_mail")
     @patch("apps.authentication.services.email_service.render_to_string")
-    def test_credentials_email_falls_back_to_legacy_sires_aliases(
-        self, render_mock, send_mail_mock
-    ):
+    def test_credentials_email_uses_sisem_aliases(self, render_mock, send_mail_mock):
         render_mock.return_value = "<html>ok</html>"
         send_mail_mock.return_value = 1
 
@@ -179,5 +173,5 @@ class EmailServiceTests(SimpleTestCase):
 
         self.assertTrue(result)
         _, message = send_mail_mock.call_args.args[0:2]
-        self.assertIn("https://legacy-sires.example.com/login", message)
-        self.assertIn("soporte@sires.example.com", message)
+        self.assertIn("https://sisem.example.com/login", message)
+        self.assertIn("soporte@sisem.example.com", message)

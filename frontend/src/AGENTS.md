@@ -14,7 +14,7 @@
 
 - [ ] Jira ticket exists with clear acceptance criteria.
 - [ ] SDD artifacts are current for the change phase (proposal/spec/design/tasks/apply/verify).
-- [ ] Relevant decisions/discoveries are persisted in Engram (`SIRES_SHARED`).
+- [ ] Relevant decisions/discoveries are persisted in Engram (`SISEM_SHARED`).
 - [ ] Engram saves use required `topic_key` convention (`feature/{slug}/decision`, `feature/{slug}/progress`, `bug/{id-or-slug}/fix`, `ops/{area}/config`, `docs/{topic}/note`).
 - [ ] Required git hooks are active before PR/merge.
 - [ ] NEW feature/NEW functionality/LARGE refactor uses tests-first planning and Red -> Green -> Refactor execution evidence.

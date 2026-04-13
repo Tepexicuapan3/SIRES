@@ -1,6 +1,6 @@
 # Frontend Testing Guide
 
-Stack de testing del frontend SIRES:
+Stack de testing del frontend SISEM:
 
 - Vitest + Testing Library (unit e integration)
 - MSW (mock de red)

@@ -1,4 +1,4 @@
-# AGENTS.md - SIRES Frontend Ruleset
+# AGENTS.md - SISEM Frontend Ruleset
 
 ## Scope
 
@@ -53,7 +53,7 @@
 
 - [ ] Jira ticket is defined with scope and acceptance criteria.
 - [ ] SDD artifacts are up to date for the current phase.
-- [ ] Relevant decisions/discoveries are persisted in Engram (`SIRES_SHARED`).
+- [ ] Relevant decisions/discoveries are persisted in Engram (`SISEM_SHARED`).
 - [ ] Engram saves use required `topic_key` convention (`feature/{slug}/decision`, `feature/{slug}/progress`, `bug/{id-or-slug}/fix`, `ops/{area}/config`, `docs/{topic}/note`).
 - [ ] Required git hooks are active before PR/merge.
 - [ ] For NEW features/NEW functionality/LARGE refactors, planning starts with tests-first tasks and execution follows Red -> Green -> Refactor.

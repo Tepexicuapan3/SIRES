@@ -1,5 +1,5 @@
 /**
- * Cliente HTTP - SIRES API
+ * Cliente HTTP - SISEM API
  *
  * Punto de entrada ÚNICO para todas las llamadas al backend.
  *

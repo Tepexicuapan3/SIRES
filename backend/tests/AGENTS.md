@@ -27,7 +27,7 @@
 
 - Prefer deterministic tests: no arbitrary sleeps, no hidden ordering assumptions.
 - Backend tests may run with in-memory SQLite as a test-only exception (`python manage.py test`).
-- Test SQLite does not redefine SIRES data policy: PostgreSQL remains the domain ownership target for runtime/production.
+- Test SQLite does not redefine SISEM data policy: PostgreSQL remains the domain ownership target for runtime/production.
 - Cover both happy path and failure path for each endpoint/use case touched.
 - Assert standard error payload shape (`code`, `message`, `status`, optional `details`, optional `requestId`).
 - Keep fixtures/data builders explicit and local to the suite when possible.
