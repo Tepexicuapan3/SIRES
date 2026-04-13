@@ -27,6 +27,7 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 - `docs/domains/auth-access/cierre-formal-mvp-fase2.md` - cierre documental formal validado con cliente (MVP/Fase 2, reglas operativas, excepciones, trazabilidad, KPIs y DoR).
 - `docs/domains/auth-access/baseline-as-is.md` - baseline tecnico AS-IS (KAN-47) con trazabilidad de flujos/modulos/endpoints/permisos/deuda.
 - `docs/domains/auth-access/boundary-map-acl.md` - boundary map + ACL tecnico canonico (KAN-48) para fronteras, contratos permitidos y guardrails de ejecucion.
+- `docs/domains/auth-access/local-db-bootstrap-strategy.md` - estrategia reproducible de DB local para auth-access (migraciones, seeders, factories y setup/reset Docker).
 - `docs/domains/auth-access/permissions-source-of-truth.md` - slice runtime inicial de KAN-49 para backend source of truth de permisos/capabilities.
 - `docs/domains/auth-access/request-id-traceability-contract.md` - contrato canonico de trazabilidad `X-Request-ID` para KAN-51.
 - `docs/domains/auth-access/rbac-views-extraction-slices-plan.md` - plan de extraccion incremental de `rbac_views` por slices con coexistencia y rollback (KAN-52).
