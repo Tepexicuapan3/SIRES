@@ -29,6 +29,8 @@ from rest_framework.test import APITestCase
     }
 )
 class AuthApiTests(APITestCase):
+    """KAN-92 critical contractual suite (TC001/TC003/TC006/TC017/TC021)."""
+
     def setUp(self):
         cache.clear()
         self.user = SyUsuario.objects.create(
@@ -93,6 +95,15 @@ class AuthApiTests(APITestCase):
         self.assertEqual(
             AuditoriaEvento.objects.filter(accion="LOGIN_SUCCESS").count(), 1
         )
+
+    def test_login_sets_cookie_security_contract(self):
+        """KAN-92/TC001: HttpOnly auth cookies + readable CSRF cookie."""
+        response = self._login()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.cookies[ACCESS_COOKIE]["httponly"], True)
+        self.assertEqual(response.cookies[REFRESH_COOKIE]["httponly"], True)
+        self.assertEqual(response.cookies[CSRF_COOKIE]["httponly"], "")
 
     def test_login_allows_relogin_when_session_is_active(self):
         self._login()
@@ -273,6 +284,7 @@ class AuthApiTests(APITestCase):
         )
 
     def test_verify_requires_auth(self):
+        """KAN-92/TC017: verify returns 401 when no session exists."""
         response = self.client.get("/api/v1/auth/verify")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data, {"valid": False})
@@ -331,6 +343,25 @@ class AuthApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["success"])
+
+    def test_logout_invalidates_verify_session(self):
+        """KAN-92/TC021: logout clears auth context for verify endpoint."""
+        login_response = self._login()
+        csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+        verify_before = self.client.get("/api/v1/auth/verify")
+        self.assertEqual(verify_before.status_code, status.HTTP_200_OK)
+        self.assertEqual(verify_before.data, {"valid": True})
+
+        logout_response = self.client.post(
+            "/api/v1/auth/logout",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+        )
+        self.assertEqual(logout_response.status_code, status.HTTP_200_OK)
+
+        verify_after = self.client.get("/api/v1/auth/verify")
+        self.assertEqual(verify_after.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(verify_after.data, {"valid": False})
 
     def test_complete_onboarding(self):
         login_response = self._login()

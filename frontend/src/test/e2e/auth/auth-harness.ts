@@ -23,7 +23,17 @@ const AUTH_COOKIE_NAMES = new Set([
 ]);
 const RETRY_ATTEMPTS = 20;
 const RETRY_DELAY_MS = 250;
-const SHOULD_PREFER_BROWSER_MSW = process.env.VITE_USE_MSW === "true";
+
+export type AuthHarnessMode = "backend-real" | "hybrid";
+
+export const resolveAuthHarnessMode = (): AuthHarnessMode =>
+  process.env.PLAYWRIGHT_AUTH_HARNESS_MODE === "backend-real"
+    ? "backend-real"
+    : "hybrid";
+
+const AUTH_HARNESS_MODE = resolveAuthHarnessMode();
+const SHOULD_PREFER_BROWSER_MSW =
+  AUTH_HARNESS_MODE === "hybrid" && process.env.VITE_USE_MSW === "true";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -134,6 +144,10 @@ export async function resetAuthTestState(
   request: APIRequestContext,
   page?: Page,
 ): Promise<void> {
+  if (AUTH_HARNESS_MODE === "backend-real") {
+    return;
+  }
+
   if (SHOULD_PREFER_BROWSER_MSW && page) {
     const browserResetOk = await postFromPage(page, "test-reset-state");
     if (browserResetOk) {
@@ -147,11 +161,18 @@ export async function resetAuthTestState(
     return;
   }
 
-  if (result.lastStatus === 404 && page) {
+  if (AUTH_HARNESS_MODE === "hybrid" && result.lastStatus >= 400 && page) {
     const browserFallbackOk = await postFromPage(page, "test-reset-state");
     if (browserFallbackOk) {
       return;
     }
+  }
+
+  if (
+    AUTH_HARNESS_MODE === "hybrid" &&
+    (result.lastStatus === 404 || result.lastStatus === 0)
+  ) {
+    return;
   }
 
   throw new Error(
@@ -164,6 +185,10 @@ export async function applyAuthUserOverride(
   payload: AuthUserOverridePayload,
   page?: Page,
 ): Promise<void> {
+  if (AUTH_HARNESS_MODE === "backend-real") {
+    return;
+  }
+
   if (SHOULD_PREFER_BROWSER_MSW && page) {
     const browserOverrideOk = await postFromPage(
       page,
@@ -181,7 +206,7 @@ export async function applyAuthUserOverride(
     return;
   }
 
-  if (result.lastStatus === 404 && page) {
+  if (AUTH_HARNESS_MODE === "hybrid" && result.lastStatus >= 400 && page) {
     const browserFallbackOk = await postFromPage(
       page,
       "test-reset-user",
@@ -190,6 +215,13 @@ export async function applyAuthUserOverride(
     if (browserFallbackOk) {
       return;
     }
+  }
+
+  if (
+    AUTH_HARNESS_MODE === "hybrid" &&
+    (result.lastStatus === 404 || result.lastStatus === 0)
+  ) {
+    return;
   }
 
   throw new Error(

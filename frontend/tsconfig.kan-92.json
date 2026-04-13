@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "vitest/globals", "node", "@playwright/test"],
+    "noEmit": true
+  },
+  "include": [
+    "src/test/e2e/auth/**/*.ts",
+    "src/test/unit/auth/**/*.ts",
+    "src/test/setup.ts"
+  ]
+}

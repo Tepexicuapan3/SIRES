@@ -126,7 +126,17 @@ test.describe("Auth: Login / Logout", () => {
 
   test(
     "TC001: Login exitoso con credenciales válidas - Admin",
-    { tag: ["@critical", "@e2e", "@auth", "@login", "@AUTH-E2E-001"] },
+    {
+      tag: [
+        "@critical",
+        "@e2e",
+        "@auth",
+        "@login",
+        "@AUTH-E2E-001",
+        "@kan-92-critical",
+        "@KAN-92-TC001",
+      ],
+    },
     async ({ page }) => {
       const authPage = new AuthPage(page);
 
@@ -165,7 +175,14 @@ test.describe("Auth: Login / Logout", () => {
 
       for (const { credentials, route } of roles) {
         // Crear nuevo contexto para cada rol (sesión limpia)
-        const newContext = await context.browser().newContext();
+        const browser = context.browser();
+        if (!browser) {
+          throw new Error(
+            "Playwright browser instance is required for role loop",
+          );
+        }
+
+        const newContext = await browser.newContext();
         const newPage = await newContext.newPage();
         const authPage = new AuthPage(newPage);
 
@@ -186,7 +203,17 @@ test.describe("Auth: Login / Logout", () => {
 
   test(
     "TC003: Login fallido - Contraseña incorrecta",
-    { tag: ["@critical", "@e2e", "@auth", "@login", "@AUTH-E2E-003"] },
+    {
+      tag: [
+        "@critical",
+        "@e2e",
+        "@auth",
+        "@login",
+        "@AUTH-E2E-003",
+        "@kan-92-critical",
+        "@KAN-92-TC003",
+      ],
+    },
     async ({ page }) => {
       const authPage = new AuthPage(page);
 
@@ -223,7 +250,17 @@ test.describe("Auth: Login / Logout", () => {
 
   test(
     "TC006: Logout exitoso limpia sesión",
-    { tag: ["@critical", "@e2e", "@auth", "@logout", "@AUTH-E2E-006"] },
+    {
+      tag: [
+        "@critical",
+        "@e2e",
+        "@auth",
+        "@logout",
+        "@AUTH-E2E-006",
+        "@kan-92-critical",
+        "@KAN-92-TC006",
+      ],
+    },
     async ({ page }) => {
       const authPage = new AuthPage(page);
 
@@ -603,8 +640,20 @@ test.describe("Auth: Session Management", () => {
 
   test(
     "TC017: Acceso a ruta protegida sin autenticación redirige a login",
-    { tag: ["@critical", "@e2e", "@auth", "@session", "@AUTH-E2E-017"] },
-    async ({ page }) => {
+    {
+      tag: [
+        "@critical",
+        "@e2e",
+        "@auth",
+        "@session",
+        "@AUTH-E2E-017",
+        "@kan-92-critical",
+        "@KAN-92-TC017",
+      ],
+    },
+    async ({ page, request }) => {
+      await resetAuthE2EHarness(page, request);
+
       // Try to access protected route directly
       await page.goto("/dashboard");
 
@@ -688,7 +737,17 @@ test.describe("Auth: API Contract", () => {
 
   test(
     "TC021: API Logout invalida sesión",
-    { tag: ["@critical", "@e2e", "@auth", "@api", "@AUTH-E2E-021"] },
+    {
+      tag: [
+        "@critical",
+        "@e2e",
+        "@auth",
+        "@api",
+        "@AUTH-E2E-021",
+        "@kan-92-critical",
+        "@KAN-92-TC021",
+      ],
+    },
     async ({ page }) => {
       const authPage = new AuthPage(page);
 

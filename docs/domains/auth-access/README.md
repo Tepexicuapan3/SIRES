@@ -38,6 +38,7 @@ Este dominio cubre:
 - [`kan-67-cutover-legacy-retirement.md`](./kan-67-cutover-legacy-retirement.md) - evidencia de corte incremental KAN-67 sobre S3 para retiro controlado de lógica legacy inline en `rbac_views` con fallback por flag.
 - [`kan-68-startup-quality-gate.md`](./kan-68-startup-quality-gate.md) - evidencia de quality gate KAN-68 para pre-deploy validation, rollback rehearsal y decisión go/no-go.
 - [`kan-69-observability-baseline.md`](./kan-69-observability-baseline.md) - baseline operativo de observabilidad auth-access (métricas, alertas mínimas y snapshot/tablero inicial).
+- [`kan-92-auth-e2e-critical-go-no-go.md`](./kan-92-auth-e2e-critical-go-no-go.md) - dictamen Docker-first GO/NO-GO para auth crítico (TC001/003/006/017/021), con matriz AC→TC→evidencia y resultado final.
 - [`kan-60-s1-qa-regression-go-no-go.md`](./kan-60-s1-qa-regression-go-no-go.md) - evidencia de regresión funcional Sprint 1 + checklist pre-deploy y dictamen QA Go/No-Go para KAN-60.
 - [`kan-71-multi-sprint-demo-process.md`](./kan-71-multi-sprint-demo-process.md) - guía institucional reusable de demo multi-sprint (plantilla de acta, checklist de evidencia mínima y flujo de cierre Jira/PR/docs).
 - [`pending-decisions.md`](./pending-decisions.md) - acta de cierre de decisiones historicamente pendientes (estado final resuelto).

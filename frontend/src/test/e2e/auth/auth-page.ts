@@ -4,7 +4,7 @@ import {
   expect,
   APIRequestContext,
   type BrowserContext,
-  type APIResponse,
+  type Response,
 } from "@playwright/test";
 import { resolveApiBaseUrl } from "./auth-test-env";
 
@@ -29,7 +29,7 @@ export class BasePage {
   async getToastMessage(): Promise<string> {
     const toast = await this.waitForToast();
     await expect(toast).toBeVisible({ timeout: 5000 });
-    return toast.textContent() || "";
+    return (await toast.textContent()) ?? "";
   }
 
   async clearCookies(): Promise<void> {
@@ -134,7 +134,7 @@ export class AuthPage extends BasePage {
   /**
    * LOGIN ACTIONS
    */
-  async login(data: LoginData): Promise<APIResponse> {
+  async login(data: LoginData): Promise<Response> {
     await expect(this.usernameInput).toBeVisible({ timeout: 10000 });
     await expect(this.usernameInput).toBeEditable({ timeout: 10000 });
     await this.usernameInput.fill(data.username);
@@ -215,13 +215,13 @@ export class AuthPage extends BasePage {
   async requestResetCode(
     email: string,
     options: RequestResetOptions = {},
-  ): Promise<APIResponse> {
+  ): Promise<Response> {
     const retries = options.retries ?? 0;
     const retryDelayMs = options.retryDelayMs ?? 1000;
 
     await this.emailInput.fill(email);
 
-    let lastResponse: APIResponse | null = null;
+    let lastResponse: Response | null = null;
 
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       const [response] = await Promise.all([
@@ -245,7 +245,7 @@ export class AuthPage extends BasePage {
       }
     }
 
-    return lastResponse as APIResponse;
+    return lastResponse as Response;
   }
 
   async enterOtpCode(code: string): Promise<void> {
@@ -332,8 +332,7 @@ export class AuthAPI {
     private context?: BrowserContext, // BrowserContext opcional para extraer cookies
   ) {
     const baseOrigin = this.context
-      ?.pages()
-      .at(0)
+      ?.pages()[0]
       ?.url()
       ?.split("/")
       .slice(0, 3)
