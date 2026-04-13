@@ -116,3 +116,55 @@ Resultado:
   - `docs/domains/auth-access/kan-58a-s2-apply-evidence.md`
   - `docs/domains/auth-access/kan-59-apply-evidence.md`
   - `docs/domains/auth-access/kan-69-observability-baseline.md`
+
+## 9) Addendum KAN-73 - RBAC user email failure contract hardening
+
+Objetivo del addendum: dejar trazabilidad reproducible del hardening contractual de `POST /api/v1/users` ante falla de envio de credenciales, con evidencia TDD-first y Docker-first.
+
+### RED -> GREEN (focal)
+
+- **RED** (precondicion incorrecta intencional para probar sensibilidad al flag):
+
+```bash
+docker compose exec backend python manage.py test \
+  apps.administracion.tests.test_rbac_users_api.RbacUsersApiTests.test_create_user_email_failure_tolerated_when_flag_enabled
+```
+
+Resultado RED observado:
+
+- `FAILED (failures=1)`
+- `AssertionError: 500 != 201`
+
+- **GREEN** (precondicion contractual correcta con `@override_settings(ALLOW_USER_CREATE_WITHOUT_EMAIL=True)`):
+
+```bash
+docker compose exec backend python manage.py test \
+  apps.administracion.tests.test_rbac_users_api.RbacUsersApiTests.test_create_user_email_failure_tolerated_when_flag_enabled
+```
+
+Resultado GREEN observado:
+
+- `Ran 1 test ... OK`
+
+### Validacion Docker-first final (suite RBAC focal)
+
+```bash
+docker compose up -d auth-db redis backend
+docker compose exec backend python manage.py test \
+  apps.administracion.tests.test_rbac_contract \
+  apps.administracion.tests.test_rbac_authz_matrix \
+  apps.administracion.tests.test_rbac_roles_permissions_api \
+  apps.administracion.tests.test_rbac_users_api \
+  apps.administracion.tests.test_rbac_services_and_utils
+```
+
+Resultado final observado:
+
+- `Ran 156 tests ... OK`
+
+### Cobertura contractual KAN-73 (AC-F1..AC-F4)
+
+- `AC-F1 (flag=false)`: `500 EMAIL_DELIVERY_FAILED` + rollback validado en `test_create_user_email_failure_rolls_back_creation_in_strict_mode`.
+- `AC-F2 (flag=true)`: `201` + persistencia + `credentialsEmailSent=false` validado en `test_create_user_email_failure_tolerated_when_flag_enabled`.
+- `AC-F3 (determinismo)`: ambos branches forzados con `@override_settings(...)`.
+- `AC-F4 (alineacion contrato)`: actualizada matriz en `docs/api/modules/rbac.md` con comportamiento dual por flag.

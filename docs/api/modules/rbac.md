@@ -212,6 +212,27 @@ Si luego se exponen en API RBAC, usar nombres estandar:
 | PATCH | `/users/:id/activate` | - | `UserStatusResponse` | 200 | `admin:gestion:usuarios:update` |
 | PATCH | `/users/:id/deactivate` | - | `UserStatusResponse` | 200 | `admin:gestion:usuarios:update` |
 
+##### Contrato de falla de envio de credenciales (`POST /users`)
+
+El comportamiento de `POST /users` ante fallo de `send_user_credentials_email(...)` es **dual** y esta gobernado por `ALLOW_USER_CREATE_WITHOUT_EMAIL`:
+
+| Flag `ALLOW_USER_CREATE_WITHOUT_EMAIL` | HTTP | Persistencia usuario | Shape de respuesta |
+| --- | --- | --- | --- |
+| `false` (strict mode) | `500` | rollback (no queda usuario creado) | `ApiError` con `code=EMAIL_DELIVERY_FAILED`, `message`, `status`, `timestamp`, `requestId?`, `details?` |
+| `true` (tolerant mode) | `201` | commit (usuario creado disponible para lecturas) | `CreateUserResponse` con `id`, `username`, `credentialsEmailSent=false` |
+
+Error esperado en strict mode:
+
+```json
+{
+  "code": "EMAIL_DELIVERY_FAILED",
+  "message": "No se pudo enviar el correo de credenciales. El usuario no fue creado.",
+  "status": 500,
+  "timestamp": "2026-04-13T18:00:00Z",
+  "requestId": "kan-73-strict-mode"
+}
+```
+
 ##### UsersListParams
 
 Filtros soportados en `GET /users`:
@@ -303,10 +324,10 @@ Matriz de `accion` recomendada:
    - Si se asigna `:create/:update/:delete`, garantizar `:read` del mismo recurso.
    - Si se intenta revocar `:read` y quedan permisos de escritura del mismo recurso, rechazar (`PERMISSION_DEPENDENCY`).
 11. `CreateUser` debe dejar onboarding forzado:
-   - `cambiar_clave = true`
-   - `terminos_acept = false`
-   - `fch_terminos = null`
-   - response incluye `temporaryPassword`.
+    - `cambiar_clave = true`
+    - `terminos_acept = false`
+    - `fch_terminos = null`
+    - response incluye `credentialsEmailSent` (`true` cuando envio OK, `false` cuando se tolera falla por flag).
 12. `PATCH /users/:id/activate|deactivate` solo cambia `est_activo`.
    - No usar `fch_baja` para activar/desactivar normal.
    - `fch_baja` queda reservado para expiracion/baja de cuenta.
@@ -363,7 +384,7 @@ Decision de contrato para no romper:
 {
   "id": 120,
   "username": "auditor1",
-  "temporaryPassword": "TempPassword123!"
+  "credentialsEmailSent": true
 }
 ```
 

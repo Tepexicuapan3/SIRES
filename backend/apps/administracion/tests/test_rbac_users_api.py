@@ -183,7 +183,9 @@ class RbacUsersApiTests(APITestCase):
         response_is_active = self.client.get("/api/v1/users?isActive=true")
         self.assertEqual(response_is_active.status_code, status.HTTP_200_OK)
 
-        response_role = self.client.get(f"/api/v1/users?roleId={self.role_medico.id_rol}")
+        response_role = self.client.get(
+            f"/api/v1/users?roleId={self.role_medico.id_rol}"
+        )
         self.assertEqual(response_role.status_code, status.HTTP_200_OK)
 
         response_clinic = self.client.get(f"/api/v1/users?clinicId={self.clinic.id}")
@@ -242,9 +244,42 @@ class RbacUsersApiTests(APITestCase):
         self.assertFalse(created_user.terminos_acept)
 
     @patch("apps.administracion.views.rbac_views.send_user_credentials_email")
-    @override_settings(ALLOW_USER_CREATE_WITHOUT_EMAIL=False)
-    def test_create_user_email_failure_rolls_back_creation(self, send_email_mock):
+    @override_settings(ALLOW_USER_CREATE_WITHOUT_EMAIL=True)
+    def test_create_user_email_failure_tolerated_when_flag_enabled(
+        self, send_email_mock
+    ):
         send_email_mock.return_value = False
+
+        response = self.client.post(
+            "/api/v1/users",
+            {
+                "username": "new_user_email_tolerated",
+                "firstName": "Nuevo",
+                "paternalName": "Tolera",
+                "maternalName": "Correo",
+                "email": "new.user.email.tolerated@example.com",
+                "clinicId": self.clinic.id,
+                "primaryRoleId": self.role_recepcion.id_rol,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("id", response.data)
+        self.assertEqual(response.data["username"], "new_user_email_tolerated")
+        self.assertFalse(response.data["credentialsEmailSent"])
+        self.assertTrue(
+            SyUsuario.objects.filter(usuario="new_user_email_tolerated").exists()
+        )
+
+    @patch("apps.administracion.views.rbac_views.send_user_credentials_email")
+    @override_settings(ALLOW_USER_CREATE_WITHOUT_EMAIL=False)
+    def test_create_user_email_failure_rolls_back_creation_in_strict_mode(
+        self, send_email_mock
+    ):
+        send_email_mock.return_value = False
+        request_id = "kan-73-strict-mode"
 
         response = self.client.post(
             "/api/v1/users",
@@ -259,11 +294,20 @@ class RbacUsersApiTests(APITestCase):
             },
             format="json",
             HTTP_X_CSRF_TOKEN=self.csrf_token,
+            HTTP_X_REQUEST_ID=request_id,
         )
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data["code"], "EMAIL_DELIVERY_FAILED")
-        self.assertFalse(SyUsuario.objects.filter(usuario="new_user_email_fail").exists())
+        self.assertEqual(
+            response.data["message"],
+            "No se pudo enviar el correo de credenciales. El usuario no fue creado.",
+        )
+        self.assertEqual(response.data["status"], status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["requestId"], request_id)
+        self.assertFalse(
+            SyUsuario.objects.filter(usuario="new_user_email_fail").exists()
+        )
 
     def test_create_user_duplicate_returns_conflict(self):
         response = self.client.post(
@@ -441,7 +485,9 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["user"]["firstName"], "Sin")
         self.assertTrue(
-            DetUsuario.objects.filter(id_usuario=self.target_user, nombre="Sin").exists()
+            DetUsuario.objects.filter(
+                id_usuario=self.target_user, nombre="Sin"
+            ).exists()
         )
 
     def test_activate_and_deactivate_user(self):
@@ -505,7 +551,9 @@ class RbacUsersApiTests(APITestCase):
             HTTP_X_CSRF_TOKEN=self.csrf_token,
         )
         self.assertEqual(primary_response.status_code, status.HTTP_200_OK)
-        primary_roles = [role for role in primary_response.data["roles"] if role["isPrimary"]]
+        primary_roles = [
+            role for role in primary_response.data["roles"] if role["isPrimary"]
+        ]
         self.assertEqual(len(primary_roles), 1)
         self.assertEqual(primary_roles[0]["name"], "RECEPCION_USERS")
 
@@ -600,7 +648,9 @@ class RbacUsersApiTests(APITestCase):
         self.assertIsNone(relation.fch_baja)
 
     def test_assign_roles_ensures_primary_exists(self):
-        RelUsuarioRol.objects.filter(id_usuario=self.target_user).update(is_primary=False)
+        RelUsuarioRol.objects.filter(id_usuario=self.target_user).update(
+            is_primary=False
+        )
 
         response = self.client.post(
             f"/api/v1/users/{self.target_user.id_usuario}/roles",
@@ -685,7 +735,9 @@ class RbacUsersApiTests(APITestCase):
             is_primary=True,
         )
         self.assertEqual(primary_relations.count(), 1)
-        self.assertEqual(primary_relations.first().id_rol_id, self.role_recepcion.id_rol)
+        self.assertEqual(
+            primary_relations.first().id_rol_id, self.role_recepcion.id_rol
+        )
 
     def test_override_upsert_is_idempotent_on_replay(self):
         first_response = self.client.post(
@@ -913,9 +965,9 @@ class RbacUsersApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        event = AuditoriaEvento.objects.filter(accion="RBAC_USER_OVERRIDE_UPSERT").latest(
-            "id_evento"
-        )
+        event = AuditoriaEvento.objects.filter(
+            accion="RBAC_USER_OVERRIDE_UPSERT"
+        ).latest("id_evento")
         self.assertEqual(event.resultado, AuditoriaEvento.Resultado.SUCCESS)
         self.assertEqual(event.recurso_id, self.target_user.id_usuario)
         self.assertEqual(event.target_usuario_id, self.target_user.id_usuario)
@@ -934,9 +986,9 @@ class RbacUsersApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["code"], "USER_NOT_FOUND")
-        event = AuditoriaEvento.objects.filter(accion="RBAC_USER_OVERRIDE_UPSERT").latest(
-            "id_evento"
-        )
+        event = AuditoriaEvento.objects.filter(
+            accion="RBAC_USER_OVERRIDE_UPSERT"
+        ).latest("id_evento")
         self.assertEqual(event.resultado, AuditoriaEvento.Resultado.FAIL)
         self.assertEqual(event.codigo_error, "USER_NOT_FOUND")
         self.assertEqual(event.recurso_id, 999999)
@@ -947,7 +999,9 @@ class RbacUsersApiTests(APITestCase):
             timezone.get_current_timezone(),
         )
 
-        with patch("apps.administracion.views.rbac_views.timezone.now", return_value=now_local):
+        with patch(
+            "apps.administracion.views.rbac_views.timezone.now", return_value=now_local
+        ):
             upsert_response = self.client.post(
                 f"/api/v1/users/{self.target_user.id_usuario}/overrides",
                 {
@@ -963,8 +1017,13 @@ class RbacUsersApiTests(APITestCase):
         self.assertFalse(upsert_response.data["overrides"][0]["isExpired"])
 
         after_end_of_day = now_local + timedelta(hours=3)
-        with patch("apps.administracion.views.rbac_views.timezone.now", return_value=after_end_of_day):
-            detail_response = self.client.get(f"/api/v1/users/{self.target_user.id_usuario}")
+        with patch(
+            "apps.administracion.views.rbac_views.timezone.now",
+            return_value=after_end_of_day,
+        ):
+            detail_response = self.client.get(
+                f"/api/v1/users/{self.target_user.id_usuario}"
+            )
 
         self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
         self.assertTrue(detail_response.data["overrides"][0]["isExpired"])
@@ -982,7 +1041,9 @@ class RbacUsersApiTests(APITestCase):
             usr_asignacion=self.admin,
         )
 
-        with patch("apps.administracion.views.rbac_views.timezone.now", return_value=fixed_now):
+        with patch(
+            "apps.administracion.views.rbac_views.timezone.now", return_value=fixed_now
+        ):
             response = self.client.get(f"/api/v1/users/{self.target_user.id_usuario}")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1028,8 +1089,12 @@ class RbacUsersApiTests(APITestCase):
             landing_route="/admin/users",
             is_active=True,
         )
-        RelUsuarioRol.objects.create(id_usuario=self.target_user, id_rol=limited_role, is_primary=False)
-        RelUsuarioRol.objects.create(id_usuario=self.admin, id_rol=limited_role, is_primary=False)
+        RelUsuarioRol.objects.create(
+            id_usuario=self.target_user, id_rol=limited_role, is_primary=False
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=self.admin, id_rol=limited_role, is_primary=False
+        )
 
         limited_actor = SyUsuario.objects.create(
             usuario="limited_override_self",
@@ -1046,7 +1111,9 @@ class RbacUsersApiTests(APITestCase):
             materno="",
             nombre_completo="Limited Self",
         )
-        RelUsuarioRol.objects.create(id_usuario=limited_actor, id_rol=limited_role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=limited_actor, id_rol=limited_role, is_primary=True
+        )
 
         RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_update)
         RelRolPermiso.objects.create(id_rol=limited_role, id_permiso=users_read)
@@ -1112,7 +1179,9 @@ class RbacUsersApiTests(APITestCase):
             materno="",
             nombre_completo="Limited Scope",
         )
-        RelUsuarioRol.objects.create(id_usuario=limited_actor, id_rol=limited_role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=limited_actor, id_rol=limited_role, is_primary=True
+        )
 
         self._login_as("limited_override_scope", "Limited_123456")
 
@@ -1176,7 +1245,9 @@ class RbacUsersApiTests(APITestCase):
             materno="",
             nombre_completo="Limited System",
         )
-        RelUsuarioRol.objects.create(id_usuario=limited_actor, id_rol=limited_role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=limited_actor, id_rol=limited_role, is_primary=True
+        )
 
         self._login_as("limited_override_system", "Limited_123456")
 
@@ -1239,7 +1310,9 @@ class RbacUsersApiTests(APITestCase):
             materno="",
             nombre_completo="Limited Remove",
         )
-        RelUsuarioRol.objects.create(id_usuario=limited_actor, id_rol=limited_role, is_primary=True)
+        RelUsuarioRol.objects.create(
+            id_usuario=limited_actor, id_rol=limited_role, is_primary=True
+        )
 
         override = RelUsuarioOverride.objects.create(
             id_usuario=self.target_user,
@@ -1314,7 +1387,9 @@ class RbacUsersApiTests(APITestCase):
             format="json",
             HTTP_X_CSRF_TOKEN=self.csrf_token,
         )
-        self.assertEqual(invalid_effect_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            invalid_effect_response.status_code, status.HTTP_400_BAD_REQUEST
+        )
         self.assertEqual(invalid_effect_response.data["code"], "VALIDATION_ERROR")
 
         invalid_date_response = self.client.post(
@@ -1415,6 +1490,8 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["overrides"], [])
         self.assertEqual(
-            RelUsuarioOverride.objects.filter(id_usuario=self.target_user, fch_baja__isnull=True).count(),
+            RelUsuarioOverride.objects.filter(
+                id_usuario=self.target_user, fch_baja__isnull=True
+            ).count(),
             0,
         )
