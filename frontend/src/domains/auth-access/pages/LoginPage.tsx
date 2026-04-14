@@ -33,7 +33,7 @@ const recoverySteps: AuthViewState[] = [
 ];
 
 const viewTitles: Record<AuthViewState, string> = {
-  LOGIN: "S I R E S",
+  LOGIN: "SISEM",
   RECOVERY_REQUEST: "¿Olvidaste tu contraseña?",
   RECOVERY_OTP: "Verifica tu identidad",
   RECOVERY_NEW_PASS: "Restablecer contraseña",
@@ -121,7 +121,7 @@ export const LoginPage = () => {
         title={viewTitles[viewState]}
         subtitle={
           viewState === "LOGIN"
-            ? "Sistema de Información de Registro Electrónico para la Salud"
+            ? "Plataforma clínica y administrativa"
             : undefined
         }
         titleClassName={

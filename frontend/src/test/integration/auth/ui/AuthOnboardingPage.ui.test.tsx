@@ -212,5 +212,7 @@ describe("Auth UI - OnboardingPage", () => {
     await waitFor(() => {
       expect(mockForceLogout).toHaveBeenCalled();
     });
+
+    expect(console.error).not.toHaveBeenCalled();
   });
 });

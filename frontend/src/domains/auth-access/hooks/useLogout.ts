@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { authAPI } from "@api/resources/auth.api";
+import { isExpectedAuthErrorForTelemetry } from "@api/utils/errors";
 import { clearAuthSession } from "@/domains/auth-access/adapters/auth-cache";
 import { useSidebarStore } from "@app/state/ui/sidebarStore";
 import { useThemeStore } from "@app/state/ui/themeStore";
@@ -41,7 +42,7 @@ export const useLogout = () => {
       clearSession();
       navigateToLogin();
 
-      if (import.meta.env.DEV) {
+      if (import.meta.env.DEV && !isExpectedAuthErrorForTelemetry(error)) {
         console.error("Logout error:", error);
       }
     },

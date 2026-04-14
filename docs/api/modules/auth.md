@@ -119,7 +119,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | Code | Status | Message |
 | --- | --- | --- |
 | `INVALID_CREDENTIALS` | 401 | Usuario o contraseña incorrectos |
-| `USER_NOT_FOUND` | 404 | Usuario no encontrado |
 | `USER_INACTIVE` | 403 | Cuenta desactivada por un administrador |
 | `ACCOUNT_LOCKED` | 423 | Cuenta bloqueada por intentos fallidos |
 | `ACCOUNT_EXPIRED` | 401 | Tu cuenta ha expirado. Contacta a soporte |
@@ -129,6 +128,8 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `TOKEN_INVALID` | 401 | Token inválido |
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
+
+Nota de seguridad: para evitar user enumeration, credenciales inválidas por usuario inexistente y contraseña inválida responden el mismo contrato (`INVALID_CREDENTIALS`, 401, mensaje unificado).
 
 #### GET `/auth/me`
 

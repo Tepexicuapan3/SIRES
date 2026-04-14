@@ -8,7 +8,6 @@ const pickMessages = (codes: ErrorCode[]) =>
 export const loginErrorMessages: Record<ErrorCode, string> = {
   ...pickMessages([
     ERROR_CODES.INVALID_CREDENTIALS,
-    ERROR_CODES.USER_NOT_FOUND,
     ERROR_CODES.USER_INACTIVE,
     ERROR_CODES.RATE_LIMIT_EXCEEDED,
     ERROR_CODES.ACCOUNT_LOCKED,

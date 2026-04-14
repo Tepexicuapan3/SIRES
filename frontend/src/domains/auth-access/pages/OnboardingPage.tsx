@@ -3,7 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { LogOut, Lock, Loader2 } from "lucide-react";
-import { ApiError, ERROR_CODES } from "@api/utils/errors";
+import {
+  ApiError,
+  ERROR_CODES,
+  isExpectedAuthErrorForTelemetry,
+} from "@api/utils/errors";
 
 import { authAPI } from "@api/resources/auth.api";
 import { useLogout } from "@/domains/auth-access/hooks/useLogout";
@@ -78,7 +82,7 @@ export const OnboardingPage = () => {
 
       toast.error("Error al activar cuenta", { description: displayMessage });
 
-      if (import.meta.env.DEV) {
+      if (import.meta.env.DEV && !isExpectedAuthErrorForTelemetry(error)) {
         console.error("Error en onboarding:", error);
       }
     },

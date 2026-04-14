@@ -12,7 +12,11 @@ def login_user(username, password, ip_address):
     user = UserRepository.get_by_username(username)
 
     if not user:
-        raise AuthServiceError("USER_NOT_FOUND", "Usuario no encontrado", 404)
+        raise AuthServiceError(
+            "INVALID_CREDENTIALS",
+            "Usuario o contraseña incorrectos",
+            401,
+        )
 
     if not UserRepository.verify_password(user, password):
         # Suma intentos fallidos y retorna error.

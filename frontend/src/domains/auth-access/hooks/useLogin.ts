@@ -13,8 +13,17 @@ import { setAuthSession } from "@/domains/auth-access/adapters/auth-cache";
 
 type LoginMutationVariables = LoginRequest & { rememberMe: boolean };
 
+const normalizeLoginErrorCode = (code?: string): string | undefined => {
+  if (!code) return undefined;
+  if (code === ERROR_CODES.USER_NOT_FOUND) {
+    return ERROR_CODES.INVALID_CREDENTIALS;
+  }
+
+  return code;
+};
+
 const getLoginMessage = (code?: string) =>
-  getAuthErrorMessage(loginErrorMessages, code);
+  getAuthErrorMessage(loginErrorMessages, normalizeLoginErrorCode(code));
 
 /**
  * Mutation de login.
@@ -62,6 +71,8 @@ export const useLogin = () => {
     },
     onError: (error) => {
       if (error instanceof ApiError) {
+        const normalizedCode = normalizeLoginErrorCode(error.code);
+
         if (error.code === ERROR_CODES.RATE_LIMIT_EXCEEDED) {
           toast.error("Acceso bloqueado temporalmente", {
             description: getLoginMessage(error.code) || error.message,
@@ -71,7 +82,7 @@ export const useLogin = () => {
         }
 
         const description =
-          getLoginMessage(error.code) ||
+          getLoginMessage(normalizedCode) ||
           error.message ||
           "Error al iniciar sesion";
         toast.error("Error de autenticacion", { description });

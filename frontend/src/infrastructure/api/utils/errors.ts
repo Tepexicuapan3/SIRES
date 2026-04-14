@@ -153,3 +153,24 @@ export class ApiError extends Error {
     return ERROR_MESSAGES[code] || "Error desconocido";
   }
 }
+
+const EXPECTED_AUTH_ERROR_CODES = new Set<string>([
+  ERROR_CODES.INVALID_CREDENTIALS,
+  ERROR_CODES.TOKEN_EXPIRED,
+  ERROR_CODES.TOKEN_INVALID,
+  ERROR_CODES.SESSION_EXPIRED,
+  ERROR_CODES.REFRESH_TOKEN_EXPIRED,
+  ERROR_CODES.PERMISSION_DENIED,
+]);
+
+export const isExpectedAuthErrorForTelemetry = (error: unknown): boolean => {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  if (error.status !== 401 && error.status !== 403) {
+    return false;
+  }
+
+  return EXPECTED_AUTH_ERROR_CODES.has(error.code);
+};

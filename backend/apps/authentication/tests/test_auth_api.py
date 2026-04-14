@@ -671,9 +671,36 @@ class AuthApiTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data["code"], "USER_NOT_FOUND")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["code"], "INVALID_CREDENTIALS")
+        self.assertEqual(response.data["message"], "Usuario o contraseña incorrectos")
         self.assertIn("timestamp", response.data)
+
+    def test_login_nonexistent_user_and_wrong_password_share_same_error_contract(self):
+        missing_user_response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "missing", "password": "Abel_180903"},
+            format="json",
+        )
+
+        wrong_password_response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "abelb", "password": "ClaveMala1"},
+            format="json",
+        )
+
+        self.assertEqual(
+            missing_user_response.status_code,
+            wrong_password_response.status_code,
+        )
+        self.assertEqual(
+            missing_user_response.data["code"],
+            wrong_password_response.data["code"],
+        )
+        self.assertEqual(
+            missing_user_response.data["message"],
+            wrong_password_response.data["message"],
+        )
 
     def test_login_invalid_password(self):
         response = self.client.post(

@@ -78,6 +78,16 @@ describe("Auth UI - LoginPage", () => {
     ).toBeVisible();
   });
 
+  it("renders updated SISEM branding copy on login", () => {
+    render(<LoginPage />);
+
+    expect(screen.getByRole("heading", { name: "SISEM" })).toBeInTheDocument();
+    expect(screen.queryByText("S I R E S")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Plataforma clínica y administrativa"),
+    ).toBeInTheDocument();
+  });
+
   it("logs in successfully and remembers username", async () => {
     const user = userEvent.setup();
     render(<LoginPage />);
@@ -148,6 +158,31 @@ describe("Auth UI - LoginPage", () => {
     await waitFor(() => {
       expect(passwordInput).toHaveValue("");
       expect(passwordInput).toHaveFocus();
+    });
+  });
+
+  it("shows the same invalid credentials message for unknown users", async () => {
+    vi.mocked(authAPI.login).mockRejectedValueOnce(
+      new ApiError(ERROR_CODES.USER_NOT_FOUND, "Usuario no encontrado", 404),
+    );
+
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.type(
+      screen.getByRole("textbox", { name: /no\. expediente o usuario/i }),
+      "missing_user",
+    );
+    await user.type(screen.getByLabelText(/^contraseña$/i), "WrongPass1");
+    await user.click(screen.getByRole("button", { name: /iniciar sesión/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Error de autenticacion",
+        expect.objectContaining({
+          description: "Usuario o contraseña incorrectos",
+        }),
+      );
     });
   });
 
