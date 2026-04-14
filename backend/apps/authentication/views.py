@@ -541,23 +541,18 @@ class CompleteOnboardingView(APIView):
 
         serializer = CompleteOnboardingSerializer(data=request.data)
         if not serializer.is_valid():
-            error_code = "PASSWORD_TOO_WEAK"
-            message = "La contraseña es demasiado débil"
-            if "termsAccepted" in serializer.errors:
-                error_code = "TERMS_NOT_ACCEPTED"
-                message = "Debes aceptar los términos y condiciones"
             log_event(
                 request,
                 "ONBOARDING_FAILED",
                 "FAIL",
                 actor_user=user,
                 target_user=user,
-                error_code=error_code,
+                error_code="VALIDATION_ERROR",
                 meta={"endpoint": "/auth/complete-onboarding"},
             )
             return error_response(
-                error_code,
-                message,
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
                 status.HTTP_400_BAD_REQUEST,
                 details=serializer.errors,
                 request_id=get_request_id(request),
@@ -931,12 +926,12 @@ class ResetPasswordView(APIView):
                 request,
                 "PASSWORD_RESET_FAILED",
                 "FAIL",
-                error_code="PASSWORD_TOO_WEAK",
+                error_code="VALIDATION_ERROR",
                 meta={"endpoint": "/auth/reset-password"},
             )
             return error_response(
-                "PASSWORD_TOO_WEAK",
-                "La contraseña es demasiado débil",
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
                 status.HTTP_400_BAD_REQUEST,
                 details=serializer.errors,
                 request_id=get_request_id(request),

@@ -108,4 +108,35 @@ describe("auth contract alignment", () => {
 
     expect(AUTH_CONTRACT_HEADER_KEYS.AUTH_REVISION).toBe("X-Auth-Revision");
   });
+
+  it("maps reset-password form-shape errors to VALIDATION_ERROR instead of business weak-password", async () => {
+    try {
+      await authAPI.resetPassword({ newPassword: "" });
+      throw new Error(
+        "Expected authAPI.resetPassword to fail for empty newPassword",
+      );
+    } catch (error) {
+      expectNormalizedAuthApiError(error, {
+        code: "VALIDATION_ERROR",
+        status: 400,
+      });
+    }
+  });
+
+  it("maps complete-onboarding form-shape errors to VALIDATION_ERROR", async () => {
+    try {
+      await authAPI.completeOnboarding({
+        newPassword: "",
+        termsAccepted: true,
+      });
+      throw new Error(
+        "Expected authAPI.completeOnboarding to fail for invalid newPassword shape",
+      );
+    } catch (error) {
+      expectNormalizedAuthApiError(error, {
+        code: "VALIDATION_ERROR",
+        status: 400,
+      });
+    }
+  });
 });

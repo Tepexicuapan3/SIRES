@@ -117,7 +117,21 @@ class AuthContractEdgeTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["code"], "TERMS_NOT_ACCEPTED")
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
+    def test_complete_onboarding_missing_new_password_returns_validation_error(self):
+        login_response = self._login()
+        csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+        response = self.client.post(
+            "/api/v1/auth/complete-onboarding",
+            {"termsAccepted": True},
+            format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
 
     def test_request_reset_code_invalid_email_returns_invalid_email(self):
         response = self.client.post(
@@ -279,3 +293,19 @@ class AuthContractEdgeTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["code"], "TOKEN_INVALID")
+
+    def test_reset_password_missing_new_password_returns_validation_error(self):
+        reset_token = "token-reset-demo"
+        csrf_token = generate_csrf_token()
+        self.client.cookies["reset_token"] = reset_token
+        self.client.cookies[CSRF_COOKIE] = csrf_token
+
+        response = self.client.post(
+            "/api/v1/auth/reset-password",
+            {},
+            format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")

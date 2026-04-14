@@ -15,6 +15,7 @@ SISEM es un sistema medico critico sobre backend Django/DRF y frontend React. Un
 - JWT en cookies HttpOnly (no tokens en body ni storage).
 - CSRF obligatorio en mutaciones.
 - Errores siguen el formato `ApiError` del estandar.
+- `code` y `status` son contractuales; `message` se considera contractual para UX de auth-access (toast) y cualquier cambio requiere alinear runtime+docs+types+mocks+tests en el mismo PR.
 - El contrato API documenta solo errores HTTP del backend (no errores de red del cliente).
 - Gates de tipado frontend se validan por separado: `bun run typecheck:app` y `bun run typecheck:tests`.
 - Alineacion docs/tipos/mocks se valida con `src/test/integration/contracts/auth-contract-alignment.spec.ts`.
@@ -124,9 +125,6 @@ Cada endpoint debe registrar en `auditoria_eventos`:
 | `ACCOUNT_EXPIRED` | 401 | Tu cuenta ha expirado. Contacta a soporte |
 | `RATE_LIMIT_EXCEEDED` | 429 | Demasiadas solicitudes, espera un momento |
 | `SERVICE_UNAVAILABLE` | 503 | Servicio temporalmente no disponible |
-| `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
-| `TOKEN_INVALID` | 401 | Token inválido |
-| `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
 
 Nota de seguridad: para evitar user enumeration, credenciales inválidas por usuario inexistente y contraseña inválida responden el mismo contrato (`INVALID_CREDENTIALS`, 401, mensaje unificado).
@@ -198,7 +196,7 @@ Uso operativo vigente (KAN-65):
 **Errores (mensaje para toast)**
 | Code | Status | Message |
 | --- | --- | --- |
-| `REFRESH_TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
+| `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
 | `TOKEN_INVALID` | 401 | Token inválido |
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |
@@ -224,7 +222,7 @@ Uso operativo vigente (KAN-65):
 **Errores (mensaje para toast)**
 | Code | Status | Message |
 | --- | --- | --- |
-| `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
+| `REFRESH_TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
 | `TOKEN_INVALID` | 401 | Token inválido |
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
 | `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |
@@ -276,6 +274,7 @@ Uso operativo vigente (KAN-65):
 **Errores (mensaje para toast)**
 | Code | Status | Message |
 | --- | --- | --- |
+| `VALIDATION_ERROR` | 400 | Hay errores en el formulario |
 | `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
 | `TOKEN_INVALID` | 401 | Token inválido |
 | `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
@@ -338,6 +337,7 @@ Endpoint autenticado para cambio de contraseña self-service.
 **Errores (mensaje para toast)**
 | Code | Status | Message |
 | --- | --- | --- |
+| `VALIDATION_ERROR` | 400 | Hay errores en el formulario |
 | `TERMS_NOT_ACCEPTED` | 400 | Debes aceptar los términos y condiciones |
 | `PASSWORD_TOO_WEAK` | 400 | La contraseña es demasiado débil |
 | `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |

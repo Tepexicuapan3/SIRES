@@ -48,6 +48,7 @@ Sin governance, el trabajo paralelo genera colisiones, retrabajo y deuda tecnica
 - En frontend, adjuntar evidencia negativa automatizada de detección de deuda TS (`test:guard:ts-debt-detection`) para evitar falsos verdes de typecheck.
 - En frontend, adjuntar enforcement automatizado anti-bypass (`test:guard:ts-anti-bypass`) contra `any`, `as unknown as`, `@ts-ignore` y `@ts-nocheck` en fronteras críticas de tests.
 - Si hay cambios de contrato auth/frontend, incluir evidencia de `src/test/integration/contracts/auth-contract-alignment.spec.ts`.
+- Gate CI contractual obligatorio para auth: job `auth-contract-governance` (backend `test_auth_api` + `test_auth_contract_edges`, frontend `auth-contract-alignment`, `typecheck:app`, `typecheck:tests`).
 - Smoke E2E de cierre se valida en Docker con preflight reproducible (`bun run test:e2e:bootstrap`, `bun run test:e2e:smoke` / `test:e2e:kan4`); ejecucion host-only no cuenta como evidencia final.
 - Para hardening de aliases/frontend structure, incluir guard automatizado ejecutable contra reintroduccion de aliases legacy (`bun run test:guard:legacy-alias`).
 - Evidencia test-first cuando aplique TDD estricto: fallo inicial, progresion de implementacion y estado final en verde.

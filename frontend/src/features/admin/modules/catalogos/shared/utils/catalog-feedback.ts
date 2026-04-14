@@ -1,12 +1,15 @@
-import { ApiError } from "@api/utils/errors";
+import { ApiError, type ApiErrorDetails } from "@api/utils/errors";
 
-const formatDetails = (details?: Record<string, string[]>) => {
+const formatDetails = (details?: ApiErrorDetails) => {
   if (!details) return "";
 
   const lines = Object.entries(details)
-    .flatMap(([field, messages]) =>
-      messages.map((message) => `${field}: ${message}`),
-    )
+    .flatMap(([field, messages]) => {
+      const normalizedMessages = Array.isArray(messages)
+        ? messages
+        : [messages];
+      return normalizedMessages.map((message) => `${field}: ${message}`);
+    })
     .filter(Boolean);
 
   if (lines.length === 0) return "";

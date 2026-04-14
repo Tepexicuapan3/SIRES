@@ -25,7 +25,7 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import Cookies from "js-cookie";
-import { ApiError, ERROR_CODES } from "@api/utils/errors";
+import { ApiError, ERROR_CODES, type ApiErrorPayload } from "@api/utils/errors";
 import { createRequestId } from "@api/utils/request-id";
 import { queryClient } from "@app/config/query-client";
 import { clearAuthSession } from "@/domains/auth-access/adapters/auth-cache";
@@ -173,11 +173,7 @@ function transformToApiError(error: AxiosError): ApiError {
 
   // Error del backend
   const { status, data } = error.response;
-  const errorData = data as {
-    code?: string;
-    message?: string;
-    details?: Record<string, string[]>;
-  };
+  const errorData = data as Partial<ApiErrorPayload>;
 
   return new ApiError(
     (errorData?.code as keyof typeof ERROR_CODES) ||
@@ -251,7 +247,7 @@ function getDefaultErrorCode(status: number): string {
 function getDefaultMessage(status: number): string {
   switch (status) {
     case 400:
-      return "Error de validación";
+      return "Hay errores en el formulario";
     case 401:
       return "Sesión expirada";
     case 403:

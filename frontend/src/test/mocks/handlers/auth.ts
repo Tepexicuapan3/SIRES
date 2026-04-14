@@ -667,6 +667,14 @@ export const authHandlers = [
     await delay(MOCK_DELAY.long);
     const body = (await request.json()) as { newPassword: string };
 
+    if (!body.newPassword || body.newPassword.trim().length === 0) {
+      return createContractErrorResponse(
+        400,
+        "VALIDATION_ERROR",
+        "Hay errores en el formulario",
+      );
+    }
+
     // Simulación de Token Expirado
     if (body.newPassword === "ExpiredToken1!") {
       return createContractErrorResponse(
@@ -724,6 +732,14 @@ export const authHandlers = [
       );
     }
 
+    if (!body.newPassword || body.newPassword.trim().length === 0) {
+      return createContractErrorResponse(
+        400,
+        "VALIDATION_ERROR",
+        "Hay errores en el formulario",
+      );
+    }
+
     if (body.currentPassword === body.newPassword) {
       return createContractErrorResponse(
         400,
@@ -760,6 +776,14 @@ export const authHandlers = [
         400,
         "TERMS_NOT_ACCEPTED",
         "Debes aceptar los términos y condiciones.",
+      );
+    }
+
+    if (!body.newPassword || body.newPassword.trim().length === 0) {
+      return createContractErrorResponse(
+        400,
+        "VALIDATION_ERROR",
+        "Hay errores en el formulario",
       );
     }
 

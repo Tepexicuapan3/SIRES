@@ -68,6 +68,16 @@ export const ERROR_CODES = {
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
+export type ApiErrorDetails = Record<string, string[] | string>;
+
+export interface ApiErrorPayload {
+  code: string;
+  message: string;
+  status: number;
+  details?: ApiErrorDetails;
+  requestId?: string;
+}
+
 // ==========================================
 // MENSAJES USER-FRIENDLY
 // ==========================================
@@ -137,7 +147,7 @@ export class ApiError extends Error {
     public readonly code: string,
     message: string,
     public readonly status: number,
-    public readonly details?: Record<string, string[]>,
+    public readonly details?: ApiErrorDetails,
     public readonly requestId?: string,
     public readonly timestamp: Date = new Date(),
   ) {
