@@ -19,6 +19,8 @@ import type {
   VerifyResetCodeResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
+  ChangePasswordRequest,
+  ChangePasswordResponse,
   CompleteOnboardingRequest,
   CompleteOnboardingResponse,
   VerifyTokenResponse,
@@ -207,6 +209,25 @@ const authAPI = {
   ): Promise<ResetPasswordResponse> => {
     const response = await apiClient.post<ResetPasswordResponse>(
       "/auth/reset-password",
+      data,
+    );
+    return response.data;
+  },
+
+  /**
+   * Cambio de contraseña para sesión autenticada.
+   *
+   * @endpoint POST /api/v1/auth/change-password
+   * @permission Auth (Token válido + CSRF)
+   *
+   * @param data - Contraseña actual y nueva contraseña
+   * @returns Confirmación de operación exitosa
+   */
+  changePassword: async (
+    data: ChangePasswordRequest,
+  ): Promise<ChangePasswordResponse> => {
+    const response = await apiClient.post<ChangePasswordResponse>(
+      "/auth/change-password",
       data,
     );
     return response.data;

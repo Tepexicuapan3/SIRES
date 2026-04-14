@@ -47,6 +47,7 @@ Este dominio cubre:
 - [`kan-89-auth-qa-e2e-reproducibility-baseline.md`](./kan-89-auth-qa-e2e-reproducibility-baseline.md) - baseline reproducible KAN-89 para QA E2E auth (dataset canónico, corridas `backend-real`/`hybrid`, y dictamen GO/NO-GO).
 - [`kan-92-auth-e2e-critical-go-no-go.md`](./kan-92-auth-e2e-critical-go-no-go.md) - dictamen Docker-first GO/NO-GO para auth crítico (TC001/003/006/017/021), con matriz AC→TC→evidencia y resultado final.
 - [`kan-91-module-1-closure-acta.md`](./kan-91-module-1-closure-acta.md) - acta canónica de cierre de orquestación Módulo 1 (KAN-91) con regla determinística GO/NO-GO, trazabilidad Jira+Notion+docs y decisión operativa de sign-off.
+- [`kan-101-apply-evidence.md`](./kan-101-apply-evidence.md) - evidencia de implementación KAN-101 para `change-password` autenticado, incluyendo traza TDD-first Red/Green/Refactor y checklist de governance.
 - [`kan-60-s1-qa-regression-go-no-go.md`](./kan-60-s1-qa-regression-go-no-go.md) - evidencia de regresión funcional Sprint 1 + checklist pre-deploy y dictamen QA Go/No-Go para KAN-60.
 - [`kan-71-multi-sprint-demo-process.md`](./kan-71-multi-sprint-demo-process.md) - guía institucional reusable de demo multi-sprint (plantilla de acta, checklist de evidencia mínima y flujo de cierre Jira/PR/docs).
 - [`pending-decisions.md`](./pending-decisions.md) - acta de cierre de decisiones historicamente pendientes (estado final resuelto).

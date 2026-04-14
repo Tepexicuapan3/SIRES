@@ -54,6 +54,7 @@ Indice canonico de documentacion para operar SISEM con el modelo actual: monolit
 - `docs/domains/auth-access/kan-89-auth-qa-e2e-reproducibility-baseline.md` - baseline reproducible KAN-89 para QA E2E auth con dataset canónico, protocolo Docker-first y dictamen GO/NO-GO por modo.
 - `docs/domains/auth-access/kan-86-backend-quality-run-go-no-go.md` - corrida Docker-first backend para login/onboarding/reset-password con evidencia de startup y dictamen Go/No-Go Módulo 1.
 - `docs/domains/auth-access/kan-91-module-1-closure-acta.md` - acta de cierre KAN-91 para orquestación DoD del Módulo 1 con dictamen compuesto GO/NO-GO y trazabilidad Jira+Notion+docs.
+- `docs/domains/auth-access/kan-101-apply-evidence.md` - evidencia de implementación KAN-101 para `change-password` autenticado con traza TDD-first Red/Green/Refactor y checklist de governance.
 - `docs/domains/auth-access/kan-60-s1-qa-regression-go-no-go.md` - evidencia de regresión funcional Sprint 1 con checklist pre-deploy y dictamen QA Go/No-Go (KAN-60).
 - `docs/domains/auth-access/kan-71-multi-sprint-demo-process.md` - guía institucional de demo multi-sprint (plantilla reusable, checklist mínimo y flujo operativo de cierre).
 - `docs/domains/auth-access/kan-70-evidence-matrix-template.md` - matriz plantilla AC->evidencia para cierre evidence-first y trazabilidad TDD por fase.

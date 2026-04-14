@@ -13,7 +13,7 @@ from apps.authentication.services.token_service import (
     generate_csrf_token,
 )
 from apps.catalogos.models import Permisos, Roles
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.cache import cache
 from django.test import override_settings
 from django.utils import timezone
@@ -605,6 +605,143 @@ class AuthApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["code"], "PASSWORD_TOO_WEAK")
+
+    def test_change_password_success(self):
+        login_response = self._login()
+        csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+        response = self.client.post(
+            "/api/v1/auth/change-password",
+            {
+                "currentPassword": "Abel_180903",
+                "newPassword": "Nueva_Clave_123",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+            HTTP_X_REQUEST_ID="req-change-password-success",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+
+        self.user.refresh_from_db()
+        self.assertTrue(check_password("Nueva_Clave_123", self.user.clave_hash))
+        self.assertTrue(
+            AuditoriaEvento.objects.filter(
+                accion="PASSWORD_CHANGE_SUCCESS",
+                resultado="SUCCESS",
+                request_id="req-change-password-success",
+            ).exists()
+        )
+
+    def test_change_password_requires_auth(self):
+        response = self.client.post(
+            "/api/v1/auth/change-password",
+            {
+                "currentPassword": "Abel_180903",
+                "newPassword": "Nueva_Clave_123",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID="req-change-password-auth",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["code"], "TOKEN_INVALID")
+        self.assertEqual(response.data["requestId"], "req-change-password-auth")
+
+    def test_change_password_requires_csrf(self):
+        self._login()
+
+        response = self.client.post(
+            "/api/v1/auth/change-password",
+            {
+                "currentPassword": "Abel_180903",
+                "newPassword": "Nueva_Clave_123",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "PERMISSION_DENIED")
+
+    def test_change_password_invalid_current_password(self):
+        login_response = self._login()
+        csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+        response = self.client.post(
+            "/api/v1/auth/change-password",
+            {
+                "currentPassword": "ClaveMala1",
+                "newPassword": "Nueva_Clave_123",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+            HTTP_X_REQUEST_ID="req-change-password-invalid-current",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["code"], "INVALID_CREDENTIALS")
+        self.assertEqual(
+            response.data["requestId"], "req-change-password-invalid-current"
+        )
+
+    @override_settings(
+        AUTH_PASSWORD_VALIDATORS=[
+            {
+                "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+                "OPTIONS": {"min_length": 12},
+            }
+        ]
+    )
+    def test_change_password_password_weak(self):
+        login_response = self._login()
+        csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+        response = self.client.post(
+            "/api/v1/auth/change-password",
+            {
+                "currentPassword": "Abel_180903",
+                "newPassword": "corta",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "PASSWORD_TOO_WEAK")
+
+    def test_change_password_rejects_same_password(self):
+        login_response = self._login()
+        csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+        response = self.client.post(
+            "/api/v1/auth/change-password",
+            {
+                "currentPassword": "Abel_180903",
+                "newPassword": "Abel_180903",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+
+    def test_change_password_missing_new_password_returns_validation_error(self):
+        login_response = self._login()
+        csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+        response = self.client.post(
+            "/api/v1/auth/change-password",
+            {
+                "currentPassword": "Abel_180903",
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
 
     def test_login_attempts_cleared_after_success(self):
         response = self.client.post(

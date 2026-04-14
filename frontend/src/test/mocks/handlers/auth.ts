@@ -699,7 +699,7 @@ export const authHandlers = [
       return createContractErrorResponse(
         400,
         "PASSWORD_TOO_WEAK",
-        "La contraseña no cumple con los requisitos de seguridad (mín 8 caracteres, mayúscula, número y símbolo).",
+        "La contraseña es demasiado débil",
       );
     }
 
@@ -707,6 +707,40 @@ export const authHandlers = [
     setMockSessionUser(user);
 
     return createLoginResponse(user, false);
+  }),
+
+  http.post(getApiUrl("auth/change-password"), async ({ request }) => {
+    await delay(MOCK_DELAY.short);
+    const body = (await request.json()) as {
+      currentPassword: string;
+      newPassword: string;
+    };
+
+    if (body.currentPassword !== "password123") {
+      return createContractErrorResponse(
+        401,
+        "INVALID_CREDENTIALS",
+        "Usuario o contraseña incorrectos",
+      );
+    }
+
+    if (body.currentPassword === body.newPassword) {
+      return createContractErrorResponse(
+        400,
+        "VALIDATION_ERROR",
+        "Hay errores en el formulario",
+      );
+    }
+
+    if (!isPasswordStrong(body.newPassword)) {
+      return createContractErrorResponse(
+        400,
+        "PASSWORD_TOO_WEAK",
+        "La contraseña es demasiado débil",
+      );
+    }
+
+    return HttpResponse.json({ success: true });
   }),
 
   // ============================================================
@@ -753,7 +787,7 @@ export const authHandlers = [
       return createContractErrorResponse(
         400,
         "PASSWORD_TOO_WEAK",
-        "La contraseña no cumple con los requisitos de seguridad.",
+        "La contraseña es demasiado débil",
       );
     }
 

@@ -27,3 +27,9 @@ class VerifyResetCodeSerializer(serializers.Serializer):
 class ResetPasswordSerializer(serializers.Serializer):
     # Nuevo password a guardar.
     newPassword = serializers.CharField(min_length=8, max_length=255)
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    # Cambio de contraseña para sesión autenticada.
+    currentPassword = serializers.CharField(min_length=1, max_length=255)
+    newPassword = serializers.CharField(min_length=1, max_length=255)

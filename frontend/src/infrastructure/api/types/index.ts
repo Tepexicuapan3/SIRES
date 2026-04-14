@@ -31,6 +31,7 @@ export type {
   VerifyResetCodeRequest,
   ResetPasswordRequest,
   CompleteOnboardingRequest,
+  ChangePasswordRequest,
   // Responses
   LoginResponse,
   RefreshTokenResponse,
@@ -40,6 +41,7 @@ export type {
   RequestResetCodeResponse,
   ResetPasswordResponse,
   CompleteOnboardingResponse,
+  ChangePasswordResponse,
   MeResponse,
   CapabilitiesResponse,
 } from "@api/types/auth.types";

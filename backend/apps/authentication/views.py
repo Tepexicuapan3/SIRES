@@ -3,6 +3,7 @@ import time
 from apps.administracion.services.rbac_resolver import RBACResolver
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.serializers import (
+    ChangePasswordSerializer,
     CompleteOnboardingSerializer,
     LoginSerializer,
     RequestResetCodeSerializer,
@@ -38,6 +39,7 @@ from apps.authentication.uses_case.me_usecase import (
     build_capabilities_response,
     build_me_response,
 )
+from apps.authentication.uses_case.change_password_usecase import change_password
 from apps.authentication.uses_case.onboarding_usecase import complete_onboarding
 from apps.authentication.uses_case.refresh_usecase import refresh_tokens
 from apps.authentication.uses_case.request_reset_code_usecase import request_reset_code
@@ -808,6 +810,113 @@ class VerifyResetCodeView(APIView):
             },
         )
         return response
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ChangePasswordView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        try:
+            user = authenticate_request(request)
+        except AuthServiceError as exc:
+            log_event(
+                request,
+                "PASSWORD_CHANGE_FAILED",
+                "FAIL",
+                error_code=exc.code,
+                meta={"endpoint": "/auth/change-password"},
+            )
+            return error_response(
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
+                request_id=get_request_id(request),
+            )
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            log_event(
+                request,
+                "PASSWORD_CHANGE_FAILED",
+                "FAIL",
+                actor_user=user,
+                target_user=user,
+                error_code="PERMISSION_DENIED",
+                meta={"endpoint": "/auth/change-password"},
+            )
+            return csrf_error
+
+        serializer = ChangePasswordSerializer(data=request.data)
+        if not serializer.is_valid():
+            log_event(
+                request,
+                "PASSWORD_CHANGE_FAILED",
+                "FAIL",
+                actor_user=user,
+                target_user=user,
+                error_code="VALIDATION_ERROR",
+                meta={"endpoint": "/auth/change-password"},
+            )
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        try:
+            change_password(
+                user,
+                serializer.validated_data["currentPassword"],
+                serializer.validated_data["newPassword"],
+            )
+        except AuthServiceError as exc:
+            log_event(
+                request,
+                "PASSWORD_CHANGE_FAILED",
+                "FAIL",
+                actor_user=user,
+                target_user=user,
+                error_code=exc.code,
+                meta={"endpoint": "/auth/change-password"},
+            )
+            return error_response(
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
+                request_id=get_request_id(request),
+            )
+        except Exception:
+            log_event(
+                request,
+                "PASSWORD_CHANGE_FAILED",
+                "FAIL",
+                actor_user=user,
+                target_user=user,
+                error_code="INTERNAL_SERVER_ERROR",
+                meta={"endpoint": "/auth/change-password"},
+            )
+            return error_response(
+                "INTERNAL_SERVER_ERROR",
+                "Error del servidor, intenta nuevamente",
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                request_id=get_request_id(request),
+            )
+
+        log_event(
+            request,
+            "PASSWORD_CHANGE_SUCCESS",
+            "SUCCESS",
+            actor_user=user,
+            target_user=user,
+            meta={"endpoint": "/auth/change-password"},
+        )
+        return Response({"success": True}, status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

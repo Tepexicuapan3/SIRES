@@ -284,6 +284,47 @@ Uso operativo vigente (KAN-65):
 | `USER_NOT_FOUND` | 404 | Usuario no encontrado |
 | `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
 
+#### POST `/auth/change-password`
+
+Endpoint autenticado para cambio de contraseña self-service.
+
+**Auth/CSRF requerido**
+- Sesión activa por JWT en cookies HttpOnly.
+- Header `X-CSRF-TOKEN` obligatorio.
+
+**Request**
+```json
+{
+  "currentPassword": "Abel_180903",
+  "newPassword": "Nueva_Clave_123"
+}
+```
+
+**200 OK**
+```json
+{ "success": true }
+```
+
+**Errores (mensaje para toast)**
+| Code | Status | Message |
+| --- | --- | --- |
+| `VALIDATION_ERROR` | 400 | Hay errores en el formulario |
+| `PASSWORD_TOO_WEAK` | 400 | La contraseña es demasiado débil |
+| `INVALID_CREDENTIALS` | 401 | Usuario o contraseña incorrectos |
+| `TOKEN_EXPIRED` | 401 | Tu sesión ha expirado |
+| `TOKEN_INVALID` | 401 | Token inválido |
+| `SESSION_EXPIRED` | 401 | Tu sesión ha expirado |
+| `PERMISSION_DENIED` | 403 | No tienes permiso para esta acción |
+| `INTERNAL_SERVER_ERROR` | 500 | Error del servidor, intenta nuevamente |
+
+**Notas de regla de negocio (capa application/use-case)**
+- `currentPassword` debe coincidir con el hash actual del usuario autenticado.
+- `newPassword` debe ser distinta de `currentPassword`.
+- `newPassword` debe pasar `validate_password` de Django.
+
+**Auditoría obligatoria**
+- `PASSWORD_CHANGE_SUCCESS` y `PASSWORD_CHANGE_FAILED` con `request_id`, actor, `ip`, `user_agent` y metadata (`endpoint`).
+
 #### POST `/auth/complete-onboarding`
 
 **200 OK**

@@ -125,6 +125,15 @@ export interface CompleteOnboardingRequest {
   termsAccepted: boolean;
 }
 
+/**
+ * Payload para cambio de contraseña autenticado.
+ * POST /api/v1/auth/change-password
+ */
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // =============================================================================
 // RESPONSE TYPES
 // =============================================================================
@@ -184,6 +193,12 @@ export type ResetPasswordResponse = LoginResponse;
  * POST /api/v1/auth/complete-onboarding
  */
 export type CompleteOnboardingResponse = LoginResponse;
+
+/**
+ * Respuesta de cambio de contraseña.
+ * POST /api/v1/auth/change-password
+ */
+export type ChangePasswordResponse = SuccessResponse;
 
 /**
  * Respuesta de GET /api/v1/auth/me

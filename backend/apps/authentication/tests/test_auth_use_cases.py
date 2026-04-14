@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework_simplejwt.exceptions import TokenError
@@ -9,6 +9,7 @@ from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.otp_service import OTP_TTL_SECONDS
 from apps.authentication.services.token_service import create_reset_token
+from apps.authentication.uses_case.change_password_usecase import change_password
 from apps.authentication.uses_case.onboarding_usecase import complete_onboarding
 from apps.authentication.uses_case.refresh_usecase import refresh_tokens
 from apps.authentication.uses_case.request_reset_code_usecase import request_reset_code
@@ -192,3 +193,38 @@ class AuthUseCasesTests(TestCase):
 
     def test_otp_ttl_is_five_minutes(self):
         self.assertEqual(OTP_TTL_SECONDS, 300)
+
+    @patch("apps.authentication.uses_case.change_password_usecase.validate_password")
+    def test_change_password_updates_hash_when_current_password_is_valid(
+        self, validate_password_mock
+    ):
+        validate_password_mock.return_value = None
+
+        change_password(self.user, "Usecase_123456", "Nueva_123456")
+
+        self.user.refresh_from_db()
+        self.assertTrue(check_password("Nueva_123456", self.user.clave_hash))
+
+    def test_change_password_invalid_current_password(self):
+        with self.assertRaises(AuthServiceError) as ctx:
+            change_password(self.user, "ClaveMala1", "Nueva_123456")
+
+        self.assertEqual(ctx.exception.code, "INVALID_CREDENTIALS")
+
+    @patch("apps.authentication.uses_case.change_password_usecase.validate_password")
+    def test_change_password_rejects_same_password(self, validate_password_mock):
+        validate_password_mock.return_value = None
+
+        with self.assertRaises(AuthServiceError) as ctx:
+            change_password(self.user, "Usecase_123456", "Usecase_123456")
+
+        self.assertEqual(ctx.exception.code, "VALIDATION_ERROR")
+
+    @patch("apps.authentication.uses_case.change_password_usecase.validate_password")
+    def test_change_password_password_too_weak(self, validate_password_mock):
+        validate_password_mock.side_effect = ValidationError(["weak"])
+
+        with self.assertRaises(AuthServiceError) as ctx:
+            change_password(self.user, "Usecase_123456", "corta")
+
+        self.assertEqual(ctx.exception.code, "PASSWORD_TOO_WEAK")

@@ -5,6 +5,7 @@ from django.urls import path
 from .views import (
     AuthAccessObservabilityView,
     CapabilitiesView,
+    ChangePasswordView,
     CompleteOnboardingView,
     LoginView,
     LogoutView,
@@ -28,6 +29,11 @@ urlpatterns = [
     ),
     path("auth/verify", VerifyView.as_view(), name="auth-verify"),
     path("auth/refresh", RefreshView.as_view(), name="auth-refresh"),
+    path(
+        "auth/change-password",
+        ChangePasswordView.as_view(),
+        name="auth-change-password",
+    ),
     path(
         "auth/complete-onboarding",
         CompleteOnboardingView.as_view(),
