@@ -33,6 +33,10 @@ from .tipos_sanguineo import TiposSanguineo
 from .turnos import Turnos
 
 
+from .base import CatalogBase
+from .centros_atencion import CatCentroAtencion
+from .centro_atencion_horario import CatCentroAtencionHorario
+
 __all__ = [
     "CatalogBase",
     "Areas",
@@ -40,6 +44,7 @@ __all__ = [
     "Bajas",
     "CalidadLaboral",
     "CatCentroAtencion",
+    "CatCentroAtencionHorario",
     "CatCies",
     "Consultorios",
     "EdoCivil",

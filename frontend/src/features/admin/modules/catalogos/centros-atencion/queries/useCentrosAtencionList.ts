@@ -15,15 +15,17 @@ interface UseCentrosAtencionListOptions {
  *
  * Razon empresarial:
  * - Centraliza filtros y cache para catalogos compartidos.
- * - Reutilizable en formularios y filtros de usuarios.
+ * - Reutilizable en tablas, formularios y selectores.
  */
 export const useCentrosAtencionList = (
   params?: CentrosAtencionListParams,
   options: UseCentrosAtencionListOptions = {},
 ) => {
+  const normalizedParams = params ?? {};
+
   return useQuery<CentrosAtencionListResponse>({
-    queryKey: centrosAtencionKeys.list(params),
-    queryFn: () => centrosAtencionAPI.getAll(params),
+    queryKey: centrosAtencionKeys.list(normalizedParams),
+    queryFn: () => centrosAtencionAPI.getAll(normalizedParams),
     staleTime: 10 * 60 * 1000,
     enabled: options.enabled ?? true,
   });

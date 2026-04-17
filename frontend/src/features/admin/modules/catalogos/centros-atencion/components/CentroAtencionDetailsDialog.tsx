@@ -43,15 +43,18 @@ const FORM_ID = "centro-atencion-details-form";
 
 const DEFAULT_FORM_VALUES: CentroAtencionDetailsFormValues = {
   name: "",
-  folioCode: "",
-  address: "",
+  code: "",
+  centerType: "CLINICA",
+  legacyFolio: null,
   isExternal: false,
-  morningStartsAt: "07:00",
-  morningEndsAt: "14:00",
-  afternoonStartsAt: "14:00",
-  afternoonEndsAt: "20:00",
-  nightStartsAt: "20:00",
-  nightEndsAt: "23:00",
+  address: null,
+  postalCode: null,
+  neighborhood: null,
+  municipality: null,
+  state: null,
+  city: null,
+  phone: null,
+  isActive: true,
 };
 
 export function CentroAtencionDetailsDialog({
@@ -65,6 +68,7 @@ export function CentroAtencionDetailsDialog({
     useDetailsDialogCloseGuard(onOpenChange);
 
   const centerId = centerSummary?.id;
+
   const {
     data: centerDetailResponse,
     isLoading,
@@ -73,7 +77,7 @@ export function CentroAtencionDetailsDialog({
     refetch,
   } = useCentroAtencionDetail(centerId, open && Boolean(centerId));
 
-  const centerDetail = centerDetailResponse?.center;
+  const centerDetail = centerDetailResponse?.careCenter;
   const updateCenter = useUpdateCentroAtencion();
 
   const form = useForm<CentroAtencionDetailsFormValues>({
@@ -90,6 +94,7 @@ export function CentroAtencionDetailsDialog({
 
   const closeDialog = () => {
     markClosing();
+
     if (centerDetail) {
       form.reset(mapCentroAtencionDetailToFormValues(centerDetail));
     } else {
@@ -103,6 +108,7 @@ export function CentroAtencionDetailsDialog({
   const shouldShowLoading = open && isLoading && !isClosing;
   const shouldShowError =
     open && !isClosing && (isError || (!isLoading && !centerDetail));
+
   const readOnlyCenterMessage =
     "Solo lectura: no puedes actualizar este centro porque no tienes permisos.";
 
@@ -123,9 +129,11 @@ export function CentroAtencionDetailsDialog({
         centerId: centerDetail.id,
         data: payload,
       });
+
       toast.success("Centro actualizado", {
         description: "Los cambios se guardaron correctamente.",
       });
+
       form.reset(values);
     } catch (error) {
       toast.error("No se pudo guardar", {
@@ -145,6 +153,7 @@ export function CentroAtencionDetailsDialog({
         centerId: centerDetail.id,
         data: { isActive: nextActive },
       });
+
       toast.success(nextActive ? "Centro activado" : "Centro desactivado");
     } catch (error) {
       toast.error("No se pudo actualizar el estado", {
@@ -157,7 +166,13 @@ export function CentroAtencionDetailsDialog({
   };
 
   const title = centerDetail?.name || centerSummary?.name || "Centro";
-  const subtitle = centerDetail?.folioCode || centerSummary?.folioCode || null;
+  const subtitle =
+    centerDetail?.code ||
+    centerSummary?.code ||
+    centerDetail?.legacyFolio ||
+    centerSummary?.legacyFolio ||
+    null;
+
   const isActive = centerDetail?.isActive ?? centerSummary?.isActive;
 
   const statusBadge =
@@ -165,9 +180,10 @@ export function CentroAtencionDetailsDialog({
       <CatalogStatusBadge isActive={isActive} />
     ) : null;
 
-  const createdMetaLabel = centerDetail
-    ? `Creado ${formatDate(centerDetail.createdAt)} por ${centerDetail.createdBy.name}`
+  const createdMetaLabel = centerDetail?.createdAt
+    ? `Creado ${formatDate(centerDetail.createdAt)} por ${centerDetail.createdBy?.name ?? "-"}`
     : null;
+
   const createdMeta = createdMetaLabel ? (
     <span className="inline-flex max-w-full min-w-0 items-center gap-2">
       <CalendarDays className="size-4 shrink-0" />
@@ -180,6 +196,7 @@ export function CentroAtencionDetailsDialog({
   const updatedMetaLabel = centerDetail?.updatedAt
     ? `Actualizado ${formatDateTime(centerDetail.updatedAt)} por ${centerDetail.updatedBy?.name ?? "-"}`
     : null;
+
   const updatedMeta = updatedMetaLabel ? (
     <span className="inline-flex max-w-full min-w-0 items-center gap-2">
       <Pencil className="size-4 shrink-0" />
@@ -198,8 +215,9 @@ export function CentroAtencionDetailsDialog({
           <Skeleton className="h-3 w-32" />
         </div>
       </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
-        {Array.from({ length: 6 }).map((_, index) => (
+        {Array.from({ length: 8 }).map((_, index) => (
           <Skeleton key={`field-skel-${index}`} className="h-12" />
         ))}
       </div>
@@ -211,15 +229,18 @@ export function CentroAtencionDetailsDialog({
       <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-status-critical/10 text-status-critical">
         <AlertTriangle className="size-6" />
       </div>
+
       <h3 className="mt-4 text-base font-semibold text-txt-body">
         No se pudo cargar el centro
       </h3>
+
       <p className="mt-1 text-sm text-txt-muted">
         {getCentroAtencionErrorMessage(
           centerDetailError,
           "Intenta nuevamente para ver el detalle completo.",
         )}
       </p>
+
       <Button
         variant="outline"
         size="sm"
@@ -247,6 +268,7 @@ export function CentroAtencionDetailsDialog({
                 isStatusPending={updateCenter.isPending}
                 isEditable={canEdit}
               />
+
               {!canEdit ? (
                 <AdminReadOnlyNotice message={readOnlyCenterMessage} />
               ) : null}

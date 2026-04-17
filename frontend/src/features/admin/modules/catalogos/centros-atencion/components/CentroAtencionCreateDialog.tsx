@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -29,7 +29,11 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 import { ScrollArea } from "@shared/ui/ScrollArea";
-import type { CreateCentroAtencionResponse } from "@api/types";
+import type {
+  CreateCentroAtencionResponse,
+  PostalCodeSearchItem,
+} from "@api/types";
+import { centrosAtencionAPI } from "@api/resources/catalogos/centros-atencion.api";
 import { CentroAtencionDialogHeader } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDialogHeader";
 import {
   createCentroAtencionSchema,
@@ -45,43 +49,33 @@ interface CentroAtencionCreateDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const CENTER_TYPE = {
+const CENTER_ORIGIN = {
   INTERNAL: "internal",
   EXTERNAL: "external",
 } as const;
 
+const CENTER_TYPE = {
+  CLINICA: "CLINICA",
+  HOSPITAL: "HOSPITAL",
+} as const;
+
 const DEFAULT_VALUES: CreateCentroAtencionFormValues = {
   name: "",
-  folioCode: "",
-  address: "",
+  code: "",
+  centerType: "CLINICA",
+  legacyFolio: null,
   isExternal: false,
-  morningStartsAt: "07:00",
-  morningEndsAt: "14:00",
-  afternoonStartsAt: "14:00",
-  afternoonEndsAt: "20:00",
-  nightStartsAt: "20:00",
-  nightEndsAt: "23:00",
+  address: null,
+  postalCode: null,
+  neighborhood: null,
+  municipality: null,
+  state: null,
+  city: null,
+  phone: null,
+  isActive: true,
 };
 
 const FORM_ID = "centro-atencion-create-form";
-
-const SCHEDULE_FIELDS = [
-  {
-    label: "Turno matutino",
-    startsAtField: "morningStartsAt",
-    endsAtField: "morningEndsAt",
-  },
-  {
-    label: "Turno vespertino",
-    startsAtField: "afternoonStartsAt",
-    endsAtField: "afternoonEndsAt",
-  },
-  {
-    label: "Turno nocturno",
-    startsAtField: "nightStartsAt",
-    endsAtField: "nightEndsAt",
-  },
-] as const;
 
 export function CentroAtencionCreateDialog({
   open,
@@ -89,6 +83,11 @@ export function CentroAtencionCreateDialog({
 }: CentroAtencionCreateDialogProps) {
   const [createdCenter, setCreatedCenter] =
     useState<CreateCentroAtencionResponse | null>(null);
+  const [postalCodeOptions, setPostalCodeOptions] = useState<
+    PostalCodeSearchItem[]
+  >([]);
+  const [isSearchingPostalCode, setIsSearchingPostalCode] = useState(false);
+
   const createCenter = useCreateCentroAtencion();
 
   const form = useForm<CreateCentroAtencionFormValues>({
@@ -96,12 +95,71 @@ export function CentroAtencionCreateDialog({
     defaultValues: DEFAULT_VALUES,
   });
 
+  const postalCodeValue = form.watch("postalCode");
+
+  const selectedPostalCodeOption = useMemo(() => {
+    const neighborhood = form.getValues("neighborhood");
+    if (!neighborhood) return null;
+
+    return (
+      postalCodeOptions.find((item) => item.colonia === neighborhood) ?? null
+    );
+  }, [postalCodeOptions, form]);
+
   const handleDialogOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       form.reset(DEFAULT_VALUES);
       setCreatedCenter(null);
+      setPostalCodeOptions([]);
     }
     onOpenChange(nextOpen);
+  };
+
+  const handleSearchPostalCode = async () => {
+    const cp = form.getValues("postalCode");
+
+    if (!cp || cp.trim().length !== 5) {
+      toast.error("Codigo postal invalido", {
+        description: "Captura un codigo postal de 5 digitos.",
+      });
+      return;
+    }
+
+    try {
+      setIsSearchingPostalCode(true);
+      const response = await centrosAtencionAPI.searchPostalCode(cp.trim());
+      setPostalCodeOptions(response.items);
+
+      if (response.items.length === 0) {
+        toast.warning("Sin resultados", {
+          description: "No se encontraron colonias para ese codigo postal.",
+        });
+        return;
+      }
+
+      toast.success("Codigo postal encontrado", {
+        description: `Se encontraron ${response.items.length} colonias.`,
+      });
+    } catch (error) {
+      toast.error("No se pudo buscar el codigo postal", {
+        description: getCentroAtencionErrorMessage(
+          error,
+          "Error al consultar codigo postal",
+        ),
+      });
+    } finally {
+      setIsSearchingPostalCode(false);
+    }
+  };
+
+  const handleSelectPostalCodeOption = (value: string) => {
+    const selected = postalCodeOptions.find((item) => item.colonia === value);
+    if (!selected) return;
+
+    form.setValue("neighborhood", selected.colonia, { shouldDirty: true });
+    form.setValue("municipality", selected.municipio, { shouldDirty: true });
+    form.setValue("state", selected.estado, { shouldDirty: true });
+    form.setValue("city", selected.ciudad || null, { shouldDirty: true });
   };
 
   const onSubmit = async (values: CreateCentroAtencionFormValues) => {
@@ -111,10 +169,13 @@ export function CentroAtencionCreateDialog({
       });
 
       setCreatedCenter(result);
+
       toast.success("Centro creado", {
         description: `El centro ${result.name} se creo correctamente.`,
       });
+
       form.reset(DEFAULT_VALUES);
+      setPostalCodeOptions([]);
     } catch (error) {
       toast.error("No se pudo crear el centro", {
         description: getCentroAtencionErrorMessage(
@@ -138,7 +199,7 @@ export function CentroAtencionCreateDialog({
             </DialogDescription>
             <CentroAtencionDialogHeader
               title="Nuevo centro"
-              subtitle="Configura datos operativos y horarios"
+              subtitle="Configura datos generales y direccion"
               status={<Badge variant="outline">Plantilla</Badge>}
             />
           </DialogHeader>
@@ -160,21 +221,23 @@ export function CentroAtencionCreateDialog({
                           <FormItem>
                             <FormLabel>Nombre del centro</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input {...field} value={field.value ?? ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
-                        name="folioCode"
+                        name="code"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Folio</FormLabel>
+                            <FormLabel>CLUES</FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
+                                value={field.value ?? ""}
                                 onChange={(event) =>
                                   field.onChange(
                                     event.target.value.toUpperCase(),
@@ -188,34 +251,72 @@ export function CentroAtencionCreateDialog({
                       />
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-3">
                       <FormField
                         control={form.control}
-                        name="address"
+                        name="centerType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Direccion</FormLabel>
+                            <FormLabel>Tipo de centro</FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona tipo" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value={CENTER_TYPE.CLINICA}>
+                                  Clinica
+                                </SelectItem>
+                                <SelectItem value={CENTER_TYPE.HOSPITAL}>
+                                  Hospital
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="legacyFolio"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Folio legacy</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(event) =>
+                                  field.onChange(
+                                    event.target.value.toUpperCase(),
+                                  )
+                                }
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
                         name="isExternal"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Tipo</FormLabel>
+                            <FormLabel>Origen</FormLabel>
                             <Select
                               value={
                                 field.value
-                                  ? CENTER_TYPE.EXTERNAL
-                                  : CENTER_TYPE.INTERNAL
+                                  ? CENTER_ORIGIN.EXTERNAL
+                                  : CENTER_ORIGIN.INTERNAL
                               }
                               onValueChange={(value) =>
-                                field.onChange(value === CENTER_TYPE.EXTERNAL)
+                                field.onChange(value === CENTER_ORIGIN.EXTERNAL)
                               }
                             >
                               <FormControl>
@@ -224,10 +325,10 @@ export function CentroAtencionCreateDialog({
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value={CENTER_TYPE.INTERNAL}>
+                                <SelectItem value={CENTER_ORIGIN.INTERNAL}>
                                   Interno
                                 </SelectItem>
-                                <SelectItem value={CENTER_TYPE.EXTERNAL}>
+                                <SelectItem value={CENTER_ORIGIN.EXTERNAL}>
                                   Externo
                                 </SelectItem>
                               </SelectContent>
@@ -240,42 +341,178 @@ export function CentroAtencionCreateDialog({
 
                     <div className="space-y-3">
                       <h4 className="text-sm font-semibold text-txt-body">
-                        Horarios
+                        Direccion
                       </h4>
-                      <div className="grid gap-4">
-                        {SCHEDULE_FIELDS.map((scheduleField) => (
-                          <div
-                            key={scheduleField.label}
-                            className="grid gap-3 rounded-xl border border-line-struct/60 bg-subtle/20 p-3 sm:grid-cols-2"
+
+                      <div className="grid gap-4 sm:grid-cols-[180px_140px_1fr]">
+                        <FormField
+                          control={form.control}
+                          name="postalCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Codigo postal</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  maxLength={5}
+                                  inputMode="numeric"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="flex items-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={handleSearchPostalCode}
+                            disabled={
+                              isSearchingPostalCode ||
+                              !postalCodeValue ||
+                              postalCodeValue.length !== 5
+                            }
                           >
-                            <FormField
-                              control={form.control}
-                              name={scheduleField.startsAtField}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>{`${scheduleField.label} inicia`}</FormLabel>
-                                  <FormControl>
-                                    <Input type="time" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name={scheduleField.endsAtField}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>{`${scheduleField.label} termina`}</FormLabel>
-                                  <FormControl>
-                                    <Input type="time" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                            {isSearchingPostalCode
+                              ? "Buscando..."
+                              : "Buscar CP"}
+                          </Button>
+                        </div>
+
+                        <FormItem>
+                          <FormLabel>Colonia sugerida</FormLabel>
+                          <Select
+                            value={form.watch("neighborhood") ?? ""}
+                            onValueChange={handleSelectPostalCodeOption}
+                            disabled={postalCodeOptions.length === 0}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona colonia" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {postalCodeOptions.map((item) => (
+                                <SelectItem
+                                  key={`${item.codigoPostal}-${item.colonia}`}
+                                  value={item.colonia}
+                                >
+                                  {item.colonia}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Direccion</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="neighborhood"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Colonia</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <FormField
+                          control={form.control}
+                          name="municipality"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Municipio</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="state"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Estado</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ciudad</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Telefono</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {selectedPostalCodeOption ? (
+                          <div className="rounded-xl border border-line-struct/60 bg-subtle/20 p-3 text-sm text-txt-muted">
+                            <div>
+                              <span className="font-medium text-txt-body">
+                                Tipo asentamiento:
+                              </span>{" "}
+                              {selectedPostalCodeOption.tipoAsentamiento}
+                            </div>
+                            <div>
+                              <span className="font-medium text-txt-body">
+                                Zona:
+                              </span>{" "}
+                              {selectedPostalCodeOption.zona}
+                            </div>
                           </div>
-                        ))}
+                        ) : null}
                       </div>
                     </div>
                   </form>

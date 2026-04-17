@@ -3,8 +3,6 @@ from django.urls import path
 from .views import *
 
 routes = [
-    ("care-centers", CentrosAtencionListCreateView, CentrosAtencionDetailView, "int"),
-    ("areas", AreasListCreateView, AreasDetailView, "int"),
     ("authorizers", AutorizadoresListCreateView, AutorizadoresDetailView, "int"),
     ("discharge-reasons", BajasListCreateView, BajasDetailView, "int"),
     ("labor-quality", CalidadLaboralListCreateView, CalidadLaboralDetailView, "str"),
@@ -30,15 +28,47 @@ routes = [
 ]
 
 urlpatterns = []
+
 for base, list_view, detail_view, pk_type in routes:
-    urlpatterns.append(path(base, list_view.as_view(), name=f"{base}-list-create"))
+    urlpatterns.append(path(f"{base}/", list_view.as_view(), name=f"{base}-list-create"))
     urlpatterns.append(path(f"{base}/<{pk_type}:pk>", detail_view.as_view(), name=f"{base}-detail"))
 
 
-# RUTAS ESPECIALES CIES
 urlpatterns += [
-    path("cies/upload/",     CatCiesUploadAPIView.as_view(),  name="cies-upload"),   # POST paso 1: preview
-    path("cies/confirm/",    CatCiesConfirmAPIView.as_view(), name="cies-confirm"),  # POST paso 2: guardar
-    path("cies/",            CatCiesListCreateView.as_view(), name="cies-list"),
-    path("cies/<str:pk>/",   CatCiesDetailView.as_view(),     name="cies-detail"),
+    # CENTROS DE ATENCION
+    path(
+        "care-centers/",
+        CentrosAtencionListCreateView.as_view(),
+        name="care-centers-list-create",
+    ),
+    path(
+        "care-centers/<int:pk>",
+        CentrosAtencionDetailView.as_view(),
+        name="care-centers-detail",
+    ),
+
+    # HORARIOS DE CENTROS DE ATENCION
+    path(
+        "care-center-schedules/",
+        CentrosAtencionHorariosListCreateView.as_view(),
+        name="care-center-schedules-list-create",
+    ),
+    path(
+        "care-center-schedules/<int:pk>",
+        CentrosAtencionHorariosDetailView.as_view(),
+        name="care-center-schedules-detail",
+    ),
+
+    # CODIGOS POSTALES
+    path(
+        "postal-codes/search/",
+        CodigoPostalSearchAPIView.as_view(),
+        name="postal-codes-search",
+    ),
+
+    # CIES
+    path("cies/upload/", CatCiesUploadAPIView.as_view(), name="cies-upload"),
+    path("cies/confirm/", CatCiesConfirmAPIView.as_view(), name="cies-confirm"),
+    path("cies/", CatCiesListCreateView.as_view(), name="cies-list"),
+    path("cies/<str:pk>/", CatCiesDetailView.as_view(), name="cies-detail"),
 ]

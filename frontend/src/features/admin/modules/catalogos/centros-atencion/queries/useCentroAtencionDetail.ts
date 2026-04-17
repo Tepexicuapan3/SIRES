@@ -3,11 +3,21 @@ import { centrosAtencionAPI } from "@api/resources/catalogos/centros-atencion.ap
 import type { CentroAtencionDetailResponse } from "@api/types";
 import { centrosAtencionKeys } from "@features/admin/modules/catalogos/centros-atencion/queries/centrosAtencion.keys";
 
-export const useCentroAtencionDetail = (centerId?: number, enabled = true) => {
+export const useCentroAtencionDetail = (
+  centerId?: number,
+  enabled = true,
+) => {
+  const isEnabled = enabled && Boolean(centerId);
+
   return useQuery<CentroAtencionDetailResponse>({
-    queryKey: centrosAtencionKeys.detail(centerId ?? 0),
-    queryFn: () => centrosAtencionAPI.getById(centerId ?? 0),
-    enabled: enabled && Boolean(centerId),
+    queryKey: centrosAtencionKeys.detail(centerId),
+    queryFn: () => {
+      if (!centerId) {
+        throw new Error("centerId es requerido");
+      }
+      return centrosAtencionAPI.getById(centerId);
+    },
+    enabled: isEnabled,
     staleTime: 60 * 1000,
   });
 };

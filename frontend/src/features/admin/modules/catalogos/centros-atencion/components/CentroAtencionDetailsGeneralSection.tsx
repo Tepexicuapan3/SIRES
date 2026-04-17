@@ -34,30 +34,15 @@ interface CentroAtencionDetailsGeneralSectionProps {
   isEditable?: boolean;
 }
 
-const CENTER_TYPE = {
+const CENTER_ORIGIN = {
   INTERNAL: "internal",
   EXTERNAL: "external",
 } as const;
 
-const buildScheduleFields = (
-  prefix: "morning" | "afternoon" | "night",
-  label: string,
-) => {
-  const startsAtField = `${prefix}StartsAt` as const;
-  const endsAtField = `${prefix}EndsAt` as const;
-
-  return {
-    label,
-    startsAtField,
-    endsAtField,
-  };
-};
-
-const SCHEDULE_FIELDS = [
-  buildScheduleFields("morning", "Turno matutino"),
-  buildScheduleFields("afternoon", "Turno vespertino"),
-  buildScheduleFields("night", "Turno nocturno"),
-] as const;
+const CENTER_TYPE = {
+  CLINICA: "CLINICA",
+  HOSPITAL: "HOSPITAL",
+} as const;
 
 export function CentroAtencionDetailsGeneralSection({
   form,
@@ -87,21 +72,23 @@ export function CentroAtencionDetailsGeneralSection({
               <FormItem>
                 <FormLabel>Nombre del centro</FormLabel>
                 <FormControl>
-                  <Input {...field} disabled={!isEditable} />
+                  <Input {...field} value={field.value ?? ""} disabled={!isEditable} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
-            name="folioCode"
+            name="code"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Folio</FormLabel>
+                <FormLabel>CLUES</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
+                    value={field.value ?? ""}
                     disabled={!isEditable}
                     onChange={(event) =>
                       field.onChange(event.target.value.toUpperCase())
@@ -114,20 +101,6 @@ export function CentroAtencionDetailsGeneralSection({
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Direccion</FormLabel>
-              <FormControl>
-                <Input {...field} disabled={!isEditable} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <Label>ID</Label>
@@ -136,17 +109,13 @@ export function CentroAtencionDetailsGeneralSection({
 
           <FormField
             control={form.control}
-            name="isExternal"
+            name="centerType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tipo</FormLabel>
+                <FormLabel>Tipo de centro</FormLabel>
                 <Select
-                  value={
-                    field.value ? CENTER_TYPE.EXTERNAL : CENTER_TYPE.INTERNAL
-                  }
-                  onValueChange={(value) =>
-                    field.onChange(value === CENTER_TYPE.EXTERNAL)
-                  }
+                  value={field.value}
+                  onValueChange={field.onChange}
                   disabled={!isEditable}
                 >
                   <FormControl>
@@ -155,11 +124,11 @@ export function CentroAtencionDetailsGeneralSection({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={CENTER_TYPE.INTERNAL}>
-                      Interno
+                    <SelectItem value={CENTER_TYPE.CLINICA}>
+                      Clinica
                     </SelectItem>
-                    <SelectItem value={CENTER_TYPE.EXTERNAL}>
-                      Externo
+                    <SelectItem value={CENTER_TYPE.HOSPITAL}>
+                      Hospital
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -192,44 +161,178 @@ export function CentroAtencionDetailsGeneralSection({
           </div>
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="legacyFolio"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Folio legacy</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    disabled={!isEditable}
+                    onChange={(event) =>
+                      field.onChange(event.target.value.toUpperCase())
+                    }
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="isExternal"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Origen</FormLabel>
+                <Select
+                  value={
+                    field.value
+                      ? CENTER_ORIGIN.EXTERNAL
+                      : CENTER_ORIGIN.INTERNAL
+                  }
+                  onValueChange={(value) =>
+                    field.onChange(value === CENTER_ORIGIN.EXTERNAL)
+                  }
+                  disabled={!isEditable}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={CENTER_ORIGIN.INTERNAL}>
+                      Interno
+                    </SelectItem>
+                    <SelectItem value={CENTER_ORIGIN.EXTERNAL}>
+                      Externo
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <Separator />
 
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-txt-body">Horarios</h4>
-          <div className="grid gap-4">
-            {SCHEDULE_FIELDS.map((scheduleField) => (
-              <div
-                key={scheduleField.label}
-                className="grid gap-3 rounded-xl border border-line-struct/60 bg-subtle/20 p-3 sm:grid-cols-2"
-              >
-                <FormField
-                  control={form.control}
-                  name={scheduleField.startsAtField}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{`${scheduleField.label} inicia`}</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} disabled={!isEditable} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name={scheduleField.endsAtField}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{`${scheduleField.label} termina`}</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} disabled={!isEditable} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            ))}
+          <h4 className="text-sm font-semibold text-txt-body">Direccion</h4>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="postalCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Codigo postal</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      disabled={!isEditable}
+                      maxLength={5}
+                      inputMode="numeric"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefono</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value ?? ""} disabled={!isEditable} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Direccion</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} disabled={!isEditable} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="neighborhood"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Colonia</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value ?? ""} disabled={!isEditable} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="municipality"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Municipio</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value ?? ""} disabled={!isEditable} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estado</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value ?? ""} disabled={!isEditable} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ciudad</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value ?? ""} disabled={!isEditable} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 

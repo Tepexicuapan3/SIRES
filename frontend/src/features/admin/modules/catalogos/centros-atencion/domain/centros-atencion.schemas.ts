@@ -7,32 +7,187 @@ const requiredText = (label: string, maxLength = 160) =>
     .min(1, { error: `${label} requerido` })
     .max(maxLength);
 
-const requiredTime = (label: string) =>
+const optionalText = (maxLength = 255) =>
   z
     .string()
     .trim()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, {
-      error: `${label} invalido`,
+    .max(maxLength)
+    .optional()
+    .nullable()
+    .transform((value) => {
+      if (value == null) return null;
+      return value === "" ? null : value;
     });
 
+const optionalPostalCode = z
+  .string()
+  .trim()
+  .regex(/^\d{5}$/, { error: "Codigo postal invalido" })
+  .optional()
+  .nullable()
+  .or(z.literal(""))
+  .transform((value) => {
+    if (value == null || value === "") return null;
+    return value;
+  });
+
+const optionalTime = (label: string) =>
+  z
+    .string()
+    .trim()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, {
+      error: `${label} invalido`,
+    })
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((value) => {
+      if (value == null || value === "") return null;
+      return value.length === 5 ? `${value}:00` : value;
+    });
+
+// =============================================================================
+// CENTRO DE ATENCION
+// =============================================================================
+
 export const centroAtencionDetailsSchema = z.object({
-  name: requiredText("Nombre"),
-  folioCode: requiredText("Folio", 12),
-  address: requiredText("Direccion", 220),
+  name: requiredText("Nombre", 120),
+  code: requiredText("CLUES", 50),
+  centerType: z.enum(["CLINICA", "HOSPITAL"], {
+    error: "Tipo de centro invalido",
+  }),
+  legacyFolio: optionalText(10),
   isExternal: z.boolean(),
-  morningStartsAt: requiredTime("Horario matutino inicio"),
-  morningEndsAt: requiredTime("Horario matutino fin"),
-  afternoonStartsAt: requiredTime("Horario vespertino inicio"),
-  afternoonEndsAt: requiredTime("Horario vespertino fin"),
-  nightStartsAt: requiredTime("Horario nocturno inicio"),
-  nightEndsAt: requiredTime("Horario nocturno fin"),
+
+  address: optionalText(255),
+  postalCode: optionalPostalCode,
+  neighborhood: optionalText(120),
+  municipality: optionalText(120),
+  state: optionalText(120),
+  city: optionalText(120),
+  phone: optionalText(40),
+
+  isActive: z.boolean().default(true),
 });
 
 export const createCentroAtencionSchema = centroAtencionDetailsSchema;
 
+export const updateCentroAtencionSchema = centroAtencionDetailsSchema.partial();
+
+// =============================================================================
+// HORARIO DE CENTRO
+// =============================================================================
+
+export const centroAtencionHorarioSchema = z
+  .object({
+    centerId: z.number().int().positive({ error: "Centro requerido" }),
+    shiftId: z.number().int().positive({ error: "Turno requerido" }),
+    weekDay: z
+      .number()
+      .int()
+      .min(1, { error: "Dia de semana invalido" })
+      .max(7, { error: "Dia de semana invalido" }),
+
+    isOpen: z.boolean(),
+    is24Hours: z.boolean().default(false),
+
+    openingTime: optionalTime("Hora de apertura"),
+    closingTime: optionalTime("Hora de cierre"),
+    observations: optionalText(255),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.isOpen) {
+      if (data.is24Hours) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["is24Hours"],
+          message: "Si esta cerrado, no puede marcarse como 24 horas",
+        });
+      }
+
+      if (data.openingTime || data.closingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openingTime"],
+          message: "Si esta cerrado, no debe capturar horas",
+        });
+      }
+
+      return;
+    }
+
+    if (data.isOpen && data.is24Hours) {
+      if (data.openingTime || data.closingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openingTime"],
+          message: "Si es 24 horas, no debe capturar hora de apertura ni cierre",
+        });
+      }
+
+      return;
+    }
+
+    if (data.isOpen && !data.is24Hours) {
+      if (!data.openingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openingTime"],
+          message: "Hora de apertura requerida",
+        });
+      }
+
+      if (!data.closingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["closingTime"],
+          message: "Hora de cierre requerida",
+        });
+      }
+
+      if (
+        data.openingTime &&
+        data.closingTime &&
+        data.openingTime >= data.closingTime
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["closingTime"],
+          message: "La hora de cierre debe ser mayor a la hora de apertura",
+        });
+      }
+    }
+  });
+
+export const createCentroAtencionHorarioSchema = centroAtencionHorarioSchema;
+export const updateCentroAtencionHorarioSchema =
+  centroAtencionHorarioSchema.partial();
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
 export type CentroAtencionDetailsFormValues = z.infer<
   typeof centroAtencionDetailsSchema
 >;
+
 export type CreateCentroAtencionFormValues = z.infer<
   typeof createCentroAtencionSchema
+>;
+
+export type UpdateCentroAtencionFormValues = z.infer<
+  typeof updateCentroAtencionSchema
+>;
+
+export type CentroAtencionHorarioFormValues = z.infer<
+  typeof centroAtencionHorarioSchema
+>;
+
+export type CreateCentroAtencionHorarioFormValues = z.infer<
+  typeof createCentroAtencionHorarioSchema
+>;
+
+export type UpdateCentroAtencionHorarioFormValues = z.infer<
+  typeof updateCentroAtencionHorarioSchema
 >;

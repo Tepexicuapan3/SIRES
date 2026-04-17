@@ -38,14 +38,24 @@ const CENTER_STATUS_FILTER = {
   INACTIVE: "inactive",
 } as const;
 
-const CENTER_TYPE_FILTER = {
+const CENTER_ORIGIN_FILTER = {
   ALL: "all",
   INTERNAL: "internal",
   EXTERNAL: "external",
 } as const;
 
+const CENTER_TYPE_FILTER = {
+  ALL: "all",
+  CLINICA: "CLINICA",
+  HOSPITAL: "HOSPITAL",
+} as const;
+
 type CenterStatusFilter =
   (typeof CENTER_STATUS_FILTER)[keyof typeof CENTER_STATUS_FILTER];
+
+type CenterOriginFilter =
+  (typeof CENTER_ORIGIN_FILTER)[keyof typeof CENTER_ORIGIN_FILTER];
+
 type CenterTypeFilter =
   (typeof CENTER_TYPE_FILTER)[keyof typeof CENTER_TYPE_FILTER];
 
@@ -54,23 +64,32 @@ const normalizeSearchValue = (value: string | number | null | undefined) =>
 
 export function CentrosAtencionPage() {
   const { hasCapability } = usePermissionDependencies();
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
+
   const [statusFilter, setStatusFilter] = useState<CenterStatusFilter>(
     CENTER_STATUS_FILTER.ALL,
   );
-  const [typeFilter, setTypeFilter] = useState<CenterTypeFilter>(
+  const [originFilter, setOriginFilter] = useState<CenterOriginFilter>(
+    CENTER_ORIGIN_FILTER.ALL,
+  );
+  const [centerTypeFilter, setCenterTypeFilter] = useState<CenterTypeFilter>(
     CENTER_TYPE_FILTER.ALL,
   );
+
   const [columnVisibility, setColumnVisibility] =
     useState<ColumnVisibilityState>({
       name: true,
-      folioCode: true,
+      code: true,
+      centerType: true,
+      legacyFolio: true,
       isExternal: true,
       isActive: true,
       actions: true,
     });
+
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [centerToDelete, setCenterToDelete] =
@@ -100,6 +119,7 @@ export function CentrosAtencionPage() {
   const canDeleteCenter = hasCapability("admin.catalogs.centers.delete", {
     allOf: ["admin:catalogos:centros_atencion:delete"],
   });
+
   const readOnlyCatalogMessage =
     "No tienes acceso para consultar este catalogo.";
 
@@ -108,14 +128,19 @@ export function CentrosAtencionPage() {
       {
         page,
         pageSize,
+        search: debouncedSearch.trim() || undefined,
         isActive:
           statusFilter === CENTER_STATUS_FILTER.ALL
             ? undefined
             : statusFilter === CENTER_STATUS_FILTER.ACTIVE,
         isExternal:
-          typeFilter === CENTER_TYPE_FILTER.ALL
+          originFilter === CENTER_ORIGIN_FILTER.ALL
             ? undefined
-            : typeFilter === CENTER_TYPE_FILTER.EXTERNAL,
+            : originFilter === CENTER_ORIGIN_FILTER.EXTERNAL,
+        centerType:
+          centerTypeFilter === CENTER_TYPE_FILTER.ALL
+            ? undefined
+            : centerTypeFilter,
       },
       {
         enabled: canReadCenter,
@@ -124,6 +149,7 @@ export function CentrosAtencionPage() {
 
   const allRows = data?.items ?? [];
   const normalizedSearch = debouncedSearch.trim().toLowerCase();
+
   const rows =
     normalizedSearch.length === 0
       ? allRows
@@ -131,10 +157,14 @@ export function CentrosAtencionPage() {
           const matchesName = normalizeSearchValue(center.name).includes(
             normalizedSearch,
           );
-          const matchesFolio = normalizeSearchValue(center.folioCode).includes(
+          const matchesCode = normalizeSearchValue(center.code).includes(
             normalizedSearch,
           );
-          return matchesName || matchesFolio;
+          const matchesLegacyFolio = normalizeSearchValue(
+            center.legacyFolio,
+          ).includes(normalizedSearch);
+
+          return matchesName || matchesCode || matchesLegacyFolio;
         });
 
   const showActions = canReadCenter || canUpdateCenter || canDeleteCenter;
@@ -165,9 +195,11 @@ export function CentrosAtencionPage() {
 
     try {
       await deleteCenter.mutateAsync({ centerId: centerToDelete.id });
+
       toast.success("Centro eliminado", {
         description: `El centro ${centerToDelete.name} se elimino correctamente.`,
       });
+
       setDeleteOpen(false);
       setCenterToDelete(null);
     } catch (mutationError) {
@@ -196,19 +228,23 @@ export function CentrosAtencionPage() {
   });
 
   const visibilityOptions = buildCentrosAtencionVisibilityOptions(showActions);
+
   const visibleColumns = columns.filter(
     (column) => columnVisibility[column.key] ?? true,
   );
 
   const appliedFiltersCount = [
     statusFilter !== CENTER_STATUS_FILTER.ALL,
-    typeFilter !== CENTER_TYPE_FILTER.ALL,
+    originFilter !== CENTER_ORIGIN_FILTER.ALL,
+    centerTypeFilter !== CENTER_TYPE_FILTER.ALL,
   ].filter(Boolean).length;
 
   const isSearchPending = search.trim() !== debouncedSearch.trim();
+
   const hasFilters =
     canReadCenter &&
     (Boolean(debouncedSearch.trim()) || appliedFiltersCount > 0);
+
   const tableErrorDescription =
     canReadCenter && error
       ? getCentroAtencionErrorMessage(
@@ -220,7 +256,8 @@ export function CentrosAtencionPage() {
   const handleClearFilters = () => {
     setSearch("");
     setStatusFilter(CENTER_STATUS_FILTER.ALL);
-    setTypeFilter(CENTER_TYPE_FILTER.ALL);
+    setOriginFilter(CENTER_ORIGIN_FILTER.ALL);
+    setCenterTypeFilter(CENTER_TYPE_FILTER.ALL);
     setPage(1);
   };
 
@@ -232,10 +269,7 @@ export function CentrosAtencionPage() {
       isLoading: isFetching,
       disabled: isFetching,
       onSelect: () => {
-        if (isFetching) {
-          return;
-        }
-
+        if (isFetching) return;
         void refetch();
       },
     },
@@ -273,24 +307,48 @@ export function CentrosAtencionPage() {
       ],
     },
     {
-      id: "type",
-      label: "Tipo",
+      id: "origin",
+      label: "Origen",
       options: [
         {
-          id: CENTER_TYPE_FILTER.INTERNAL,
+          id: CENTER_ORIGIN_FILTER.INTERNAL,
           label: "Internos",
-          selected: typeFilter === CENTER_TYPE_FILTER.INTERNAL,
+          selected: originFilter === CENTER_ORIGIN_FILTER.INTERNAL,
           onSelect: () => {
-            setTypeFilter(CENTER_TYPE_FILTER.INTERNAL);
+            setOriginFilter(CENTER_ORIGIN_FILTER.INTERNAL);
             setPage(1);
           },
         },
         {
-          id: CENTER_TYPE_FILTER.EXTERNAL,
+          id: CENTER_ORIGIN_FILTER.EXTERNAL,
           label: "Externos",
-          selected: typeFilter === CENTER_TYPE_FILTER.EXTERNAL,
+          selected: originFilter === CENTER_ORIGIN_FILTER.EXTERNAL,
           onSelect: () => {
-            setTypeFilter(CENTER_TYPE_FILTER.EXTERNAL);
+            setOriginFilter(CENTER_ORIGIN_FILTER.EXTERNAL);
+            setPage(1);
+          },
+        },
+      ],
+    },
+    {
+      id: "centerType",
+      label: "Tipo de centro",
+      options: [
+        {
+          id: CENTER_TYPE_FILTER.CLINICA,
+          label: "Clinicas",
+          selected: centerTypeFilter === CENTER_TYPE_FILTER.CLINICA,
+          onSelect: () => {
+            setCenterTypeFilter(CENTER_TYPE_FILTER.CLINICA);
+            setPage(1);
+          },
+        },
+        {
+          id: CENTER_TYPE_FILTER.HOSPITAL,
+          label: "Hospitales",
+          selected: centerTypeFilter === CENTER_TYPE_FILTER.HOSPITAL,
+          onSelect: () => {
+            setCenterTypeFilter(CENTER_TYPE_FILTER.HOSPITAL);
             setPage(1);
           },
         },
@@ -301,7 +359,7 @@ export function CentrosAtencionPage() {
   return (
     <CatalogModuleLayout
       title="Centros de atencion"
-      description="Catalogo operativo de clinicas, hospitales y sanatorios del sistema."
+      description="Catalogo unificado de clinicas y hospitales del sistema."
       icon={<Building2 className="size-12" />}
     >
       {!canReadCenter ? (
@@ -316,7 +374,7 @@ export function CentrosAtencionPage() {
               setSearch(value);
               setPage(1);
             }}
-            placeholder="Buscar en la tabla"
+            placeholder="Buscar por nombre, CLUES o folio legacy"
             disabled={!canReadCenter}
           />
         }
@@ -329,6 +387,7 @@ export function CentrosAtencionPage() {
                 onClear={handleClearFilters}
               />
             ) : null}
+
             {canReadCenter ? (
               <TableColumnVisibility
                 columns={visibilityOptions}
@@ -336,7 +395,9 @@ export function CentrosAtencionPage() {
                 onVisibilityChange={setColumnVisibility}
               />
             ) : null}
+
             {canReadCenter ? <TableOptionsMenu options={tableOptions} /> : null}
+
             {canCreateCenter ? (
               <TablePrimaryAction
                 permission="admin:catalogos:centros_atencion:create"

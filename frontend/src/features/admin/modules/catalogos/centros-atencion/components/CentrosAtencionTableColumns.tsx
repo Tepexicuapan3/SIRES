@@ -34,22 +34,42 @@ export const buildCentrosAtencionTableColumns = ({
       key: "name",
       header: "Centro",
       accessorKey: "name",
-      className: "w-[280px]",
-      cellContentClassName: "max-w-[260px]",
+      className: "w-[260px]",
+      cellContentClassName: "max-w-[240px]",
     },
     {
-      key: "folioCode",
-      header: "Folio",
-      accessorKey: "folioCode",
-      className: "w-[150px]",
-      cellContentClassName: "max-w-[120px]",
+      key: "code",
+      header: "CLUES",
+      accessorKey: "code",
+      className: "w-[160px]",
+      cellContentClassName: "max-w-[140px]",
+    },
+    {
+      key: "centerType",
+      header: "Tipo centro",
+      accessorKey: "centerType",
+      align: "center",
+      className: "w-[140px]",
+      render: (row) => (
+        <Badge variant={row.centerType === "HOSPITAL" ? "secondary" : "outline"}>
+          {row.centerType === "HOSPITAL" ? "Hospital" : "Clínica"}
+        </Badge>
+      ),
+    },
+    {
+      key: "legacyFolio",
+      header: "Folio legacy",
+      accessorKey: "legacyFolio",
+      className: "w-[160px]",
+      cellContentClassName: "max-w-[140px]",
+      render: (row) => row.legacyFolio || "—",
     },
     {
       key: "isExternal",
-      header: "Tipo",
+      header: "Origen",
       align: "center",
       accessorKey: "isExternal",
-      className: "w-[130px]",
+      className: "w-[120px]",
       render: (row) =>
         row.isExternal ? (
           <Badge variant="secondary">Externo</Badge>
@@ -62,7 +82,7 @@ export const buildCentrosAtencionTableColumns = ({
       header: "Estado",
       align: "center",
       accessorKey: "isActive",
-      className: "w-[130px]",
+      className: "w-[120px]",
       render: (row) => <CatalogStatusBadge isActive={row.isActive} />,
     },
   ];
@@ -98,6 +118,7 @@ export const buildCentrosAtencionTableColumns = ({
           icon: Pencil,
           onSelect: () => onOpenDetails(row),
         });
+
         actions.push({
           id: `status-${row.id}`,
           label: row.isActive ? "Desactivar" : "Activar",
@@ -111,6 +132,7 @@ export const buildCentrosAtencionTableColumns = ({
         if (actions.length > 0) {
           actions.push({ id: `divider-${row.id}`, type: "separator" });
         }
+
         actions.push({
           id: `delete-${row.id}`,
           label: "Eliminar",
@@ -139,8 +161,10 @@ export const buildCentrosAtencionVisibilityOptions = (
 ): TableColumnVisibilityItem[] => {
   const options: TableColumnVisibilityItem[] = [
     { key: "name", label: "Centro" },
-    { key: "folioCode", label: "Folio" },
-    { key: "isExternal", label: "Tipo" },
+    { key: "code", label: "CLUES" },
+    { key: "centerType", label: "Tipo centro" },
+    { key: "legacyFolio", label: "Folio legacy" },
+    { key: "isExternal", label: "Origen" },
     { key: "isActive", label: "Estado" },
   ];
 

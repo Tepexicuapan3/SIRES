@@ -1,14 +1,22 @@
 /**
  * Centros de Atencion Types - Pure TypeScript interfaces
- * Tipos para gestion completa de centros de atencion del Metro CDMX.
  *
- * @description Interfaces para CRUD de centros de atencion.
- * Todos los campos usan camelCase en inglés según el estándar de la API.
+ * Contrato alineado al backend actual:
+ * - GET    /care-centers/
+ * - POST   /care-centers/
+ * - GET    /care-centers/:id
+ * - PUT    /care-centers/:id
+ * - DELETE /care-centers/:id
  *
- * Estrategia de entidades:
- * - CentroAtencionRef: Referencia minima para relaciones (ej: User.center)
- * - CentroAtencionListItem: Para tablas/listados (sin auditoria)
- * - CentroAtencionDetail: Para detalle/edicion (con auditoria completa)
+ * Recursos relacionados:
+ * - GET    /care-center-schedules/
+ * - POST   /care-center-schedules/
+ * - GET    /care-center-schedules/:id
+ * - PUT    /care-center-schedules/:id
+ * - DELETE /care-center-schedules/:id
+ *
+ * Búsqueda CP:
+ * - GET    /postal-codes/search/?cp=01000
  */
 
 import type {
@@ -19,144 +27,291 @@ import type {
 import type { UserRef } from "@api/types/users.types";
 
 // =============================================================================
-// ENTIDADES
+// CATALOG REFS
 // =============================================================================
 
-/**
- * Referencia a centro de atencion (objeto anidado para relaciones).
- * Evita tener campos separados centerId + centerName.
- * Usado en relaciones con usuarios y otros recursos.
- */
-export interface CentroAtencionRef {
+export interface CatalogRef {
   id: number;
   name: string;
 }
 
+export interface CentroAtencionRef extends CatalogRef {}
+export interface TurnoRef extends CatalogRef {}
+
+// =============================================================================
+// ENUMS / LITERALS
+// =============================================================================
+
+export type CentroAtencionType = "CLINICA" | "HOSPITAL";
+export type DiaSemana = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+// =============================================================================
+// ENTIDADES - CENTROS DE ATENCION
+// =============================================================================
+
 /**
- * Centro de atencion para listado en tabla.
- * Incluye solo datos necesarios para identificar, filtrar y mostrar en tabla.
- * NO incluye campos de auditoria (optimizado para tablas).
- *
- * GET /api/v1/care-centers
+ * Item para tabla/listado.
+ * Alineado a CatCentroAtencionListSerializer.
  */
 export interface CentroAtencionListItem {
   id: number;
   name: string;
-  folioCode: string;
+  code: string;
+  centerType: CentroAtencionType;
+  legacyFolio: string | null;
   isExternal: boolean;
   isActive: boolean;
 }
 
 /**
- * Centro de atencion con detalle completo para edicion.
- * Extiende CentroAtencionListItem con campos de auditoria.
- *
- * GET /api/v1/care-centers/:id
+ * Detalle completo.
+ * Alineado a CatCentroAtencionDetailSerializer.
  */
 export interface CentroAtencionDetail extends CentroAtencionListItem {
-  // --- Auditoría de registro ---
   createdAt: string;
-  createdBy: UserRef;
+  createdBy: UserRef | null;
   updatedAt: string | null;
   updatedBy: UserRef | null;
 
-  // --- Datos de control ---
-  address: string;
-
-  // --- Horarios ---
-  schedule: CentroAtencionSchedule;
-}
-
-export interface CentroAtencionSchedule {
-  morning: CentroAtencionShift;
-  afternoon: CentroAtencionShift;
-  night: CentroAtencionShift;
-}
-
-export interface CentroAtencionShift {
-  startsAt: string; // HH:mm
-  endsAt: string; // HH:mm
+  address: string | null;
+  postalCode: string | null;
+  neighborhood: string | null;
+  municipality: string | null;
+  state: string | null;
+  city: string | null;
+  phone: string | null;
 }
 
 // =============================================================================
-// CRUD REQUESTS
+// ENTIDADES - HORARIOS DE CENTRO
 // =============================================================================
 
 /**
- * Request para crear un nuevo centro de atencion.
- * POST /api/v1/care-centers
+ * Item de listado de horarios.
+ * Alineado a CatCentroAtencionHorarioListSerializer.
  */
+export interface CentroAtencionHorarioListItem {
+  id: number;
+  center: CentroAtencionRef | null;
+  shift: TurnoRef | null;
+  weekDay: DiaSemana;
+  isOpen: boolean;
+  is24Hours: boolean;
+  openingTime: string | null; // HH:mm:ss
+  closingTime: string | null; // HH:mm:ss
+  isActive: boolean;
+}
+
+/**
+ * Detalle completo de horario.
+ * Alineado a CatCentroAtencionHorarioDetailSerializer.
+ */
+export interface CentroAtencionHorarioDetail {
+  id: number;
+  center: CentroAtencionRef | null;
+  shift: TurnoRef | null;
+  weekDay: DiaSemana;
+  isOpen: boolean;
+  is24Hours: boolean;
+  openingTime: string | null;
+  closingTime: string | null;
+  observations: string | null;
+  isActive: boolean;
+  createdAt: string;
+  createdBy: UserRef | null;
+  updatedAt: string | null;
+  updatedBy: UserRef | null;
+}
+
+// =============================================================================
+// ENTIDADES - CODIGOS POSTALES
+// =============================================================================
+
+export interface PostalCodeSearchItem {
+  codigoPostal: string;
+  colonia: string;
+  tipoAsentamiento: string;
+  municipio: string;
+  estado: string;
+  ciudad: string;
+  zona: string;
+}
+
+// =============================================================================
+// REQUESTS - CENTROS DE ATENCION
+// =============================================================================
+
 export interface CreateCentroAtencionRequest {
   name: string;
-  folioCode: string;
-  isExternal: boolean;
-  address: string;
-  schedule: CentroAtencionSchedule;
+  code: string;
+  centerType: CentroAtencionType;
+  legacyFolio?: string | null;
+  isExternal?: boolean;
+  address?: string | null;
+  postalCode?: string | null;
+  neighborhood?: string | null;
+  municipality?: string | null;
+  state?: string | null;
+  city?: string | null;
+  phone?: string | null;
+  isActive?: boolean;
 }
 
-/**
- * Request para actualizar un centro de atencion existente.
- * PUT /api/v1/care-centers/:id
- */
 export interface UpdateCentroAtencionRequest {
   name?: string;
-  folioCode?: string;
+  code?: string;
+  centerType?: CentroAtencionType;
+  legacyFolio?: string | null;
   isExternal?: boolean;
+  address?: string | null;
+  postalCode?: string | null;
+  neighborhood?: string | null;
+  municipality?: string | null;
+  state?: string | null;
+  city?: string | null;
+  phone?: string | null;
   isActive?: boolean;
-  address?: string;
-  schedule?: CentroAtencionSchedule;
 }
 
 // =============================================================================
-// CRUD RESPONSES
+// REQUESTS - HORARIOS
 // =============================================================================
 
-/**
- * Response paginada de listado de centros de atencion.
- * GET /api/v1/care-centers
- */
+export interface CreateCentroAtencionHorarioRequest {
+  centerId: number;
+  shiftId: number;
+  weekDay: DiaSemana;
+  isOpen: boolean;
+  is24Hours?: boolean;
+  openingTime?: string | null; // HH:mm:ss
+  closingTime?: string | null; // HH:mm:ss
+  observations?: string | null;
+  isActive?: boolean;
+}
+
+export interface UpdateCentroAtencionHorarioRequest {
+  centerId?: number;
+  shiftId?: number;
+  weekDay?: DiaSemana;
+  isOpen?: boolean;
+  is24Hours?: boolean;
+  openingTime?: string | null;
+  closingTime?: string | null;
+  observations?: string | null;
+  isActive?: boolean;
+}
+
+// =============================================================================
+// RESPONSES - CENTROS DE ATENCION
+// =============================================================================
+
 export type CentrosAtencionListResponse = ListResponse<CentroAtencionListItem>;
 
-/**
- * Response con detalle completo de un centro de atencion.
- * GET /api/v1/care-centers/:id
- */
 export interface CentroAtencionDetailResponse {
-  center: CentroAtencionDetail;
+  careCenter: CentroAtencionDetail;
 }
 
-/**
- * Response al crear un centro de atencion.
- * POST /api/v1/care-centers
- */
 export interface CreateCentroAtencionResponse {
   id: number;
   name: string;
 }
 
-/**
- * Response al actualizar un centro de atencion.
- * PUT /api/v1/care-centers/:id
- */
 export interface UpdateCentroAtencionResponse {
-  center: CentroAtencionDetail;
+  careCenter: CentroAtencionDetail;
 }
 
-/**
- * Response de eliminacion de centro de atencion.
- * DELETE /api/v1/care-centers/:id
- */
 export type DeleteCentroAtencionResponse = SuccessResponse;
 
 // =============================================================================
-// PARAMS
+// RESPONSES - HORARIOS
+// =============================================================================
+
+export type CentrosAtencionHorariosListResponse =
+  ListResponse<CentroAtencionHorarioListItem>;
+
+export interface CentroAtencionHorarioDetailResponse {
+  careCenterSchedule: CentroAtencionHorarioDetail;
+}
+
+export interface CreateCentroAtencionHorarioResponse {
+  id: number;
+  name: string;
+}
+
+export interface UpdateCentroAtencionHorarioResponse {
+  careCenterSchedule: CentroAtencionHorarioDetail;
+}
+
+export type DeleteCentroAtencionHorarioResponse = SuccessResponse;
+
+// =============================================================================
+// RESPONSES - CODIGOS POSTALES
+// =============================================================================
+
+export interface PostalCodeSearchResponse {
+  items: PostalCodeSearchItem[];
+}
+
+// =============================================================================
+// PARAMS - LISTADOS
+// =============================================================================
+
+export interface CentrosAtencionListParams extends PaginationParams {
+  search?: string;
+  isActive?: boolean;
+  centerType?: CentroAtencionType;
+  isExternal?: boolean;
+  postalCode?: string;
+  sortBy?: "name" | "isActive" | "code" | "centerType" | "legacyFolio";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface CentrosAtencionHorariosListParams extends PaginationParams {
+  centerId?: number;
+  shiftId?: number;
+  weekDay?: DiaSemana;
+  isOpen?: boolean;
+  is24Hours?: boolean;
+  isActive?: boolean;
+  sortBy?: "name" | "isActive" | "weekDay";
+  sortOrder?: "asc" | "desc";
+}
+
+// =============================================================================
+// UI HELPERS
 // =============================================================================
 
 /**
- * Parametros para listar centros de atencion.
- * GET /api/v1/care-centers
+ * Modelo útil para formularios de centro.
+ * Mantiene el shape desacoplado de la API si luego agregas transforms.
  */
-export interface CentrosAtencionListParams extends PaginationParams {
-  isActive?: boolean;
-  isExternal?: boolean;
+export interface CentroAtencionFormValues {
+  name: string;
+  code: string;
+  centerType: CentroAtencionType;
+  legacyFolio: string | null;
+  isExternal: boolean;
+  address: string | null;
+  postalCode: string | null;
+  neighborhood: string | null;
+  municipality: string | null;
+  state: string | null;
+  city: string | null;
+  phone: string | null;
+  isActive: boolean;
+}
+
+/**
+ * Modelo útil para formularios de horario.
+ */
+export interface CentroAtencionHorarioFormValues {
+  centerId: number;
+  shiftId: number;
+  weekDay: DiaSemana;
+  isOpen: boolean;
+  is24Hours: boolean;
+  openingTime: string | null;
+  closingTime: string | null;
+  observations: string | null;
+  isActive: boolean;
 }

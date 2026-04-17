@@ -1,0 +1,3 @@
+from .centro_atencion_repository import CentroAtencionRepository
+from .turno_repository import TurnoRepository
+from .codigo_postal_repository import CodigoPostalRepository
