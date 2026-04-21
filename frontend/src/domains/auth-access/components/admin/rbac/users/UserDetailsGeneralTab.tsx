@@ -18,6 +18,7 @@ import {
 } from "@shared/ui/select";
 import type { CentroAtencionListItem, UserDetail } from "@api/types";
 import type { UserDetailsFormValues } from "@/domains/auth-access/types/rbac/users.schemas";
+import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
 
 interface UserDetailsGeneralTabProps {
   form: UseFormReturn<UserDetailsFormValues>;
@@ -177,48 +178,14 @@ export function UserDetailsGeneralTab({
                     />
                   </FormControl>
                 ) : (
-                  <Select
-                    value={
-                      field.value !== null && field.value !== undefined
-                        ? field.value.toString()
-                        : "none"
-                    }
-                    onValueChange={(value) => {
-                      if (value === "none") {
-                        field.onChange(null);
-                        return;
-                      }
-
-                      if (!value) {
-                        return;
-                      }
-
-                      const parsedValue = Number(value);
-                      if (Number.isNaN(parsedValue)) {
-                        return;
-                      }
-
-                      field.onChange(parsedValue);
-                    }}
-                    disabled={!isEditable}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Selecciona un centro" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Sin centro</SelectItem>
-                      {clinicSelectOptions.map((clinic) => (
-                        <SelectItem
-                          key={clinic.id}
-                          value={clinic.id.toString()}
-                        >
-                          {clinic.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <ClinicCombobox
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      options={clinicSelectOptions}
+                      disabled={!isEditable}
+                    />
+                  </FormControl>
                 )}
                 {isClinicsCatalogLoading ? (
                   <p className="text-xs text-txt-muted">

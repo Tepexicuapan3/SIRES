@@ -19,6 +19,7 @@ routes = [
     ("consultation-origins", OrigenConsListCreateView, OrigenConsDetailView, "str"),
     ("kinship", ParentescoListCreateView, ParentescoDetailView, "str"),
     ("passes", PasesListCreateView, PasesDetailView, "int"),
+    ("areas", AreasListCreateView, AreasDetailView, "int"),
     ("area-types", TiposAreasListCreateView, TiposAreasDetailView, "int"),
     ("auth-types", TpAutorizacionListCreateView, TpAutorizacionDetailView, "int"),
     ("appointment-types", TipoDeCitasListCreateView, TipoDeCitasDetailView, "int"),
@@ -57,6 +58,18 @@ urlpatterns += [
         "care-center-schedules/<int:pk>",
         CentrosAtencionHorariosDetailView.as_view(),
         name="care-center-schedules-detail",
+    ),
+
+    # EXCEPCIONES DE CENTROS DE ATENCION
+    path(
+        "care-center-exceptions/",
+        CentrosAtencionExcepcionesListCreateView.as_view(),
+        name="care-center-exceptions-list-create",
+    ),
+    path(
+        "care-center-exceptions/<int:pk>",
+        CentrosAtencionExcepcionesDetailView.as_view(),
+        name="care-center-exceptions-detail",
     ),
 
     # CODIGOS POSTALES

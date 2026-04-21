@@ -5,7 +5,7 @@ import userEvent, {
 import { fireEvent, render, screen, waitFor, within } from "@/test/utils";
 import CentrosAtencionPage from "@features/admin/modules/catalogos/centros-atencion/pages/CentrosAtencionPage";
 import { toast } from "sonner";
-import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
+import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useUpdateCentroAtencion } from "@features/admin/modules/catalogos/centros-atencion/mutations/useUpdateCentroAtencion";
 import { useDeleteCentroAtencion } from "@features/admin/modules/catalogos/centros-atencion/mutations/useDeleteCentroAtencion";
@@ -38,8 +38,8 @@ vi.mock(
   }),
 );
 
-vi.mock("@/domains/auth-access/hooks/usePermissions", () => ({
-  usePermissions: vi.fn(),
+vi.mock("@/domains/auth-access/hooks/usePermissionDependencies", () => ({
+  usePermissionDependencies: vi.fn(),
 }));
 
 vi.mock(
@@ -68,7 +68,9 @@ const createCenter = (
 ): CentroAtencionListItem => ({
   id: 1,
   name: "Centro Central",
-  folioCode: "CEN",
+  code: "DFCEN001",
+  centerType: "CLINICA",
+  legacyFolio: "CEN",
   isExternal: false,
   isActive: true,
   ...overrides,
@@ -84,47 +86,51 @@ describe("CentrosAtencionPage UI", () => {
     const secondCenter = createCenter({
       id: 2,
       name: "Hospital Norte",
-      folioCode: "HNO",
+      code: "DFHOR001",
+      centerType: "HOSPITAL",
+      legacyFolio: "HNO",
       isExternal: true,
       isActive: false,
     });
 
-    vi.mocked(useCentrosAtencionList).mockImplementation((params) => ({
+    vi.mocked(useCentrosAtencionList).mockReturnValue({
       data: {
         items: [firstCenter, secondCenter],
-        page: params?.page ?? 1,
-        pageSize: params?.pageSize ?? 10,
+        page: 1,
+        pageSize: 10,
         total: 2,
         totalPages: 1,
       },
       isLoading: false,
+      isFetching: false,
+      isError: false,
       error: null,
       refetch,
-    }));
+      status: "success",
+      fetchStatus: "idle",
+    } as unknown as ReturnType<typeof useCentrosAtencionList>);
 
-    vi.mocked(usePermissions).mockReturnValue({
-      permissions: ["*"],
-      hasPermission: () => true,
-      hasAnyPermission: () => true,
-      hasAllPermissions: () => true,
-      isAdmin: () => true,
-    });
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: () => true,
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
 
     vi.mocked(useUpdateCentroAtencion).mockReturnValue({
       mutateAsync: updateMutate,
       isPending: false,
-    } as ReturnType<typeof useUpdateCentroAtencion>);
+    } as unknown as ReturnType<typeof useUpdateCentroAtencion>);
 
     vi.mocked(useDeleteCentroAtencion).mockReturnValue({
       mutateAsync: deleteMutate,
       isPending: false,
-    } as ReturnType<typeof useDeleteCentroAtencion>);
+    } as unknown as ReturnType<typeof useDeleteCentroAtencion>);
 
     updateMutate.mockResolvedValue({
-      center: {
+      careCenter: {
         id: 1,
         name: "Centro Central",
-        folioCode: "CEN",
+        code: "DFCEN001",
+        centerType: "CLINICA",
+        legacyFolio: "CEN",
         isExternal: false,
         isActive: false,
       },
@@ -142,7 +148,6 @@ describe("CentrosAtencionPage UI", () => {
     ).toBeVisible();
     expect(screen.getByText("Centro Central")).toBeVisible();
     expect(screen.getByText("Hospital Norte")).toBeVisible();
-    expect(screen.getByRole("columnheader", { name: "Folio" })).toBeVisible();
   });
 
   it("opens create dialog from primary action", async () => {
@@ -191,14 +196,9 @@ describe("CentrosAtencionPage UI", () => {
   });
 
   it("shows minimal notice when catalog read access is missing", () => {
-    vi.mocked(usePermissions).mockReturnValue({
-      permissions: ["admin:catalogos:centros_atencion:update"],
-      hasPermission: (permission) =>
-        permission === "admin:catalogos:centros_atencion:update",
-      hasAnyPermission: () => true,
-      hasAllPermissions: () => false,
-      isAdmin: () => false,
-    });
+    vi.mocked(usePermissionDependencies).mockReturnValue({
+      hasCapability: (cap: string) => cap !== "admin.catalogs.centers.read",
+    } as unknown as ReturnType<typeof usePermissionDependencies>);
 
     render(<CentrosAtencionPage />);
 

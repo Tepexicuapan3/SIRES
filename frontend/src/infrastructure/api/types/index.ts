@@ -124,24 +124,86 @@ export type {
 // =============================================================================
 // CLINICS TYPES (CRUD)
 // =============================================================================
+// =============================================================================
+// CLINICS TYPES (CRUD + schedules + postal codes)
+// =============================================================================
 export type {
-  // Entidades
+  // Refs y enums
   CentroAtencionRef,
+  TurnoRef,
+  DiaSemana,
+  CentroAtencionType,
+  TipoExcepcion,
+  // Entidades - centro
   CentroAtencionListItem,
   CentroAtencionDetail,
-  // CRUD Requests
+  // CRUD Requests - centro
   CreateCentroAtencionRequest,
   UpdateCentroAtencionRequest,
-  // CRUD Responses
+  // CRUD Responses - centro
   CreateCentroAtencionResponse,
   UpdateCentroAtencionResponse,
   DeleteCentroAtencionResponse,
-  // Listados
+  // Listados - centro
   CentrosAtencionListParams,
   CentrosAtencionListResponse,
-  // Detalle
+  // Detalle - centro
   CentroAtencionDetailResponse,
+  // Entidades - horario
+  CentroAtencionHorarioListItem,
+  CentroAtencionHorarioDetail,
+  // CRUD Requests - horario
+  CreateCentroAtencionHorarioRequest,
+  UpdateCentroAtencionHorarioRequest,
+  // CRUD Responses - horario
+  CreateCentroAtencionHorarioResponse,
+  UpdateCentroAtencionHorarioResponse,
+  DeleteCentroAtencionHorarioResponse,
+  // Listados - horario
+  CentrosAtencionHorariosListParams,
+  CentrosAtencionHorariosListResponse,
+  // Detalle - horario
+  CentroAtencionHorarioDetailResponse,
+  // Entidades - excepcion
+  CentroAtencionExcepcionListItem,
+  CentroAtencionExcepcionDetail,
+  // CRUD Requests - excepcion
+  CreateCentroAtencionExcepcionRequest,
+  UpdateCentroAtencionExcepcionRequest,
+  // CRUD Responses - excepcion
+  CreateCentroAtencionExcepcionResponse,
+  UpdateCentroAtencionExcepcionResponse,
+  DeleteCentroAtencionExcepcionResponse,
+  // Listados - excepcion
+  CentrosAtencionExcepcionesListParams,
+  CentrosAtencionExcepcionesListResponse,
+  // Detalle - excepcion
+  CentroAtencionExcepcionDetailResponse,
+  // Codigos postales
+  PostalCodeSearchItem,
+  PostalCodeSearchResponse,
 } from "@api/types/catalogos/centros-atencion.types";
+
+// =============================================================================
+// TURNOS TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  TurnoListItem,
+  TurnoDetail,
+  // CRUD Requests
+  CreateTurnoRequest,
+  UpdateTurnoRequest,
+  // CRUD Responses
+  CreateTurnoResponse,
+  UpdateTurnoResponse,
+  DeleteTurnoResponse,
+  // Listados
+  TurnosListParams,
+  TurnosListResponse,
+  // Detalle
+  TurnoDetailResponse,
+} from "@api/types/catalogos/turnos.types";
 
 export type {
   // Entidades
@@ -181,6 +243,64 @@ export type {
   // Detalle
   ConsultorioDetailResponse,
 } from "@api/types/catalogos/consultorios.types";
+
+// =============================================================================
+// TIPOS DE AREAS TYPES (CRUD)
+// =============================================================================
+export type {
+  TipoAreaListItem,
+  TipoAreaDetail,
+  CreateTipoAreaRequest,
+  UpdateTipoAreaRequest,
+  CreateTipoAreaResponse,
+  UpdateTipoAreaResponse,
+  DeleteTipoAreaResponse,
+  TiposAreasListParams,
+  TiposAreasListResponse,
+  TipoAreaDetailResponse,
+} from "@api/types/catalogos/tipos-areas.types";
+
+// =============================================================================
+// ESCOLARIDAD TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  EscolaridadListItem,
+  EscolaridadDetail,
+  // CRUD Requests
+  CreateEscolaridadRequest,
+  UpdateEscolaridadRequest,
+  // CRUD Responses
+  CreateEscolaridadResponse,
+  UpdateEscolaridadResponse,
+  DeleteEscolaridadResponse,
+  // Listados
+  EscolaridadListParams,
+  EscolaridadListResponse,
+  // Detalle
+  EscolaridadDetailResponse,
+} from "@api/types/catalogos/escolaridad.types";
+
+// =============================================================================
+// ESCUELAS TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  EscuelaListItem,
+  EscuelaDetail,
+  // CRUD Requests
+  CreateEscuelaRequest,
+  UpdateEscuelaRequest,
+  // CRUD Responses
+  CreateEscuelaResponse,
+  UpdateEscuelaResponse,
+  DeleteEscuelaResponse,
+  // Listados
+  EscuelasListParams,
+  EscuelasListResponse,
+  // Detalle
+  EscuelaDetailResponse,
+} from "@api/types/catalogos/escuelas.types";
 
 // =============================================================================
 // CLINICAL FLOW TYPES (visits, vitals, doctor flow)

@@ -11,25 +11,28 @@ vi.mock("@api/client", () => ({
   },
 }));
 
-describe("centrosAtencionAPI contract mapping", () => {
+describe("centrosAtencionAPI", () => {
   const mockedApiClient = apiClient as unknown as {
     get: ReturnType<typeof vi.fn>;
     post: ReturnType<typeof vi.fn>;
     put: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("maps backend code to folioCode for list response", async () => {
+  it("getAll returns list with correct fields", async () => {
     mockedApiClient.get.mockResolvedValueOnce({
       data: {
         items: [
           {
             id: 1,
             name: "Centro Central",
-            code: "CEN",
+            code: "DFCEN001",
+            centerType: "CLINICA",
+            legacyFolio: "CEN",
             isExternal: false,
             isActive: true,
           },
@@ -46,74 +49,77 @@ describe("centrosAtencionAPI contract mapping", () => {
     expect(response.items[0]).toMatchObject({
       id: 1,
       name: "Centro Central",
-      folioCode: "CEN",
+      code: "DFCEN001",
+      legacyFolio: "CEN",
     });
   });
 
-  it("maps create payload folioCode to backend code", async () => {
+  it("create sends correct payload with code and centerType", async () => {
     mockedApiClient.post.mockResolvedValueOnce({
       data: {
-        id: 5,
-        name: "Hospital Norte",
+        careCenter: {
+          id: 5,
+          name: "Hospital Norte",
+          code: "DFHOR001",
+          centerType: "HOSPITAL",
+          legacyFolio: null,
+          isExternal: true,
+          isActive: true,
+        },
       },
     });
 
     await centrosAtencionAPI.create({
       name: "Hospital Norte",
-      folioCode: "HNO",
+      code: "DFHOR001",
+      centerType: "HOSPITAL",
       isExternal: true,
-      address: "Av. Norte 120",
-      schedule: {
-        morning: { startsAt: "07:00", endsAt: "14:00" },
-        afternoon: { startsAt: "14:00", endsAt: "20:00" },
-        night: { startsAt: "20:00", endsAt: "23:00" },
-      },
     });
 
     expect(apiClient.post).toHaveBeenCalledWith(
-      "/care-centers",
+      expect.stringContaining("care-centers"),
       expect.objectContaining({
         name: "Hospital Norte",
-        code: "HNO",
+        code: "DFHOR001",
+        centerType: "HOSPITAL",
       }),
-    );
-    expect(apiClient.post).not.toHaveBeenCalledWith(
-      "/care-centers",
-      expect.objectContaining({ folioCode: "HNO" }),
     );
   });
 
-  it("maps backend code to folioCode for update response", async () => {
+  it("update sends correct payload and returns careCenter", async () => {
+    const updatedCenter = {
+      id: 1,
+      name: "Centro Central Actualizado",
+      code: "DFCEN001",
+      centerType: "CLINICA" as const,
+      legacyFolio: "CEN",
+      isExternal: false,
+      isActive: true,
+      address: "Av. Central 100",
+      postalCode: "06600",
+      neighborhood: "Centro",
+      municipality: "Cuauhtémoc",
+      state: "Ciudad de México",
+      city: "Ciudad de México",
+      phone: null,
+      createdAt: "2026-01-01T00:00:00Z",
+      createdBy: { id: 1, name: "Admin" },
+      updatedAt: "2026-04-20T00:00:00Z",
+      updatedBy: { id: 1, name: "Admin" },
+    };
+
     mockedApiClient.put.mockResolvedValueOnce({
-      data: {
-        center: {
-          id: 1,
-          name: "Centro Central",
-          code: "CC-001",
-          isExternal: false,
-          isActive: true,
-          address: "Av. Central 100",
-          schedule: {
-            morning: { startsAt: "07:00", endsAt: "14:00" },
-            afternoon: { startsAt: "14:00", endsAt: "20:00" },
-            night: { startsAt: "20:00", endsAt: "23:00" },
-          },
-          createdAt: "2026-01-01T00:00:00Z",
-          createdBy: { id: 1, name: "Admin" },
-          updatedAt: null,
-          updatedBy: null,
-        },
-      },
+      data: { careCenter: updatedCenter },
     });
 
     const response = await centrosAtencionAPI.update(1, {
-      folioCode: "CC-001",
+      name: "Centro Central Actualizado",
     });
 
-    expect(response.center.folioCode).toBe("CC-001");
+    expect(response.careCenter.id).toBe(1);
     expect(apiClient.put).toHaveBeenCalledWith(
-      "/care-centers/1",
-      expect.objectContaining({ code: "CC-001" }),
+      expect.stringContaining("care-centers/1"),
+      expect.objectContaining({ name: "Centro Central Actualizado" }),
     );
   });
 });

@@ -15,6 +15,12 @@
  * - PUT    /care-center-schedules/:id
  * - DELETE /care-center-schedules/:id
  *
+ * - GET    /care-center-exceptions/
+ * - POST   /care-center-exceptions/
+ * - GET    /care-center-exceptions/:id
+ * - PUT    /care-center-exceptions/:id
+ * - DELETE /care-center-exceptions/:id
+ *
  * Búsqueda CP:
  * - GET    /postal-codes/search/?cp=01000
  */
@@ -44,6 +50,7 @@ export interface TurnoRef extends CatalogRef {}
 
 export type CentroAtencionType = "CLINICA" | "HOSPITAL";
 export type DiaSemana = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type TipoExcepcion = "CERRADO" | "HORARIO_MODIFICADO" | "AVISO";
 
 // =============================================================================
 // ENTIDADES - CENTROS DE ATENCION
@@ -314,4 +321,95 @@ export interface CentroAtencionHorarioFormValues {
   closingTime: string | null;
   observations: string | null;
   isActive: boolean;
+}
+
+// =============================================================================
+// ENTIDADES - EXCEPCIONES DE CENTRO
+// =============================================================================
+
+/**
+ * Item de listado de excepciones.
+ * Alineado a CatCentroAtencionExcepcionListSerializer.
+ */
+export interface CentroAtencionExcepcionListItem {
+  id: number;
+  centerId: number;
+  date: string; // YYYY-MM-DD
+  tipo: TipoExcepcion;
+  reason: string;
+  openingTime: string | null; // HH:mm:ss
+  closingTime: string | null; // HH:mm:ss
+  isActive: boolean;
+}
+
+/**
+ * Detalle completo de excepción.
+ * Alineado a CatCentroAtencionExcepcionDetailSerializer.
+ */
+export interface CentroAtencionExcepcionDetail extends CentroAtencionExcepcionListItem {
+  createdAt: string;
+  createdBy: UserRef | null;
+  updatedAt: string | null;
+  updatedBy: UserRef | null;
+}
+
+// =============================================================================
+// REQUESTS - EXCEPCIONES
+// =============================================================================
+
+export interface CreateCentroAtencionExcepcionRequest {
+  centerId: number;
+  date: string; // YYYY-MM-DD
+  tipo: TipoExcepcion;
+  reason: string;
+  openingTime?: string | null;
+  closingTime?: string | null;
+  isActive?: boolean;
+}
+
+export interface UpdateCentroAtencionExcepcionRequest {
+  centerId?: number;
+  date?: string;
+  tipo?: TipoExcepcion;
+  reason?: string;
+  openingTime?: string | null;
+  closingTime?: string | null;
+  isActive?: boolean;
+}
+
+// =============================================================================
+// RESPONSES - EXCEPCIONES
+// =============================================================================
+
+export type CentrosAtencionExcepcionesListResponse =
+  ListResponse<CentroAtencionExcepcionListItem>;
+
+export interface CentroAtencionExcepcionDetailResponse {
+  careCenterException: CentroAtencionExcepcionDetail;
+}
+
+export interface CreateCentroAtencionExcepcionResponse {
+  id: number;
+  name: string;
+}
+
+export interface UpdateCentroAtencionExcepcionResponse {
+  careCenterException: CentroAtencionExcepcionDetail;
+}
+
+export type DeleteCentroAtencionExcepcionResponse = SuccessResponse;
+
+// =============================================================================
+// PARAMS - EXCEPCIONES
+// =============================================================================
+
+export interface CentrosAtencionExcepcionesListParams extends PaginationParams {
+  centerId?: number;
+  tipo?: TipoExcepcion;
+  dateFrom?: string; // YYYY-MM-DD
+  dateTo?: string;   // YYYY-MM-DD
+  year?: number;
+  isActive?: boolean;
+  sortBy?: "date" | "isActive" | "tipo";
+  sortOrder?: "asc" | "desc";
 }

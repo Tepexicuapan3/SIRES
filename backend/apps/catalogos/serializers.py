@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.catalogos.models import (
@@ -8,6 +9,7 @@ from apps.catalogos.models import (
     CalidadLaboral,
     CatCentroAtencion,
     CatCentroAtencionHorario,
+    CatCentroAtencionExcepcion,
     Consultorios,
     EdoCivil,
     Enfermedades,
@@ -189,9 +191,13 @@ class CatCentroAtencionWriteSerializer(CatalogWriteSerializer):
         fields = CatalogWriteSerializer.Meta.fields + _CENTRO_WRITE_EXTRA
 
     def validate_center_type(self, value):
-        if value not in {"CLINICA", "HOSPITAL"}:
-            raise serializers.ValidationError("El tipo de centro debe ser CLINICA o HOSPITAL.")
+        valid = set(CatCentroAtencion.TipoCentro.values)
+        if value not in valid:
+            raise serializers.ValidationError(
+                f"El tipo de centro debe ser uno de: {', '.join(valid)}."
+            )
         return value
+
 
     def validate_postal_code(self, value):
         if value and (not value.isdigit() or len(value) != 5):
@@ -254,7 +260,12 @@ class CatCentroAtencionHorarioWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CatCentroAtencionHorario
-        fields = ("centerId", "shiftId", "weekDay", "isOpen", "is24Hours", "openingTime", "closingTime", "observations", "isActive")
+        fields = (
+            "centerId", "shiftId", "weekDay",
+            "isOpen", "is24Hours",
+            "openingTime", "closingTime",
+            "observations", "isActive"
+        )
 
     def validate_week_day(self, value):
         if not 1 <= value <= 7:
@@ -267,19 +278,33 @@ class CatCentroAtencionHorarioWriteSerializer(serializers.ModelSerializer):
         opening = attrs.get("opening_time")
         closing = attrs.get("closing_time")
 
+        # Tus validaciones actuales
         if not is_open:
             if is_24h:
                 raise serializers.ValidationError("Si el horario está cerrado, no puede ser 24 horas.")
             if opening or closing:
                 raise serializers.ValidationError("Si el horario está cerrado, no debe tener hora de apertura ni cierre.")
+
         elif is_24h:
             if opening or closing:
                 raise serializers.ValidationError("Si el horario es 24 horas, no debe incluir horas de apertura o cierre.")
+
         else:
             if not opening or not closing:
                 raise serializers.ValidationError("Debe capturar hora de apertura y hora de cierre.")
             if opening >= closing:
                 raise serializers.ValidationError("La hora de apertura debe ser menor que la hora de cierre.")
+
+        # NUEVO: Validación del modelo (clean)
+        model_fields = {f.name for f in CatCentroAtencionHorario._meta.get_fields()}
+        instance_data = {k: v for k, v in attrs.items() if k in model_fields}
+
+        instance = CatCentroAtencionHorario(**instance_data)
+
+        try:
+            instance.clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
 
         return attrs
 
@@ -733,3 +758,99 @@ class CatCiesSerializer(serializers.ModelSerializer):
         model = CatCies
         fields = "__all__"
         read_only_fields = ["code"]
+
+
+# ---------------------------------------------------------------------------
+# CatCentroAtencionExcepcion
+# ---------------------------------------------------------------------------
+
+class CatCentroAtencionExcepcionListSerializer(serializers.ModelSerializer):
+    centerId = serializers.IntegerField(source="center_id")
+    date = serializers.DateField()
+    tipo = serializers.CharField()
+    reason = serializers.CharField()
+    openingTime = serializers.TimeField(source="opening_time", allow_null=True)
+    closingTime = serializers.TimeField(source="closing_time", allow_null=True)
+    isActive = serializers.BooleanField(source="is_active")
+
+    class Meta:
+        model = CatCentroAtencionExcepcion
+        fields = (
+            "id", "centerId", "date", "tipo", "reason",
+            "openingTime", "closingTime", "isActive",
+        )
+
+
+class CatCentroAtencionExcepcionDetailSerializer(AuditFieldsMixin, serializers.ModelSerializer):
+    centerId = serializers.IntegerField(source="center_id")
+    date = serializers.DateField()
+    tipo = serializers.CharField()
+    reason = serializers.CharField()
+    openingTime = serializers.TimeField(source="opening_time", allow_null=True)
+    closingTime = serializers.TimeField(source="closing_time", allow_null=True)
+    isActive = serializers.BooleanField(source="is_active")
+
+    class Meta:
+        model = CatCentroAtencionExcepcion
+        fields = (
+            "id", "centerId", "date", "tipo", "reason",
+            "openingTime", "closingTime", "isActive",
+            "createdAt", "createdBy", "updatedAt", "updatedBy",
+        )
+
+
+class CatCentroAtencionExcepcionWriteSerializer(serializers.ModelSerializer):
+    centerId = serializers.IntegerField(source="center_id")
+    date = serializers.DateField()
+    tipo = serializers.ChoiceField(choices=CatCentroAtencionExcepcion.TIPO_CHOICES)
+    reason = serializers.CharField(max_length=255)
+    openingTime = serializers.TimeField(source="opening_time", required=False, allow_null=True)
+    closingTime = serializers.TimeField(source="closing_time", required=False, allow_null=True)
+    isActive = serializers.BooleanField(source="is_active", required=False)
+
+    class Meta:
+        model = CatCentroAtencionExcepcion
+        fields = (
+            "centerId", "date", "tipo", "reason",
+            "openingTime", "closingTime", "isActive",
+        )
+
+    def validate(self, attrs):
+        tipo = attrs.get("tipo")
+        opening = attrs.get("opening_time")
+        closing = attrs.get("closing_time")
+
+        if tipo == CatCentroAtencionExcepcion.TIPO_HORARIO_MODIFICADO:
+            if not opening or not closing:
+                raise serializers.ValidationError(
+                    "El tipo Horario modificado requiere hora de apertura y hora de cierre."
+                )
+            if opening >= closing:
+                raise serializers.ValidationError(
+                    "La hora de apertura debe ser anterior a la hora de cierre."
+                )
+        else:
+            if opening or closing:
+                raise serializers.ValidationError(
+                    "Solo el tipo Horario modificado puede incluir horas de apertura y cierre."
+                )
+
+        # Delegate to model.clean() for any additional validation
+        instance_data = {
+            "center_id": attrs.get("center_id"),
+            "date": attrs.get("date"),
+            "tipo": tipo,
+            "reason": attrs.get("reason", ""),
+            "opening_time": opening,
+            "closing_time": closing,
+            "is_active": attrs.get("is_active", True),
+        }
+        instance = CatCentroAtencionExcepcion(**instance_data)
+        try:
+            instance.clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            )
+
+        return attrs

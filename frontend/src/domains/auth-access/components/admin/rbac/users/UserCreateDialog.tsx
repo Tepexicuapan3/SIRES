@@ -37,6 +37,7 @@ import {
 } from "@/domains/auth-access/types/rbac/users.schemas";
 import { getUserErrorMessage } from "@/domains/auth-access/adapters/rbac/users/users.feedback";
 import { UserDialogHeader } from "@/domains/auth-access/components/admin/rbac/users/UserDialogHeader";
+import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
 
 interface UserCreateDialogProps {
   open: boolean;
@@ -213,35 +214,13 @@ export function UserCreateDialog({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Centro de atencion</FormLabel>
-                              <Select
-                                value={
-                                  field.value ? field.value.toString() : "none"
-                                }
-                                onValueChange={(value) =>
-                                  field.onChange(
-                                    value === "none" ? null : Number(value),
-                                  )
-                                }
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="h-11">
-                                    <SelectValue placeholder="Selecciona un centro" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="none">
-                                    Sin centro
-                                  </SelectItem>
-                                  {clinicOptions.map((clinic) => (
-                                    <SelectItem
-                                      key={clinic.id}
-                                      value={clinic.id.toString()}
-                                    >
-                                      {clinic.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <ClinicCombobox
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  options={clinicOptions}
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}

@@ -15,12 +15,12 @@ from apps.catalogos.uses_case.upload_cies_use_case import PreviewCiesUseCase
 
 from .models import (
     Areas, Autorizadores, Bajas, CalidadLaboral, CatCentroAtencion,
-    CatCentroAtencionHorario, Consultorios, EdoCivil, Enfermedades,
+    CatCentroAtencionHorario, CatCentroAtencionExcepcion, Consultorios, EdoCivil, Enfermedades,
     Escolaridad, Escuelas, Especialidades, EstudiosMed, GruposDeMedicamentos,
     Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
     Roles, TipoDeCitas, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
 )
-from .permissions import CatalogPermissionMixin
+from .permissions import CatalogPermissionMixin, HasAnyOfPermissions
 from .repositories.consultorios_repository import ConsultoriosRepository
 from .serializers import (
     AreasDetailSerializer, AreasListSerializer, AreasWriteSerializer,
@@ -30,6 +30,8 @@ from .serializers import (
     CatCentroAtencionDetailSerializer, CatCentroAtencionHorarioDetailSerializer,
     CatCentroAtencionHorarioListSerializer, CatCentroAtencionHorarioWriteSerializer,
     CatCentroAtencionListSerializer, CatCentroAtencionWriteSerializer,
+    CatCentroAtencionExcepcionListSerializer, CatCentroAtencionExcepcionDetailSerializer,
+    CatCentroAtencionExcepcionWriteSerializer,
     CodigoPostalResultSerializer, ConsultoriosDetailSerializer,
     ConsultoriosListSerializer, ConsultoriosWriteSerializer,
     EdoCivilDetailSerializer, EdoCivilListSerializer, EdoCivilWriteSerializer,
@@ -410,6 +412,16 @@ class CentrosAtencionListCreateView(CatalogBaseListCreateView):
         "legacyFolio": "legacy_folio",
     })
 
+    def get_permissions(self):
+        if getattr(self, "request", None) and self.request.method == "GET":
+            return [HasAnyOfPermissions(
+                "admin:catalogos:centros_atencion:read",
+                "admin:gestion:usuarios:read",
+                "admin:gestion:usuarios:create",
+                "admin:gestion:usuarios:update",
+            )]
+        return super().get_permissions()
+
     def get_queryset(self):
         qs = self.model.objects.all()
         params = self.request.query_params
@@ -424,6 +436,52 @@ class CentrosAtencionListCreateView(CatalogBaseListCreateView):
             qs = qs.filter(postal_code=postal_code)
 
         return qs
+    
+    def post(self, request):
+        serializer = self.write_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        # Validación personalizada por CLUES (code)
+        code = serializer.validated_data.get("code")
+        if code and self.model.objects.filter(code=code).exists():
+            return self._error(
+                request,
+                code="CARE_CENTER_EXISTS",
+                message="Ya existe un centro con ese CLUES",
+                http_status=status.HTTP_409_CONFLICT,
+                details={"code": ["Duplicado"]},
+            )
+
+        # Campos automáticos (igual que la base)
+        model_fields = self._model_field_names()
+        save_kwargs = {}
+
+        if "created_at" in model_fields:
+            save_kwargs["created_at"] = timezone.now()
+
+        if "created_by_id" in model_fields:
+            save_kwargs["created_by_id"] = _get_actor_id(request.user)
+
+        item = serializer.save(**save_kwargs)
+
+        return Response(
+            {"id": item.id, "name": str(item)},
+            status=status.HTTP_201_CREATED,
+        )
+    
+
+
+    
+
+
 
 
 class CentrosAtencionDetailView(CatalogBaseDetailView):
@@ -1113,4 +1171,137 @@ class CatCiesDetailView(CatalogPermissionMixin, ErrorMixin, RetrieveUpdateDestro
     catalog = "cies"
     queryset = CatCies.objects.all()
     serializer_class = CatCiesSerializer
+
+
+# ---------------------------------------------------------------------------
+# Excepciones de Centros de Atención
+# ---------------------------------------------------------------------------
+
+class CentrosAtencionExcepcionesListCreateView(CatalogBaseListCreateView):
+    catalog = "centros_atencion_excepciones"
+    model = CatCentroAtencionExcepcion
+    list_serializer = CatCentroAtencionExcepcionListSerializer
+    write_serializer = CatCentroAtencionExcepcionWriteSerializer
+    name_field = "id"
+    error_codes = MappingProxyType({"exists": "CARE_CENTER_EXCEPTION_EXISTS"})
+    sort_map = MappingProxyType({
+        "name": "date",
+        "date": "date",
+        "isActive": "is_active",
+        "tipo": "tipo",
+    })
+
+    def get_queryset(self):
+        qs = self.model.objects.select_related("center").all()
+        params = self.request.query_params
+
+        if center_id := params.get("centerId"):
+            qs = qs.filter(center_id=center_id)
+
+        if tipo := params.get("tipo"):
+            qs = qs.filter(tipo=tipo)
+
+        if date_from := params.get("dateFrom"):
+            qs = qs.filter(date__gte=date_from)
+
+        if date_to := params.get("dateTo"):
+            qs = qs.filter(date__lte=date_to)
+
+        if year := params.get("year"):
+            qs = qs.filter(date__year=year)
+
+        return qs.order_by("date")
+
+    def post(self, request):
+        serializer = self.write_serializer(data=request.data)
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        vd = serializer.validated_data
+        if self.model.objects.filter(
+            center_id=vd["center_id"],
+            date=vd["date"],
+        ).exists():
+            return self._error(
+                request,
+                code="CARE_CENTER_EXCEPTION_EXISTS",
+                message="Ya existe una excepción para ese centro en esa fecha.",
+                http_status=status.HTTP_409_CONFLICT,
+                details={
+                    "centerId": ["Duplicado"],
+                    "date": ["Ya existe una excepción para esta fecha"],
+                },
+            )
+
+        item = serializer.save(
+            created_at=timezone.now(),
+            created_by_id=_get_actor_id(request.user),
+        )
+        return Response(
+            {"id": item.id, "name": str(item.date)},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CentrosAtencionExcepcionesDetailView(CatalogBaseDetailView):
+    catalog = "centros_atencion_excepciones"
+    model = CatCentroAtencionExcepcion
+    detail_serializer = CatCentroAtencionExcepcionDetailSerializer
+    write_serializer = CatCentroAtencionExcepcionWriteSerializer
+    wrapper_key = "careCenterException"
+    error_codes = MappingProxyType({
+        "not_found": "CARE_CENTER_EXCEPTION_NOT_FOUND",
+        "exists": "CARE_CENTER_EXCEPTION_EXISTS",
+    })
+
+    def put(self, request, pk):
+        item = self.get_object(pk)
+        if not item:
+            return self._error(
+                request,
+                code="CARE_CENTER_EXCEPTION_NOT_FOUND",
+                message="Excepción no encontrada",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = self.write_serializer(item, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        vd = serializer.validated_data
+        new_center_id = vd.get("center_id", item.center_id)
+        new_date = vd.get("date", item.date)
+
+        if self.model.objects.filter(
+            center_id=new_center_id,
+            date=new_date,
+        ).exclude(pk=item.pk).exists():
+            return self._error(
+                request,
+                code="CARE_CENTER_EXCEPTION_EXISTS",
+                message="Ya existe una excepción para ese centro en esa fecha.",
+                http_status=status.HTTP_409_CONFLICT,
+                details={
+                    "centerId": ["Duplicado"],
+                    "date": ["Ya existe una excepción para esta fecha"],
+                },
+            )
+
+        updated = serializer.save(
+            updated_at=timezone.now(),
+            updated_by_id=_get_actor_id(request.user),
+        )
+        return Response({"careCenterException": self.detail_serializer(updated).data})
     lookup_field = "code"

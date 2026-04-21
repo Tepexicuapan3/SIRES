@@ -70,6 +70,49 @@ class HasCatalogPermission(BasePermission):
         return True
 
 
+class HasAnyOfPermissions(BasePermission):
+    """Permite el acceso si el usuario tiene AL MENOS uno de los permisos dados."""
+
+    def __init__(self, *permissions: str):
+        self.permissions = frozenset(permissions)
+
+    def has_permission(self, request, _view) -> bool:
+        request_id = request.headers.get("X-Request-ID")
+
+        if request.method in MUTATING_METHODS and not validate_csrf(request):
+            raise CatalogApiException(
+                code="CSRF_INVALID",
+                message="Token CSRF inválido o ausente",
+                http_status=403,
+                request_id=request_id,
+            )
+
+        try:
+            user = authenticate_request(request)
+        except AuthServiceError as exc:
+            raise CatalogApiException(
+                code=exc.code,
+                message=exc.message,
+                http_status=exc.status_code,
+                request_id=request_id,
+                details=exc.details,
+            )
+
+        request.user = user
+
+        user_permissions = set(UserRepository.build_auth_user(user).get("permissions", []))
+
+        if "*" in user_permissions or user_permissions & self.permissions:
+            return True
+
+        raise CatalogApiException(
+            code="INSUFFICIENT_PERMISSIONS",
+            message="No tienes permiso para esta acción",
+            http_status=403,
+            request_id=request_id,
+        )
+
+
 class CatalogPermissionMixin:
     catalog: Optional[str] = None
 

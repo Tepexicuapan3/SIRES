@@ -154,7 +154,11 @@ export const adminRoutes: RouteObject[] = [
       {
         path: "escolaridad",
         element: (
-          <ProtectedRoute requiredPermission="admin:catalogos:escolaridad:read">
+          <ProtectedRoute
+            requiredCapability="admin.catalogs.escolaridad.read"
+            fallbackRequirement={{ allOf: ["admin:catalogos:escolaridad:read"] }}
+            dependencyAware
+          >
             <EscolaridadPage />
           </ProtectedRoute>
         ),
@@ -266,7 +270,11 @@ export const adminRoutes: RouteObject[] = [
       {
         path: "turnos",
         element: (
-          <ProtectedRoute requiredPermission="admin:catalogos:turnos:read">
+          <ProtectedRoute
+            requiredCapability="admin.catalogs.turnos.read"
+            fallbackRequirement={{ allOf: ["admin:catalogos:turnos:read"] }}
+            dependencyAware
+          >
             <TurnosPage />
           </ProtectedRoute>
         ),

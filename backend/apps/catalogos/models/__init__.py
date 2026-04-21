@@ -5,6 +5,8 @@ from .autorizadores import Autorizadores
 from .bajas import Bajas
 from .calidad_laboral import CalidadLaboral
 from .centros_atencion import CatCentroAtencion
+from .centro_atencion_horario import CatCentroAtencionHorario
+from .centro_atencion_excepcion import CatCentroAtencionExcepcion
 from .cies import CatCies
 from .consultorios import Consultorios
 from .edo_civil import EdoCivil
@@ -19,7 +21,7 @@ from .origen_consulta import OrigenCons
 from .parentescos import Parentesco
 from .pases import Pases
 
-# 🔑 ALIAS IMPORTANTES
+# ALIAS IMPORTANTES
 from .roles import Roles
 from .permisos import Permisos
 from .roles import Roles as CatRol
@@ -33,9 +35,6 @@ from .tipos_sanguineo import TiposSanguineo
 from .turnos import Turnos
 
 
-from .base import CatalogBase
-from .centros_atencion import CatCentroAtencion
-from .centro_atencion_horario import CatCentroAtencionHorario
 
 __all__ = [
     "CatalogBase",
@@ -45,6 +44,7 @@ __all__ = [
     "CalidadLaboral",
     "CatCentroAtencion",
     "CatCentroAtencionHorario",
+    "CatCentroAtencionExcepcion",
     "CatCies",
     "Consultorios",
     "EdoCivil",

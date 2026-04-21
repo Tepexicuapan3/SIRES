@@ -151,7 +151,7 @@ export function AreaDetailsDialog({
     ) : null;
 
   const createdMetaLabel = areaDetail
-    ? `Creado ${formatDate(areaDetail.createdAt)} por ${areaDetail.createdBy.name}`
+    ? `Creado ${formatDate(areaDetail.createdAt)} por ${areaDetail.createdBy?.name ?? "-"}`
     : null;
 
   const createdMeta = createdMetaLabel ? (

@@ -17,15 +17,18 @@ centrosAtencionDB.unshift(
   createMockCentroAtencionDetail({
     id: 1,
     name: "Centro Central",
-    folioCode: "CEN",
+    code: "DFCEN001",
+    legacyFolio: "CEN",
+    centerType: "CLINICA",
     isExternal: false,
     isActive: true,
     address: "Av. Central 100, CDMX",
-    schedule: {
-      morning: { startsAt: "07:00", endsAt: "14:00" },
-      afternoon: { startsAt: "14:00", endsAt: "20:00" },
-      night: { startsAt: "20:00", endsAt: "23:00" },
-    },
+    postalCode: "06600",
+    neighborhood: "Centro",
+    municipality: "Cuauhtémoc",
+    state: "Ciudad de México",
+    city: "Ciudad de México",
+    phone: "5555551234",
   }),
 );
 
@@ -61,32 +64,12 @@ const requirePermission = (permission: string) => {
 const toListItem = (center: (typeof centrosAtencionDB)[number]) => ({
   id: center.id,
   name: center.name,
-  folioCode: center.folioCode,
+  code: center.code,
+  centerType: center.centerType,
+  legacyFolio: center.legacyFolio,
   isExternal: center.isExternal,
   isActive: center.isActive,
 });
-
-const isValidTime = (value: unknown): value is string =>
-  typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
-
-const isValidSchedule = (value: unknown) => {
-  if (typeof value !== "object" || value === null) return false;
-
-  const schedule = value as {
-    morning?: { startsAt?: unknown; endsAt?: unknown };
-    afternoon?: { startsAt?: unknown; endsAt?: unknown };
-    night?: { startsAt?: unknown; endsAt?: unknown };
-  };
-
-  return (
-    isValidTime(schedule.morning?.startsAt) &&
-    isValidTime(schedule.morning?.endsAt) &&
-    isValidTime(schedule.afternoon?.startsAt) &&
-    isValidTime(schedule.afternoon?.endsAt) &&
-    isValidTime(schedule.night?.startsAt) &&
-    isValidTime(schedule.night?.endsAt)
-  );
-};
 
 export const centrosAtencionHandlers = [
   http.get(getApiUrl("care-centers"), async ({ request }) => {
@@ -101,6 +84,7 @@ export const centrosAtencionHandlers = [
     const pageSize = Number(url.searchParams.get("pageSize") || 10);
     const isActiveParam = url.searchParams.get("isActive");
     const isExternalParam = url.searchParams.get("isExternal");
+    const centerTypeParam = url.searchParams.get("centerType");
 
     const filteredCenters = centrosAtencionDB.filter((center) => {
       const statusMatches =
@@ -111,7 +95,9 @@ export const centrosAtencionHandlers = [
         isExternalParam === null
           ? true
           : center.isExternal === (isExternalParam === "true");
-      return statusMatches && typeMatches;
+      const centerTypeMatches =
+        centerTypeParam === null ? true : center.centerType === centerTypeParam;
+      return statusMatches && typeMatches && centerTypeMatches;
     });
 
     const total = filteredCenters.length;
@@ -147,9 +133,7 @@ export const centrosAtencionHandlers = [
       );
     }
 
-    return HttpResponse.json({
-      center,
-    });
+    return HttpResponse.json({ careCenter: center });
   }),
 
   http.post(getApiUrl("care-centers"), async ({ request }) => {
@@ -162,64 +146,56 @@ export const centrosAtencionHandlers = [
 
     const body = (await request.json()) as {
       name?: string;
-      folioCode?: string;
+      code?: string;
+      centerType?: string;
+      legacyFolio?: string | null;
       isExternal?: boolean;
-      address?: string;
-      schedule?: unknown;
+      address?: string | null;
+      postalCode?: string | null;
+      neighborhood?: string | null;
+      municipality?: string | null;
+      state?: string | null;
+      city?: string | null;
+      phone?: string | null;
+      isActive?: boolean;
     };
 
     const name = body.name?.trim();
-    const folioCode = body.folioCode?.trim().toUpperCase();
-    const address = body.address?.trim();
-    const isExternal = Boolean(body.isExternal);
+    const code = body.code?.trim().toUpperCase();
 
-    if (!name || !folioCode || !address || !isValidSchedule(body.schedule)) {
+    if (!name || !code || !body.centerType) {
       return HttpResponse.json(
-        {
-          code: "VALIDATION_ERROR",
-          message: "Revisa los datos capturados.",
-        },
+        { code: "VALIDATION_ERROR", message: "Revisa los datos capturados." },
         { status: 400 },
       );
     }
 
-    const duplicateName = centrosAtencionDB.some(
-      (center) => center.name.toLowerCase() === name.toLowerCase(),
+    const duplicateCode = centrosAtencionDB.some(
+      (center) => center.code.toLowerCase() === code.toLowerCase(),
     );
-    if (duplicateName) {
+    if (duplicateCode) {
       return HttpResponse.json(
-        {
-          code: "CLINIC_EXISTS",
-          message: "Ya existe un centro con ese nombre.",
-        },
-        { status: 409 },
-      );
-    }
-
-    const duplicateFolio = centrosAtencionDB.some(
-      (center) => center.folioCode.toLowerCase() === folioCode.toLowerCase(),
-    );
-    if (duplicateFolio) {
-      return HttpResponse.json(
-        {
-          code: "FOLIO_CODE_EXISTS",
-          message: "El folio ya esta en uso por otro centro.",
-        },
+        { code: "CLUES_EXISTS", message: "El CLUES ya esta registrado." },
         { status: 409 },
       );
     }
 
     const sessionUser = getMockSessionUser();
-    const schedule =
-      body.schedule as (typeof centrosAtencionDB)[number]["schedule"];
     const createdCenter = createMockCentroAtencionDetail({
       id: nextCenterId,
       name,
-      folioCode,
-      isExternal,
-      isActive: true,
-      address,
-      schedule,
+      code,
+      centerType: body.centerType as "CLINICA" | "HOSPITAL",
+      legacyFolio: body.legacyFolio ?? null,
+      isExternal: body.isExternal ?? false,
+      isActive: body.isActive ?? true,
+      address: body.address ?? null,
+      postalCode: body.postalCode ?? null,
+      neighborhood: body.neighborhood ?? null,
+      municipality: body.municipality ?? null,
+      state: body.state ?? null,
+      city: body.city ?? null,
+      phone: body.phone ?? null,
       createdAt: new Date().toISOString(),
       createdBy: {
         id: sessionUser?.id ?? 0,
@@ -232,10 +208,7 @@ export const centrosAtencionHandlers = [
     nextCenterId += 1;
     centrosAtencionDB.unshift(createdCenter);
 
-    return HttpResponse.json({
-      id: createdCenter.id,
-      name: createdCenter.name,
-    });
+    return HttpResponse.json({ careCenter: createdCenter });
   }),
 
   http.put(getApiUrl("care-centers/:id"), async ({ params, request }) => {
@@ -258,82 +231,60 @@ export const centrosAtencionHandlers = [
 
     const body = (await request.json()) as {
       name?: string;
-      folioCode?: string;
+      code?: string;
+      centerType?: string;
+      legacyFolio?: string | null;
       isExternal?: boolean;
       isActive?: boolean;
-      address?: string;
-      schedule?: unknown;
+      address?: string | null;
+      postalCode?: string | null;
+      neighborhood?: string | null;
+      municipality?: string | null;
+      state?: string | null;
+      city?: string | null;
+      phone?: string | null;
     };
 
-    const normalizedName = body.name?.trim();
-    const normalizedFolio = body.folioCode?.trim().toUpperCase();
-    const normalizedAddress = body.address?.trim();
+    const normalizedCode = body.code?.trim().toUpperCase();
 
-    const duplicateName = normalizedName
-      ? centrosAtencionDB.some(
-          (center) =>
-            center.id !== id &&
-            center.name.toLowerCase() === normalizedName.toLowerCase(),
-        )
-      : false;
-    if (duplicateName) {
-      return HttpResponse.json(
-        {
-          code: "CLINIC_EXISTS",
-          message: "Ya existe un centro con ese nombre.",
-        },
-        { status: 409 },
+    if (normalizedCode) {
+      const duplicateCode = centrosAtencionDB.some(
+        (center) =>
+          center.id !== id &&
+          center.code.toLowerCase() === normalizedCode.toLowerCase(),
       );
-    }
-
-    const duplicateFolio = normalizedFolio
-      ? centrosAtencionDB.some(
-          (center) =>
-            center.id !== id &&
-            center.folioCode.toLowerCase() === normalizedFolio.toLowerCase(),
-        )
-      : false;
-    if (duplicateFolio) {
-      return HttpResponse.json(
-        {
-          code: "FOLIO_CODE_EXISTS",
-          message: "El folio ya esta en uso por otro centro.",
-        },
-        { status: 409 },
-      );
-    }
-
-    if (body.schedule !== undefined && !isValidSchedule(body.schedule)) {
-      return HttpResponse.json(
-        {
-          code: "VALIDATION_ERROR",
-          message: "Revisa los datos capturados.",
-        },
-        { status: 400 },
-      );
+      if (duplicateCode) {
+        return HttpResponse.json(
+          { code: "CLUES_EXISTS", message: "El CLUES ya esta registrado." },
+          { status: 409 },
+        );
+      }
     }
 
     const currentCenter = centrosAtencionDB[centerIndex];
     const sessionUser = getMockSessionUser();
-    const nextSchedule =
-      body.schedule !== undefined
-        ? (body.schedule as typeof currentCenter.schedule)
-        : currentCenter.schedule;
 
     const updatedCenter = {
       ...currentCenter,
-      name: normalizedName ?? currentCenter.name,
-      folioCode: normalizedFolio ?? currentCenter.folioCode,
-      isExternal:
-        typeof body.isExternal === "boolean"
-          ? body.isExternal
-          : currentCenter.isExternal,
-      isActive:
-        typeof body.isActive === "boolean"
-          ? body.isActive
-          : currentCenter.isActive,
-      address: normalizedAddress ?? currentCenter.address,
-      schedule: nextSchedule,
+      ...(body.name !== undefined && { name: body.name.trim() }),
+      ...(normalizedCode !== undefined && { code: normalizedCode }),
+      ...(body.centerType !== undefined && {
+        centerType: body.centerType as "CLINICA" | "HOSPITAL",
+      }),
+      ...(body.legacyFolio !== undefined && { legacyFolio: body.legacyFolio }),
+      ...(body.isExternal !== undefined && { isExternal: body.isExternal }),
+      ...(body.isActive !== undefined && { isActive: body.isActive }),
+      ...(body.address !== undefined && { address: body.address }),
+      ...(body.postalCode !== undefined && { postalCode: body.postalCode }),
+      ...(body.neighborhood !== undefined && {
+        neighborhood: body.neighborhood,
+      }),
+      ...(body.municipality !== undefined && {
+        municipality: body.municipality,
+      }),
+      ...(body.state !== undefined && { state: body.state }),
+      ...(body.city !== undefined && { city: body.city }),
+      ...(body.phone !== undefined && { phone: body.phone }),
       updatedAt: new Date().toISOString(),
       updatedBy: {
         id: sessionUser?.id ?? 0,
@@ -343,9 +294,7 @@ export const centrosAtencionHandlers = [
 
     centrosAtencionDB[centerIndex] = updatedCenter;
 
-    return HttpResponse.json({
-      center: updatedCenter,
-    });
+    return HttpResponse.json({ careCenter: updatedCenter });
   }),
 
   http.delete(getApiUrl("care-centers/:id"), async ({ params }) => {
@@ -366,7 +315,10 @@ export const centrosAtencionHandlers = [
       );
     }
 
-    centrosAtencionDB.splice(centerIndex, 1);
+    centrosAtencionDB[centerIndex] = {
+      ...centrosAtencionDB[centerIndex],
+      isActive: false,
+    };
 
     return HttpResponse.json({ success: true });
   }),

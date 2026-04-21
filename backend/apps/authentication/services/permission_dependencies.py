@@ -91,6 +91,23 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "admin.catalogs.centers.delete": {
         "allOf": ["admin:catalogos:centros_atencion:delete"]
     },
+    "admin.catalogs.escolaridad.read": {"allOf": ["admin:catalogos:escolaridad:read"]},
+    "admin.catalogs.escolaridad.create": {"allOf": ["admin:catalogos:escolaridad:create"]},
+    "admin.catalogs.escolaridad.update": {"allOf": ["admin:catalogos:escolaridad:update"]},
+    "admin.catalogs.escolaridad.delete": {"allOf": ["admin:catalogos:escolaridad:delete"]},
+    "admin.catalogs.tiposAreas.read": {"allOf": ["admin:catalogos:tipos_areas:read"]},
+    "admin.catalogs.tiposAreas.create": {"allOf": ["admin:catalogos:tipos_areas:create"]},
+    "admin.catalogs.tiposAreas.update": {"allOf": ["admin:catalogos:tipos_areas:update"]},
+    "admin.catalogs.tiposAreas.delete": {"allOf": ["admin:catalogos:tipos_areas:delete"]},
+    "admin.catalogs.escuelas.read": {"allOf": ["admin:catalogos:escuelas:read"]},
+    "admin.catalogs.escuelas.create": {"allOf": ["admin:catalogos:escuelas:create"]},
+    "admin.catalogs.escuelas.update": {"allOf": ["admin:catalogos:escuelas:update"]},
+    "admin.catalogs.escuelas.delete": {"allOf": ["admin:catalogos:escuelas:delete"]},
+    "admin.catalogs.turnos.read": {"allOf": ["admin:catalogos:turnos:read"]},
+    "admin.catalogs.turnos.create": {"allOf": ["admin:catalogos:turnos:create"]},
+    "admin.catalogs.turnos.update": {"allOf": ["admin:catalogos:turnos:update"]},
+    "admin.catalogs.turnos.delete": {"allOf": ["admin:catalogos:turnos:delete"]},
+    "admin.catalogs.cies.upload": {"allOf": ["admin:catalogos:cies:upload"]},
     "flow.visits.queue.read": {
         "anyOf": [
             "recepcion:fichas:medicina_general:create",

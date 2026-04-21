@@ -15,6 +15,12 @@
  * - PUT    /care-center-schedules/:id
  * - DELETE /care-center-schedules/:id
  *
+ * - GET    /care-center-exceptions/
+ * - POST   /care-center-exceptions/
+ * - GET    /care-center-exceptions/:id
+ * - PUT    /care-center-exceptions/:id
+ * - DELETE /care-center-exceptions/:id
+ *
  * - GET    /postal-codes/search/?cp=01000
  */
 
@@ -36,6 +42,14 @@ import type {
   UpdateCentroAtencionHorarioRequest,
   UpdateCentroAtencionHorarioResponse,
   DeleteCentroAtencionHorarioResponse,
+  CentrosAtencionExcepcionesListParams,
+  CentrosAtencionExcepcionesListResponse,
+  CentroAtencionExcepcionDetailResponse,
+  CreateCentroAtencionExcepcionRequest,
+  CreateCentroAtencionExcepcionResponse,
+  UpdateCentroAtencionExcepcionRequest,
+  UpdateCentroAtencionExcepcionResponse,
+  DeleteCentroAtencionExcepcionResponse,
   PostalCodeSearchResponse,
 } from "@api/types";
 
@@ -193,7 +207,85 @@ export const centrosAtencionAPI = {
   },
 
   // ==========================================
-  // 3. CODIGOS POSTALES
+  // 3. EXCEPCIONES DE CENTROS DE ATENCION
+  // ==========================================
+
+  /**
+   * Listar excepciones de centros.
+   * @endpoint GET /care-center-exceptions/
+   * @permission admin:catalogos:centros_atencion_excepciones:read
+   */
+  getExcepciones: async (
+    params?: CentrosAtencionExcepcionesListParams,
+  ): Promise<CentrosAtencionExcepcionesListResponse> => {
+    const response = await apiClient.get<CentrosAtencionExcepcionesListResponse>(
+      "/care-center-exceptions/",
+      { params },
+    );
+    return response.data;
+  },
+
+  /**
+   * Obtener detalle de una excepción.
+   * @endpoint GET /care-center-exceptions/:id
+   * @permission admin:catalogos:centros_atencion_excepciones:read
+   */
+  getExcepcionById: async (
+    excepcionId: number,
+  ): Promise<CentroAtencionExcepcionDetailResponse> => {
+    const response = await apiClient.get<CentroAtencionExcepcionDetailResponse>(
+      `/care-center-exceptions/${excepcionId}`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Crear excepción.
+   * @endpoint POST /care-center-exceptions/
+   * @permission admin:catalogos:centros_atencion_excepciones:create
+   */
+  createExcepcion: async (
+    data: CreateCentroAtencionExcepcionRequest,
+  ): Promise<CreateCentroAtencionExcepcionResponse> => {
+    const response = await apiClient.post<CreateCentroAtencionExcepcionResponse>(
+      "/care-center-exceptions/",
+      data,
+    );
+    return response.data;
+  },
+
+  /**
+   * Actualizar excepción.
+   * @endpoint PUT /care-center-exceptions/:id
+   * @permission admin:catalogos:centros_atencion_excepciones:update
+   */
+  updateExcepcion: async (
+    excepcionId: number,
+    data: UpdateCentroAtencionExcepcionRequest,
+  ): Promise<UpdateCentroAtencionExcepcionResponse> => {
+    const response = await apiClient.put<UpdateCentroAtencionExcepcionResponse>(
+      `/care-center-exceptions/${excepcionId}`,
+      data,
+    );
+    return response.data;
+  },
+
+  /**
+   * Eliminar excepción (baja logica).
+   * @endpoint DELETE /care-center-exceptions/:id
+   * @permission admin:catalogos:centros_atencion_excepciones:delete
+   */
+  deleteExcepcion: async (
+    excepcionId: number,
+  ): Promise<DeleteCentroAtencionExcepcionResponse> => {
+    const response = await apiClient.delete<DeleteCentroAtencionExcepcionResponse>(
+      `/care-center-exceptions/${excepcionId}`,
+    );
+    return response.data;
+  },
+
+  // ==========================================
+  // 4. CODIGOS POSTALES
   // ==========================================
 
   /**

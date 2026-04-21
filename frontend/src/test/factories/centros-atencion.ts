@@ -3,7 +3,7 @@ import type {
   CentroAtencionDetail,
   CentroAtencionListItem,
   CentroAtencionRef,
-  CentroAtencionSchedule,
+  CentroAtencionHorarioListItem,
 } from "@api/types/catalogos/centros-atencion.types";
 import type { UserRef } from "@api/types/users.types";
 
@@ -21,21 +21,14 @@ export const createMockCentroAtencionRef = (
   ...overrides,
 });
 
-export const createMockCentroAtencionSchedule = (
-  overrides: Partial<CentroAtencionSchedule> = {},
-): CentroAtencionSchedule => ({
-  morning: { startsAt: "07:00", endsAt: "14:00" },
-  afternoon: { startsAt: "14:00", endsAt: "20:00" },
-  night: { startsAt: "20:00", endsAt: "23:00" },
-  ...overrides,
-});
-
 export const createMockCentroAtencionListItem = (
   overrides: Partial<CentroAtencionListItem> = {},
 ): CentroAtencionListItem => ({
   id: faker.number.int({ min: 1, max: 1000 }),
   name: `Centro ${faker.location.street()}`,
-  folioCode: faker.string.alpha({ length: 3, casing: "upper" }),
+  code: faker.string.alpha({ length: 6, casing: "upper" }),
+  centerType: faker.helpers.arrayElement(["CLINICA", "HOSPITAL"] as const),
+  legacyFolio: faker.string.alpha({ length: 3, casing: "upper" }),
   isExternal: faker.datatype.boolean(),
   isActive: faker.datatype.boolean(),
   ...overrides,
@@ -53,7 +46,27 @@ export const createMockCentroAtencionDetail = (
     updatedAt: null,
     updatedBy: null,
     address: faker.location.streetAddress(),
-    schedule: createMockCentroAtencionSchedule(),
+    postalCode: faker.string.numeric(5),
+    neighborhood: faker.location.county(),
+    municipality: faker.location.city(),
+    state: faker.location.state(),
+    city: faker.location.city(),
+    phone: faker.phone.number(),
     ...overrides,
   };
 };
+
+export const createMockCentroAtencionHorarioListItem = (
+  overrides: Partial<CentroAtencionHorarioListItem> = {},
+): CentroAtencionHorarioListItem => ({
+  id: faker.number.int({ min: 1, max: 1000 }),
+  center: createMockCentroAtencionRef(),
+  shift: { id: faker.number.int({ min: 1, max: 3 }), name: "Matutino" },
+  weekDay: faker.number.int({ min: 1, max: 7 }) as 1 | 2 | 3 | 4 | 5 | 6 | 7,
+  isOpen: true,
+  is24Hours: false,
+  openingTime: "07:00:00",
+  closingTime: "14:00:00",
+  isActive: true,
+  ...overrides,
+});

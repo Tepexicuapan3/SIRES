@@ -160,7 +160,7 @@ export function UsersPage() {
       isActive: true,
     },
     {
-      enabled: canReadClinicsCatalog,
+      enabled: canReadUser || canCreateUser || canUpdateUser,
     },
   );
   const roleOptions = rolesData?.items ?? [];
