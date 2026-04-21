@@ -6,7 +6,7 @@ import type {
 } from "@api/types";
 import { centrosAtencionKeys } from "@features/admin/modules/catalogos/centros-atencion/queries/centrosAtencion.keys";
 
-interface UpdateCentroAtencionPayload {
+interface Payload {
   centerId: number;
   data: UpdateCentroAtencionRequest;
 }
@@ -14,27 +14,15 @@ interface UpdateCentroAtencionPayload {
 export const useUpdateCentroAtencion = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<
-    UpdateCentroAtencionResponse,
-    Error,
-    UpdateCentroAtencionPayload
-  >({
-    mutationFn: ({ centerId, data }) =>
-      centrosAtencionAPI.update(centerId, data),
+  return useMutation<UpdateCentroAtencionResponse, Error, Payload>({
+    mutationFn: ({ centerId, data }) => centrosAtencionAPI.update(centerId, data),
     onSuccess: (response, variables) => {
       queryClient.setQueryData(
-        centrosAtencionKeys.detail(response.careCenter.id),
-        {
-          careCenter: response.careCenter,
-        },
+        centrosAtencionKeys.detail(variables.centerId),
+        { careCenter: response.careCenter },
       );
-
       void queryClient.invalidateQueries({
-        queryKey: centrosAtencionKeys.list(),
-      });
-
-      void queryClient.invalidateQueries({
-        queryKey: centrosAtencionKeys.detail(variables.centerId),
+        queryKey: centrosAtencionKeys.all,
       });
     },
   });

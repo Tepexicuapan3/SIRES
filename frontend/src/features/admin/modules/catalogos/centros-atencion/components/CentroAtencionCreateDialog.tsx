@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import {
@@ -29,6 +30,7 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 import { ScrollArea } from "@shared/ui/ScrollArea";
+import { Separator } from "@shared/ui/separator";
 import type {
   CreateCentroAtencionResponse,
   PostalCodeSearchItem,
@@ -76,6 +78,7 @@ const DEFAULT_VALUES: CreateCentroAtencionFormValues = {
 };
 
 const FORM_ID = "centro-atencion-create-form";
+const CP_DEBOUNCE_MS = 600;
 
 export function CentroAtencionCreateDialog({
   open,
@@ -87,6 +90,7 @@ export function CentroAtencionCreateDialog({
     PostalCodeSearchItem[]
   >([]);
   const [isSearchingPostalCode, setIsSearchingPostalCode] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const createCenter = useCreateCentroAtencion();
 
@@ -97,13 +101,49 @@ export function CentroAtencionCreateDialog({
 
   const postalCodeValue = form.watch("postalCode");
 
+  // Auto-búsqueda cuando el CP tiene exactamente 5 dígitos
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const cp = postalCodeValue?.trim() ?? "";
+
+    if (cp.length !== 5) {
+      setPostalCodeOptions([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        setIsSearchingPostalCode(true);
+        const response = await centrosAtencionAPI.searchPostalCode(cp);
+        setPostalCodeOptions(response.items);
+
+        if (response.items.length === 0) {
+          toast.warning("Sin resultados", {
+            description: "No se encontraron colonias para ese codigo postal.",
+          });
+        }
+      } catch (error) {
+        toast.error("No se pudo buscar el codigo postal", {
+          description: getCentroAtencionErrorMessage(
+            error,
+            "Error al consultar codigo postal",
+          ),
+        });
+      } finally {
+        setIsSearchingPostalCode(false);
+      }
+    }, CP_DEBOUNCE_MS);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [postalCodeValue]);
+
   const selectedPostalCodeOption = useMemo(() => {
     const neighborhood = form.getValues("neighborhood");
     if (!neighborhood) return null;
-
-    return (
-      postalCodeOptions.find((item) => item.colonia === neighborhood) ?? null
-    );
+    return postalCodeOptions.find((item) => item.colonia === neighborhood) ?? null;
   }, [postalCodeOptions, form]);
 
   const handleDialogOpenChange = (nextOpen: boolean) => {
@@ -113,43 +153,6 @@ export function CentroAtencionCreateDialog({
       setPostalCodeOptions([]);
     }
     onOpenChange(nextOpen);
-  };
-
-  const handleSearchPostalCode = async () => {
-    const cp = form.getValues("postalCode");
-
-    if (!cp || cp.trim().length !== 5) {
-      toast.error("Codigo postal invalido", {
-        description: "Captura un codigo postal de 5 digitos.",
-      });
-      return;
-    }
-
-    try {
-      setIsSearchingPostalCode(true);
-      const response = await centrosAtencionAPI.searchPostalCode(cp.trim());
-      setPostalCodeOptions(response.items);
-
-      if (response.items.length === 0) {
-        toast.warning("Sin resultados", {
-          description: "No se encontraron colonias para ese codigo postal.",
-        });
-        return;
-      }
-
-      toast.success("Codigo postal encontrado", {
-        description: `Se encontraron ${response.items.length} colonias.`,
-      });
-    } catch (error) {
-      toast.error("No se pudo buscar el codigo postal", {
-        description: getCentroAtencionErrorMessage(
-          error,
-          "Error al consultar codigo postal",
-        ),
-      });
-    } finally {
-      setIsSearchingPostalCode(false);
-    }
   };
 
   const handleSelectPostalCodeOption = (value: string) => {
@@ -188,8 +191,8 @@ export function CentroAtencionCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="w-[95vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[92vw] lg:w-235 xl:w-255">
-        <div className="flex max-h-[88vh] flex-col">
+      <DialogContent className="w-[96vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[90vw] sm:max-w-[860px] lg:max-w-[1020px]">
+        <div className="flex max-h-[90vh] flex-col">
           <DialogHeader className="px-8 pt-8">
             <DialogTitle className="sr-only">
               Nuevo centro de atencion
@@ -206,157 +209,46 @@ export function CentroAtencionCreateDialog({
 
           <ScrollArea className="flex-1 px-8 pb-8">
             <div className="space-y-6 pt-4">
-              <div className="rounded-2xl border border-line-struct bg-paper p-4">
+              <div className="rounded-2xl border border-line-struct bg-paper p-5">
                 <Form {...form}>
                   <form
                     id={FORM_ID}
                     onSubmit={form.handleSubmit(onSubmit)}
                     className="space-y-6"
                   >
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nombre del centro</FormLabel>
-                            <FormControl>
-                              <Input {...field} value={field.value ?? ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="code"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>CLUES</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(event) =>
-                                  field.onChange(
-                                    event.target.value.toUpperCase(),
-                                  )
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <FormField
-                        control={form.control}
-                        name="centerType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo de centro</FormLabel>
-                            <Select
-                              value={field.value}
-                              onValueChange={field.onChange}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecciona tipo" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value={CENTER_TYPE.CLINICA}>
-                                  Clinica
-                                </SelectItem>
-                                <SelectItem value={CENTER_TYPE.HOSPITAL}>
-                                  Hospital
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="legacyFolio"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Folio legacy</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(event) =>
-                                  field.onChange(
-                                    event.target.value.toUpperCase(),
-                                  )
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="isExternal"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Origen</FormLabel>
-                            <Select
-                              value={
-                                field.value
-                                  ? CENTER_ORIGIN.EXTERNAL
-                                  : CENTER_ORIGIN.INTERNAL
-                              }
-                              onValueChange={(value) =>
-                                field.onChange(value === CENTER_ORIGIN.EXTERNAL)
-                              }
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value={CENTER_ORIGIN.INTERNAL}>
-                                  Interno
-                                </SelectItem>
-                                <SelectItem value={CENTER_ORIGIN.EXTERNAL}>
-                                  Externo
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-txt-body">
-                        Direccion
+                    {/* ── Datos generales ── */}
+                    <div>
+                      <h4 className="mb-3 text-sm font-semibold text-txt-body">
+                        Datos generales
                       </h4>
-
-                      <div className="grid gap-4 sm:grid-cols-[180px_140px_1fr]">
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_160px_160px_160px]">
                         <FormField
                           control={form.control}
-                          name="postalCode"
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem className="lg:col-span-2">
+                              <FormLabel>Nombre del centro</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="code"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Codigo postal</FormLabel>
+                              <FormLabel>CLUES</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   value={field.value ?? ""}
-                                  maxLength={5}
-                                  inputMode="numeric"
+                                  onChange={(e) =>
+                                    field.onChange(e.target.value.toUpperCase())
+                                  }
                                 />
                               </FormControl>
                               <FormMessage />
@@ -364,23 +256,142 @@ export function CentroAtencionCreateDialog({
                           )}
                         />
 
-                        <div className="flex items-end">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            onClick={handleSearchPostalCode}
-                            disabled={
-                              isSearchingPostalCode ||
-                              !postalCodeValue ||
-                              postalCodeValue.length !== 5
-                            }
-                          >
-                            {isSearchingPostalCode
-                              ? "Buscando..."
-                              : "Buscar CP"}
-                          </Button>
-                        </div>
+                        <FormField
+                          control={form.control}
+                          name="centerType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tipo</FormLabel>
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Tipo" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value={CENTER_TYPE.CLINICA}>
+                                    Clinica
+                                  </SelectItem>
+                                  <SelectItem value={CENTER_TYPE.HOSPITAL}>
+                                    Hospital
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="isExternal"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Origen</FormLabel>
+                              <Select
+                                value={
+                                  field.value
+                                    ? CENTER_ORIGIN.EXTERNAL
+                                    : CENTER_ORIGIN.INTERNAL
+                                }
+                                onValueChange={(v) =>
+                                  field.onChange(v === CENTER_ORIGIN.EXTERNAL)
+                                }
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value={CENTER_ORIGIN.INTERNAL}>
+                                    Interno
+                                  </SelectItem>
+                                  <SelectItem value={CENTER_ORIGIN.EXTERNAL}>
+                                    Externo
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="legacyFolio"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Folio legacy</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) =>
+                                    field.onChange(e.target.value.toUpperCase())
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Telefono</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* ── Dirección ── */}
+                    <div>
+                      <h4 className="mb-3 text-sm font-semibold text-txt-body">
+                        Direccion
+                      </h4>
+
+                      {/* CP + colonia sugerida */}
+                      <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
+                        <FormField
+                          control={form.control}
+                          name="postalCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Codigo postal</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    maxLength={5}
+                                    inputMode="numeric"
+                                    className="pr-8"
+                                  />
+                                  {isSearchingPostalCode ? (
+                                    <Loader2 className="absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-txt-muted" />
+                                  ) : null}
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
                         <FormItem>
                           <FormLabel>Colonia sugerida</FormLabel>
@@ -391,7 +402,15 @@ export function CentroAtencionCreateDialog({
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Selecciona colonia" />
+                                <SelectValue
+                                  placeholder={
+                                    isSearchingPostalCode
+                                      ? "Buscando colonias..."
+                                      : postalCodeOptions.length === 0
+                                        ? "Captura el CP primero"
+                                        : "Selecciona colonia"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -408,12 +427,31 @@ export function CentroAtencionCreateDialog({
                         </FormItem>
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Info asentamiento */}
+                      {selectedPostalCodeOption ? (
+                        <div className="mt-3 flex gap-4 rounded-xl border border-line-struct/60 bg-subtle/20 px-4 py-2.5 text-sm text-txt-muted">
+                          <span>
+                            <span className="font-medium text-txt-body">
+                              Tipo:{" "}
+                            </span>
+                            {selectedPostalCodeOption.tipoAsentamiento}
+                          </span>
+                          <span>
+                            <span className="font-medium text-txt-body">
+                              Zona:{" "}
+                            </span>
+                            {selectedPostalCodeOption.zona}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {/* Dirección + desglose */}
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr]">
                         <FormField
                           control={form.control}
                           name="address"
                           render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="lg:col-span-2">
                               <FormLabel>Direccion</FormLabel>
                               <FormControl>
                                 <Input {...field} value={field.value ?? ""} />
@@ -436,15 +474,13 @@ export function CentroAtencionCreateDialog({
                             </FormItem>
                           )}
                         />
-                      </div>
 
-                      <div className="grid gap-4 sm:grid-cols-3">
                         <FormField
                           control={form.control}
                           name="municipality"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Municipio</FormLabel>
+                              <FormLabel>Municipio / Alcaldia</FormLabel>
                               <FormControl>
                                 <Input {...field} value={field.value ?? ""} />
                               </FormControl>
@@ -480,39 +516,6 @@ export function CentroAtencionCreateDialog({
                             </FormItem>
                           )}
                         />
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Telefono</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value ?? ""} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        {selectedPostalCodeOption ? (
-                          <div className="rounded-xl border border-line-struct/60 bg-subtle/20 p-3 text-sm text-txt-muted">
-                            <div>
-                              <span className="font-medium text-txt-body">
-                                Tipo asentamiento:
-                              </span>{" "}
-                              {selectedPostalCodeOption.tipoAsentamiento}
-                            </div>
-                            <div>
-                              <span className="font-medium text-txt-body">
-                                Zona:
-                              </span>{" "}
-                              {selectedPostalCodeOption.zona}
-                            </div>
-                          </div>
-                        ) : null}
                       </div>
                     </div>
                   </form>

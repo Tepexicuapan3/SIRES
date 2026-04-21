@@ -7,6 +7,8 @@ import { Button } from "@shared/ui/button";
 import { Separator } from "@shared/ui/separator";
 import { Skeleton } from "@shared/ui/skeleton";
 import { CentroAtencionDetailsGeneralSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsGeneralSection";
+import { CentroAtencionDetailsHorariosSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsHorariosSection";
+import { CentroAtencionDetailsExcepcionesSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsExcepcionesSection";
 import { CentroAtencionDialogHeader } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDialogHeader";
 import {
   centroAtencionDetailsSchema,
@@ -275,6 +277,26 @@ export function CentroAtencionDetailsDialog({
             </>
           ),
         },
+        {
+        id: "horarios",
+        label: "Horarios",
+        content: (
+          <CentroAtencionDetailsHorariosSection
+            centerId={centerDetail.id}
+            canEdit={canEdit}
+          />
+        ),
+      },
+      {
+        id: "excepciones",
+        label: "Excepciones",
+        content: (
+          <CentroAtencionDetailsExcepcionesSection
+            centerId={centerDetail.id}
+            canEdit={canEdit}
+          />
+        ),
+      },
       ]
     : [];
 

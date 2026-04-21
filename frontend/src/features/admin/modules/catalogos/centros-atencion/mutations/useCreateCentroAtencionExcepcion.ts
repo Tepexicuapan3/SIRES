@@ -1,23 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { centrosAtencionAPI } from "@api/resources/catalogos/centros-atencion.api";
 import type {
-  CreateCentroAtencionRequest,
-  CreateCentroAtencionResponse,
+  CreateCentroAtencionExcepcionRequest,
+  CreateCentroAtencionExcepcionResponse,
 } from "@api/types";
 import { centrosAtencionKeys } from "@features/admin/modules/catalogos/centros-atencion/queries/centrosAtencion.keys";
 
 interface Payload {
-  data: CreateCentroAtencionRequest;
+  data: CreateCentroAtencionExcepcionRequest;
 }
 
-export const useCreateCentroAtencion = () => {
+export const useCreateCentroAtencionExcepcion = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<CreateCentroAtencionResponse, Error, Payload>({
-    mutationFn: ({ data }) => centrosAtencionAPI.create(data),
+  return useMutation<CreateCentroAtencionExcepcionResponse, Error, Payload>({
+    mutationFn: ({ data }) => centrosAtencionAPI.createExcepcion(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: centrosAtencionKeys.all,
+        queryKey: centrosAtencionKeys.exceptions.all,
       });
     },
   });

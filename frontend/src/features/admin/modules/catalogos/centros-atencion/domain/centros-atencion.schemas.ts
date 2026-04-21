@@ -165,29 +165,116 @@ export const updateCentroAtencionHorarioSchema =
   centroAtencionHorarioSchema.partial();
 
 // =============================================================================
+// EXCEPCION DE CENTRO
+// =============================================================================
+
+export const centroAtencionExcepcionSchema = z
+  .object({
+    centerId: z.number().int().positive({ error: "Centro requerido" }),
+    date: z
+      .string()
+      .trim()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha invalida (YYYY-MM-DD)" }),
+    tipo: z.enum(["CERRADO", "HORARIO_MODIFICADO", "AVISO"], {
+      error: "Tipo de excepcion invalido",
+    }),
+    reason: z
+      .string()
+      .trim()
+      .min(1, { error: "Motivo requerido" })
+      .max(255, { error: "Motivo demasiado largo" }),
+    openingTime: optionalTime("Hora de apertura"),
+    closingTime: optionalTime("Hora de cierre"),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (data.tipo === "HORARIO_MODIFICADO") {
+      if (!data.openingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openingTime"],
+          message: "Hora de apertura requerida para horario modificado",
+        });
+      }
+
+      if (!data.closingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["closingTime"],
+          message: "Hora de cierre requerida para horario modificado",
+        });
+      }
+
+      if (
+        data.openingTime &&
+        data.closingTime &&
+        data.openingTime >= data.closingTime
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["closingTime"],
+          message: "La hora de cierre debe ser mayor a la hora de apertura",
+        });
+      }
+    } else {
+      if (data.openingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openingTime"],
+          message: "Solo el tipo Horario modificado puede incluir hora de apertura",
+        });
+      }
+
+      if (data.closingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["closingTime"],
+          message: "Solo el tipo Horario modificado puede incluir hora de cierre",
+        });
+      }
+    }
+  });
+
+export const createCentroAtencionExcepcionSchema = centroAtencionExcepcionSchema;
+export const updateCentroAtencionExcepcionSchema =
+  centroAtencionExcepcionSchema.partial();
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
-export type CentroAtencionDetailsFormValues = z.infer<
+export type CentroAtencionDetailsFormValues = z.input<
   typeof centroAtencionDetailsSchema
 >;
 
-export type CreateCentroAtencionFormValues = z.infer<
+export type CreateCentroAtencionFormValues = z.input<
   typeof createCentroAtencionSchema
 >;
 
-export type UpdateCentroAtencionFormValues = z.infer<
+export type UpdateCentroAtencionFormValues = z.input<
   typeof updateCentroAtencionSchema
 >;
 
-export type CentroAtencionHorarioFormValues = z.infer<
+export type CentroAtencionHorarioFormValues = z.input<
   typeof centroAtencionHorarioSchema
 >;
 
-export type CreateCentroAtencionHorarioFormValues = z.infer<
+export type CreateCentroAtencionHorarioFormValues = z.input<
   typeof createCentroAtencionHorarioSchema
 >;
 
-export type UpdateCentroAtencionHorarioFormValues = z.infer<
+export type UpdateCentroAtencionHorarioFormValues = z.input<
   typeof updateCentroAtencionHorarioSchema
+>;
+
+export type CentroAtencionExcepcionFormValues = z.input<
+  typeof centroAtencionExcepcionSchema
+>;
+
+export type CreateCentroAtencionExcepcionFormValues = z.input<
+  typeof createCentroAtencionExcepcionSchema
+>;
+
+export type UpdateCentroAtencionExcepcionFormValues = z.input<
+  typeof updateCentroAtencionExcepcionSchema
 >;

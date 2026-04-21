@@ -5,6 +5,11 @@ import type {
   CentroAtencionHorarioDetail,
   CreateCentroAtencionHorarioRequest,
   UpdateCentroAtencionHorarioRequest,
+  DiaSemana,
+  CentroAtencionExcepcionDetail,
+  CreateCentroAtencionExcepcionRequest,
+  UpdateCentroAtencionExcepcionRequest,
+  TipoExcepcion,
 } from "@api/types";
 
 import type {
@@ -13,6 +18,8 @@ import type {
   UpdateCentroAtencionFormValues,
   CentroAtencionHorarioFormValues,
   CreateCentroAtencionHorarioFormValues,
+  CentroAtencionExcepcionFormValues,
+  CreateCentroAtencionExcepcionFormValues,
 } from "@features/admin/modules/catalogos/centros-atencion/domain/centros-atencion.schemas";
 
 // =============================================================================
@@ -155,7 +162,7 @@ export const mapCentroAtencionHorarioDetailToFormValues = (
 ): CentroAtencionHorarioFormValues => ({
   centerId: detail?.center?.id ?? 0,
   shiftId: detail?.shift?.id ?? 0,
-  weekDay: detail?.weekDay ?? 1,
+  weekDay: (detail?.weekDay ?? 1) as DiaSemana,
   isOpen: detail?.isOpen ?? true,
   is24Hours: detail?.is24Hours ?? false,
   openingTime: detail?.openingTime ?? null,
@@ -173,7 +180,7 @@ export const buildCreateCentroAtencionHorarioPayload = (
 ): CreateCentroAtencionHorarioRequest => ({
   centerId: values.centerId,
   shiftId: values.shiftId,
-  weekDay: values.weekDay,
+  weekDay: values.weekDay as DiaSemana,
   isOpen: values.isOpen,
   is24Hours: values.is24Hours,
   openingTime: normalizeTime(values.openingTime),
@@ -197,7 +204,7 @@ export const buildUpdateCentroAtencionHorarioPayload = (
   }
 
   if (dirtyFields.weekDay && values.weekDay !== undefined) {
-    payload.weekDay = values.weekDay;
+    payload.weekDay = values.weekDay as DiaSemana;
   }
 
   if (dirtyFields.isOpen && values.isOpen !== undefined) {
@@ -218,6 +225,75 @@ export const buildUpdateCentroAtencionHorarioPayload = (
 
   if (dirtyFields.observations) {
     payload.observations = normalizeNullableText(values.observations);
+  }
+
+  if (dirtyFields.isActive && values.isActive !== undefined) {
+    payload.isActive = values.isActive;
+  }
+
+  return payload;
+};
+
+// =============================================================================
+// EXCEPCIONES - API -> FORM
+// =============================================================================
+
+export const mapCentroAtencionExcepcionToFormValues = (
+  detail?: CentroAtencionExcepcionDetail | null,
+): CentroAtencionExcepcionFormValues => ({
+  centerId: detail?.centerId ?? 0,
+  date: detail?.date ?? "",
+  tipo: detail?.tipo ?? "CERRADO",
+  reason: detail?.reason ?? "",
+  openingTime: detail?.openingTime ?? null,
+  closingTime: detail?.closingTime ?? null,
+  isActive: detail?.isActive ?? true,
+});
+
+// =============================================================================
+// EXCEPCIONES - FORM -> API
+// =============================================================================
+
+export const buildCreateCentroAtencionExcepcionPayload = (
+  values: CreateCentroAtencionExcepcionFormValues,
+): CreateCentroAtencionExcepcionRequest => ({
+  centerId: values.centerId,
+  date: values.date,
+  tipo: values.tipo as TipoExcepcion,
+  reason: values.reason.trim(),
+  openingTime: normalizeTime(values.openingTime),
+  closingTime: normalizeTime(values.closingTime),
+  isActive: values.isActive,
+});
+
+export const buildUpdateCentroAtencionExcepcionPayload = (
+  values: Partial<CentroAtencionExcepcionFormValues>,
+  dirtyFields: Partial<Record<keyof CentroAtencionExcepcionFormValues, boolean>>,
+): UpdateCentroAtencionExcepcionRequest => {
+  const payload: UpdateCentroAtencionExcepcionRequest = {};
+
+  if (dirtyFields.centerId && values.centerId !== undefined) {
+    payload.centerId = values.centerId;
+  }
+
+  if (dirtyFields.date && values.date !== undefined) {
+    payload.date = values.date;
+  }
+
+  if (dirtyFields.tipo && values.tipo !== undefined) {
+    payload.tipo = values.tipo as TipoExcepcion;
+  }
+
+  if (dirtyFields.reason && values.reason !== undefined) {
+    payload.reason = values.reason.trim();
+  }
+
+  if (dirtyFields.openingTime) {
+    payload.openingTime = normalizeTime(values.openingTime);
+  }
+
+  if (dirtyFields.closingTime) {
+    payload.closingTime = normalizeTime(values.closingTime);
   }
 
   if (dirtyFields.isActive && values.isActive !== undefined) {

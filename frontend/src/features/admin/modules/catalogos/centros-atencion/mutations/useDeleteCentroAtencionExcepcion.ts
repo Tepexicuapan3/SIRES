@@ -1,23 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { centrosAtencionAPI } from "@api/resources/catalogos/centros-atencion.api";
-import type { DeleteCentroAtencionResponse } from "@api/types";
+import type { DeleteCentroAtencionExcepcionResponse } from "@api/types";
 import { centrosAtencionKeys } from "@features/admin/modules/catalogos/centros-atencion/queries/centrosAtencion.keys";
 
 interface Payload {
-  centerId: number;
+  excepcionId: number;
 }
 
-export const useDeleteCentroAtencion = () => {
+export const useDeleteCentroAtencionExcepcion = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<DeleteCentroAtencionResponse, Error, Payload>({
-    mutationFn: ({ centerId }) => centrosAtencionAPI.delete(centerId),
+  return useMutation<DeleteCentroAtencionExcepcionResponse, Error, Payload>({
+    mutationFn: ({ excepcionId }) =>
+      centrosAtencionAPI.deleteExcepcion(excepcionId),
     onSuccess: (_response, variables) => {
       void queryClient.invalidateQueries({
-        queryKey: centrosAtencionKeys.all,
+        queryKey: centrosAtencionKeys.exceptions.all,
       });
       queryClient.removeQueries({
-        queryKey: centrosAtencionKeys.detail(variables.centerId),
+        queryKey: centrosAtencionKeys.exceptions.detail(variables.excepcionId),
       });
     },
   });

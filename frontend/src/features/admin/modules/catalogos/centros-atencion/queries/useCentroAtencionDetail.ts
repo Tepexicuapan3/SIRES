@@ -10,11 +10,9 @@ export const useCentroAtencionDetail = (
   const isEnabled = enabled && Boolean(centerId);
 
   return useQuery<CentroAtencionDetailResponse>({
-    queryKey: centrosAtencionKeys.detail(centerId),
+    queryKey: centrosAtencionKeys.detail(centerId!),
     queryFn: () => {
-      if (!centerId) {
-        throw new Error("centerId es requerido");
-      }
+      if (!centerId) throw new Error("centerId es requerido");
       return centrosAtencionAPI.getById(centerId);
     },
     enabled: isEnabled,

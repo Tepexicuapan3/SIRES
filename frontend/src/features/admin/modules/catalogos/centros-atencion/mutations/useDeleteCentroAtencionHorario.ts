@@ -1,23 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { centrosAtencionAPI } from "@api/resources/catalogos/centros-atencion.api";
-import type { DeleteCentroAtencionResponse } from "@api/types";
+import type { DeleteCentroAtencionHorarioResponse } from "@api/types";
 import { centrosAtencionKeys } from "@features/admin/modules/catalogos/centros-atencion/queries/centrosAtencion.keys";
 
 interface Payload {
-  centerId: number;
+  scheduleId: number;
 }
 
-export const useDeleteCentroAtencion = () => {
+export const useDeleteCentroAtencionHorario = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<DeleteCentroAtencionResponse, Error, Payload>({
-    mutationFn: ({ centerId }) => centrosAtencionAPI.delete(centerId),
+  return useMutation<DeleteCentroAtencionHorarioResponse, Error, Payload>({
+    mutationFn: ({ scheduleId }) =>
+      centrosAtencionAPI.deleteSchedule(scheduleId),
     onSuccess: (_response, variables) => {
       void queryClient.invalidateQueries({
-        queryKey: centrosAtencionKeys.all,
+        queryKey: centrosAtencionKeys.schedules.all,
       });
       queryClient.removeQueries({
-        queryKey: centrosAtencionKeys.detail(variables.centerId),
+        queryKey: centrosAtencionKeys.schedules.detail(variables.scheduleId),
       });
     },
   });
