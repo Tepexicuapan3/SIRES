@@ -278,3 +278,139 @@ export type CreateCentroAtencionExcepcionFormValues = z.input<
 export type UpdateCentroAtencionExcepcionFormValues = z.input<
   typeof updateCentroAtencionExcepcionSchema
 >;
+
+// =============================================================================
+// WEEK HORARIO (grilla semanal — todos los días a la vez)
+// =============================================================================
+
+export const weekDayRowSchema = z
+  .object({
+    weekDay: z.number().int().min(1).max(7),
+    existingId: z.number().int().positive().optional(),
+    isOpen: z.boolean(),
+    is24Hours: z.boolean(),
+    openingTime: optionalTime("Hora de apertura"),
+    closingTime: optionalTime("Hora de cierre"),
+    observations: optionalText(255),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.isOpen) return;
+    if (data.is24Hours) {
+      if (data.openingTime || data.closingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openingTime"],
+          message: "Si es 24 horas, no capture horas",
+        });
+      }
+      return;
+    }
+    if (!data.openingTime) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openingTime"],
+        message: "Hora de apertura requerida",
+      });
+    }
+    if (!data.closingTime) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["closingTime"],
+        message: "Hora de cierre requerida",
+      });
+    }
+    if (
+      data.openingTime &&
+      data.closingTime &&
+      data.openingTime >= data.closingTime
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["closingTime"],
+        message: "La hora de cierre debe ser mayor a la apertura",
+      });
+    }
+  });
+
+export const weekHorarioFormSchema = z.object({
+  centerId: z.number().int().positive({ error: "Centro requerido" }),
+  shiftId: z.number().int().positive({ error: "Turno requerido" }),
+  days: z.array(weekDayRowSchema).length(7),
+});
+
+export type WeekDayRowFormValues = z.input<typeof weekDayRowSchema>;
+export type WeekHorarioFormValues = z.input<typeof weekHorarioFormSchema>;
+
+// =============================================================================
+// BULK EXCEPCION (múltiples fechas a la vez)
+// =============================================================================
+
+export const bulkExcepcionFormSchema = z
+  .object({
+    centerId: z.number().int().positive({ error: "Centro requerido" }),
+    dates: z
+      .array(
+        z
+          .string()
+          .trim()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha invalida" }),
+      )
+      .min(1, { error: "Selecciona al menos una fecha" }),
+    tipo: z.enum(["CERRADO", "HORARIO_MODIFICADO", "AVISO"], {
+      error: "Tipo invalido",
+    }),
+    reason: z
+      .string()
+      .trim()
+      .min(1, { error: "Motivo requerido" })
+      .max(255, { error: "Motivo demasiado largo" }),
+    openingTime: optionalTime("Hora de apertura"),
+    closingTime: optionalTime("Hora de cierre"),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (data.tipo === "HORARIO_MODIFICADO") {
+      if (!data.openingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openingTime"],
+          message: "Hora de apertura requerida",
+        });
+      }
+      if (!data.closingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["closingTime"],
+          message: "Hora de cierre requerida",
+        });
+      }
+      if (
+        data.openingTime &&
+        data.closingTime &&
+        data.openingTime >= data.closingTime
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["closingTime"],
+          message: "La hora de cierre debe ser mayor a la apertura",
+        });
+      }
+    } else {
+      if (data.openingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["openingTime"],
+          message: "Solo horario modificado puede incluir horas",
+        });
+      }
+      if (data.closingTime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["closingTime"],
+          message: "Solo horario modificado puede incluir horas",
+        });
+      }
+    }
+  });
+
+export type BulkExcepcionFormValues = z.input<typeof bulkExcepcionFormSchema>;

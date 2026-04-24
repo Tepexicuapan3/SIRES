@@ -1,11 +1,13 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@shared/ui/button";
 import { Skeleton } from "@shared/ui/skeleton";
 import { Badge } from "@shared/ui/badge";
+import { Switch } from "@shared/ui/switch";
+import { Input } from "@shared/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -18,22 +20,12 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@shared/ui/form";
-import { Input } from "@shared/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@shared/ui/select";
-import { Switch } from "@shared/ui/switch";
-import { Label } from "@shared/ui/label";
-import {
-  centroAtencionHorarioSchema,
-  type CentroAtencionHorarioFormValues,
+  weekHorarioFormSchema,
+  type WeekHorarioFormValues,
+  type WeekDayRowFormValues,
 } from "@features/admin/modules/catalogos/centros-atencion/domain/centros-atencion.schemas";
 import { useCentroAtencionHorariosList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentroAtencionHorariosList";
 import { useTurnosList } from "@features/admin/modules/catalogos/turnos/queries/useTurnosList";
@@ -42,12 +34,11 @@ import { useCreateCentroAtencionHorario } from "@features/admin/modules/catalogo
 import { useUpdateCentroAtencionHorario } from "@features/admin/modules/catalogos/centros-atencion/mutations/useUpdateCentroAtencionHorario";
 import { useDeleteCentroAtencionHorario } from "@features/admin/modules/catalogos/centros-atencion/mutations/useDeleteCentroAtencionHorario";
 import { getCentroAtencionErrorMessage } from "@features/admin/modules/catalogos/centros-atencion/utils/centros-atencion.feedback";
-import {
-  buildCreateCentroAtencionHorarioPayload,
-  buildUpdateCentroAtencionHorarioPayload,
-  mapCentroAtencionHorarioDetailToFormValues,
-} from "@features/admin/modules/catalogos/centros-atencion/utils/centros-atencion.transform";
-import type { CentroAtencionHorarioListItem, DiaSemana } from "@api/types";
+import type { DiaSemana } from "@api/types";
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
 
 const DIA_LABELS: Record<DiaSemana, string> = {
   1: "Lunes",
@@ -59,17 +50,31 @@ const DIA_LABELS: Record<DiaSemana, string> = {
   7: "Domingo",
 };
 
-const DEFAULT_HORARIO_VALUES: CentroAtencionHorarioFormValues = {
-  centerId: 0,
-  shiftId: 0,
-  weekDay: 1,
-  isOpen: true,
-  is24Hours: false,
-  openingTime: null,
-  closingTime: null,
-  observations: null,
-  isActive: true,
+const DIAS: DiaSemana[] = [1, 2, 3, 4, 5, 6, 7];
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+const buildEmptyDays = (): WeekDayRowFormValues[] =>
+  DIAS.map((d) => ({
+    weekDay: d,
+    existingId: undefined,
+    isOpen: false,
+    is24Hours: false,
+    openingTime: null,
+    closingTime: null,
+    observations: null,
+  }));
+
+const normalizeTime = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  return value.length === 5 ? `${value}:00` : value;
 };
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 interface Props {
   centerId: number;
@@ -81,8 +86,6 @@ export function CentroAtencionDetailsHorariosSection({
   canEdit,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingSchedule, setEditingSchedule] =
-    useState<CentroAtencionHorarioListItem | null>(null);
 
   const { data, isLoading } = useCentroAtencionHorariosList(
     { centerId, pageSize: 100 },
@@ -90,72 +93,111 @@ export function CentroAtencionDetailsHorariosSection({
   );
 
   const { data: turnosData } = useTurnosList({ pageSize: 100 });
-  const turnosOptions = (turnosData?.items ?? []).map((t) => ({ id: t.id, name: t.name }));
+  const turnosOptions = (turnosData?.items ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+  }));
 
   const createSchedule = useCreateCentroAtencionHorario();
   const updateSchedule = useUpdateCentroAtencionHorario();
   const deleteSchedule = useDeleteCentroAtencionHorario();
 
-  const form = useForm<CentroAtencionHorarioFormValues>({
-    resolver: zodResolver(centroAtencionHorarioSchema),
-    defaultValues: DEFAULT_HORARIO_VALUES,
+  const form = useForm<WeekHorarioFormValues>({
+    resolver: zodResolver(weekHorarioFormSchema),
+    defaultValues: { centerId, shiftId: 0, days: buildEmptyDays() },
   });
 
-  const isOpen = form.watch("isOpen");
-  const is24Hours = form.watch("is24Hours");
+  const { fields } = useFieldArray({ control: form.control, name: "days" });
+  const watchedShiftId = form.watch("shiftId");
+  const watchedDays = form.watch("days");
 
-  const openCreate = () => {
-    setEditingSchedule(null);
-    form.reset({ ...DEFAULT_HORARIO_VALUES, centerId });
-    setDialogOpen(true);
-  };
-
-  const openEdit = (schedule: CentroAtencionHorarioListItem) => {
-    setEditingSchedule(schedule);
-    form.reset(
-      mapCentroAtencionHorarioDetailToFormValues({
-        ...schedule,
-        observations: null,
-        createdAt: "",
-        createdBy: null,
-        updatedAt: null,
-        updatedBy: null,
-      }),
+  useEffect(() => {
+    if (!watchedShiftId || watchedShiftId === 0) return;
+    const existing = (data?.items ?? []).filter(
+      (s) => s.shift?.id === watchedShiftId,
     );
+    const days = DIAS.map((d) => {
+      const found = existing.find((s) => s.weekDay === d);
+      if (found) {
+        return {
+          weekDay: d,
+          existingId: found.id,
+          isOpen: found.isOpen,
+          is24Hours: found.is24Hours,
+          openingTime: found.openingTime ? found.openingTime.slice(0, 5) : null,
+          closingTime: found.closingTime ? found.closingTime.slice(0, 5) : null,
+          observations: null,
+        };
+      }
+      return {
+        weekDay: d,
+        existingId: undefined,
+        isOpen: false,
+        is24Hours: false,
+        openingTime: null,
+        closingTime: null,
+        observations: null,
+      };
+    });
+    form.setValue("days", days);
+  }, [watchedShiftId, data?.items]);
+
+  const openDialog = (preloadShiftId?: number) => {
+    form.reset({ centerId, shiftId: preloadShiftId ?? 0, days: buildEmptyDays() });
     setDialogOpen(true);
   };
 
   const closeDialog = () => {
     setDialogOpen(false);
-    setEditingSchedule(null);
-    form.reset(DEFAULT_HORARIO_VALUES);
+    form.reset({ centerId, shiftId: 0, days: buildEmptyDays() });
   };
 
-  const handleSubmit = async (values: CentroAtencionHorarioFormValues) => {
-    try {
-      if (editingSchedule) {
-        const payload = buildUpdateCentroAtencionHorarioPayload(
-          values,
-          form.formState.dirtyFields as Partial<
-            Record<keyof CentroAtencionHorarioFormValues, boolean>
-          >,
-        );
-        await updateSchedule.mutateAsync({
-          scheduleId: editingSchedule.id,
-          data: payload,
+  const handleSubmit = async (values: WeekHorarioFormValues) => {
+    const ops = values.days.map((day) => {
+      const openingTime =
+        day.isOpen && !day.is24Hours ? normalizeTime(day.openingTime) : null;
+      const closingTime =
+        day.isOpen && !day.is24Hours ? normalizeTime(day.closingTime) : null;
+
+      if (day.existingId) {
+        return updateSchedule.mutateAsync({
+          scheduleId: day.existingId,
+          data: {
+            isOpen: day.isOpen,
+            is24Hours: day.is24Hours,
+            openingTime,
+            closingTime,
+            observations: day.observations ?? null,
+          },
         });
-        toast.success("Horario actualizado");
-      } else {
-        const payload = buildCreateCentroAtencionHorarioPayload(values);
-        await createSchedule.mutateAsync({ data: payload });
-        toast.success("Horario creado");
       }
-      closeDialog();
-    } catch (error) {
-      toast.error("No se pudo guardar el horario", {
-        description: getCentroAtencionErrorMessage(error, "Error al guardar"),
+
+      return createSchedule.mutateAsync({
+        data: {
+          centerId: values.centerId,
+          shiftId: values.shiftId,
+          weekDay: day.weekDay as DiaSemana,
+          isOpen: day.isOpen,
+          is24Hours: day.is24Hours,
+          openingTime,
+          closingTime,
+          observations: day.observations ?? null,
+          isActive: true,
+        },
       });
+    });
+
+    const results = await Promise.allSettled(ops);
+    const failed = results.filter((r) => r.status === "rejected");
+
+    if (failed.length === 0) {
+      toast.success("Horario semanal guardado");
+    } else {
+      toast.warning(
+        `${results.length - failed.length} de ${results.length} días guardados correctamente`,
+      );
     }
+    closeDialog();
   };
 
   const handleDelete = async (scheduleId: number) => {
@@ -170,18 +212,30 @@ export function CentroAtencionDetailsHorariosSection({
   };
 
   const schedules = data?.items ?? [];
+
+  const groupedByShift = schedules.reduce<
+    Map<number, { shiftName: string; days: typeof schedules }>
+  >((acc, s) => {
+    const sid = s.shift?.id ?? 0;
+    if (!acc.has(sid))
+      acc.set(sid, { shiftName: s.shift?.name ?? "Sin turno", days: [] });
+    acc.get(sid)!.days.push(s);
+    return acc;
+  }, new Map());
+
   const isSaving = createSchedule.isPending || updateSchedule.isPending;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-txt-muted">
-          {schedules.length} horario{schedules.length !== 1 ? "s" : ""} configurado{schedules.length !== 1 ? "s" : ""}
+          {schedules.length} horario{schedules.length !== 1 ? "s" : ""}{" "}
+          configurado{schedules.length !== 1 ? "s" : ""}
         </p>
         {canEdit && (
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" onClick={() => openDialog()}>
             <Plus className="mr-2 size-4" />
-            Agregar horario
+            Configurar turno
           </Button>
         )}
       </div>
@@ -199,213 +253,220 @@ export function CentroAtencionDetailsHorariosSection({
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {schedules.map((schedule) => (
-            <div
-              key={schedule.id}
-              className="flex items-center justify-between rounded-xl border border-line-struct bg-paper px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-24 text-sm font-medium text-txt-body">
-                  {DIA_LABELS[schedule.weekDay]}
-                </span>
-                <span className="text-sm text-txt-muted">
-                  {schedule.shift?.name ?? "-"}
-                </span>
-                <Badge variant={schedule.isActive ? "default" : "secondary"}>
-                  {!schedule.isOpen
-                    ? "Cerrado"
-                    : schedule.is24Hours
-                      ? "24h"
-                      : `${schedule.openingTime?.slice(0, 5) ?? "-"} - ${schedule.closingTime?.slice(0, 5) ?? "-"}`}
-                </Badge>
-              </div>
-
-              {canEdit && (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEdit(schedule)}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => void handleDelete(schedule.id)}
-                    disabled={deleteSchedule.isPending}
-                  >
-                    <Trash2 className="size-4 text-status-critical" />
-                  </Button>
+        <div className="space-y-4">
+          {Array.from(groupedByShift.entries()).map(
+            ([sid, { shiftName, days }]) => (
+              <div
+                key={sid}
+                className="overflow-hidden rounded-xl border border-line-struct"
+              >
+                <div className="flex items-center justify-between bg-surface-subtle px-4 py-2">
+                  <span className="text-sm font-semibold">{shiftName}</span>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDialog(sid)}
+                    >
+                      <Pencil className="mr-1 size-3.5" />
+                      Editar semana
+                    </Button>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+
+                <div className="divide-y divide-line-struct">
+                  {DIAS.map((dia) => {
+                    const schedule = days.find((s) => s.weekDay === dia);
+                    return (
+                      <div
+                        key={dia}
+                        className="flex items-center justify-between px-4 py-2.5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-24 text-sm font-medium text-txt-body">
+                            {DIA_LABELS[dia]}
+                          </span>
+                          {schedule ? (
+                            <Badge
+                              variant={
+                                !schedule.isOpen ? "secondary" : "default"
+                              }
+                            >
+                              {!schedule.isOpen
+                                ? "Cerrado"
+                                : schedule.is24Hours
+                                  ? "24h"
+                                  : `${schedule.openingTime?.slice(0, 5) ?? "-"} - ${schedule.closingTime?.slice(0, 5) ?? "-"}`}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-txt-muted opacity-50">
+                              No configurado
+                            </span>
+                          )}
+                        </div>
+
+                        {canEdit && schedule && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => void handleDelete(schedule.id)}
+                            disabled={deleteSchedule.isPending}
+                          >
+                            <Trash2 className="size-4 text-status-critical" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ),
+          )}
         </div>
       )}
 
+      {/* Week grid dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {editingSchedule ? "Editar horario" : "Nuevo horario"}
-            </DialogTitle>
+            <DialogTitle>Configurar horario semanal</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
             <form
-              id="horario-form"
+              id="week-horario-form"
               onSubmit={form.handleSubmit(handleSubmit)}
               className="space-y-4"
             >
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="weekDay"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dia</FormLabel>
-                      <Select
-                        value={String(field.value)}
-                        onValueChange={(v) => field.onChange(Number(v) as DiaSemana)}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(Object.entries(DIA_LABELS) as [string, string][]).map(
-                            ([val, label]) => (
-                              <SelectItem key={val} value={val}>
-                                {label}
-                              </SelectItem>
-                            ),
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="shiftId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Turno</FormLabel>
-                      <FormControl>
-                        <CatalogFkCombobox
-                          options={turnosOptions}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Selecciona un turno"
-                          searchPlaceholder="Buscar turno..."
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="flex items-center gap-6">
-                <FormField
-                  control={form.control}
-                  name="isOpen"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <Label>Abierto</Label>
-                    </FormItem>
-                  )}
-                />
-
-                {isOpen && (
-                  <FormField
-                    control={form.control}
-                    name="is24Hours"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2 space-y-0">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <Label>24 horas</Label>
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-
-              {isOpen && !is24Hours && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="openingTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hora apertura</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="time"
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="closingTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hora cierre</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="time"
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
               <FormField
                 control={form.control}
-                name="observations"
+                name="shiftId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Observaciones</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        placeholder="Opcional"
+                      <CatalogFkCombobox
+                        options={turnosOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Selecciona un turno"
+                        searchPlaceholder="Buscar turno..."
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* 7-day grid */}
+              <div className="overflow-hidden rounded-xl border border-line-struct">
+                <div className="grid grid-cols-[7rem_2.5rem_2.5rem_1fr_1fr] gap-x-3 bg-surface-subtle px-4 py-2 text-xs font-medium uppercase tracking-wide text-txt-muted">
+                  <span>Día</span>
+                  <span className="text-center">Abierto</span>
+                  <span className="text-center">24h</span>
+                  <span>Apertura</span>
+                  <span>Cierre</span>
+                </div>
+
+                <div className="divide-y divide-line-struct">
+                  {fields.map((field, index) => {
+                    const dayIsOpen = watchedDays[index]?.isOpen ?? false;
+                    const dayIs24h = watchedDays[index]?.is24Hours ?? false;
+
+                    return (
+                      <div
+                        key={field.id}
+                        className="grid grid-cols-[7rem_2.5rem_2.5rem_1fr_1fr] items-center gap-x-3 px-4 py-2.5"
+                      >
+                        <span className="text-sm font-medium text-txt-body">
+                          {DIA_LABELS[field.weekDay as DiaSemana]}
+                        </span>
+
+                        <div className="flex justify-center">
+                          <FormField
+                            control={form.control}
+                            name={`days.${index}.isOpen`}
+                            render={({ field: f }) => (
+                              <Switch
+                                checked={f.value}
+                                onCheckedChange={(checked) => {
+                                  f.onChange(checked);
+                                  if (!checked) {
+                                    form.setValue(`days.${index}.is24Hours`, false);
+                                    form.setValue(`days.${index}.openingTime`, null);
+                                    form.setValue(`days.${index}.closingTime`, null);
+                                  }
+                                }}
+                              />
+                            )}
+                          />
+                        </div>
+
+                        <div className="flex justify-center">
+                          <FormField
+                            control={form.control}
+                            name={`days.${index}.is24Hours`}
+                            render={({ field: f }) => (
+                              <Switch
+                                checked={f.value}
+                                disabled={!dayIsOpen}
+                                onCheckedChange={(checked) => {
+                                  f.onChange(checked);
+                                  if (checked) {
+                                    form.setValue(`days.${index}.openingTime`, null);
+                                    form.setValue(`days.${index}.closingTime`, null);
+                                  }
+                                }}
+                              />
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name={`days.${index}.openingTime`}
+                          render={({ field: f }) => (
+                            <FormItem className="space-y-0">
+                              <FormControl>
+                                <Input
+                                  type="time"
+                                  value={f.value ?? ""}
+                                  onChange={(e) =>
+                                    f.onChange(e.target.value || null)
+                                  }
+                                  disabled={!dayIsOpen || dayIs24h}
+                                  className="h-8 text-sm"
+                                />
+                              </FormControl>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`days.${index}.closingTime`}
+                          render={({ field: f }) => (
+                            <FormItem className="space-y-0">
+                              <FormControl>
+                                <Input
+                                  type="time"
+                                  value={f.value ?? ""}
+                                  onChange={(e) =>
+                                    f.onChange(e.target.value || null)
+                                  }
+                                  disabled={!dayIsOpen || dayIs24h}
+                                  className="h-8 text-sm"
+                                />
+                              </FormControl>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </form>
           </Form>
 
@@ -413,8 +474,8 @@ export function CentroAtencionDetailsHorariosSection({
             <Button variant="outline" onClick={closeDialog}>
               Cancelar
             </Button>
-            <Button type="submit" form="horario-form" disabled={isSaving}>
-              {isSaving ? "Guardando..." : editingSchedule ? "Guardar cambios" : "Crear horario"}
+            <Button type="submit" form="week-horario-form" disabled={isSaving}>
+              {isSaving ? "Guardando..." : "Guardar horario semanal"}
             </Button>
           </DialogFooter>
         </DialogContent>
