@@ -30,6 +30,7 @@ from apps.catalogos.models import (
     TiposSanguineo,
     TpAutorizacion,
     Turnos,
+    Vacunas,
 )
 from apps.catalogos.models.cies import CatCies
 
@@ -332,13 +333,18 @@ class AreasListSerializer(CatalogListWithCodeSerializer):
         model = Areas
 
 class AreasDetailSerializer(CatalogDetailWithCodeSerializer):
+    tipoArea = CatalogRefSerializer(source="tipo_area", read_only=True)
+
     class Meta(CatalogDetailWithCodeSerializer.Meta):
         model = Areas
+        fields = CatalogDetailWithCodeSerializer.Meta.fields + ("tipoArea",)
 
 class AreasWriteSerializer(CatalogWriteSerializer):
+    idTipoArea = serializers.IntegerField(source="tipo_area_id")
+
     class Meta(CatalogWriteSerializer.Meta):
         model = Areas
-        fields = ("name", "code", "isActive")
+        fields = ("name", "code", "idTipoArea", "isActive")
 
 
 class BajasListSerializer(CatalogListSerializer):
@@ -596,6 +602,23 @@ class TurnosDetailSerializer(CatalogDetailSerializer):
 class TurnosWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = Turnos
+
+
+# ---------------------------------------------------------------------------
+# Vacunas
+# ---------------------------------------------------------------------------
+
+class VacunasListSerializer(CatalogListSerializer):
+    class Meta(CatalogListSerializer.Meta):
+        model = Vacunas
+
+class VacunasDetailSerializer(CatalogDetailSerializer):
+    class Meta(CatalogDetailSerializer.Meta):
+        model = Vacunas
+
+class VacunasWriteSerializer(CatalogWriteSerializer):
+    class Meta(CatalogWriteSerializer.Meta):
+        model = Vacunas
 
 
 # ---------------------------------------------------------------------------

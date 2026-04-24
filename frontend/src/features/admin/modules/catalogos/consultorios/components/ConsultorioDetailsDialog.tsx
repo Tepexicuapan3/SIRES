@@ -38,8 +38,8 @@ interface ConsultorioDetailsDialogProps {
 const DEFAULT_FORM_VALUES: ConsultorioDetailsFormValues = {
   name: "",
   code: "",
-  idTurn: "",
-  idCenter: "",
+  idTurn: 0,
+  idCenter: 0,
 };
 
 const FORM_ID = "consultorio-details-form";
@@ -76,8 +76,8 @@ export function ConsultorioDetailsDialog({
     form.reset({
       name: consultorioDetail.name ?? "",
       code: String(consultorioDetail.code ?? ""),
-      idTurn: String(consultorioDetail.turn?.id ?? ""),
-      idCenter: String(consultorioDetail.center?.id ?? ""),
+      idTurn: consultorioDetail.turn?.id ?? 0,
+      idCenter: consultorioDetail.center?.id ?? 0,
     });
   }, [consultorioDetail, form, isDirty, open]);
 
@@ -87,8 +87,8 @@ export function ConsultorioDetailsDialog({
       form.reset({
         name: consultorioDetail.name ?? "",
         code: String(consultorioDetail.code ?? ""),
-        idTurn: String(consultorioDetail.turn?.id ?? ""),
-        idCenter: String(consultorioDetail.center?.id ?? ""),
+        idTurn: consultorioDetail.turn?.id ?? 0,
+        idCenter: consultorioDetail.center?.id ?? 0,
       });
     } else {
       form.reset(DEFAULT_FORM_VALUES);
@@ -111,8 +111,8 @@ export function ConsultorioDetailsDialog({
 
     if (dirtyFields.name) payload.name = values.name;
     if (dirtyFields.code) payload.code = Number(values.code);
-    if (dirtyFields.idTurn) payload.idTurn = Number(values.idTurn);
-    if (dirtyFields.idCenter) payload.idCenter = Number(values.idCenter);
+    if (dirtyFields.idTurn) payload.idTurn = values.idTurn;
+    if (dirtyFields.idCenter) payload.idCenter = values.idCenter;
 
     if (Object.keys(payload).length === 0) return;
 

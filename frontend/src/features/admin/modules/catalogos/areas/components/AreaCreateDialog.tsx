@@ -21,15 +21,18 @@ import {
   FormMessage,
 } from "@shared/ui/form";
 import { Input } from "@shared/ui/input";
+import { Textarea } from "@shared/ui/textarea";
 import { ScrollArea } from "@shared/ui/ScrollArea";
 import { AreaDialogHeader } from "@features/admin/modules/catalogos/areas/components/AreaDialogHeader";
 import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/shared/components/CatalogCreateResultCard";
+import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
 import {
   createAreaSchema,
   type CreateAreaFormValues,
 } from "@features/admin/modules/catalogos/areas/domain/areas.schemas";
 import { useCreateArea } from "@features/admin/modules/catalogos/areas/mutations/useCreateArea";
 import { getAreaErrorMessage } from "@features/admin/modules/catalogos/areas/utils/areas.feedback";
+import { useTiposAreasList } from "@features/admin/modules/catalogos/tipos-areas/queries/useTiposAreasList";
 import type { CreateAreaResponse } from "@api/types";
 
 interface AreaCreateDialogProps {
@@ -40,6 +43,7 @@ interface AreaCreateDialogProps {
 const DEFAULT_VALUES: CreateAreaFormValues = {
   name: "",
   code: "",
+  idTipoArea: 0,
 };
 
 const FORM_ID = "area-create-form";
@@ -52,6 +56,7 @@ export function AreaCreateDialog({
     null,
   );
   const createArea = useCreateArea();
+  const { data: tiposAreasData } = useTiposAreasList({ isActive: true }, { enabled: open });
 
   const form = useForm<CreateAreaFormValues>({
     resolver: zodResolver(createAreaSchema),
@@ -72,6 +77,7 @@ export function AreaCreateDialog({
         data: {
           name: values.name,
           code: values.code,
+          idTipoArea: values.idTipoArea,
         },
       });
 
@@ -87,18 +93,20 @@ export function AreaCreateDialog({
     }
   };
 
+  const tiposAreas = tiposAreasData?.items ?? [];
+
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="w-[95vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[92vw] lg:w-215 xl:w-235">
+      <DialogContent className="w-[95vw] max-w-none rounded-5xl bg-paper p-0 sm:w-[92vw] lg:w-[1000px] xl:w-[1100px]">
         <div className="flex max-h-[88vh] flex-col">
           <DialogHeader className="px-8 pt-8">
-            <DialogTitle className="sr-only">Nueva area</DialogTitle>
+            <DialogTitle className="sr-only">Nueva Área</DialogTitle>
             <DialogDescription className="sr-only">
-              Crea una nueva area para el catalogo administrativo.
+              Crea una nueva área para el catalogo administrativo.
             </DialogDescription>
             <AreaDialogHeader
-              title="Nueva area"
-              subtitle="Configura nombre y codigo"
+              title="Nueva Área"
+              subtitle="Configura nombre y código"
               status={<Badge variant="outline">Plantilla</Badge>}
             />
           </DialogHeader>
@@ -110,17 +118,36 @@ export function AreaCreateDialog({
                   <form
                     id={FORM_ID}
                     onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-6"
+                    className="space-y-4"
                   >
+                    {/* Nombre — fila completa */}
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nombre del área</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              rows={3}
+                              className="w-full resize-none font-medium"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {/* Código y Tipo — lado a lado */}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <FormField
                         control={form.control}
-                        name="name"
+                        name="code"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Nombre del area</FormLabel>
+                            <FormLabel>Código</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input {...field} className="w-full" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -128,12 +155,18 @@ export function AreaCreateDialog({
                       />
                       <FormField
                         control={form.control}
-                        name="code"
+                        name="idTipoArea"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Codigo</FormLabel>
+                            <FormLabel>Tipo de área</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <CatalogFkCombobox
+                                options={tiposAreas}
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Selecciona un tipo"
+                                searchPlaceholder="Buscar tipo de área..."
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -143,7 +176,6 @@ export function AreaCreateDialog({
                   </form>
                 </Form>
               </div>
-
               {createdArea ? (
                 <CatalogCreateResultCard
                   title="Area creada"

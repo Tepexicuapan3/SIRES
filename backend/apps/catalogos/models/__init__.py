@@ -33,6 +33,7 @@ from .tipos_citas import TipoDeCitas
 from .tipos_licencias import Licencias
 from .tipos_sanguineo import TiposSanguineo
 from .turnos import Turnos
+from .vacunas import Vacunas
 
 
 
@@ -68,5 +69,6 @@ __all__ = [
     "Licencias",
     "TiposSanguineo",
     "Turnos",
+    "Vacunas",
     "CatCies"
 ]

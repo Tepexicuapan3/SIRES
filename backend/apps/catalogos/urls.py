@@ -26,13 +26,14 @@ routes = [
     ("licenses", LicenciasListCreateView, LicenciasDetailView, "int"),
     ("blood-type", TiposSanguineoListCreateView, TiposSanguineoDetailView, "int"),
     ("shifts", TurnosListCreateView, TurnosDetailView, "int"),
+    ("vaccines", VacunasListCreateView, VacunasDetailView, "int"),
 ]
 
 urlpatterns = []
 
 for base, list_view, detail_view, pk_type in routes:
     urlpatterns.append(path(f"{base}/", list_view.as_view(), name=f"{base}-list-create"))
-    urlpatterns.append(path(f"{base}/<{pk_type}:pk>", detail_view.as_view(), name=f"{base}-detail"))
+    urlpatterns.append(path(f"{base}/<{pk_type}:pk>/", detail_view.as_view(), name=f"{base}-detail"))
 
 
 urlpatterns += [
@@ -43,7 +44,7 @@ urlpatterns += [
         name="care-centers-list-create",
     ),
     path(
-        "care-centers/<int:pk>",
+        "care-centers/<int:pk>/",
         CentrosAtencionDetailView.as_view(),
         name="care-centers-detail",
     ),
@@ -55,7 +56,7 @@ urlpatterns += [
         name="care-center-schedules-list-create",
     ),
     path(
-        "care-center-schedules/<int:pk>",
+        "care-center-schedules/<int:pk>/",
         CentrosAtencionHorariosDetailView.as_view(),
         name="care-center-schedules-detail",
     ),
@@ -67,7 +68,7 @@ urlpatterns += [
         name="care-center-exceptions-list-create",
     ),
     path(
-        "care-center-exceptions/<int:pk>",
+        "care-center-exceptions/<int:pk>/",
         CentrosAtencionExcepcionesDetailView.as_view(),
         name="care-center-exceptions-detail",
     ),

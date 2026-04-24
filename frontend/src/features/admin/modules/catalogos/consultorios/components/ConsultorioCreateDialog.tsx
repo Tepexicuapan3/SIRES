@@ -24,6 +24,9 @@ import { Input } from "@shared/ui/input";
 import { ScrollArea } from "@shared/ui/ScrollArea";
 import { ConsultorioDialogHeader } from "@features/admin/modules/catalogos/consultorios/components/ConsultorioDialogHeader";
 import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/shared/components/CatalogCreateResultCard";
+import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
+import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
+import { useTurnosList } from "@features/admin/modules/catalogos/turnos/queries/useTurnosList";
 import {
   createConsultorioSchema,
   type CreateConsultorioFormValues,
@@ -40,8 +43,8 @@ interface ConsultorioCreateDialogProps {
 const DEFAULT_VALUES: CreateConsultorioFormValues = {
   name: "",
   code: "",
-  idTurn: "",
-  idCenter: "",
+  idTurn: 0,
+  idCenter: 0,
 };
 
 const FORM_ID = "consultorio-create-form";
@@ -53,6 +56,12 @@ export function ConsultorioCreateDialog({
   const [createdConsultorio, setCreatedConsultorio] =
     useState<CreateConsultorioResponse | null>(null);
   const createConsultorio = useCreateConsultorio();
+
+  const { data: centrosData } = useCentrosAtencionList({ isActive: true }, { enabled: open });
+  const centrosOptions = (centrosData?.items ?? []).map((c) => ({ id: c.id, name: c.name }));
+
+  const { data: turnosData } = useTurnosList({ isActive: true }, { enabled: open });
+  const turnosOptions = (turnosData?.items ?? []).map((t) => ({ id: t.id, name: t.name }));
 
   const form = useForm<CreateConsultorioFormValues>({
     resolver: zodResolver(createConsultorioSchema),
@@ -73,8 +82,8 @@ export function ConsultorioCreateDialog({
         data: {
           name: values.name,
           code: Number(values.code),
-          idTurn: Number(values.idTurn),
-          idCenter: Number(values.idCenter),
+          idTurn: values.idTurn,
+          idCenter: values.idCenter,
           isActive: true,
         },
       });
@@ -154,9 +163,15 @@ export function ConsultorioCreateDialog({
                         name="idTurn"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>ID turno</FormLabel>
+                            <FormLabel>Turno</FormLabel>
                             <FormControl>
-                              <Input {...field} inputMode="numeric" />
+                              <CatalogFkCombobox
+                                options={turnosOptions}
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Selecciona un turno"
+                                searchPlaceholder="Buscar turno..."
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -167,9 +182,15 @@ export function ConsultorioCreateDialog({
                         name="idCenter"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>ID centro</FormLabel>
+                            <FormLabel>Centro de atención</FormLabel>
                             <FormControl>
-                              <Input {...field} inputMode="numeric" />
+                              <CatalogFkCombobox
+                                options={centrosOptions}
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Selecciona un centro"
+                                searchPlaceholder="Buscar centro..."
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

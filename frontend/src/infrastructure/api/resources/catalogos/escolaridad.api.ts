@@ -17,7 +17,7 @@ export const escolaridadAPI = {
   },
 
   getById: async (id: number): Promise<EscolaridadDetailResponse> => {
-    const response = await apiClient.get<EscolaridadDetailResponse>(`/education-level/${id}`);
+    const response = await apiClient.get<EscolaridadDetailResponse>(`/education-level/${id}/`);
     return response.data;
   },
 
@@ -27,12 +27,12 @@ export const escolaridadAPI = {
   },
 
   update: async (id: number, data: UpdateEscolaridadRequest): Promise<UpdateEscolaridadResponse> => {
-    const response = await apiClient.put<UpdateEscolaridadResponse>(`/education-level/${id}`, data);
+    const response = await apiClient.put<UpdateEscolaridadResponse>(`/education-level/${id}/`, data);
     return response.data;
   },
 
   delete: async (id: number): Promise<DeleteEscolaridadResponse> => {
-    const response = await apiClient.delete<DeleteEscolaridadResponse>(`/education-level/${id}`);
+    const response = await apiClient.delete<DeleteEscolaridadResponse>(`/education-level/${id}/`);
     return response.data;
   },
 };

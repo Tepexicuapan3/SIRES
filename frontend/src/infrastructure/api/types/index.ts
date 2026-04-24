@@ -303,6 +303,47 @@ export type {
 } from "@api/types/catalogos/escuelas.types";
 
 // =============================================================================
+// VACUNAS TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  VacunaListItem,
+  VacunaDetail,
+  // CRUD Requests
+  CreateVacunaRequest,
+  UpdateVacunaRequest,
+  // CRUD Responses
+  CreateVacunaResponse,
+  UpdateVacunaResponse,
+  DeleteVacunaResponse,
+  // Listados
+  VacunasListParams,
+  VacunasListResponse,
+  // Detalle
+  VacunaDetailResponse,
+} from "@api/types/catalogos/vacunas.types";
+
+// =============================================================================
+// FARMACIA TYPES (inventario vacunas)
+// =============================================================================
+export type {
+  VacunaRef,
+  CentroRef,
+  InventarioVacunaListItem,
+  InventarioVacunaDetail,
+  CreateInventarioVacunaRequest,
+  UpdateInventarioVacunaRequest,
+  InventarioVacunaListResponse,
+  InventarioVacunaDetailResponse,
+  CreateInventarioVacunaResponse,
+  UpdateInventarioVacunaResponse,
+  DeleteInventarioVacunaResponse,
+  InventarioVacunaListParams,
+  ApplyDosesRequest,
+  ApplyDosesResponse,
+} from "@api/types/farmacia/inventario-vacunas.types";
+
+// =============================================================================
 // CLINICAL FLOW TYPES (visits, vitals, doctor flow)
 // =============================================================================
 export type {

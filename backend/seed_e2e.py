@@ -69,6 +69,10 @@ PERMISSIONS = [
     ("admin:catalogos:areas:create", "Admin - Crear areas"),
     ("admin:catalogos:areas:update", "Admin - Editar areas"),
     ("admin:catalogos:areas:delete", "Admin - Eliminar areas"),
+    ("admin:catalogos:vacunas:read", "Admin - Ver catalogo de vacunas"),
+    ("admin:catalogos:vacunas:create", "Admin - Crear vacunas"),
+    ("admin:catalogos:vacunas:update", "Admin - Editar vacunas"),
+    ("admin:catalogos:vacunas:delete", "Admin - Eliminar vacunas"),
     ("admin:reportes:read", "Admin - Ver reportes"),
     ("admin:estadisticas:read", "Admin - Ver estadisticas"),
     ("admin:autorizacion:recetas:read", "Admin - Autorizacion recetas"),
@@ -103,6 +107,10 @@ PERMISSIONS = [
     ("recepcion:incapacidad:create", "Recepcion - Incapacidad"),
     ("farmacia:recetas:dispensar", "Farmacia - Dispensar recetas"),
     ("farmacia:inventario:update", "Farmacia - Actualizar inventario"),
+    ("farmacia:vacunas:read", "Farmacia - Ver inventario de vacunas"),
+    ("farmacia:vacunas:create", "Farmacia - Registrar inventario de vacunas"),
+    ("farmacia:vacunas:update", "Farmacia - Actualizar inventario de vacunas"),
+    ("farmacia:vacunas:delete", "Farmacia - Dar de baja inventario de vacunas"),
     ("urgencias:triage:read", "Urgencias - Ver triage"),
 ]
 
@@ -158,6 +166,10 @@ ROLE_DEFS = [
             "admin:catalogos:areas:create",
             "admin:catalogos:areas:update",
             "admin:catalogos:areas:delete",
+            "admin:catalogos:vacunas:read",
+            "admin:catalogos:vacunas:create",
+            "admin:catalogos:vacunas:update",
+            "admin:catalogos:vacunas:delete",
         ],
     },
     {
@@ -203,6 +215,7 @@ ROLE_DEFS = [
             "admin:gestion:permisos:read",
             "admin:catalogos:centros_atencion:read",
             "admin:catalogos:areas:read",
+            "admin:catalogos:vacunas:read",
             "admin:reportes:read",
         ],
     },
@@ -261,6 +274,10 @@ ROLE_DEFS = [
         "perms": [
             "farmacia:recetas:dispensar",
             "farmacia:inventario:update",
+            "farmacia:vacunas:read",
+            "farmacia:vacunas:create",
+            "farmacia:vacunas:update",
+            "farmacia:vacunas:delete",
         ],
     },
     {

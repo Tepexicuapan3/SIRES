@@ -27,6 +27,7 @@ export interface AreaListItem {
 }
 
 export interface AreaDetail extends AreaListItem {
+  tipoArea: { id: number; name: string } | null;
   createdAt: string;
   createdBy: UserRef;
   updatedAt: string | null;
@@ -40,11 +41,13 @@ export interface AreaDetail extends AreaListItem {
 export interface CreateAreaRequest {
   name: string;
   code: string;
+  idTipoArea: number;
 }
 
 export interface UpdateAreaRequest {
   name?: string;
   code?: string;
+  idTipoArea?: number;
   isActive?: boolean;
 }
 

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Search, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/popover";
+import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { cn } from "@shared/utils/styling/cn";
 interface ClinicOption {
@@ -57,15 +58,14 @@ export function ClinicCombobox({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="outline"
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "flex h-11 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs",
-            "ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+            "w-full justify-between font-normal",
             !selected && "text-txt-muted",
           )}
         >
@@ -87,9 +87,9 @@ export function ClinicCombobox({
                 <X className="size-3.5" />
               </span>
             ) : null}
-            <ChevronsUpDown className="size-4 text-txt-muted" />
+            <ChevronsUpDown className="size-4 opacity-50" />
           </div>
-        </button>
+        </Button>
       </PopoverTrigger>
 
       <PopoverContent

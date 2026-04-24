@@ -187,6 +187,11 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["admin:catalogos:turnos:read"],
           },
           {
+            title: "Vacunas",
+            url: "/admin/catalogos/vacunas",
+            permissions: ["admin:catalogos:vacunas:read"],
+          },
+          {
             title: "Catálogo CIES",
             url: "/admin/catalogos/cies",
             permissions: ["admin:catalogos:cies:upload"],
@@ -321,6 +326,12 @@ export const NAV_CONFIG: NavSection[] = [
   {
     title: "Farmacia",
     items: [
+      {
+        title: "Inventario de vacunas",
+        url: "/farmacia/vacunas",
+        icon: Pill,
+        permissions: ["farmacia:vacunas:read"],
+      },
       {
         title: "Recetas",
         url: "/farmacia/recetas",

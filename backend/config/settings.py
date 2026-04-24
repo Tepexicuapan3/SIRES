@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "apps.catalogos",
     "apps.administracion",
     "apps.realtime",
+    "apps.farmacia",
     'apps.recepcion.routers',
 ]
 

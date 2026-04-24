@@ -159,4 +159,11 @@ export const catalogDefinitions = {
     endpoint: "shifts",
     permissionRead: "admin:catalogos:turnos:read",
   },
+  vacunas: {
+    slug: "vacunas",
+    title: "Vacunas",
+    description: "Catalogo de biologicos del programa de vacunacion.",
+    endpoint: "vaccines",
+    permissionRead: "admin:catalogos:vacunas:read",
+  },
 } as const satisfies Record<string, CatalogDefinition>;

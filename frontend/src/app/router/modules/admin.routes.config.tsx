@@ -26,6 +26,7 @@ import TiposCitasPage from "@features/admin/modules/catalogos/tipos-citas/pages/
 import LicenciasPage from "@features/admin/modules/catalogos/licencias/pages/LicenciasPage";
 import TiposSanguineoPage from "@features/admin/modules/catalogos/tipos-sanguineo/pages/TiposSanguineoPage";
 import TurnosPage from "@features/admin/modules/catalogos/turnos/pages/TurnosPage";
+import VacunasPage from "@features/admin/modules/catalogos/vacunas/pages/VacunasPage";
 import PlaceholderPage from "@shared/components/PlaceholderPage";
 import { lazy, Suspense } from "react";
 
@@ -276,6 +277,18 @@ export const adminRoutes: RouteObject[] = [
             dependencyAware
           >
             <TurnosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "vacunas",
+        element: (
+          <ProtectedRoute
+            requiredCapability="admin.catalogs.vacunas.read"
+            fallbackRequirement={{ allOf: ["admin:catalogos:vacunas:read"] }}
+            dependencyAware
+          >
+            <VacunasPage />
           </ProtectedRoute>
         ),
       },

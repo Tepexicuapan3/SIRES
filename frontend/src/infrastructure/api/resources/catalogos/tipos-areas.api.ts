@@ -17,7 +17,7 @@ export const tiposAreasAPI = {
   },
 
   getById: async (id: number): Promise<TipoAreaDetailResponse> => {
-    const response = await apiClient.get<TipoAreaDetailResponse>(`/area-types/${id}`);
+    const response = await apiClient.get<TipoAreaDetailResponse>(`/area-types/${id}/`);
     return response.data;
   },
 
@@ -27,12 +27,12 @@ export const tiposAreasAPI = {
   },
 
   update: async (id: number, data: UpdateTipoAreaRequest): Promise<UpdateTipoAreaResponse> => {
-    const response = await apiClient.put<UpdateTipoAreaResponse>(`/area-types/${id}`, data);
+    const response = await apiClient.put<UpdateTipoAreaResponse>(`/area-types/${id}/`, data);
     return response.data;
   },
 
   delete: async (id: number): Promise<DeleteTipoAreaResponse> => {
-    const response = await apiClient.delete<DeleteTipoAreaResponse>(`/area-types/${id}`);
+    const response = await apiClient.delete<DeleteTipoAreaResponse>(`/area-types/${id}/`);
     return response.data;
   },
 };

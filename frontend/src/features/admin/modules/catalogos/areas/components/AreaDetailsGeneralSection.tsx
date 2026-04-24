@@ -23,6 +23,8 @@ import {
   type CatalogStatus,
 } from "@features/admin/modules/catalogos/shared/domain/catalog-status";
 import type { AreaDetailsFormValues } from "@features/admin/modules/catalogos/areas/domain/areas.schemas";
+import { useTiposAreasList } from "@features/admin/modules/catalogos/tipos-areas/queries/useTiposAreasList";
+import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
 
 interface AreaDetailsGeneralSectionProps {
   form: UseFormReturn<AreaDetailsFormValues>;
@@ -46,6 +48,9 @@ export function AreaDetailsGeneralSection({
   const statusValue: CatalogStatus = areaDetail.isActive
     ? CATALOG_STATUS.ACTIVE
     : CATALOG_STATUS.INACTIVE;
+
+  const { data: tiposAreasData } = useTiposAreasList({ isActive: true });
+  const tiposAreas = tiposAreasData?.items ?? [];
 
   return (
     <Form {...form}>
@@ -76,6 +81,29 @@ export function AreaDetailsGeneralSection({
                 <FormLabel>Codigo</FormLabel>
                 <FormControl>
                   <Input {...field} disabled={!isEditable} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="idTipoArea"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de área</FormLabel>
+                <FormControl>
+                  <CatalogFkCombobox
+                    options={tiposAreas}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Selecciona un tipo"
+                    searchPlaceholder="Buscar tipo de área..."
+                    disabled={!isEditable}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

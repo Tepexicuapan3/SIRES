@@ -15,7 +15,7 @@ export const consultoriosAPI = {
     params?: ConsultoriosListParams,
   ): Promise<ConsultoriosListResponse> => {
     const response = await apiClient.get<ConsultoriosListResponse>(
-      "/consulting-rooms",
+      "/consulting-rooms/",
       { params },
     );
     return response.data;
@@ -25,7 +25,7 @@ export const consultoriosAPI = {
     consultorioId: number,
   ): Promise<ConsultorioDetailResponse> => {
     const response = await apiClient.get<ConsultorioDetailResponse>(
-      `/consulting-rooms/${consultorioId}`,
+      `/consulting-rooms/${consultorioId}/`,
     );
     return response.data;
   },
@@ -34,7 +34,7 @@ export const consultoriosAPI = {
     data: CreateConsultorioRequest,
   ): Promise<CreateConsultorioResponse> => {
     const response = await apiClient.post<CreateConsultorioResponse>(
-      "/consulting-rooms",
+      "/consulting-rooms/",
       data,
     );
     return response.data;
@@ -45,7 +45,7 @@ export const consultoriosAPI = {
     data: UpdateConsultorioRequest,
   ): Promise<UpdateConsultorioResponse> => {
     const response = await apiClient.put<UpdateConsultorioResponse>(
-      `/consulting-rooms/${consultorioId}`,
+      `/consulting-rooms/${consultorioId}/`,
       data,
     );
     return response.data;
@@ -53,7 +53,7 @@ export const consultoriosAPI = {
 
   delete: async (consultorioId: number): Promise<DeleteConsultorioResponse> => {
     const response = await apiClient.delete<DeleteConsultorioResponse>(
-      `/consulting-rooms/${consultorioId}`,
+      `/consulting-rooms/${consultorioId}/`,
     );
     return response.data;
   },

@@ -80,7 +80,7 @@ export const centrosAtencionAPI = {
    */
   getById: async (centerId: number): Promise<CentroAtencionDetailResponse> => {
     const response = await apiClient.get<CentroAtencionDetailResponse>(
-      `/care-centers/${centerId}`,
+      `/care-centers/${centerId}/`,
     );
     return response.data;
   },
@@ -110,7 +110,7 @@ export const centrosAtencionAPI = {
     data: UpdateCentroAtencionRequest,
   ): Promise<UpdateCentroAtencionResponse> => {
     const response = await apiClient.put<UpdateCentroAtencionResponse>(
-      `/care-centers/${centerId}`,
+      `/care-centers/${centerId}/`,
       data,
     );
     return response.data;
@@ -123,7 +123,7 @@ export const centrosAtencionAPI = {
    */
   delete: async (centerId: number): Promise<DeleteCentroAtencionResponse> => {
     const response = await apiClient.delete<DeleteCentroAtencionResponse>(
-      `/care-centers/${centerId}`,
+      `/care-centers/${centerId}/`,
     );
     return response.data;
   },
@@ -156,7 +156,7 @@ export const centrosAtencionAPI = {
     scheduleId: number,
   ): Promise<CentroAtencionHorarioDetailResponse> => {
     const response = await apiClient.get<CentroAtencionHorarioDetailResponse>(
-      `/care-center-schedules/${scheduleId}`,
+      `/care-center-schedules/${scheduleId}/`,
     );
     return response.data;
   },
@@ -186,7 +186,7 @@ export const centrosAtencionAPI = {
     data: UpdateCentroAtencionHorarioRequest,
   ): Promise<UpdateCentroAtencionHorarioResponse> => {
     const response = await apiClient.put<UpdateCentroAtencionHorarioResponse>(
-      `/care-center-schedules/${scheduleId}`,
+      `/care-center-schedules/${scheduleId}/`,
       data,
     );
     return response.data;
@@ -201,7 +201,7 @@ export const centrosAtencionAPI = {
     scheduleId: number,
   ): Promise<DeleteCentroAtencionHorarioResponse> => {
     const response = await apiClient.delete<DeleteCentroAtencionHorarioResponse>(
-      `/care-center-schedules/${scheduleId}`,
+      `/care-center-schedules/${scheduleId}/`,
     );
     return response.data;
   },
@@ -234,7 +234,7 @@ export const centrosAtencionAPI = {
     excepcionId: number,
   ): Promise<CentroAtencionExcepcionDetailResponse> => {
     const response = await apiClient.get<CentroAtencionExcepcionDetailResponse>(
-      `/care-center-exceptions/${excepcionId}`,
+      `/care-center-exceptions/${excepcionId}/`,
     );
     return response.data;
   },
@@ -264,7 +264,7 @@ export const centrosAtencionAPI = {
     data: UpdateCentroAtencionExcepcionRequest,
   ): Promise<UpdateCentroAtencionExcepcionResponse> => {
     const response = await apiClient.put<UpdateCentroAtencionExcepcionResponse>(
-      `/care-center-exceptions/${excepcionId}`,
+      `/care-center-exceptions/${excepcionId}/`,
       data,
     );
     return response.data;
@@ -279,7 +279,7 @@ export const centrosAtencionAPI = {
     excepcionId: number,
   ): Promise<DeleteCentroAtencionExcepcionResponse> => {
     const response = await apiClient.delete<DeleteCentroAtencionExcepcionResponse>(
-      `/care-center-exceptions/${excepcionId}`,
+      `/care-center-exceptions/${excepcionId}/`,
     );
     return response.data;
   },

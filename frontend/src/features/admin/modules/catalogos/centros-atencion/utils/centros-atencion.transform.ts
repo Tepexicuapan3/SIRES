@@ -165,8 +165,8 @@ export const mapCentroAtencionHorarioDetailToFormValues = (
   weekDay: (detail?.weekDay ?? 1) as DiaSemana,
   isOpen: detail?.isOpen ?? true,
   is24Hours: detail?.is24Hours ?? false,
-  openingTime: detail?.openingTime ?? null,
-  closingTime: detail?.closingTime ?? null,
+  openingTime: detail?.openingTime ? detail.openingTime.slice(0, 5) : null,
+  closingTime: detail?.closingTime ? detail.closingTime.slice(0, 5) : null,
   observations: detail?.observations ?? null,
   isActive: detail?.isActive ?? true,
 });
@@ -215,12 +215,16 @@ export const buildUpdateCentroAtencionHorarioPayload = (
     payload.is24Hours = values.is24Hours;
   }
 
-  if (dirtyFields.openingTime) {
+  if (values.isOpen && !values.is24Hours) {
     payload.openingTime = normalizeTime(values.openingTime);
-  }
-
-  if (dirtyFields.closingTime) {
     payload.closingTime = normalizeTime(values.closingTime);
+  } else {
+    if (dirtyFields.openingTime) {
+      payload.openingTime = normalizeTime(values.openingTime);
+    }
+    if (dirtyFields.closingTime) {
+      payload.closingTime = normalizeTime(values.closingTime);
+    }
   }
 
   if (dirtyFields.observations) {

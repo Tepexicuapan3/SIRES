@@ -23,6 +23,9 @@ import {
   type CatalogStatus,
 } from "@features/admin/modules/catalogos/shared/domain/catalog-status";
 import type { ConsultorioDetailsFormValues } from "@features/admin/modules/catalogos/consultorios/domain/consultorios.schemas";
+import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
+import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
+import { useTurnosList } from "@features/admin/modules/catalogos/turnos/queries/useTurnosList";
 
 interface ConsultorioDetailsGeneralSectionProps {
   form: UseFormReturn<ConsultorioDetailsFormValues>;
@@ -46,6 +49,12 @@ export function ConsultorioDetailsGeneralSection({
   const statusValue: CatalogStatus = consultorioDetail.isActive
     ? CATALOG_STATUS.ACTIVE
     : CATALOG_STATUS.INACTIVE;
+
+  const { data: centrosData } = useCentrosAtencionList({ isActive: true });
+  const centrosOptions = (centrosData?.items ?? []).map((c) => ({ id: c.id, name: c.name }));
+
+  const { data: turnosData } = useTurnosList({ isActive: true });
+  const turnosOptions = (turnosData?.items ?? []).map((t) => ({ id: t.id, name: t.name }));
 
   return (
     <Form {...form}>
@@ -95,13 +104,14 @@ export function ConsultorioDetailsGeneralSection({
             name="idTurn"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>ID turno</FormLabel>
+                <FormLabel>Turno</FormLabel>
                 <FormControl>
-                  <Input
-                    {...field}
-                    type="number"
+                  <CatalogFkCombobox
+                    options={turnosOptions}
                     value={field.value}
-                    onChange={(event) => field.onChange(event.target.value)}
+                    onChange={field.onChange}
+                    placeholder="Selecciona un turno"
+                    searchPlaceholder="Buscar turno..."
                     disabled={!isEditable}
                   />
                 </FormControl>
@@ -114,13 +124,14 @@ export function ConsultorioDetailsGeneralSection({
             name="idCenter"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>ID centro</FormLabel>
+                <FormLabel>Centro de atención</FormLabel>
                 <FormControl>
-                  <Input
-                    {...field}
-                    type="number"
+                  <CatalogFkCombobox
+                    options={centrosOptions}
                     value={field.value}
-                    onChange={(event) => field.onChange(event.target.value)}
+                    onChange={field.onChange}
+                    placeholder="Selecciona un centro"
+                    searchPlaceholder="Buscar centro..."
                     disabled={!isEditable}
                   />
                 </FormControl>
@@ -156,17 +167,6 @@ export function ConsultorioDetailsGeneralSection({
                 </SelectItem>
               </SelectContent>
             </Select>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Turno asociado</Label>
-            <Input value={consultorioDetail.turn?.name ?? "-"} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Centro asociado</Label>
-            <Input value={consultorioDetail.center?.name ?? "-"} disabled />
           </div>
         </div>
 

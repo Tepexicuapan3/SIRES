@@ -107,7 +107,15 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "admin.catalogs.turnos.create": {"allOf": ["admin:catalogos:turnos:create"]},
     "admin.catalogs.turnos.update": {"allOf": ["admin:catalogos:turnos:update"]},
     "admin.catalogs.turnos.delete": {"allOf": ["admin:catalogos:turnos:delete"]},
+    "admin.catalogs.vacunas.read": {"allOf": ["admin:catalogos:vacunas:read"]},
+    "admin.catalogs.vacunas.create": {"allOf": ["admin:catalogos:vacunas:create"]},
+    "admin.catalogs.vacunas.update": {"allOf": ["admin:catalogos:vacunas:update"]},
+    "admin.catalogs.vacunas.delete": {"allOf": ["admin:catalogos:vacunas:delete"]},
     "admin.catalogs.cies.upload": {"allOf": ["admin:catalogos:cies:upload"]},
+    "farmacia.vacunas.read": {"allOf": ["farmacia:vacunas:read"]},
+    "farmacia.vacunas.create": {"allOf": ["farmacia:vacunas:create"]},
+    "farmacia.vacunas.update": {"allOf": ["farmacia:vacunas:update"]},
+    "farmacia.vacunas.delete": {"allOf": ["farmacia:vacunas:delete"]},
     "flow.visits.queue.read": {
         "anyOf": [
             "recepcion:fichas:medicina_general:create",

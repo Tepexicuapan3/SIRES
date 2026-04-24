@@ -1,4 +1,5 @@
 import { Navigate, type RouteObject } from "react-router-dom";
+// farmaciaRoutes migrado a farmacia.routes.config.tsx
 import { ProtectedRoute } from "@routes/guards/ProtectedRoute";
 import PlaceholderPage from "@shared/components/PlaceholderPage";
 
@@ -11,37 +12,6 @@ import PlaceholderPage from "@shared/components/PlaceholderPage";
  * - Permite validar permisos y navegacion sin UI final.
  * - Evita rutas muertas mientras los modulos se desarrollan.
  */
-export const farmaciaRoutes: RouteObject[] = [
-  {
-    index: true,
-    element: <Navigate to="recetas" replace />,
-  },
-  {
-    path: "recetas",
-    element: (
-      <ProtectedRoute requiredPermission="farmacia:recetas:dispensar">
-        <PlaceholderPage
-          title="Gestion de Recetas"
-          description="Dispensacion y control de recetas medicas"
-          moduleName="Farmacia"
-        />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "inventario",
-    element: (
-      <ProtectedRoute requiredPermission="farmacia:inventario:update">
-        <PlaceholderPage
-          title="Inventario"
-          description="Control de stock y medicamentos"
-          moduleName="Farmacia"
-        />
-      </ProtectedRoute>
-    ),
-  },
-];
-
 export const urgenciasRoutes: RouteObject[] = [
   {
     index: true,

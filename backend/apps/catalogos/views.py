@@ -19,6 +19,7 @@ from .models import (
     Escolaridad, Escuelas, Especialidades, EstudiosMed, GruposDeMedicamentos,
     Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
     Roles, TipoDeCitas, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
+    Vacunas,
 )
 from .permissions import CatalogPermissionMixin, HasAnyOfPermissions
 from .repositories.consultorios_repository import ConsultoriosRepository
@@ -53,6 +54,7 @@ from .serializers import (
     TiposSanguineoDetailSerializer, TiposSanguineoListSerializer, TiposSanguineoWriteSerializer,
     TpAutorizacionDetailSerializer, TpAutorizacionListSerializer, TpAutorizacionWriteSerializer,
     TurnosDetailSerializer, TurnosListSerializer, TurnosWriteSerializer,
+    VacunasDetailSerializer, VacunasListSerializer, VacunasWriteSerializer,
 )
 from .services.codigo_postal_service import CodigoPostalService
 
@@ -1111,6 +1113,26 @@ class TurnosDetailView(CatalogBaseDetailView):
     write_serializer = TurnosWriteSerializer
     wrapper_key = "shift"
     error_codes = MappingProxyType({"not_found": "SHIFT_NOT_FOUND", "exists": "SHIFT_EXISTS"})
+
+
+# ---------------------------------------------------------------------------
+# Vacunas
+# ---------------------------------------------------------------------------
+
+class VacunasListCreateView(CatalogBaseListCreateView):
+    catalog = "vacunas"
+    model = Vacunas
+    list_serializer = VacunasListSerializer
+    write_serializer = VacunasWriteSerializer
+    error_codes = MappingProxyType({"exists": "VACCINE_EXISTS"})
+
+class VacunasDetailView(CatalogBaseDetailView):
+    catalog = "vacunas"
+    model = Vacunas
+    detail_serializer = VacunasDetailSerializer
+    write_serializer = VacunasWriteSerializer
+    wrapper_key = "vaccine"
+    error_codes = MappingProxyType({"not_found": "VACCINE_NOT_FOUND", "exists": "VACCINE_EXISTS"})
 
 
 # ---------------------------------------------------------------------------

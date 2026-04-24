@@ -31,7 +31,7 @@ export const turnosAPI = {
 
   getById: async (turnoId: number): Promise<TurnoDetailResponse> => {
     const response = await apiClient.get<TurnoDetailResponse>(
-      `/shifts/${turnoId}`,
+      `/shifts/${turnoId}/`,
     );
     return response.data;
   },
@@ -46,7 +46,7 @@ export const turnosAPI = {
     data: UpdateTurnoRequest,
   ): Promise<UpdateTurnoResponse> => {
     const response = await apiClient.put<UpdateTurnoResponse>(
-      `/shifts/${turnoId}`,
+      `/shifts/${turnoId}/`,
       data,
     );
     return response.data;
@@ -54,7 +54,7 @@ export const turnosAPI = {
 
   delete: async (turnoId: number): Promise<DeleteTurnoResponse> => {
     const response = await apiClient.delete<DeleteTurnoResponse>(
-      `/shifts/${turnoId}`,
+      `/shifts/${turnoId}/`,
     );
     return response.data;
   },

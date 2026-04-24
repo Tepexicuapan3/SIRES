@@ -10,6 +10,7 @@ const requiredText = (label: string, maxLength = 120) =>
 export const areaDetailsSchema = z.object({
   name: requiredText("Nombre"),
   code: requiredText("Codigo", 40),
+  idTipoArea: z.number({ error: "Tipo de área requerido" }).min(1, { error: "Tipo de área requerido" }),
 });
 
 export const createAreaSchema = areaDetailsSchema;

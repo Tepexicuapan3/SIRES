@@ -24,7 +24,7 @@ export const areasAPI = {
    * @permission admin:catalogos:areas:read
    */
   getAll: async (params?: AreasListParams): Promise<AreasListResponse> => {
-    const response = await apiClient.get<AreasListResponse>("/areas", {
+    const response = await apiClient.get<AreasListResponse>("/areas/", {
       params,
     });
     return response.data;
@@ -37,7 +37,7 @@ export const areasAPI = {
    */
   getById: async (areaId: number): Promise<AreaDetailResponse> => {
     const response = await apiClient.get<AreaDetailResponse>(
-      `/areas/${areaId}`,
+      `/areas/${areaId}/`,
     );
     return response.data;
   },
@@ -48,7 +48,7 @@ export const areasAPI = {
    * @permission admin:catalogos:areas:create
    */
   create: async (data: CreateAreaRequest): Promise<CreateAreaResponse> => {
-    const response = await apiClient.post<CreateAreaResponse>("/areas", data);
+    const response = await apiClient.post<CreateAreaResponse>("/areas/", data);
     return response.data;
   },
 
@@ -62,7 +62,7 @@ export const areasAPI = {
     data: UpdateAreaRequest,
   ): Promise<UpdateAreaResponse> => {
     const response = await apiClient.put<UpdateAreaResponse>(
-      `/areas/${areaId}`,
+      `/areas/${areaId}/`,
       data,
     );
     return response.data;
@@ -75,7 +75,7 @@ export const areasAPI = {
    */
   delete: async (areaId: number): Promise<DeleteAreaResponse> => {
     const response = await apiClient.delete<DeleteAreaResponse>(
-      `/areas/${areaId}`,
+      `/areas/${areaId}/`,
     );
     return response.data;
   },

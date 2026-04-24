@@ -36,6 +36,8 @@ import {
   type CentroAtencionHorarioFormValues,
 } from "@features/admin/modules/catalogos/centros-atencion/domain/centros-atencion.schemas";
 import { useCentroAtencionHorariosList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentroAtencionHorariosList";
+import { useTurnosList } from "@features/admin/modules/catalogos/turnos/queries/useTurnosList";
+import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
 import { useCreateCentroAtencionHorario } from "@features/admin/modules/catalogos/centros-atencion/mutations/useCreateCentroAtencionHorario";
 import { useUpdateCentroAtencionHorario } from "@features/admin/modules/catalogos/centros-atencion/mutations/useUpdateCentroAtencionHorario";
 import { useDeleteCentroAtencionHorario } from "@features/admin/modules/catalogos/centros-atencion/mutations/useDeleteCentroAtencionHorario";
@@ -86,6 +88,9 @@ export function CentroAtencionDetailsHorariosSection({
     { centerId, pageSize: 100 },
     { enabled: Boolean(centerId) },
   );
+
+  const { data: turnosData } = useTurnosList({ pageSize: 100 });
+  const turnosOptions = (turnosData?.items ?? []).map((t) => ({ id: t.id, name: t.name }));
 
   const createSchedule = useCreateCentroAtencionHorario();
   const updateSchedule = useUpdateCentroAtencionHorario();
@@ -290,13 +295,14 @@ export function CentroAtencionDetailsHorariosSection({
                   name="shiftId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Turno ID</FormLabel>
+                      <FormLabel>Turno</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          value={field.value === 0 ? "" : field.value}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        <CatalogFkCombobox
+                          options={turnosOptions}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Selecciona un turno"
+                          searchPlaceholder="Buscar turno..."
                         />
                       </FormControl>
                       <FormMessage />
@@ -353,7 +359,7 @@ export function CentroAtencionDetailsHorariosSection({
                           <Input
                             {...field}
                             type="time"
-                            value={field.value?.slice(0, 5) ?? ""}
+                            value={field.value ?? ""}
                             onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
@@ -372,7 +378,7 @@ export function CentroAtencionDetailsHorariosSection({
                           <Input
                             {...field}
                             type="time"
-                            value={field.value?.slice(0, 5) ?? ""}
+                            value={field.value ?? ""}
                             onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>

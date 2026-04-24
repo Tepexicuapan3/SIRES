@@ -38,6 +38,7 @@ interface AreaDetailsDialogProps {
 const DEFAULT_FORM_VALUES: AreaDetailsFormValues = {
   name: "",
   code: "",
+  idTipoArea: 0,
 };
 
 const FORM_ID = "area-details-form";
@@ -74,6 +75,7 @@ export function AreaDetailsDialog({
     form.reset({
       name: areaDetail.name ?? "",
       code: areaDetail.code ?? "",
+      idTipoArea: areaDetail.tipoArea?.id ?? 0,
     });
   }, [areaDetail, form, isDirty, open]);
 
@@ -83,6 +85,7 @@ export function AreaDetailsDialog({
       form.reset({
         name: areaDetail.name ?? "",
         code: areaDetail.code ?? "",
+        idTipoArea: areaDetail.tipoArea?.id ?? 0,
       });
     } else {
       form.reset(DEFAULT_FORM_VALUES);
@@ -105,6 +108,7 @@ export function AreaDetailsDialog({
 
     if (dirtyFields.name) payload.name = values.name;
     if (dirtyFields.code) payload.code = values.code;
+    if (dirtyFields.idTipoArea) payload.idTipoArea = values.idTipoArea;
 
     if (Object.keys(payload).length === 0) return;
 
