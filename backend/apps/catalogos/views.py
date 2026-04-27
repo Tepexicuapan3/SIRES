@@ -14,10 +14,10 @@ from apps.catalogos.uses_case.confirm_cies_use_case import ConfirmCiesUseCase
 from apps.catalogos.uses_case.upload_cies_use_case import PreviewCiesUseCase
 
 from .models import (
-    Areas, Autorizadores, Bajas, CalidadLaboral, CatCentroAtencion,
-    CatCentroAtencionHorario, CatCentroAtencionExcepcion, Consultorios, EdoCivil, Enfermedades,
-    Escolaridad, Escuelas, Especialidades, EstudiosMed, GruposDeMedicamentos,
-    Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
+    Areas, Autorizadores, Bajas, CalidadLaboral, CatAreaClinica, CatCentroAtencion,
+    CatCentroAtencionHorario, CatCentroAtencionExcepcion, CentroAreaClinica, Consultorios,
+    EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, EstudiosMed,
+    GruposDeMedicamentos, Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
     Roles, TipoDeCitas, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
     Vacunas,
 )
@@ -25,6 +25,8 @@ from .permissions import CatalogPermissionMixin, HasAnyOfPermissions
 from .repositories.consultorios_repository import ConsultoriosRepository
 from .serializers import (
     AreasDetailSerializer, AreasListSerializer, AreasWriteSerializer,
+    CatAreaClinicaDetailSerializer, CatAreaClinicaListSerializer, CatAreaClinicaWriteSerializer,
+    CentroAreaClinicaDetailSerializer, CentroAreaClinicaListSerializer, CentroAreaClinicaWriteSerializer,
     AutorizadoresDetailSerializer, AutorizadoresListSerializer, AutorizadoresWriteSerializer,
     BajasDetailSerializer, BajasListSerializer, BajasWriteSerializer,
     CalidadLaboralDetailSerializer, CalidadLaboralListSerializer, CalidadLaboralWriteSerializer,
@@ -1327,3 +1329,173 @@ class CentrosAtencionExcepcionesDetailView(CatalogBaseDetailView):
         )
         return Response({"careCenterException": self.detail_serializer(updated).data})
     lookup_field = "code"
+
+
+# ---------------------------------------------------------------------------
+# CatAreaClinica
+# ---------------------------------------------------------------------------
+
+class CatAreaClinicaListCreateView(CatalogBaseListCreateView):
+    catalog = "areas_clinicas"
+    model = CatAreaClinica
+    list_serializer = CatAreaClinicaListSerializer
+    write_serializer = CatAreaClinicaWriteSerializer
+    error_codes = MappingProxyType({"exists": "CLINICAL_AREA_EXISTS"})
+
+
+class CatAreaClinicaDetailView(CatalogBaseDetailView):
+    catalog = "areas_clinicas"
+    model = CatAreaClinica
+    detail_serializer = CatAreaClinicaDetailSerializer
+    write_serializer = CatAreaClinicaWriteSerializer
+    wrapper_key = "clinicalArea"
+    error_codes = MappingProxyType({
+        "not_found": "CLINICAL_AREA_NOT_FOUND",
+        "exists": "CLINICAL_AREA_EXISTS",
+    })
+
+
+# ---------------------------------------------------------------------------
+# CentroAreaClinica
+# ---------------------------------------------------------------------------
+
+class CentroAreaClinicaListCreateView(PaginationMixin, CatalogPermissionMixin, ErrorMixin, APIView):
+    catalog = "centro_area_clinica"
+
+    def _get_queryset(self, request):
+        qs = CentroAreaClinica.objects.select_related("center", "area_clinica").all()
+        params = request.query_params
+
+        if center_id := params.get("centerId"):
+            qs = qs.filter(center_id=center_id)
+        if area_id := params.get("areaClinicaId"):
+            qs = qs.filter(area_clinica_id=area_id)
+        if (is_active := _parse_bool_param(params.get("isActive"))) is not None:
+            qs = qs.filter(is_active=is_active)
+
+        return qs.order_by("center__name", "area_clinica__name")
+
+    def get(self, request):
+        try:
+            page, page_size = self._parse_pagination(request)
+        except _PaginationError as exc:
+            return exc.response
+
+        qs = self._get_queryset(request)
+        items, total, total_pages = self._paginate_queryset(qs, page, page_size)
+        serializer = CentroAreaClinicaListSerializer(items, many=True)
+        return self._paginated_response(serializer.data, page, page_size, total, total_pages)
+
+    def post(self, request):
+        serializer = CentroAreaClinicaWriteSerializer(data=request.data)
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        vd = serializer.validated_data
+        center_id = vd["center_id"]
+        area_clinica_id = vd["area_clinica_id"]
+
+        if not CatCentroAtencion.objects.filter(pk=center_id).exists():
+            return self._error(
+                request,
+                code="CARE_CENTER_NOT_FOUND",
+                message="Centro de atención no encontrado.",
+                http_status=status.HTTP_404_NOT_FOUND,
+                details={"centerId": ["No existe"]},
+            )
+
+        if not CatAreaClinica.objects.filter(pk=area_clinica_id).exists():
+            return self._error(
+                request,
+                code="CLINICAL_AREA_NOT_FOUND",
+                message="Área clínica no encontrada.",
+                http_status=status.HTTP_404_NOT_FOUND,
+                details={"areaClinicaId": ["No existe"]},
+            )
+
+        if CentroAreaClinica.objects.filter(center_id=center_id, area_clinica_id=area_clinica_id).exists():
+            return self._error(
+                request,
+                code="CARE_CENTER_CLINICAL_AREA_EXISTS",
+                message="El área clínica ya está asignada a este centro.",
+                http_status=status.HTTP_409_CONFLICT,
+                details={"areaClinicaId": ["Ya asignada a este centro"]},
+            )
+
+        serializer.save(
+            created_at=timezone.now(),
+            created_by_id=_get_actor_id(request.user),
+        )
+        return Response(
+            {"centerId": center_id, "areaClinicaId": area_clinica_id},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CentroAreaClinicaDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
+    catalog = "centro_area_clinica"
+
+    def _get_object(self, center_id, area_id):
+        return CentroAreaClinica.objects.filter(
+            center_id=center_id, area_clinica_id=area_id
+        ).first()
+
+    def get(self, request, center_id, area_id):
+        item = self._get_object(center_id, area_id)
+        if not item:
+            return self._error(
+                request,
+                code="CARE_CENTER_CLINICAL_AREA_NOT_FOUND",
+                message="Relación no encontrada.",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response({"careCenterClinicalArea": CentroAreaClinicaDetailSerializer(item).data})
+
+    def put(self, request, center_id, area_id):
+        item = self._get_object(center_id, area_id)
+        if not item:
+            return self._error(
+                request,
+                code="CARE_CENTER_CLINICAL_AREA_NOT_FOUND",
+                message="Relación no encontrada.",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = CentroAreaClinicaWriteSerializer(item, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return self._error(
+                request,
+                code="VALIDATION_ERROR",
+                message="Datos de entrada inválidos",
+                http_status=status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+            )
+
+        updated = serializer.save(
+            updated_at=timezone.now(),
+            updated_by_id=_get_actor_id(request.user),
+        )
+        return Response({"careCenterClinicalArea": CentroAreaClinicaDetailSerializer(updated).data})
+
+    def delete(self, request, center_id, area_id):
+        item = self._get_object(center_id, area_id)
+        if not item:
+            return self._error(
+                request,
+                code="CARE_CENTER_CLINICAL_AREA_NOT_FOUND",
+                message="Relación no encontrada.",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        actor_id = _get_actor_id(request.user)
+        item.is_active = False
+        item.deleted_at = timezone.now()
+        item.deleted_by_id = actor_id
+        item.save(update_fields=["is_active", "deleted_at", "deleted_by_id"])
+        return Response({"success": True})

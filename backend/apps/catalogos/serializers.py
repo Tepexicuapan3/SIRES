@@ -7,9 +7,11 @@ from apps.catalogos.models import (
     Autorizadores,
     Bajas,
     CalidadLaboral,
+    CatAreaClinica,
     CatCentroAtencion,
     CatCentroAtencionHorario,
     CatCentroAtencionExcepcion,
+    CentroAreaClinica,
     Consultorios,
     EdoCivil,
     Enfermedades,
@@ -877,3 +879,60 @@ class CatCentroAtencionExcepcionWriteSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+
+# ---------------------------------------------------------------------------
+# CatAreaClinica
+# ---------------------------------------------------------------------------
+
+class CatAreaClinicaListSerializer(CatalogListSerializer):
+    class Meta(CatalogListSerializer.Meta):
+        model = CatAreaClinica
+
+
+class CatAreaClinicaDetailSerializer(CatalogDetailSerializer):
+    class Meta(CatalogDetailSerializer.Meta):
+        model = CatAreaClinica
+
+
+class CatAreaClinicaWriteSerializer(CatalogWriteSerializer):
+    class Meta(CatalogWriteSerializer.Meta):
+        model = CatAreaClinica
+
+
+# ---------------------------------------------------------------------------
+# CentroAreaClinica
+# ---------------------------------------------------------------------------
+
+class _CentroAreaClinicaReadMixin(serializers.Serializer):
+    center = serializers.SerializerMethodField()
+    areaClinica = serializers.SerializerMethodField()
+    isActive = serializers.BooleanField(source="is_active")
+
+    def get_center(self, obj):
+        return build_catalog_ref(obj.center_id, CatCentroAtencion.objects)
+
+    def get_areaClinica(self, obj):
+        return build_catalog_ref(obj.area_clinica_id, CatAreaClinica.objects)
+
+
+class CentroAreaClinicaListSerializer(_CentroAreaClinicaReadMixin, serializers.ModelSerializer):
+    class Meta:
+        model = CentroAreaClinica
+        fields = ("center", "areaClinica", "isActive")
+
+
+class CentroAreaClinicaDetailSerializer(AuditFieldsMixin, _CentroAreaClinicaReadMixin, serializers.ModelSerializer):
+    class Meta:
+        model = CentroAreaClinica
+        fields = ("center", "areaClinica", "isActive", "createdAt", "createdBy", "updatedAt", "updatedBy")
+
+
+class CentroAreaClinicaWriteSerializer(serializers.ModelSerializer):
+    centerId = serializers.IntegerField(source="center_id")
+    areaClinicaId = serializers.IntegerField(source="area_clinica_id")
+    isActive = serializers.BooleanField(source="is_active", required=False)
+
+    class Meta:
+        model = CentroAreaClinica
+        fields = ("centerId", "areaClinicaId", "isActive")

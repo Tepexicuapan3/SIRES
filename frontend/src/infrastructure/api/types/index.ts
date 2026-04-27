@@ -324,6 +324,36 @@ export type {
 } from "@api/types/catalogos/vacunas.types";
 
 // =============================================================================
+// ÁREAS CLÍNICAS TYPES (CRUD catálogo + relación por centro)
+// =============================================================================
+export type {
+  // Refs
+  AreaClinicaRef,
+  // Catálogo cat_areas_clinicas
+  AreaClinicaListItem,
+  AreaClinicaDetail,
+  CreateAreaClinicaRequest,
+  UpdateAreaClinicaRequest,
+  AreasClinicasListResponse,
+  AreaClinicaDetailResponse,
+  CreateAreaClinicaResponse,
+  UpdateAreaClinicaResponse,
+  DeleteAreaClinicaResponse,
+  AreasClinicasListParams,
+  // Relación centro_area_clinica
+  CentroAreaClinicaListItem,
+  CentroAreaClinicaDetail,
+  CreateCentroAreaClinicaRequest,
+  UpdateCentroAreaClinicaRequest,
+  CentrosAreasClinicasListResponse,
+  CentroAreaClinicaDetailResponse,
+  CreateCentroAreaClinicaResponse,
+  UpdateCentroAreaClinicaResponse,
+  DeleteCentroAreaClinicaResponse,
+  CentrosAreasClinicasListParams,
+} from "@api/types/catalogos/areas-clinicas.types";
+
+// =============================================================================
 // FARMACIA TYPES (inventario vacunas)
 // =============================================================================
 export type {

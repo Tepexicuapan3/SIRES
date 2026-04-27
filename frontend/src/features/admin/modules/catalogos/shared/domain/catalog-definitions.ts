@@ -166,4 +166,11 @@ export const catalogDefinitions = {
     endpoint: "vaccines",
     permissionRead: "admin:catalogos:vacunas:read",
   },
+  areasClinicas: {
+    slug: "areas-clinicas",
+    title: "Áreas clínicas",
+    description: "Catálogo de áreas clínicas por centro de atención.",
+    endpoint: "clinical-areas",
+    permissionRead: "admin:catalogos:areas_clinicas:read",
+  },
 } as const satisfies Record<string, CatalogDefinition>;

@@ -27,6 +27,7 @@ import LicenciasPage from "@features/admin/modules/catalogos/licencias/pages/Lic
 import TiposSanguineoPage from "@features/admin/modules/catalogos/tipos-sanguineo/pages/TiposSanguineoPage";
 import TurnosPage from "@features/admin/modules/catalogos/turnos/pages/TurnosPage";
 import VacunasPage from "@features/admin/modules/catalogos/vacunas/pages/VacunasPage";
+import AreasClinicasPage from "@features/admin/modules/catalogos/areas-clinicas/pages/AreasClinicasPage";
 import PlaceholderPage from "@shared/components/PlaceholderPage";
 import { lazy, Suspense } from "react";
 
@@ -289,6 +290,14 @@ export const adminRoutes: RouteObject[] = [
             dependencyAware
           >
             <VacunasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "areas-clinicas",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:areas_clinicas:read">
+            <AreasClinicasPage />
           </ProtectedRoute>
         ),
       },

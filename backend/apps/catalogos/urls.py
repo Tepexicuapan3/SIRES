@@ -27,6 +27,7 @@ routes = [
     ("blood-type", TiposSanguineoListCreateView, TiposSanguineoDetailView, "int"),
     ("shifts", TurnosListCreateView, TurnosDetailView, "int"),
     ("vaccines", VacunasListCreateView, VacunasDetailView, "int"),
+    ("clinical-areas", CatAreaClinicaListCreateView, CatAreaClinicaDetailView, "int"),
 ]
 
 urlpatterns = []
@@ -71,6 +72,18 @@ urlpatterns += [
         "care-center-exceptions/<int:pk>/",
         CentrosAtencionExcepcionesDetailView.as_view(),
         name="care-center-exceptions-detail",
+    ),
+
+    # AREAS CLINICAS POR CENTRO
+    path(
+        "care-center-clinical-areas/",
+        CentroAreaClinicaListCreateView.as_view(),
+        name="care-center-clinical-areas-list-create",
+    ),
+    path(
+        "care-center-clinical-areas/<int:center_id>/<int:area_id>/",
+        CentroAreaClinicaDetailView.as_view(),
+        name="care-center-clinical-areas-detail",
     ),
 
     # CODIGOS POSTALES

@@ -3,55 +3,78 @@ Production-ready REST API template using FastAPI.
 Includes pagination, filtering, error handling, and best practices.
 """
 
-from fastapi import FastAPI, HTTPException, Query, Path, Depends, status
+from datetime import datetime, timezone
+from enum import Enum
+from math import ceil
+from typing import Any, List, Optional
+
+from fastapi import FastAPI, HTTPException, Path, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
-from typing import Optional, List, Any
-from datetime import datetime
-from enum import Enum
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
 
 app = FastAPI(
-    title="API Template",
+    title="REST API Template",
     version="1.0.0",
-    docs_url="/api/docs"
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
 )
 
-# Security Middleware
-# Trusted Host: Prevents HTTP Host Header attacks
+
+# Security middleware
+# IMPORTANT: replace these values in production.
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"] # TODO: Configure this in production, e.g. ["api.example.com"]
+    allowed_hosts=[
+        "localhost",
+        "127.0.0.1",
+        "*.localhost",
+        # "api.example.com",
+    ],
 )
 
-# CORS: Configures Cross-Origin Resource Sharing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # TODO: Update this with specific origins in production
-    allow_credentials=False, # TODO: Set to True if you need cookies/auth headers, but restrict origins
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        # "https://example.com",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-# Models
+
+def utc_now() -> datetime:
+    """Return a timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
+
+
 class UserStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
+
 
 class UserBase(BaseModel):
     email: EmailStr
     name: str = Field(..., min_length=1, max_length=100)
     status: UserStatus = UserStatus.ACTIVE
 
+
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, exclude=True)
+
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     status: Optional[UserStatus] = None
+
 
 class User(UserBase):
     id: str
@@ -60,10 +83,11 @@ class User(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-# Pagination
+
 class PaginationParams(BaseModel):
-    page: int = Field(1, ge=1)
-    page_size: int = Field(20, ge=1, le=100)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
+
 
 class PaginatedResponse(BaseModel):
     items: List[Any]
@@ -72,111 +96,176 @@ class PaginatedResponse(BaseModel):
     page_size: int
     pages: int
 
-# Error handling
+
 class ErrorDetail(BaseModel):
     field: Optional[str] = None
     message: str
     code: str
+
 
 class ErrorResponse(BaseModel):
     error: str
     message: str
     details: Optional[List[ErrorDetail]] = None
 
+
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    detail = exc.detail
+
+    if isinstance(detail, dict):
+        message = str(detail.get("message", "Error"))
+        details = detail.get("details")
+    else:
+        message = str(detail)
+        details = None
+
     return JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
-            error=exc.__class__.__name__,
-            message=exc.detail if isinstance(exc.detail, str) else exc.detail.get("message", "Error"),
-            details=exc.detail.get("details") if isinstance(exc.detail, dict) else None
-        ).model_dump()
+            error="HTTPException",
+            message=message,
+            details=details,
+        ).model_dump(mode="json"),
     )
 
-# Endpoints
+
+@app.get("/api/health", tags=["Health"])
+async def health_check() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.get("/api/users", response_model=PaginatedResponse, tags=["Users"])
 async def list_users(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    status: Optional[UserStatus] = Query(None),
-    search: Optional[str] = Query(None)
-):
-    """List users with pagination and filtering."""
-    # Mock implementation
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    status_filter: Optional[UserStatus] = Query(default=None, alias="status"),
+    search: Optional[str] = Query(default=None, min_length=1),
+) -> PaginatedResponse:
+    """List users with pagination and optional filtering."""
+
     total = 100
-    items = [
-        User(
-            id=str(i),
-            email=f"user{i}@example.com",
-            name=f"User {i}",
-            status=UserStatus.ACTIVE,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        ).model_dump()
-        for i in range((page-1)*page_size, min(page*page_size, total))
-    ]
+    start = (page - 1) * page_size
+    end = min(start + page_size, total)
+
+    items: List[User] = []
+
+    for i in range(start, end):
+        user_status = status_filter or UserStatus.ACTIVE
+        user = User(
+            id=str(i + 1),
+            email=f"user{i + 1}@example.com",
+            name=f"User {i + 1}",
+            status=user_status,
+            created_at=utc_now(),
+            updated_at=utc_now(),
+        )
+
+        if search and search.lower() not in user.name.lower() and search.lower() not in user.email.lower():
+            continue
+
+        items.append(user)
 
     return PaginatedResponse(
-        items=items,
+        items=[item.model_dump(mode="json") for item in items],
         total=total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size
+        pages=ceil(total / page_size),
     )
 
-@app.post("/api/users", response_model=User, status_code=status.HTTP_201_CREATED, tags=["Users"])
-async def create_user(user: UserCreate):
+
+@app.post(
+    "/api/users",
+    response_model=User,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Users"],
+)
+async def create_user(user: UserCreate) -> User:
     """Create a new user."""
-    # Mock implementation
+
+    now = utc_now()
+
     return User(
         id="123",
         email=user.email,
         name=user.name,
         status=user.status,
-        created_at=datetime.now(),
-        updated_at=datetime.now()
+        created_at=now,
+        updated_at=now,
     )
 
+
 @app.get("/api/users/{user_id}", response_model=User, tags=["Users"])
-async def get_user(user_id: str = Path(..., description="User ID")):
+async def get_user(
+    user_id: str = Path(..., min_length=1, description="User ID"),
+) -> User:
     """Get user by ID."""
-    # Mock: Check if exists
+
     if user_id == "999":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"message": "User not found", "details": {"id": user_id}}
+            detail={
+                "message": "User not found",
+                "details": [
+                    {
+                        "field": "id",
+                        "message": user_id,
+                        "code": "not_found",
+                    }
+                ],
+            },
         )
+
+    now = utc_now()
 
     return User(
         id=user_id,
         email="user@example.com",
         name="User Name",
         status=UserStatus.ACTIVE,
-        created_at=datetime.now(),
-        updated_at=datetime.now()
+        created_at=now,
+        updated_at=now,
     )
 
+
 @app.patch("/api/users/{user_id}", response_model=User, tags=["Users"])
-async def update_user(user_id: str, update: UserUpdate):
+async def update_user(
+    update: UserUpdate,
+    user_id: str = Path(..., min_length=1, description="User ID"),
+) -> User:
     """Partially update user."""
-    # Validate user exists
+
     existing = await get_user(user_id)
-
-    # Apply updates
     update_data = update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(existing, field, value)
 
-    existing.updated_at = datetime.now()
-    return existing
+    updated_user = existing.model_copy(update=update_data)
+    updated_user.updated_at = utc_now()
 
-@app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Users"])
-async def delete_user(user_id: str):
+    return updated_user
+
+
+@app.delete(
+    "/api/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Users"],
+)
+async def delete_user(
+    user_id: str = Path(..., min_length=1, description="User ID"),
+) -> Response:
     """Delete user."""
-    await get_user(user_id)  # Verify exists
-    return None
+
+    await get_user(user_id)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+
+    uvicorn.run(
+        "rest-api-template:app",
+        host="0.0.0.0",
+        port=5000,
+        reload=True,
+    )

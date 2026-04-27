@@ -1,6 +1,7 @@
 from .base import CatalogBase
 
 from .areas import Areas
+from .areas_clinicas import CatAreaClinica, CentroAreaClinica
 from .autorizadores import Autorizadores
 from .bajas import Bajas
 from .calidad_laboral import CalidadLaboral
@@ -40,6 +41,8 @@ from .vacunas import Vacunas
 __all__ = [
     "CatalogBase",
     "Areas",
+    "CatAreaClinica",
+    "CentroAreaClinica",
     "Autorizadores",
     "Bajas",
     "CalidadLaboral",

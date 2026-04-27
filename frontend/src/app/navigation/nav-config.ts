@@ -192,6 +192,11 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["admin:catalogos:vacunas:read"],
           },
           {
+            title: "Áreas clínicas",
+            url: "/admin/catalogos/areas-clinicas",
+            permissions: ["admin:catalogos:areas_clinicas:read"],
+          },
+          {
             title: "Catálogo CIES",
             url: "/admin/catalogos/cies",
             permissions: ["admin:catalogos:cies:upload"],

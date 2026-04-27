@@ -22,6 +22,7 @@ django-cors-headers==4.9.0
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 et_xmlfile==2.0.0
+h11==0.16.0
 hyperlink==21.0.0
 idna==3.11
 Incremental==24.11.0
@@ -56,6 +57,7 @@ typing_extensions==4.15.0
 tzdata==2025.3
 tzlocal==5.3.1
 ujson==5.11.0
+uvicorn==0.46.0
 vine==5.1.0
 wcwidth==0.6.0
 zope.interface==8.2
