@@ -197,6 +197,11 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["admin:catalogos:areas_clinicas:read"],
           },
           {
+            title: "Áreas clínicas por centro",
+            url: "/admin/catalogos/centro-area-clinica",
+            permissions: ["admin:catalogos:centro_area_clinica:read"],
+          },
+          {
             title: "Catálogo CIES",
             url: "/admin/catalogos/cies",
             permissions: ["admin:catalogos:cies:upload"],

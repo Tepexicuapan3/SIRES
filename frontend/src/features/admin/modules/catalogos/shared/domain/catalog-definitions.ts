@@ -173,4 +173,11 @@ export const catalogDefinitions = {
     endpoint: "clinical-areas",
     permissionRead: "admin:catalogos:areas_clinicas:read",
   },
+  centroAreaClinica: {
+    slug: "centro-area-clinica",
+    title: "Áreas clínicas por centro",
+    description: "Asignación de áreas clínicas a centros de atención.",
+    endpoint: "care-center-clinical-areas",
+    permissionRead: "admin:catalogos:centro_area_clinica:read",
+  },
 } as const satisfies Record<string, CatalogDefinition>;

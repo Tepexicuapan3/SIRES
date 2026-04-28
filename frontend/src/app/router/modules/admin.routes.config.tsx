@@ -28,6 +28,7 @@ import TiposSanguineoPage from "@features/admin/modules/catalogos/tipos-sanguine
 import TurnosPage from "@features/admin/modules/catalogos/turnos/pages/TurnosPage";
 import VacunasPage from "@features/admin/modules/catalogos/vacunas/pages/VacunasPage";
 import AreasClinicasPage from "@features/admin/modules/catalogos/areas-clinicas/pages/AreasClinicasPage";
+import CentrosAreasClinicasPage from "@features/admin/modules/catalogos/centro-area-clinica/pages/CentrosAreasClinicasPage";
 import PlaceholderPage from "@shared/components/PlaceholderPage";
 import { lazy, Suspense } from "react";
 
@@ -298,6 +299,14 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:areas_clinicas:read">
             <AreasClinicasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "centro-area-clinica",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:centro_area_clinica:read">
+            <CentrosAreasClinicasPage />
           </ProtectedRoute>
         ),
       },
