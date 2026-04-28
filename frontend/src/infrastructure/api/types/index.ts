@@ -303,6 +303,27 @@ export type {
 } from "@api/types/catalogos/escuelas.types";
 
 // =============================================================================
+// ESPECIALIDADES TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  EspecialidadListItem,
+  EspecialidadDetail,
+  // CRUD Requests
+  CreateEspecialidadRequest,
+  UpdateEspecialidadRequest,
+  // CRUD Responses
+  CreateEspecialidadResponse,
+  UpdateEspecialidadResponse,
+  DeleteEspecialidadResponse,
+  // Listados
+  EspecialidadesListParams,
+  EspecialidadesListResponse,
+  // Detalle
+  EspecialidadDetailResponse,
+} from "@api/types/catalogos/especialidades.types";
+
+// =============================================================================
 // VACUNAS TYPES (CRUD)
 // =============================================================================
 export type {
