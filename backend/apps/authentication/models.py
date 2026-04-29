@@ -76,6 +76,25 @@ class DetUsuario(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
+    no_exp = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        db_column="no_exp",
+    )
+    id_area_clinica = models.ForeignKey(
+        "catalogos.CatAreaClinica",
+        db_column="id_area_clinica",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    cd_laboral = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        db_column="cd_laboral",
+    )
 
     class Meta:
         db_table = "det_usuarios"
@@ -84,3 +103,41 @@ class DetUsuario(models.Model):
 
     def __str__(self):
         return self.nombre_completo
+
+
+class DetUsuarioCedula(models.Model):
+    TIPO_PROFESIONAL = "PROFESIONAL"
+    TIPO_ESPECIALIDAD = "ESPECIALIDAD"
+    TIPO_SUBESPECIALIDAD = "SUBESPECIALIDAD"
+    TIPO_CHOICES = [
+        (TIPO_PROFESIONAL, "Cédula Profesional"),
+        (TIPO_ESPECIALIDAD, "Cédula de Especialidad"),
+        (TIPO_SUBESPECIALIDAD, "Cédula de Subespecialidad"),
+    ]
+
+    id = models.BigAutoField(primary_key=True)
+    id_usuario = models.ForeignKey(
+        SyUsuario,
+        db_column="id_usuario",
+        on_delete=models.CASCADE,
+        related_name="cedulas",
+    )
+    numero = models.CharField(max_length=30, db_column="numero")
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        default=TIPO_PROFESIONAL,
+        db_column="tipo",
+    )
+    es_principal = models.BooleanField(default=False, db_column="es_principal")
+    orden = models.IntegerField(db_column="orden")
+
+    class Meta:
+        db_table = "det_usuario_cedulas"
+        ordering = ["orden"]
+        unique_together = [("id_usuario", "orden")]
+        verbose_name = "Cédula de Usuario"
+        verbose_name_plural = "Cédulas de Usuario"
+
+    def __str__(self):
+        return f"{self.tipo}: {self.numero}"

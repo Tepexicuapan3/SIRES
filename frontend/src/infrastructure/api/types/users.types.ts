@@ -9,6 +9,7 @@
 import type { PaginationParams, ListResponse } from "@api/types/common.types";
 import type { PermissionEffect } from "@api/types/permissions.types";
 import type { CentroAtencionRef } from "@api/types/catalogos/centros-atencion.types";
+import type { AreaClinicaRef } from "@api/types/catalogos/areas-clinicas.types";
 
 // =============================================================================
 // OBJETOS ANIDADOS (Relaciones)
@@ -21,6 +22,29 @@ import type { CentroAtencionRef } from "@api/types/catalogos/centros-atencion.ty
 export interface UserRef {
   id: number;
   name: string;
+}
+
+export type CedulaTipo = "PROFESIONAL" | "ESPECIALIDAD" | "SUBESPECIALIDAD";
+
+export interface CedulaItem {
+  id?: number;
+  numero: string;
+  tipo: CedulaTipo;
+  esPrincipal: boolean;
+  orden: number;
+}
+
+export interface EmpleadoSermedResult {
+  noExp: string;
+  firstName: string;
+  paternalName: string;
+  maternalName: string;
+  cdLaboral: string;
+  cdClinica: string;
+}
+
+export interface EmpleadoSermedResponse {
+  empleado: EmpleadoSermedResult;
 }
 
 // =============================================================================
@@ -49,6 +73,9 @@ export interface UserListItem {
   fullname: string;
   email: string;
   clinic: CentroAtencionRef | null;
+  areaClinica: AreaClinicaRef | null;
+  cdLaboral: string | null;
+  cedulas: CedulaItem[];
   primaryRole: string;
   isActive: boolean;
   termsAccepted?: boolean;
@@ -67,6 +94,12 @@ export interface UserDetail extends UserListItem {
   firstName: string;
   paternalName: string;
   maternalName: string;
+
+  // --- Datos SERMED / clínicos ---
+  noExp: string | null;
+  cdLaboral: string | null;
+  areaClinica: AreaClinicaRef | null;
+  cedulas: CedulaItem[];
 
   // --- Estado de cuenta ---
   termsAccepted: boolean;
@@ -127,6 +160,9 @@ export interface CreateUserRequest {
   email: string;
   clinicId?: number | null;
   primaryRoleId: number;
+  noExp?: string | null;
+  cdLaboral?: string | null;
+  areaClinicaId?: number | null;
 }
 
 /**
@@ -139,6 +175,10 @@ export interface UpdateUserRequest {
   maternalName?: string;
   email?: string;
   clinicId?: number | null;
+  noExp?: string | null;
+  cdLaboral?: string | null;
+  areaClinicaId?: number | null;
+  cedulas?: Omit<CedulaItem, "orden">[];
 }
 
 // =============================================================================

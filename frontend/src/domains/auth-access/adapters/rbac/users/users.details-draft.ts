@@ -1,10 +1,14 @@
 import type {
+  CedulaItem,
   Permission,
   RoleListItem,
   UserOverride,
   UserRole,
 } from "@api/types";
-import type { UserDetailsFormValues } from "@/domains/auth-access/types/rbac/users.schemas";
+import type {
+  CedulaFormItem,
+  UserDetailsFormValues,
+} from "@/domains/auth-access/types/rbac/users.schemas";
 
 interface UserDetailFormSource {
   firstName?: string | null;
@@ -12,6 +16,10 @@ interface UserDetailFormSource {
   maternalName?: string | null;
   email?: string | null;
   clinic?: { id: number } | null;
+  noExp?: string | null;
+  cdLaboral?: string | null;
+  areaClinica?: { id: number } | null;
+  cedulas?: CedulaItem[];
 }
 
 interface DraftAssigner {
@@ -43,6 +51,20 @@ export const mapUserDetailToFormValues = (
     typeof detail?.clinic?.id === "number" && detail.clinic.id > 0
       ? detail.clinic.id
       : null,
+  noExp: detail?.noExp ?? null,
+  cdLaboral: detail?.cdLaboral ?? null,
+  areaClinicaId:
+    typeof detail?.areaClinica?.id === "number" && detail.areaClinica.id > 0
+      ? detail.areaClinica.id
+      : null,
+  cedulas: (detail?.cedulas ?? []).map(
+    (c): CedulaFormItem => ({
+      id: c.id,
+      numero: c.numero,
+      tipo: c.tipo,
+      esPrincipal: c.esPrincipal,
+    }),
+  ),
 });
 
 const normalizeDraftText = (value: string | null | undefined) =>
@@ -50,6 +72,15 @@ const normalizeDraftText = (value: string | null | undefined) =>
 
 const normalizeDraftClinicId = (value: number | null | undefined) =>
   typeof value === "number" && value > 0 && !Number.isNaN(value) ? value : null;
+
+const normalizeCedulas = (cedulas: CedulaFormItem[]) =>
+  JSON.stringify(
+    cedulas.map((c) => ({
+      numero: c.numero.trim(),
+      tipo: c.tipo,
+      esPrincipal: c.esPrincipal,
+    })),
+  );
 
 export const buildUserProfilePayload = (
   baseline: UserDetailsFormValues,
@@ -87,6 +118,25 @@ export const buildUserProfilePayload = (
     normalizeDraftClinicId(baseline.clinicId)
   ) {
     payload.clinicId = draft.clinicId;
+  }
+
+  if (normalizeDraftText(draft.noExp) !== normalizeDraftText(baseline.noExp)) {
+    payload.noExp = draft.noExp?.trim() || null;
+  }
+
+  if (normalizeDraftText(draft.cdLaboral) !== normalizeDraftText(baseline.cdLaboral)) {
+    payload.cdLaboral = draft.cdLaboral?.trim() || null;
+  }
+
+  if (
+    normalizeDraftClinicId(draft.areaClinicaId) !==
+    normalizeDraftClinicId(baseline.areaClinicaId)
+  ) {
+    payload.areaClinicaId = draft.areaClinicaId;
+  }
+
+  if (normalizeCedulas(draft.cedulas) !== normalizeCedulas(baseline.cedulas)) {
+    payload.cedulas = draft.cedulas;
   }
 
   return payload;

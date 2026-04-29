@@ -30,6 +30,7 @@ import type {
   AddUserOverrideRequest,
   AddUserOverrideResponse,
   RemoveUserOverrideResponse,
+  EmpleadoSermedResponse,
 } from "@api/types";
 
 export const usersAPI = {
@@ -117,6 +118,20 @@ export const usersAPI = {
   deactivate: async (userId: number): Promise<UserStatusResponse> => {
     const response = await apiClient.patch<UserStatusResponse>(
       `/users/${userId}/deactivate`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Buscar empleado en SERMED por número de expediente.
+   * @endpoint GET /api/v1/users/empleados-sermed/:noExp
+   * @permission admin:gestion:usuarios:read
+   */
+  lookupEmpleadoSermed: async (
+    noExp: string,
+  ): Promise<EmpleadoSermedResponse> => {
+    const response = await apiClient.get<EmpleadoSermedResponse>(
+      `/users/empleados-sermed/${encodeURIComponent(noExp)}`,
     );
     return response.data;
   },

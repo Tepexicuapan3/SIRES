@@ -1,5 +1,6 @@
-import type { UseFormReturn } from "react-hook-form";
-import { ShieldCheck, UserRound } from "lucide-react";
+import { useRef, useState } from "react";
+import { type UseFormReturn } from "react-hook-form";
+import { Loader2, Search, ShieldCheck, UserRound } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -9,6 +10,7 @@ import {
   FormMessage,
 } from "@shared/ui/form";
 import { Input } from "@shared/ui/input";
+import { Button } from "@shared/ui/button";
 import {
   Select,
   SelectContent,
@@ -16,14 +18,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@shared/ui/select";
+import { Separator } from "@shared/ui/separator";
 import type { CentroAtencionListItem, UserDetail } from "@api/types";
 import type { UserDetailsFormValues } from "@/domains/auth-access/types/rbac/users.schemas";
 import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
+import { AreaClinicaCombobox } from "@/domains/auth-access/components/admin/rbac/users/AreaClinicaCombobox";
+import { CedulasSection } from "@/domains/auth-access/components/admin/rbac/users/CedulasSection";
+import { useEmpleadoSermedLookup } from "@/domains/auth-access/hooks/rbac/users/useEmpleadoSermedLookup";
+
+interface AreaClinicaOption {
+  id: number;
+  name: string;
+}
 
 interface UserDetailsGeneralTabProps {
   form: UseFormReturn<UserDetailsFormValues>;
   formId: string;
   clinicOptions: CentroAtencionListItem[];
+  areaClinicaOptions?: AreaClinicaOption[];
   isClinicsCatalogLoading?: boolean;
   userDetail: UserDetail;
   accountIsActive: boolean;
@@ -49,6 +61,7 @@ export function UserDetailsGeneralTab({
   form,
   formId,
   clinicOptions,
+  areaClinicaOptions = [],
   isClinicsCatalogLoading = false,
   userDetail,
   accountIsActive,
@@ -68,7 +81,6 @@ export function UserDetailsGeneralTab({
     }),
   );
   const currentClinic = userDetail.clinic;
-
   if (
     currentClinic &&
     !clinicSelectOptions.some((clinic) => clinic.id === currentClinic.id)
@@ -79,6 +91,27 @@ export function UserDetailsGeneralTab({
     });
   }
 
+  const currentArea = userDetail.areaClinica;
+  const areaOptions = [...areaClinicaOptions];
+  if (currentArea && !areaOptions.some((a) => a.id === currentArea.id)) {
+    areaOptions.unshift({ id: currentArea.id, name: currentArea.name });
+  }
+
+  const { lookup, isLoading: isLookingUp, result: lookupResult, error: lookupError } =
+    useEmpleadoSermedLookup();
+  const noExpInputRef = useRef<HTMLInputElement>(null);
+  const [lookupAttempted, setLookupAttempted] = useState(false);
+
+  const handleNoExpLookup = async () => {
+    const noExp = form.getValues("noExp")?.trim();
+    if (!noExp) return;
+    setLookupAttempted(true);
+    const found = await lookup(noExp);
+    if (found?.cdLaboral) {
+      form.setValue("cdLaboral", found.cdLaboral);
+    }
+  };
+
   return (
     <Form {...form}>
       <form
@@ -86,6 +119,7 @@ export function UserDetailsGeneralTab({
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-6"
       >
+        {/* Usuario + Rol (solo lectura) */}
         <div className="mx-auto w-full max-w-[480px]">
           <div className="relative h-11 rounded-2xl bg-subtle/20 ring-1 ring-line-struct/70">
             <div className="flex h-full items-center">
@@ -108,6 +142,7 @@ export function UserDetailsGeneralTab({
           </div>
         </div>
 
+        {/* Datos personales */}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
@@ -163,6 +198,7 @@ export function UserDetailsGeneralTab({
           />
         </div>
 
+        {/* Centro de atención + Estado */}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
@@ -232,6 +268,119 @@ export function UserDetailsGeneralTab({
             ) : null}
           </div>
         </div>
+
+        <Separator />
+
+        {/* Datos SERMED */}
+        <div className="space-y-4">
+          <p className="text-xs font-semibold tracking-wide text-txt-muted uppercase">
+            Datos SERMED
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* cd_laboral (solo lectura, se llena desde búsqueda SERMED) */}
+            <FormField
+              control={form.control}
+              name="cdLaboral"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Clave laboral SERMED</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                      placeholder="Se llena al buscar expediente"
+                      disabled={!isEditable}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Número de expediente con búsqueda */}
+            <FormField
+              control={form.control}
+              name="noExp"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>No. expediente SERMED</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input
+                        {...field}
+                        ref={noExpInputRef}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                        placeholder="Ej. 123456"
+                        disabled={!isEditable}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void handleNoExpLookup();
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    {isEditable ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        disabled={isLookingUp || !form.getValues("noExp")}
+                        onClick={() => void handleNoExpLookup()}
+                      >
+                        {isLookingUp ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Search className="size-4" />
+                        )}
+                      </Button>
+                    ) : null}
+                  </div>
+                  {lookupAttempted && lookupResult ? (
+                    <p className="text-xs text-status-stable">
+                      {[lookupResult.firstName, lookupResult.paternalName, lookupResult.maternalName]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </p>
+                  ) : null}
+                  {lookupAttempted && lookupError ? (
+                    <p className="text-xs text-status-critical">{lookupError}</p>
+                  ) : null}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Área clínica */}
+            <FormField
+              control={form.control}
+              name="areaClinicaId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Área clínica</FormLabel>
+                  <FormControl>
+                    <AreaClinicaCombobox
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      options={areaOptions}
+                      disabled={!isEditable}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Cédulas profesionales */}
+        <CedulasSection form={form} isEditable={isEditable} />
       </form>
     </Form>
   );

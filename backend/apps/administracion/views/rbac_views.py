@@ -20,7 +20,8 @@ from apps.administracion.models import (
     RelUsuarioOverride,
     RelUsuarioRol,
 )
-from apps.authentication.models import DetUsuario, SyUsuario
+from django.db import connections
+from apps.authentication.models import DetUsuario, DetUsuarioCedula, SyUsuario
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.auth_revision import (
     touch_user_auth_revision,
@@ -31,7 +32,7 @@ from apps.authentication.services.email_service import send_user_credentials_ema
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
-from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
+from apps.catalogos.models import CatAreaClinica, CatCentroAtencion, Permisos, Roles
 from apps.administracion.use_cases.rbac_write import (
     AssignUserRolesUseCase,
     SetUserPrimaryRoleUseCase,
@@ -362,6 +363,9 @@ def _serialize_user_list_item(user):
     if detail and detail.nombre_completo:
         full_name = detail.nombre_completo
 
+    area = getattr(detail, "id_area_clinica", None) if detail else None
+    cedulas = list(user.cedulas.all().order_by("orden")) if hasattr(user, "cedulas") else []
+
     return {
         "id": user.id_usuario,
         "username": user.usuario,
@@ -369,6 +373,9 @@ def _serialize_user_list_item(user):
         "fullName": full_name,
         "email": user.correo,
         "clinic": _clinic_ref(detail),
+        "areaClinica": {"id": area.id, "name": area.name} if area else None,
+        "cdLaboral": detail.cd_laboral if detail else None,
+        "cedulas": [_serialize_cedula(c) for c in cedulas],
         "primaryRole": primary.id_rol.rol if primary else "",
         "isActive": bool(user.est_activo),
         "termsAccepted": bool(user.terminos_acept),
@@ -376,14 +383,36 @@ def _serialize_user_list_item(user):
     }
 
 
+def _serialize_cedula(cedula):
+    return {
+        "id": cedula.id,
+        "numero": cedula.numero,
+        "tipo": cedula.tipo,
+        "esPrincipal": cedula.es_principal,
+        "orden": cedula.orden,
+    }
+
+
 def _serialize_user_detail(user):
     detail = getattr(user, "detalle", None)
     base = _serialize_user_list_item(user)
+
+    area = getattr(detail, "id_area_clinica", None) if detail else None
+
+    cedulas = [
+        _serialize_cedula(c)
+        for c in user.cedulas.all().order_by("orden")
+    ]
+
     return {
         **base,
         "firstName": detail.nombre if detail else "",
         "paternalName": detail.paterno if detail else "",
         "maternalName": detail.materno if detail and detail.materno else "",
+        "noExp": detail.no_exp if detail else None,
+        "cdLaboral": detail.cd_laboral if detail else None,
+        "areaClinica": {"id": area.id, "name": area.name} if area else None,
+        "cedulas": cedulas,
         "termsAccepted": bool(user.terminos_acept),
         "mustChangePassword": bool(user.cambiar_clave),
         "lastLoginAt": _to_utc_iso(user.last_conexion),
@@ -1232,8 +1261,8 @@ class UsersListCreateView(APIView):
         users_by_id = {
             user.id_usuario: user
             for user in SyUsuario.objects.select_related(
-                "detalle", "detalle__id_centro_atencion"
-            ).filter(id_usuario__in=page_user_ids)
+                "detalle", "detalle__id_centro_atencion", "detalle__id_area_clinica"
+            ).prefetch_related("cedulas").filter(id_usuario__in=page_user_ids)
         }
         ordered_users = [
             users_by_id[user_id] for user_id in page_user_ids if user_id in users_by_id
@@ -1373,6 +1402,13 @@ class UsersListCreateView(APIView):
             if part
         ).strip()
 
+        area_clinica = None
+        area_clinica_id = request.data.get("areaClinicaId")
+        if area_clinica_id is not None:
+            area_clinica = CatAreaClinica.objects.filter(
+                id=area_clinica_id, is_active=True
+            ).first()
+
         DetUsuario.objects.create(
             id_usuario=user,
             nombre=request.data.get("firstName"),
@@ -1380,6 +1416,9 @@ class UsersListCreateView(APIView):
             materno=maternal_name,
             nombre_completo=full_name,
             id_centro_atencion=clinic,
+            no_exp=request.data.get("noExp") or None,
+            cd_laboral=request.data.get("cdLaboral") or None,
+            id_area_clinica=area_clinica,
         )
 
         RelUsuarioRol.objects.create(
@@ -1441,7 +1480,12 @@ class UserDetailView(APIView):
 
     def _get_user(self, user_id):
         return (
-            SyUsuario.objects.select_related("detalle", "detalle__id_centro_atencion")
+            SyUsuario.objects.select_related(
+                "detalle",
+                "detalle__id_centro_atencion",
+                "detalle__id_area_clinica",
+            )
+            .prefetch_related("cedulas")
             .filter(id_usuario=user_id)
             .first()
         )
@@ -1595,12 +1639,93 @@ class UserDetailView(APIView):
                     )
                 detail.id_centro_atencion = clinic
 
+        if "noExp" in request.data:
+            detail.no_exp = request.data.get("noExp") or None
+
+        if "cdLaboral" in request.data:
+            detail.cd_laboral = request.data.get("cdLaboral") or None
+
+        if "areaClinicaId" in request.data:
+            area_id = request.data.get("areaClinicaId")
+            if area_id is None:
+                detail.id_area_clinica = None
+            else:
+                area = CatAreaClinica.objects.filter(id=area_id, is_active=True).first()
+                if not area:
+                    _audit(
+                        request,
+                        "RBAC_USER_UPDATE",
+                        "user",
+                        resource_id=user.id_usuario,
+                        result="FAIL",
+                        error_code="AREA_CLINICA_NOT_FOUND",
+                        target_user=user,
+                    )
+                    return error_response(
+                        "AREA_CLINICA_NOT_FOUND",
+                        "Área clínica no encontrada",
+                        status.HTTP_404_NOT_FOUND,
+                        request_id=_request_id(request),
+                    )
+                detail.id_area_clinica = area
+
         detail.nombre_completo = " ".join(
             part
             for part in [detail.nombre, detail.paterno, detail.materno or ""]
             if part
         ).strip()
         detail.save()
+
+        if "cedulas" in request.data:
+            cedulas_data = request.data.get("cedulas") or []
+            if len(cedulas_data) > 3:
+                return error_response(
+                    "CEDULAS_LIMIT_EXCEEDED",
+                    "Solo se permiten hasta 3 cédulas por usuario",
+                    status.HTTP_400_BAD_REQUEST,
+                    request_id=_request_id(request),
+                )
+            tipos_validos = {
+                DetUsuarioCedula.TIPO_PROFESIONAL,
+                DetUsuarioCedula.TIPO_ESPECIALIDAD,
+                DetUsuarioCedula.TIPO_SUBESPECIALIDAD,
+            }
+            for idx, cedula_item in enumerate(cedulas_data):
+                if not cedula_item.get("numero", "").strip():
+                    return error_response(
+                        "VALIDATION_ERROR",
+                        f"La cédula {idx + 1} debe tener un número válido",
+                        status.HTTP_400_BAD_REQUEST,
+                        request_id=_request_id(request),
+                    )
+                if cedula_item.get("tipo") not in tipos_validos:
+                    return error_response(
+                        "VALIDATION_ERROR",
+                        f"Tipo de cédula inválido en posición {idx + 1}",
+                        status.HTTP_400_BAD_REQUEST,
+                        request_id=_request_id(request),
+                    )
+
+            principal_count = sum(
+                1 for c in cedulas_data if c.get("esPrincipal", False)
+            )
+            if principal_count > 1:
+                return error_response(
+                    "VALIDATION_ERROR",
+                    "Solo puede haber una cédula principal",
+                    status.HTTP_400_BAD_REQUEST,
+                    request_id=_request_id(request),
+                )
+
+            user.cedulas.all().delete()
+            for idx, cedula_item in enumerate(cedulas_data):
+                DetUsuarioCedula.objects.create(
+                    id_usuario=user,
+                    numero=cedula_item["numero"].strip(),
+                    tipo=cedula_item.get("tipo", DetUsuarioCedula.TIPO_PROFESIONAL),
+                    es_principal=bool(cedula_item.get("esPrincipal", False)),
+                    orden=idx + 1,
+                )
 
         user.fch_modf = timezone.now()
         user.usr_modf = actor
@@ -2020,3 +2145,64 @@ class UserOverrideRemoveView(APIView):
             target_user=target_user,
         )
         return Response(payload, status=status.HTTP_200_OK)
+
+
+class EmpleadoSermedLookupView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, no_exp):
+        _, auth_error = _authorize(request, "admin:gestion:usuarios:read")
+        if auth_error:
+            return auth_error
+
+        no_exp = no_exp.strip()
+        if not no_exp:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Número de expediente requerido",
+                status.HTTP_400_BAD_REQUEST,
+                request_id=_request_id(request),
+            )
+
+        sql = """
+            SELECT
+                e.NO_EXP,
+                e.DS_PATERNO,
+                e.DS_MATERNO,
+                e.DS_NOMBRE,
+                e.CD_LABORAL,
+                e.CD_CLINICA
+            FROM cat_empleados e
+            WHERE e.NO_EXP = %s
+            LIMIT 1
+        """
+        try:
+            with connections["expedientes"].cursor() as cursor:
+                cursor.execute(sql, [no_exp])
+                row = cursor.fetchone()
+        except Exception:
+            return error_response(
+                "SERMED_UNAVAILABLE",
+                "No se pudo consultar la base de SERMED",
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                request_id=_request_id(request),
+            )
+
+        if not row:
+            return error_response(
+                "EMPLEADO_NOT_FOUND",
+                "No se encontró un empleado con ese número de expediente",
+                status.HTTP_404_NOT_FOUND,
+                request_id=_request_id(request),
+            )
+
+        payload = {
+            "noExp": row[0],
+            "paternalName": row[1] or "",
+            "maternalName": row[2] or "",
+            "firstName": row[3] or "",
+            "cdLaboral": row[4] or "",
+            "cdClinica": row[5] or "",
+        }
+        return Response({"empleado": payload}, status=status.HTTP_200_OK)

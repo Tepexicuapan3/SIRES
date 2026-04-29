@@ -53,6 +53,10 @@ export type {
   // Objetos anidados (relaciones)
   UserRef,
   BaseUser,
+  CedulaTipo,
+  CedulaItem,
+  EmpleadoSermedResult,
+  EmpleadoSermedResponse,
   // Entidades
   UserListItem,
   UserDetail,

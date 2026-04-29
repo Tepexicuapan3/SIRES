@@ -93,9 +93,43 @@ export const buildUsersTableColumns = ({
       key: "clinic",
       header: "Centro",
       accessorKey: "clinic",
-      className: "w-[200px]",
-      cellContentClassName: "max-w-[200px]",
+      className: "w-[180px]",
+      cellContentClassName: "max-w-[180px]",
       render: (row) => row.clinic?.name ?? "Sin centro",
+    },
+    {
+      key: "areaClinica",
+      header: "Área clínica",
+      className: "w-[160px]",
+      cellContentClassName: "max-w-[160px]",
+      render: (row) => row.areaClinica?.name ?? (
+        <span className="text-txt-muted">—</span>
+      ),
+    },
+    {
+      key: "cdLaboral",
+      header: "Clave lab.",
+      className: "w-[110px]",
+      render: (row) => row.cdLaboral ? (
+        <span className="font-mono text-xs">{row.cdLaboral}</span>
+      ) : (
+        <span className="text-txt-muted">—</span>
+      ),
+    },
+    {
+      key: "cedulas",
+      header: "Cédulas",
+      align: "center" as const,
+      className: "w-[90px]",
+      render: (row) => {
+        const count = row.cedulas?.length ?? 0;
+        if (count === 0) return <span className="text-txt-muted">—</span>;
+        return (
+          <Badge variant="outline" className="gap-1 text-xs">
+            {count} {count === 1 ? "cédula" : "cédulas"}
+          </Badge>
+        );
+      },
     },
     {
       key: "primaryRole",
@@ -203,6 +237,9 @@ export const buildUsersVisibilityOptions = (
     { key: "user", label: "Usuario" },
     { key: "email", label: "Correo" },
     { key: "clinic", label: "Centro" },
+    { key: "areaClinica", label: "Área clínica" },
+    { key: "cdLaboral", label: "Clave lab." },
+    { key: "cedulas", label: "Cédulas" },
     { key: "primaryRole", label: "Rol" },
     { key: "isActive", label: "Estado" },
   ];

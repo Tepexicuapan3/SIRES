@@ -38,12 +38,19 @@ import {
 import { getUserErrorMessage } from "@/domains/auth-access/adapters/rbac/users/users.feedback";
 import { UserDialogHeader } from "@/domains/auth-access/components/admin/rbac/users/UserDialogHeader";
 import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
+import { AreaClinicaCombobox } from "@/domains/auth-access/components/admin/rbac/users/AreaClinicaCombobox";
+
+interface AreaClinicaOption {
+  id: number;
+  name: string;
+}
 
 interface UserCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   roleOptions: RoleListItem[];
   clinicOptions: CentroAtencionListItem[];
+  areaClinicaOptions?: AreaClinicaOption[];
 }
 
 const DEFAULT_VALUES: CreateUserFormValues = {
@@ -54,6 +61,9 @@ const DEFAULT_VALUES: CreateUserFormValues = {
   email: "",
   clinicId: null,
   primaryRoleId: 0,
+  noExp: null,
+  cdLaboral: null,
+  areaClinicaId: null,
 };
 
 const FORM_ID = "user-create-form";
@@ -63,6 +73,7 @@ export function UserCreateDialog({
   onOpenChange,
   roleOptions,
   clinicOptions,
+  areaClinicaOptions = [],
 }: UserCreateDialogProps) {
   const createUser = useCreateUser();
 
@@ -89,6 +100,9 @@ export function UserCreateDialog({
           email: values.email,
           clinicId: values.clinicId ?? null,
           primaryRoleId: values.primaryRoleId,
+          noExp: values.noExp ?? null,
+          cdLaboral: values.cdLaboral ?? null,
+          areaClinicaId: values.areaClinicaId ?? null,
         },
       });
 
@@ -210,6 +224,46 @@ export function UserCreateDialog({
                         />
                         <FormField
                           control={form.control}
+                          name="noExp"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>No. expediente SERMED</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) =>
+                                    field.onChange(e.target.value || null)
+                                  }
+                                  placeholder="Opcional"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="cdLaboral"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Clave laboral SERMED</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) =>
+                                    field.onChange(e.target.value || null)
+                                  }
+                                  placeholder="Opcional"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
                           name="clinicId"
                           render={({ field }) => (
                             <FormItem>
@@ -219,6 +273,23 @@ export function UserCreateDialog({
                                   value={field.value}
                                   onChange={field.onChange}
                                   options={clinicOptions}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="areaClinicaId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Área clínica</FormLabel>
+                              <FormControl>
+                                <AreaClinicaCombobox
+                                  value={field.value ?? null}
+                                  onChange={field.onChange}
+                                  options={areaClinicaOptions}
                                 />
                               </FormControl>
                               <FormMessage />

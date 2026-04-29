@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views.rbac_views import (
     AssignRolePermissionsView,
+    EmpleadoSermedLookupView,
     PermissionsCatalogView,
     RevokeRolePermissionView,
     RoleDetailView,
@@ -15,7 +16,6 @@ from .views.rbac_views import (
     UserRoleRevokeView,
     UserRolesView,
     UsersListCreateView,
-    
 )
 
 from .views.expediente_view import ExpedienteView, ActualizarExpedienteView
@@ -42,4 +42,5 @@ urlpatterns = [
     path("users/<int:user_id>/overrides/<str:code>", UserOverrideRemoveView.as_view(), name="rbac-user-override-remove"),
     path('expedientes/', ExpedienteView.as_view(), name='buscar'),
     path('expedientes/actualizar/', ActualizarExpedienteView.as_view(), name='actualizar'),
+    path('users/empleados-sermed/<str:no_exp>', EmpleadoSermedLookupView.as_view(), name='rbac-empleado-sermed-lookup'),
 ]

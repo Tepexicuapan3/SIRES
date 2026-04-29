@@ -24,6 +24,7 @@ import { useActivateUser } from "@/domains/auth-access/hooks/rbac/users/useActiv
 import { useDeactivateUser } from "@/domains/auth-access/hooks/rbac/users/useDeactivateUser";
 import { useRolesList } from "@/domains/auth-access/hooks/rbac/roles/useRolesList";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
+import { useAreasClinicasList } from "@features/admin/modules/catalogos/areas-clinicas/queries/useAreasClinicasList";
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import { UserDetailsDialog } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsDialog";
 import { UserCreateDialog } from "@/domains/auth-access/components/admin/rbac/users/UserCreateDialog";
@@ -72,6 +73,9 @@ export function UsersPage() {
       user: true,
       email: true,
       clinic: true,
+      areaClinica: true,
+      cdLaboral: false,
+      cedulas: true,
       primaryRole: true,
       isActive: true,
       actions: true,
@@ -163,8 +167,16 @@ export function UsersPage() {
       enabled: canReadUser || canCreateUser || canUpdateUser,
     },
   );
+  const { data: areasClinicasData } = useAreasClinicasList(
+    { page: 1, pageSize: 200 },
+    { enabled: canReadUser || canCreateUser || canUpdateUser },
+  );
   const roleOptions = rolesData?.items ?? [];
   const clinicOptions = clinicsData?.items ?? [];
+  const areaClinicaOptions = (areasClinicasData?.items ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+  }));
 
   const canManageUsersFully = resolveCapability("admin.users.editFull", {
     allOf: [
@@ -422,6 +434,7 @@ export function UsersPage() {
         userSummary={selectedUser}
         roleOptions={roleOptions}
         clinicOptions={clinicOptions}
+        areaClinicaOptions={areaClinicaOptions}
         isClinicsCatalogLoading={
           isLoadingClinicsCatalog || isFetchingClinicsCatalog
         }
@@ -436,6 +449,7 @@ export function UsersPage() {
         onOpenChange={setCreateOpen}
         roleOptions={roleOptions}
         clinicOptions={clinicOptions}
+        areaClinicaOptions={areaClinicaOptions}
       />
     </div>
   );

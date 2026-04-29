@@ -1,5 +1,7 @@
 import * as z from "zod";
 
+const CEDULA_TIPOS = ["PROFESIONAL", "ESPECIALIDAD", "SUBESPECIALIDAD"] as const;
+
 const requiredText = (label: string) =>
   z
     .string({ error: `${label} requerido` })
@@ -49,13 +51,38 @@ const requiredNumber = z
   .int()
   .positive({ error: "Selecciona un rol" });
 
-export const userDetailsSchema = z.object({
-  firstName: requiredText("Nombre"),
-  paternalName: requiredText("Apellido paterno"),
-  maternalName: optionalText,
-  email: emailSchema,
-  clinicId: optionalNumber,
+const cedulaSchema = z.object({
+  id: z.number().int().positive().optional(),
+  numero: z
+    .string({ error: "Número de cédula requerido" })
+    .trim()
+    .min(1, { error: "Número de cédula requerido" })
+    .max(30, { error: "Número de cédula demasiado largo" }),
+  tipo: z.enum(CEDULA_TIPOS, { error: "Tipo de cédula inválido" }),
+  esPrincipal: z.boolean().default(false),
 });
+
+export type CedulaFormItem = z.infer<typeof cedulaSchema>;
+
+export const userDetailsSchema = z
+  .object({
+    firstName: requiredText("Nombre"),
+    paternalName: requiredText("Apellido paterno"),
+    maternalName: optionalText,
+    email: emailSchema,
+    clinicId: optionalNumber,
+    noExp: z.string().trim().max(20).nullable().default(null),
+    cdLaboral: z.string().trim().max(100).nullable().default(null),
+    areaClinicaId: optionalNumber,
+    cedulas: z
+      .array(cedulaSchema)
+      .max(3, { message: "Solo se permiten hasta 3 cédulas" })
+      .default([]),
+  })
+  .refine(
+    (data) => data.cedulas.filter((c) => c.esPrincipal).length <= 1,
+    { message: "Solo puede haber una cédula principal", path: ["cedulas"] },
+  );
 
 export const createUserSchema = z.object({
   username: z
@@ -69,6 +96,9 @@ export const createUserSchema = z.object({
   email: emailSchema,
   clinicId: optionalNumber,
   primaryRoleId: requiredNumber,
+  noExp: z.string().trim().max(20).nullable().default(null),
+  cdLaboral: z.string().trim().max(100).nullable().default(null),
+  areaClinicaId: optionalNumber,
 });
 
 export type UserDetailsFormValues = z.infer<typeof userDetailsSchema>;

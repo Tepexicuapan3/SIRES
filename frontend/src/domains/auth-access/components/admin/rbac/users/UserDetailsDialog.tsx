@@ -70,6 +70,11 @@ import type {
   UserRole,
 } from "@api/types";
 
+interface AreaClinicaOption {
+  id: number;
+  name: string;
+}
+
 interface UserDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -77,6 +82,7 @@ interface UserDetailsDialogProps {
   userSummary: UserListItem | null;
   roleOptions: RoleListItem[];
   clinicOptions: CentroAtencionListItem[];
+  areaClinicaOptions?: AreaClinicaOption[];
   isClinicsCatalogLoading?: boolean;
   canEdit: boolean;
   canReadRolesCatalog?: boolean;
@@ -90,6 +96,10 @@ const DEFAULT_FORM_VALUES: UserDetailsFormValues = {
   maternalName: "",
   email: "",
   clinicId: null,
+  noExp: null,
+  cdLaboral: null,
+  areaClinicaId: null,
+  cedulas: [],
 };
 
 const DRAFT_ASSIGNER = {
@@ -106,6 +116,7 @@ export function UserDetailsDialog({
   userSummary,
   roleOptions,
   clinicOptions,
+  areaClinicaOptions = [],
   isClinicsCatalogLoading = false,
   canEdit,
   canReadRolesCatalog = true,
@@ -163,12 +174,20 @@ export function UserDetailsDialog({
     draftMaternalName,
     draftEmail,
     draftClinicId,
+    draftNoExp,
+    draftCdLaboral,
+    draftAreaClinicaId,
+    draftCedulas,
   ] = form.watch([
     "firstName",
     "paternalName",
     "maternalName",
     "email",
     "clinicId",
+    "noExp",
+    "cdLaboral",
+    "areaClinicaId",
+    "cedulas",
   ]);
 
   const watchedFormValues: UserDetailsFormValues = {
@@ -177,6 +196,10 @@ export function UserDetailsDialog({
     maternalName: draftMaternalName ?? "",
     email: draftEmail ?? "",
     clinicId: draftClinicId ?? null,
+    noExp: draftNoExp ?? null,
+    cdLaboral: draftCdLaboral ?? null,
+    areaClinicaId: draftAreaClinicaId ?? null,
+    cedulas: draftCedulas ?? [],
   };
   const baselineFormValues = userDetail
     ? mapUserDetailToFormValues(userDetail)
@@ -580,6 +603,7 @@ export function UserDetailsDialog({
                 form={form}
                 formId={FORM_ID}
                 clinicOptions={clinicOptions}
+                areaClinicaOptions={areaClinicaOptions}
                 isClinicsCatalogLoading={isClinicsCatalogLoading}
                 userDetail={userDetail}
                 accountIsActive={workingAccountIsActive}
