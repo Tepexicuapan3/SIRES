@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Loader2, Search } from "lucide-react";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import {
@@ -30,6 +32,8 @@ import {
 import { ScrollArea } from "@shared/ui/ScrollArea";
 import type { CentroAtencionListItem, RoleListItem } from "@api/types";
 import { useCreateUser } from "@/domains/auth-access/hooks/rbac/users/useCreateUser";
+import { useEmpleadoSermedLookup } from "@/domains/auth-access/hooks/rbac/users/useEmpleadoSermedLookup";
+import { useAreaClinicasByClinic } from "@/domains/auth-access/hooks/rbac/users/useAreaClinicasByClinic";
 import { UserCreateSidePanel } from "@/domains/auth-access/components/admin/rbac/users/UserCreateSidePanel";
 import {
   createUserSchema,
@@ -39,6 +43,7 @@ import { getUserErrorMessage } from "@/domains/auth-access/adapters/rbac/users/u
 import { UserDialogHeader } from "@/domains/auth-access/components/admin/rbac/users/UserDialogHeader";
 import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
 import { AreaClinicaCombobox } from "@/domains/auth-access/components/admin/rbac/users/AreaClinicaCombobox";
+import { CedulasSection } from "@/domains/auth-access/components/admin/rbac/users/CedulasSection";
 
 interface AreaClinicaOption {
   id: number;
@@ -64,6 +69,7 @@ const DEFAULT_VALUES: CreateUserFormValues = {
   noExp: null,
   cdLaboral: null,
   areaClinicaId: null,
+  cedulas: [],
 };
 
 const FORM_ID = "user-create-form";
@@ -82,9 +88,46 @@ export function UserCreateDialog({
     defaultValues: DEFAULT_VALUES,
   });
 
+  // SERMED lookup
+  const { lookup, isLoading: isLookingUp, result: lookupResult, error: lookupError } =
+    useEmpleadoSermedLookup();
+  const noExpInputRef = useRef<HTMLInputElement>(null);
+  const [lookupAttempted, setLookupAttempted] = useState(false);
+
+  const handleNoExpLookup = async () => {
+    const noExp = form.getValues("noExp")?.trim();
+    if (!noExp) return;
+    setLookupAttempted(true);
+    const found = await lookup(noExp);
+    if (found) {
+      if (found.firstName) form.setValue("firstName", found.firstName);
+      if (found.paternalName) form.setValue("paternalName", found.paternalName);
+      if (found.maternalName) form.setValue("maternalName", found.maternalName);
+      if (found.cdLaboral) form.setValue("cdLaboral", found.cdLaboral);
+    }
+  };
+
+  // Filter areas by selected clinic
+  const watchedClinicId = form.watch("clinicId");
+  const { options: filteredAreaOptions, isLoading: isLoadingAreas } =
+    useAreaClinicasByClinic(watchedClinicId, areaClinicaOptions);
+
+  // Clear areaClinicaId when clinic changes and the area is no longer in list
+  const currentAreaClinicaId = form.watch("areaClinicaId");
+  useEffect(() => {
+    if (!watchedClinicId || isLoadingAreas) return;
+    if (
+      currentAreaClinicaId &&
+      !filteredAreaOptions.some((a) => a.id === currentAreaClinicaId)
+    ) {
+      form.setValue("areaClinicaId", null);
+    }
+  }, [watchedClinicId, currentAreaClinicaId, filteredAreaOptions, isLoadingAreas]);
+
   const handleDialogOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       form.reset(DEFAULT_VALUES);
+      setLookupAttempted(false);
     }
     onOpenChange(nextOpen);
   };
@@ -103,11 +146,12 @@ export function UserCreateDialog({
           noExp: values.noExp ?? null,
           cdLaboral: values.cdLaboral ?? null,
           areaClinicaId: values.areaClinicaId ?? null,
+          cedulas: values.cedulas.length > 0 ? values.cedulas : undefined,
         },
       });
 
       toast.success("Usuario creado", {
-        description: `El usuario ${result.username} se creo correctamente.`,
+        description: `El usuario ${result.username} se creó correctamente.`,
       });
       handleDialogOpenChange(false);
     } catch (error) {
@@ -153,6 +197,7 @@ export function UserCreateDialog({
                       onSubmit={form.handleSubmit(onSubmit)}
                       className="space-y-6"
                     >
+                      {/* Datos personales */}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
                           control={form.control}
@@ -208,6 +253,7 @@ export function UserCreateDialog({
                         />
                       </div>
 
+                      {/* Cuenta + SERMED */}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
                           control={form.control}
@@ -222,26 +268,69 @@ export function UserCreateDialog({
                             </FormItem>
                           )}
                         />
+
+                        {/* No. expediente con búsqueda SERMED */}
                         <FormField
                           control={form.control}
                           name="noExp"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>No. expediente SERMED</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  value={field.value ?? ""}
-                                  onChange={(e) =>
-                                    field.onChange(e.target.value || null)
-                                  }
-                                  placeholder="Opcional"
-                                />
-                              </FormControl>
+                              <div className="flex gap-2">
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    ref={noExpInputRef}
+                                    value={field.value ?? ""}
+                                    onChange={(e) =>
+                                      field.onChange(e.target.value || null)
+                                    }
+                                    placeholder="Ej. 123456"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        void handleNoExpLookup();
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="shrink-0"
+                                  disabled={isLookingUp || !form.getValues("noExp")}
+                                  onClick={() => void handleNoExpLookup()}
+                                >
+                                  {isLookingUp ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <Search className="size-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              {lookupAttempted && lookupResult ? (
+                                <p className="text-xs text-status-stable">
+                                  Encontrado:{" "}
+                                  {[
+                                    lookupResult.firstName,
+                                    lookupResult.paternalName,
+                                    lookupResult.maternalName,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")}
+                                </p>
+                              ) : null}
+                              {lookupAttempted && lookupError ? (
+                                <p className="text-xs text-status-critical">
+                                  {lookupError}
+                                </p>
+                              ) : null}
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+
                         <FormField
                           control={form.control}
                           name="cdLaboral"
@@ -255,19 +344,21 @@ export function UserCreateDialog({
                                   onChange={(e) =>
                                     field.onChange(e.target.value || null)
                                   }
-                                  placeholder="Opcional"
+                                  placeholder="Se llena al buscar expediente"
                                 />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+
+                        {/* Centro de atención */}
                         <FormField
                           control={form.control}
                           name="clinicId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Centro de atencion</FormLabel>
+                              <FormLabel>Centro de atención</FormLabel>
                               <FormControl>
                                 <ClinicCombobox
                                   value={field.value}
@@ -279,25 +370,46 @@ export function UserCreateDialog({
                             </FormItem>
                           )}
                         />
+
+                        {/* Área clínica filtrada por centro */}
                         <FormField
                           control={form.control}
                           name="areaClinicaId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Área clínica</FormLabel>
+                              <FormLabel>
+                                Área clínica
+                                {watchedClinicId ? " (del centro)" : ""}
+                              </FormLabel>
                               <FormControl>
                                 <AreaClinicaCombobox
                                   value={field.value ?? null}
                                   onChange={field.onChange}
-                                  options={areaClinicaOptions}
+                                  options={filteredAreaOptions}
+                                  disabled={isLoadingAreas}
+                                  placeholder={
+                                    isLoadingAreas
+                                      ? "Cargando áreas..."
+                                      : watchedClinicId
+                                        ? "Selecciona área del centro"
+                                        : "Selecciona área clínica"
+                                  }
                                 />
                               </FormControl>
+                              {watchedClinicId &&
+                              !isLoadingAreas &&
+                              filteredAreaOptions.length === 0 ? (
+                                <p className="text-xs text-txt-muted">
+                                  El centro no tiene áreas clínicas asignadas.
+                                </p>
+                              ) : null}
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
 
+                      {/* Rol primario */}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
                           control={form.control}
@@ -334,6 +446,9 @@ export function UserCreateDialog({
                           )}
                         />
                       </div>
+
+                      {/* Cédulas profesionales */}
+                      <CedulasSection form={form} isEditable={true} />
                     </form>
                   </Form>
                 </div>

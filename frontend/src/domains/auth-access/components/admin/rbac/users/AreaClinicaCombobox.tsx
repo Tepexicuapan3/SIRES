@@ -118,7 +118,7 @@ export function AreaClinicaCombobox({
           ) : null}
         </div>
 
-        <div className="max-h-56 overflow-y-auto py-1">
+        <div className="max-h-72 overflow-y-auto py-1">
           <button
             type="button"
             className={cn(

@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 import { cn } from "@shared/utils/styling/cn";
-import type { UserDetailsFormValues } from "@/domains/auth-access/types/rbac/users.schemas";
 
 const TIPO_LABELS: Record<string, string> = {
   PROFESIONAL: "Profesional",
@@ -26,7 +25,8 @@ const TIPO_LABELS: Record<string, string> = {
 };
 
 interface CedulasSectionProps {
-  form: UseFormReturn<UserDetailsFormValues>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form: UseFormReturn<any>;
   isEditable?: boolean;
 }
 

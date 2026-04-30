@@ -1,4 +1,4 @@
-import type { AreasClinicasListParams } from "@api/types";
+import type { AreasClinicasListParams, CentrosAreasClinicasListParams } from "@api/types";
 
 const BASE_KEY = ["admin", "catalogos", "areas-clinicas"] as const;
 
@@ -11,4 +11,9 @@ export const areasClinicasKeys = {
       : ([...BASE_KEY, "list"] as const),
 
   detail: (id: number) => [...BASE_KEY, "detail", id] as const,
+
+  centroAreasClinicas: (params?: CentrosAreasClinicasListParams) =>
+    params
+      ? ([...BASE_KEY, "centro-areas", params] as const)
+      : ([...BASE_KEY, "centro-areas"] as const),
 };

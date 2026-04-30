@@ -76,7 +76,7 @@ const normalizeDraftClinicId = (value: number | null | undefined) =>
 const normalizeCedulas = (cedulas: CedulaFormItem[]) =>
   JSON.stringify(
     cedulas.map((c) => ({
-      numero: c.numero.trim(),
+      numero: (c.numero ?? "").trim(),
       tipo: c.tipo,
       esPrincipal: c.esPrincipal,
     })),

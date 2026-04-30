@@ -163,6 +163,7 @@ export interface CreateUserRequest {
   noExp?: string | null;
   cdLaboral?: string | null;
   areaClinicaId?: number | null;
+  cedulas?: Omit<CedulaItem, "orden">[];
 }
 
 /**

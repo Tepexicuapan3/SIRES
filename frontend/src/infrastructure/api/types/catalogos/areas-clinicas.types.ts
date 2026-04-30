@@ -75,6 +75,7 @@ export interface AreasClinicasListParams extends PaginationParams {
   isActive?: boolean;
   sortBy?: "name" | "isActive";
   sortOrder?: "asc" | "desc";
+  centerId?: number;
 }
 
 // =============================================================================

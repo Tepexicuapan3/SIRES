@@ -84,22 +84,31 @@ export const userDetailsSchema = z
     { message: "Solo puede haber una cédula principal", path: ["cedulas"] },
   );
 
-export const createUserSchema = z.object({
-  username: z
-    .string({ error: "Usuario requerido" })
-    .trim()
-    .min(3, { error: "Usuario requerido" })
-    .max(60, { error: "Usuario demasiado largo" }),
-  firstName: requiredText("Nombre"),
-  paternalName: requiredText("Apellido paterno"),
-  maternalName: optionalText,
-  email: emailSchema,
-  clinicId: optionalNumber,
-  primaryRoleId: requiredNumber,
-  noExp: z.string().trim().max(20).nullable().default(null),
-  cdLaboral: z.string().trim().max(100).nullable().default(null),
-  areaClinicaId: optionalNumber,
-});
+export const createUserSchema = z
+  .object({
+    username: z
+      .string({ error: "Usuario requerido" })
+      .trim()
+      .min(3, { error: "Usuario requerido" })
+      .max(60, { error: "Usuario demasiado largo" }),
+    firstName: requiredText("Nombre"),
+    paternalName: requiredText("Apellido paterno"),
+    maternalName: optionalText,
+    email: emailSchema,
+    clinicId: optionalNumber,
+    primaryRoleId: requiredNumber,
+    noExp: z.string().trim().max(20).nullable().default(null),
+    cdLaboral: z.string().trim().max(100).nullable().default(null),
+    areaClinicaId: optionalNumber,
+    cedulas: z
+      .array(cedulaSchema)
+      .max(3, { message: "Solo se permiten hasta 3 cédulas" })
+      .default([]),
+  })
+  .refine(
+    (data) => data.cedulas.filter((c) => c.esPrincipal).length <= 1,
+    { message: "Solo puede haber una cédula principal", path: ["cedulas"] },
+  );
 
 export type UserDetailsFormValues = z.infer<typeof userDetailsSchema>;
 export type CreateUserFormValues = z.infer<typeof createUserSchema>;

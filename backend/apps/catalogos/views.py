@@ -1342,6 +1342,18 @@ class CatAreaClinicaListCreateView(CatalogBaseListCreateView):
     write_serializer = CatAreaClinicaWriteSerializer
     error_codes = MappingProxyType({"exists": "CLINICAL_AREA_EXISTS"})
 
+    def get_queryset(self):
+        qs = CatAreaClinica.objects.all()
+        center_id = self.request.query_params.get("centerId")
+        if center_id:
+            area_ids = list(
+                CentroAreaClinica.objects.filter(center_id=center_id)
+                .values_list("area_clinica_id", flat=True)
+            )
+            print(f"[DEBUG] centerId={center_id!r}  area_ids={area_ids}")
+            qs = qs.filter(id__in=area_ids)
+        return qs
+
 
 class CatAreaClinicaDetailView(CatalogBaseDetailView):
     catalog = "areas_clinicas"

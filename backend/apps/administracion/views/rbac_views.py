@@ -1428,6 +1428,52 @@ class UsersListCreateView(APIView):
             usr_asignacion=actor,
         )
 
+        cedulas_data = request.data.get("cedulas") or []
+        if cedulas_data:
+            if len(cedulas_data) > 3:
+                return error_response(
+                    "CEDULAS_LIMIT_EXCEEDED",
+                    "Solo se permiten hasta 3 cédulas por usuario",
+                    status.HTTP_400_BAD_REQUEST,
+                    request_id=_request_id(request),
+                )
+            tipos_validos = {
+                DetUsuarioCedula.TIPO_PROFESIONAL,
+                DetUsuarioCedula.TIPO_ESPECIALIDAD,
+                DetUsuarioCedula.TIPO_SUBESPECIALIDAD,
+            }
+            for idx, cedula_item in enumerate(cedulas_data):
+                if not cedula_item.get("numero", "").strip():
+                    return error_response(
+                        "VALIDATION_ERROR",
+                        f"La cédula {idx + 1} debe tener un número válido",
+                        status.HTTP_400_BAD_REQUEST,
+                        request_id=_request_id(request),
+                    )
+                if cedula_item.get("tipo") not in tipos_validos:
+                    return error_response(
+                        "VALIDATION_ERROR",
+                        f"Tipo de cédula inválido en posición {idx + 1}",
+                        status.HTTP_400_BAD_REQUEST,
+                        request_id=_request_id(request),
+                    )
+            principal_count = sum(1 for c in cedulas_data if c.get("esPrincipal", False))
+            if principal_count > 1:
+                return error_response(
+                    "VALIDATION_ERROR",
+                    "Solo puede haber una cédula principal",
+                    status.HTTP_400_BAD_REQUEST,
+                    request_id=_request_id(request),
+                )
+            for idx, cedula_item in enumerate(cedulas_data):
+                DetUsuarioCedula.objects.create(
+                    id_usuario=user,
+                    numero=cedula_item["numero"].strip(),
+                    tipo=cedula_item.get("tipo", DetUsuarioCedula.TIPO_PROFESIONAL),
+                    es_principal=bool(cedula_item.get("esPrincipal", False)),
+                    orden=idx + 1,
+                )
+
         credentials_email_sent = send_user_credentials_email(
             recipient_email=user.correo,
             username=user.usuario,

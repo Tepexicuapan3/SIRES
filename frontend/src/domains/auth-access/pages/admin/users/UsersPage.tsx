@@ -74,7 +74,7 @@ export function UsersPage() {
       email: true,
       clinic: true,
       areaClinica: true,
-      cdLaboral: false,
+      cdLaboral: true,
       cedulas: true,
       primaryRole: true,
       isActive: true,
