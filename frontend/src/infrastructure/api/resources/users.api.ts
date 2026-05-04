@@ -31,6 +31,9 @@ import type {
   AddUserOverrideResponse,
   RemoveUserOverrideResponse,
   EmpleadoSermedResponse,
+  NotifyUsersRequest,
+  NotifyUsersResponse,
+  NotifyUsersPreviewResponse,
 } from "@api/types";
 
 export const usersAPI = {
@@ -133,6 +136,28 @@ export const usersAPI = {
     const response = await apiClient.get<EmpleadoSermedResponse>(
       `/users/empleados-sermed/${encodeURIComponent(noExp)}`,
     );
+    return response.data;
+  },
+
+  /**
+   * Vista previa: cuántos usuarios recibirían la notificación.
+   * @endpoint POST /api/v1/users/notify?preview=true
+   */
+  notifyPreview: async (data: NotifyUsersRequest): Promise<NotifyUsersPreviewResponse> => {
+    const response = await apiClient.post<NotifyUsersPreviewResponse>(
+      "/users/notify?preview=true",
+      data,
+    );
+    return response.data;
+  },
+
+  /**
+   * Enviar notificación masiva (respuesta 202, envío en background).
+   * @endpoint POST /api/v1/users/notify
+   * @permission admin:gestion:usuarios:update
+   */
+  notify: async (data: NotifyUsersRequest): Promise<NotifyUsersResponse> => {
+    const response = await apiClient.post<NotifyUsersResponse>("/users/notify", data);
     return response.data;
   },
 

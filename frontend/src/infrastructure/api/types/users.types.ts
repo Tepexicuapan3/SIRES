@@ -253,6 +253,27 @@ export interface UsersListParams extends PaginationParams {
 export type UsersListResponse = ListResponse<UserListItem>;
 
 // =============================================================================
+// NOTIFICACIONES
+// =============================================================================
+
+export interface NotifyUsersRequest {
+  subject: string;
+  message: string;
+  category?: string;
+  cdLaboral?: string;
+  roleId?: number | null;
+  clinicId?: number | null;
+}
+
+export interface NotifyUsersResponse {
+  queued: number;
+}
+
+export interface NotifyUsersPreviewResponse {
+  count: number;
+}
+
+// =============================================================================
 // DETALLE
 // =============================================================================
 

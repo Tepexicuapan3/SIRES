@@ -1,7 +1,8 @@
 import logging
+import threading
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -147,6 +148,74 @@ def send_user_credentials_email(
         return False
 
     return True
+
+
+def send_notification_email_batch(recipients, subject, message, category="Notificación SISEM"):
+    """
+    Envía una notificación masiva en un thread de background.
+    recipients: [{"email": str, "name": str}, ...]
+    Usa una sola conexión SMTP para todos los mensajes.
+    """
+    if not recipients:
+        return 0
+
+    company_name = getattr(settings, "EMAIL_COMPANY_NAME", "SISEM STC Metro")
+    logo_url = getattr(settings, "EMAIL_LOGO_URL", "https://i.ibb.co/zhdkzrZp/SISEM.webp")
+    metro_logo_url = getattr(settings, "EMAIL_METRO_LOGO_URL", "https://i.ibb.co/zhdc3v4c/metro-logo-borde.jpg")
+    support_email = _setting_value(
+        "SISEM_SUPPORT_EMAIL",
+        settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
+        primary_default=settings.DEFAULT_FROM_EMAIL or "soporte@sisem.local",
+    )
+    current_year = timezone.now().year
+
+    def _send():
+        sent = 0
+        failed = 0
+        try:
+            conn = get_connection()
+            conn.open()
+            for recipient in recipients:
+                try:
+                    html = render_to_string(
+                        "authentication/notification_email.html",
+                        {
+                            "user_name": recipient["name"],
+                            "subject": subject,
+                            "message": message,
+                            "category": category,
+                            "company_name": company_name,
+                            "logo_url": logo_url,
+                            "metro_logo_url": metro_logo_url,
+                            "support_email": support_email,
+                            "current_year": current_year,
+                        },
+                    )
+                    email = EmailMultiAlternatives(
+                        subject=subject,
+                        body=message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        to=[recipient["email"]],
+                        connection=conn,
+                    )
+                    email.attach_alternative(html, "text/html")
+                    email.send()
+                    sent += 1
+                except Exception:
+                    logger.exception("Fallo al enviar notificación a %s", recipient.get("email"))
+                    failed += 1
+        except Exception:
+            logger.exception("Fallo al abrir conexión SMTP para notificación masiva")
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        logger.info("Notificación masiva completada: %d enviados, %d fallidos", sent, failed)
+
+    thread = threading.Thread(target=_send, daemon=True)
+    thread.start()
+    return len(recipients)
 
 
 def _smtp_is_configured():

@@ -16,6 +16,7 @@ from .views.rbac_views import (
     UserRoleRevokeView,
     UserRolesView,
     UsersListCreateView,
+    UsersNotifyView,
 )
 
 from .views.expediente_view import ExpedienteView, ActualizarExpedienteView
@@ -43,4 +44,5 @@ urlpatterns = [
     path('expedientes/', ExpedienteView.as_view(), name='buscar'),
     path('expedientes/actualizar/', ActualizarExpedienteView.as_view(), name='actualizar'),
     path('users/empleados-sermed/<str:no_exp>', EmpleadoSermedLookupView.as_view(), name='rbac-empleado-sermed-lookup'),
+    path("users/notify", UsersNotifyView.as_view(), name="rbac-users-notify"),
 ]

@@ -28,7 +28,7 @@ from apps.authentication.services.auth_revision import (
     touch_users_auth_revision,
 )
 from apps.authentication.services.csrf_service import validate_csrf
-from apps.authentication.services.email_service import send_user_credentials_email
+from apps.authentication.services.email_service import send_user_credentials_email, send_notification_email_batch
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
@@ -2294,3 +2294,95 @@ class EmpleadoSermedLookupView(APIView):
             "cdClinica": row[5] or "",
         }
         return Response({"empleado": payload}, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Notificaciones masivas a usuarios
+# ---------------------------------------------------------------------------
+
+class UsersNotifyView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    @transaction.atomic
+    def post(self, request):
+        actor, auth_error = _authorize(
+            request,
+            "admin:gestion:usuarios:update",
+            require_csrf=True,
+        )
+        if auth_error:
+            return auth_error
+
+        subject = (request.data.get("subject") or "").strip()
+        message = (request.data.get("message") or "").strip()
+        category = (request.data.get("category") or "Notificación SISEM").strip()
+        preview = request.query_params.get("preview") == "true"
+
+        if not subject:
+            return error_response(
+                "VALIDATION_ERROR",
+                "El asunto es requerido.",
+                status.HTTP_400_BAD_REQUEST,
+                request_id=_request_id(request),
+            )
+        if not message:
+            return error_response(
+                "VALIDATION_ERROR",
+                "El mensaje es requerido.",
+                status.HTTP_400_BAD_REQUEST,
+                request_id=_request_id(request),
+            )
+
+        qs = SyUsuario.objects.select_related("detalle").filter(est_activo=True)
+
+        cd_laboral = (request.data.get("cdLaboral") or "").strip()
+        if cd_laboral:
+            qs = qs.filter(detalle__cd_laboral__icontains=cd_laboral)
+
+        role_id = request.data.get("roleId")
+        if role_id:
+            user_ids_with_role = RelUsuarioRol.objects.filter(
+                id_rol_id=role_id,
+                fch_baja__isnull=True,
+            ).values_list("id_usuario_id", flat=True)
+            qs = qs.filter(id_usuario__in=user_ids_with_role)
+
+        clinic_id = request.data.get("clinicId")
+        if clinic_id:
+            qs = qs.filter(detalle__id_centro_atencion_id=clinic_id)
+
+        recipients = [
+            {
+                "email": u.correo,
+                "name": getattr(u.detalle, "nombre_completo", None) or u.usuario,
+            }
+            for u in qs
+            if u.correo
+        ]
+
+        if not recipients:
+            return error_response(
+                "NO_RECIPIENTS",
+                "No hay usuarios activos que coincidan con los filtros seleccionados.",
+                status.HTTP_400_BAD_REQUEST,
+                request_id=_request_id(request),
+            )
+
+        if preview:
+            return Response({"count": len(recipients)}, status=status.HTTP_200_OK)
+
+        queued = send_notification_email_batch(
+            recipients=recipients,
+            subject=subject,
+            message=message,
+            category=category,
+        )
+        _audit(
+            request,
+            "RBAC_USER_NOTIFY",
+            "user",
+            result="SUCCESS",
+            after={"queued": queued, "subject": subject, "category": category},
+        )
+        return Response({"queued": queued}, status=status.HTTP_202_ACCEPTED)

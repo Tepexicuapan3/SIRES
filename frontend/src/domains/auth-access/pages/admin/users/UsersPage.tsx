@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Plus, RotateCcw, ShieldUser } from "lucide-react";
+import { Download, Mail, Plus, RotateCcw, ShieldUser } from "lucide-react";
 import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useDebounce } from "@shared/hooks/useDebounce";
+import { Button } from "@shared/ui/button";
 import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
   TableColumnVisibility,
@@ -30,6 +31,7 @@ import { useEscuelasList } from "@features/admin/modules/catalogos/escuelas/quer
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import { UserDetailsDialog } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsDialog";
 import { UserCreateDialog } from "@/domains/auth-access/components/admin/rbac/users/UserCreateDialog";
+import { UserNotifyDialog } from "@/domains/auth-access/components/admin/rbac/users/UserNotifyDialog";
 import {
   buildUsersTableColumns,
   buildUsersVisibilityOptions,
@@ -85,6 +87,7 @@ export function UsersPage() {
       actions: true,
     });
   const [createOpen, setCreateOpen] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
   const {
     open: detailsOpen,
     selectedItem: selectedUser,
@@ -398,6 +401,17 @@ export function UsersPage() {
               onVisibilityChange={setColumnVisibility}
             />
             <TableOptionsMenu options={tableOptions} />
+            {canUpdateUser ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2"
+                onClick={() => setNotifyOpen(true)}
+              >
+                <Mail className="size-4" />
+                Notificar
+              </Button>
+            ) : null}
             {canCreateUser ? (
               <TablePrimaryAction
                 permission="admin:gestion:usuarios:create"
@@ -477,6 +491,12 @@ export function UsersPage() {
         areaClinicaOptions={areaClinicaOptions}
         escolaridadOptions={escolaridadOptions}
         escuelaOptions={escuelaOptions}
+      />
+      <UserNotifyDialog
+        open={notifyOpen}
+        onOpenChange={setNotifyOpen}
+        roleOptions={roleOptions}
+        clinicOptions={clinicOptions}
       />
     </div>
   );
