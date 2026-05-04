@@ -140,6 +140,19 @@ export const usersAPI = {
   },
 
   /**
+   * Exportar usuarios a Excel con los filtros actuales.
+   * @endpoint GET /api/v1/users/export
+   * @permission admin:gestion:usuarios:read
+   */
+  export: async (params?: UsersListParams): Promise<Blob> => {
+    const response = await apiClient.get("/users/export", {
+      params,
+      responseType: "blob",
+    });
+    return response.data as Blob;
+  },
+
+  /**
    * Vista previa: cuántos usuarios recibirían la notificación.
    * @endpoint POST /api/v1/users/notify?preview=true
    */

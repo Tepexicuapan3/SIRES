@@ -150,7 +150,7 @@ Cuando el PR toca contratos/API o auth-access, sumar:
 ## Request-Changes Comment Template (organizado)
 
 ```markdown
-¡Hola {autor}! Gracias por el PR 🙌
+¡Hola {autor}! Gracias por el PR 
 
 ## Resumen
 Buen avance en {área}. Antes de mergear, hay puntos bloqueantes de governance/compliance que debemos corregir.

@@ -2386,3 +2386,179 @@ class UsersNotifyView(APIView):
             after={"queued": queued, "subject": subject, "category": category},
         )
         return Response({"queued": queued}, status=status.HTTP_202_ACCEPTED)
+
+
+# ---------------------------------------------------------------------------
+# Exportación Excel de usuarios
+# ---------------------------------------------------------------------------
+
+class UserExportView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        actor, auth_error = _authorize(request, "admin:gestion:usuarios:read")
+        if auth_error:
+            return auth_error
+
+        import io
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        from django.http import HttpResponse
+
+        # ── Mismos filtros que UsersListCreateView ──────────────────────────
+        qs = SyUsuario.objects.select_related(
+            "detalle",
+            "detalle__id_centro_atencion",
+            "detalle__id_area_clinica",
+            "detalle__id_escolaridad",
+            "detalle__id_escuela",
+        ).prefetch_related("cedulas").all()
+
+        search = request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                Q(usuario__icontains=search)
+                | Q(correo__icontains=search)
+                | Q(detalle__nombre_completo__icontains=search)
+            )
+
+        is_active_raw = _parse_bool(request.query_params.get("isActive"))
+        if is_active_raw not in (None, "invalid"):
+            qs = qs.filter(est_activo=is_active_raw)
+
+        role_id = request.query_params.get("roleId")
+        if role_id:
+            qs = qs.filter(
+                relusuariorol__id_rol_id=role_id,
+                relusuariorol__fch_baja__isnull=True,
+            )
+
+        clinic_id = request.query_params.get("clinicId")
+        if clinic_id:
+            qs = qs.filter(detalle__id_centro_atencion_id=clinic_id)
+
+        status_filter = request.query_params.get("status")
+        if status_filter == "active":
+            qs = qs.filter(est_activo=True)
+        elif status_filter == "inactive":
+            qs = qs.filter(est_activo=False)
+        elif status_filter == "pending":
+            qs = qs.filter(Q(terminos_acept=False) | Q(cambiar_clave=True))
+
+        users = list(qs.order_by("detalle__nombre_completo", "usuario").distinct())
+
+        # ── Libro Excel ─────────────────────────────────────────────────────
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Usuarios"
+
+        BRAND = "D94300"
+        HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+        HEADER_FILL = PatternFill("solid", fgColor=BRAND)
+        HEADER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        CELL_ALIGN = Alignment(vertical="center")
+        BORDER_SIDE = Side(style="thin", color="D7DEE8")
+        THIN_BORDER = Border(
+            left=BORDER_SIDE, right=BORDER_SIDE,
+            top=BORDER_SIDE, bottom=BORDER_SIDE,
+        )
+
+        HEADERS = [
+            "Usuario", "Nombre", "Ap. Paterno", "Ap. Materno",
+            "Nombre completo", "Correo", "Centro de atención",
+            "Área clínica", "Clave laboral", "Escolaridad",
+            "Escuela (siglas)", "Escuela (nombre)",
+            "Cédula 1", "Cédula 2", "Cédula 3",
+            "Rol primario", "Estado",
+        ]
+
+        # Encabezados
+        for col_idx, header in enumerate(HEADERS, start=1):
+            cell = ws.cell(row=1, column=col_idx, value=header)
+            cell.font = HEADER_FONT
+            cell.fill = HEADER_FILL
+            cell.alignment = HEADER_ALIGN
+            cell.border = THIN_BORDER
+
+        ws.row_dimensions[1].height = 30
+        ws.freeze_panes = "A2"
+
+        # Filas de datos
+        FILL_ODD = PatternFill("solid", fgColor="F8FAFC")
+
+        for row_idx, user in enumerate(users, start=2):
+            detail = getattr(user, "detalle", None)
+            roles = _active_user_role_relations(user)
+            primary = next((r for r in roles if r.is_primary), roles[0] if roles else None)
+            cedulas = list(user.cedulas.all().order_by("orden"))
+
+            if user.est_activo and getattr(user, "terminos_acept", True) and not getattr(user, "cambiar_clave", False):
+                est_label = "Activo"
+            elif not user.est_activo:
+                est_label = "Inactivo"
+            else:
+                est_label = "Pendiente"
+
+            def _cedula_str(idx):
+                if idx < len(cedulas):
+                    c = cedulas[idx]
+                    return f"{c.numero} ({c.tipo})"
+                return ""
+
+            row_data = [
+                user.usuario,
+                detail.nombre if detail else "",
+                detail.paterno if detail else "",
+                detail.materno if detail else "",
+                detail.nombre_completo if detail else "",
+                user.correo,
+                detail.id_centro_atencion.name if detail and detail.id_centro_atencion else "",
+                detail.id_area_clinica.name if detail and detail.id_area_clinica else "",
+                detail.cd_laboral if detail else "",
+                detail.id_escolaridad.name if detail and detail.id_escolaridad else "",
+                detail.id_escuela.code if detail and detail.id_escuela else "",
+                detail.id_escuela.name if detail and detail.id_escuela else "",
+                _cedula_str(0),
+                _cedula_str(1),
+                _cedula_str(2),
+                primary.id_rol.rol if primary else "",
+                est_label,
+            ]
+
+            fill = FILL_ODD if row_idx % 2 == 0 else None
+
+            for col_idx, value in enumerate(row_data, start=1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                cell.alignment = CELL_ALIGN
+                cell.border = THIN_BORDER
+                if fill:
+                    cell.fill = fill
+
+        # Ancho automático de columnas
+        COL_MIN_WIDTH = 10
+        COL_MAX_WIDTH = 40
+        for col_idx in range(1, len(HEADERS) + 1):
+            col_letter = get_column_letter(col_idx)
+            max_len = len(HEADERS[col_idx - 1])
+            for row_idx in range(2, len(users) + 2):
+                cell_val = ws.cell(row=row_idx, column=col_idx).value
+                if cell_val:
+                    max_len = max(max_len, len(str(cell_val)))
+            ws.column_dimensions[col_letter].width = min(max(max_len + 2, COL_MIN_WIDTH), COL_MAX_WIDTH)
+
+        # Respuesta HTTP
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        from django.utils import timezone as tz
+        filename = f"usuarios_{tz.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["X-Total-Users"] = str(len(users))
+        return response

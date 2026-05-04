@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Mail, Plus, RotateCcw, ShieldUser } from "lucide-react";
+import { FileDown, Mail, Plus, RotateCcw, ShieldUser } from "lucide-react";
 import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
@@ -21,6 +21,7 @@ import { TablePrimaryAction } from "@features/admin/shared/components/TablePrima
 import { TableSearch } from "@features/admin/shared/components/TableSearch";
 import { AdminPageIntro } from "@features/admin/shared/components/AdminPageIntro";
 import { useUsersList } from "@/domains/auth-access/hooks/rbac/users/useUsersList";
+import { useExportUsers } from "@/domains/auth-access/hooks/rbac/users/useExportUsers";
 import { useActivateUser } from "@/domains/auth-access/hooks/rbac/users/useActivateUser";
 import { useDeactivateUser } from "@/domains/auth-access/hooks/rbac/users/useDeactivateUser";
 import { useRolesList } from "@/domains/auth-access/hooks/rbac/roles/useRolesList";
@@ -98,6 +99,7 @@ export function UsersPage() {
   const debouncedSearch = useDebounce(search, 400);
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
+  const { exportUsers, isExporting } = useExportUsers();
   const { resolveCapability } = createCapabilityResolver({
     hasCapability,
     isCapabilitiesLoading,
@@ -289,9 +291,20 @@ export function UsersPage() {
     },
     {
       id: "export-users",
-      label: "Exportar",
-      icon: Download,
+      label: isExporting ? "Exportando..." : "Exportar Excel",
+      icon: FileDown,
+      isLoading: isExporting,
       loadingAnimation: "pulse",
+      disabled: isExporting || !canReadUser,
+      onSelect: () => {
+        if (isExporting || !canReadUser) return;
+        void exportUsers({
+          search: debouncedSearch || undefined,
+          status: statusFilter === USER_STATUS_FILTER.ALL ? undefined : statusFilter,
+          roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
+          clinicId: clinicFilter === CLINIC_FILTER_ALL ? undefined : Number(clinicFilter),
+        });
+      },
     },
   ];
 

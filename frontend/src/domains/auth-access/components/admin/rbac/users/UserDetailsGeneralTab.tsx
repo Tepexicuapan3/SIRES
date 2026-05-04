@@ -208,6 +208,25 @@ export function UserDetailsGeneralTab({
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="cdLaboral"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Clave laboral</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                    placeholder="Ej. HON, BASE..."
+                    disabled={!isEditable}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* Centro + Estado + Área clínica */}
