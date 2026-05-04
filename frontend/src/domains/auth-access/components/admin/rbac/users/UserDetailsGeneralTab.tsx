@@ -22,6 +22,7 @@ import type { CentroAtencionListItem, UserDetail } from "@api/types";
 import type { UserDetailsFormValues } from "@/domains/auth-access/types/rbac/users.schemas";
 import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
 import { AreaClinicaCombobox } from "@/domains/auth-access/components/admin/rbac/users/AreaClinicaCombobox";
+import { CatalogCombobox, type CatalogOption } from "@/domains/auth-access/components/admin/rbac/users/CatalogCombobox";
 import { CedulasSection } from "@/domains/auth-access/components/admin/rbac/users/CedulasSection";
 import { useAreaClinicasByClinic } from "@/domains/auth-access/hooks/rbac/users/useAreaClinicasByClinic";
 
@@ -35,6 +36,8 @@ interface UserDetailsGeneralTabProps {
   formId: string;
   clinicOptions: CentroAtencionListItem[];
   areaClinicaOptions?: AreaClinicaOption[];
+  escolaridadOptions?: CatalogOption[];
+  escuelaOptions?: CatalogOption[];
   isClinicsCatalogLoading?: boolean;
   userDetail: UserDetail;
   accountIsActive: boolean;
@@ -61,6 +64,8 @@ export function UserDetailsGeneralTab({
   formId,
   clinicOptions,
   areaClinicaOptions = [],
+  escolaridadOptions = [],
+  escuelaOptions = [],
   isClinicsCatalogLoading = false,
   userDetail,
   accountIsActive,
@@ -88,6 +93,19 @@ export function UserDetailsGeneralTab({
   const allAreaOptions = [...areaClinicaOptions];
   if (currentArea && !allAreaOptions.some((a) => a.id === currentArea.id)) {
     allAreaOptions.unshift({ id: currentArea.id, name: currentArea.name });
+  }
+
+  // Asegurar que los valores guardados (aunque inactivos) estén en las opciones
+  const allEscolaridadOptions = [...escolaridadOptions];
+  const currentEscolaridad = userDetail.escolaridad;
+  if (currentEscolaridad && !allEscolaridadOptions.some((e) => e.id === currentEscolaridad.id)) {
+    allEscolaridadOptions.unshift({ id: currentEscolaridad.id, name: currentEscolaridad.name, isActive: currentEscolaridad.isActive });
+  }
+
+  const allEscuelaOptions = [...escuelaOptions];
+  const currentEscuela = userDetail.escuela;
+  if (currentEscuela && !allEscuelaOptions.some((e) => e.id === currentEscuela.id)) {
+    allEscuelaOptions.unshift({ id: currentEscuela.id, name: currentEscuela.name, code: currentEscuela.code, isActive: currentEscuela.isActive });
   }
 
   const watchedClinicId = form.watch("clinicId");
@@ -290,6 +308,53 @@ export function UserDetailsGeneralTab({
                     El centro seleccionado no tiene áreas clínicas asignadas.
                   </p>
                 ) : null}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Escolaridad + Escuela */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="escolaridadId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Escolaridad</FormLabel>
+                <FormControl>
+                  <CatalogCombobox
+                    value={field.value ?? null}
+                    onChange={field.onChange}
+                    options={allEscolaridadOptions}
+                    disabled={!isEditable}
+                    placeholder="Selecciona escolaridad"
+                    emptyLabel="Sin escolaridad"
+                    searchPlaceholder="Buscar escolaridad..."
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="escuelaId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Escuela</FormLabel>
+                <FormControl>
+                  <CatalogCombobox
+                    value={field.value ?? null}
+                    onChange={field.onChange}
+                    options={allEscuelaOptions}
+                    disabled={!isEditable}
+                    placeholder="Selecciona escuela"
+                    emptyLabel="Sin escuela"
+                    showCode
+                    searchPlaceholder="Buscar por siglas o nombre..."
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

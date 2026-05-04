@@ -11,6 +11,19 @@ import type { PermissionEffect } from "@api/types/permissions.types";
 import type { CentroAtencionRef } from "@api/types/catalogos/centros-atencion.types";
 import type { AreaClinicaRef } from "@api/types/catalogos/areas-clinicas.types";
 
+export interface EscolaridadRef {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
+
+export interface EscuelaRef {
+  id: number;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
+
 // =============================================================================
 // OBJETOS ANIDADOS (Relaciones)
 // =============================================================================
@@ -75,6 +88,8 @@ export interface UserListItem {
   clinic: CentroAtencionRef | null;
   areaClinica: AreaClinicaRef | null;
   cdLaboral: string | null;
+  escolaridad: EscolaridadRef | null;
+  escuela: EscuelaRef | null;
   cedulas: CedulaItem[];
   primaryRole: string;
   isActive: boolean;
@@ -163,6 +178,8 @@ export interface CreateUserRequest {
   noExp?: string | null;
   cdLaboral?: string | null;
   areaClinicaId?: number | null;
+  escolaridadId?: number | null;
+  escuelaId?: number | null;
   cedulas?: Omit<CedulaItem, "orden">[];
 }
 
@@ -179,6 +196,8 @@ export interface UpdateUserRequest {
   noExp?: string | null;
   cdLaboral?: string | null;
   areaClinicaId?: number | null;
+  escolaridadId?: number | null;
+  escuelaId?: number | null;
   cedulas?: Omit<CedulaItem, "orden">[];
 }
 

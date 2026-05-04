@@ -43,6 +43,7 @@ import { getUserErrorMessage } from "@/domains/auth-access/adapters/rbac/users/u
 import { UserDialogHeader } from "@/domains/auth-access/components/admin/rbac/users/UserDialogHeader";
 import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
 import { AreaClinicaCombobox } from "@/domains/auth-access/components/admin/rbac/users/AreaClinicaCombobox";
+import { CatalogCombobox, type CatalogOption } from "@/domains/auth-access/components/admin/rbac/users/CatalogCombobox";
 import { CedulasSection } from "@/domains/auth-access/components/admin/rbac/users/CedulasSection";
 
 interface AreaClinicaOption {
@@ -56,6 +57,8 @@ interface UserCreateDialogProps {
   roleOptions: RoleListItem[];
   clinicOptions: CentroAtencionListItem[];
   areaClinicaOptions?: AreaClinicaOption[];
+  escolaridadOptions?: CatalogOption[];
+  escuelaOptions?: CatalogOption[];
 }
 
 const DEFAULT_VALUES: CreateUserFormValues = {
@@ -69,6 +72,8 @@ const DEFAULT_VALUES: CreateUserFormValues = {
   noExp: null,
   cdLaboral: null,
   areaClinicaId: null,
+  escolaridadId: null,
+  escuelaId: null,
   cedulas: [],
 };
 
@@ -80,6 +85,8 @@ export function UserCreateDialog({
   roleOptions,
   clinicOptions,
   areaClinicaOptions = [],
+  escolaridadOptions = [],
+  escuelaOptions = [],
 }: UserCreateDialogProps) {
   const createUser = useCreateUser();
 
@@ -146,6 +153,8 @@ export function UserCreateDialog({
           noExp: values.noExp ?? null,
           cdLaboral: values.cdLaboral ?? null,
           areaClinicaId: values.areaClinicaId ?? null,
+          escolaridadId: values.escolaridadId ?? null,
+          escuelaId: values.escuelaId ?? null,
           cedulas: values.cedulas.length > 0 ? values.cedulas : undefined,
         },
       });
@@ -441,6 +450,51 @@ export function UserCreateDialog({
                                   ))}
                                 </SelectContent>
                               </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Escolaridad + Escuela */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="escolaridadId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Escolaridad</FormLabel>
+                              <FormControl>
+                                <CatalogCombobox
+                                  value={field.value ?? null}
+                                  onChange={field.onChange}
+                                  options={escolaridadOptions}
+                                  placeholder="Selecciona escolaridad"
+                                  emptyLabel="Sin escolaridad"
+                                  searchPlaceholder="Buscar escolaridad..."
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="escuelaId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Escuela</FormLabel>
+                              <FormControl>
+                                <CatalogCombobox
+                                  value={field.value ?? null}
+                                  onChange={field.onChange}
+                                  options={escuelaOptions}
+                                  placeholder="Selecciona escuela"
+                                  emptyLabel="Sin escuela"
+                                  showCode
+                                  searchPlaceholder="Buscar por siglas o nombre..."
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}

@@ -75,6 +75,13 @@ interface AreaClinicaOption {
   name: string;
 }
 
+interface CatalogOption {
+  id: number;
+  name: string;
+  code?: string;
+  isActive: boolean;
+}
+
 interface UserDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,6 +90,8 @@ interface UserDetailsDialogProps {
   roleOptions: RoleListItem[];
   clinicOptions: CentroAtencionListItem[];
   areaClinicaOptions?: AreaClinicaOption[];
+  escolaridadOptions?: CatalogOption[];
+  escuelaOptions?: CatalogOption[];
   isClinicsCatalogLoading?: boolean;
   canEdit: boolean;
   canReadRolesCatalog?: boolean;
@@ -99,6 +108,8 @@ const DEFAULT_FORM_VALUES: UserDetailsFormValues = {
   noExp: null,
   cdLaboral: null,
   areaClinicaId: null,
+  escolaridadId: null,
+  escuelaId: null,
   cedulas: [],
 };
 
@@ -117,6 +128,8 @@ export function UserDetailsDialog({
   roleOptions,
   clinicOptions,
   areaClinicaOptions = [],
+  escolaridadOptions = [],
+  escuelaOptions = [],
   isClinicsCatalogLoading = false,
   canEdit,
   canReadRolesCatalog = true,
@@ -604,6 +617,8 @@ export function UserDetailsDialog({
                 formId={FORM_ID}
                 clinicOptions={clinicOptions}
                 areaClinicaOptions={areaClinicaOptions}
+                escolaridadOptions={escolaridadOptions}
+                escuelaOptions={escuelaOptions}
                 isClinicsCatalogLoading={isClinicsCatalogLoading}
                 userDetail={userDetail}
                 accountIsActive={workingAccountIsActive}

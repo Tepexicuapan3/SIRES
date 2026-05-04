@@ -95,6 +95,20 @@ class DetUsuario(models.Model):
         blank=True,
         db_column="cd_laboral",
     )
+    id_escolaridad = models.ForeignKey(
+        "catalogos.Escolaridad",
+        db_column="id_escolaridad",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    id_escuela = models.ForeignKey(
+        "catalogos.Escuelas",
+        db_column="id_escuela",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
 
     class Meta:
         db_table = "det_usuarios"

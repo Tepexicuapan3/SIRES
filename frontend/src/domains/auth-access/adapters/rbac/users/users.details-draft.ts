@@ -19,6 +19,8 @@ interface UserDetailFormSource {
   noExp?: string | null;
   cdLaboral?: string | null;
   areaClinica?: { id: number } | null;
+  escolaridad?: { id: number } | null;
+  escuela?: { id: number } | null;
   cedulas?: CedulaItem[];
 }
 
@@ -56,6 +58,14 @@ export const mapUserDetailToFormValues = (
   areaClinicaId:
     typeof detail?.areaClinica?.id === "number" && detail.areaClinica.id > 0
       ? detail.areaClinica.id
+      : null,
+  escolaridadId:
+    typeof detail?.escolaridad?.id === "number" && detail.escolaridad.id > 0
+      ? detail.escolaridad.id
+      : null,
+  escuelaId:
+    typeof detail?.escuela?.id === "number" && detail.escuela.id > 0
+      ? detail.escuela.id
       : null,
   cedulas: (detail?.cedulas ?? []).map(
     (c): CedulaFormItem => ({
@@ -133,6 +143,20 @@ export const buildUserProfilePayload = (
     normalizeDraftClinicId(baseline.areaClinicaId)
   ) {
     payload.areaClinicaId = draft.areaClinicaId;
+  }
+
+  if (
+    normalizeDraftClinicId(draft.escolaridadId) !==
+    normalizeDraftClinicId(baseline.escolaridadId)
+  ) {
+    payload.escolaridadId = draft.escolaridadId;
+  }
+
+  if (
+    normalizeDraftClinicId(draft.escuelaId) !==
+    normalizeDraftClinicId(baseline.escuelaId)
+  ) {
+    payload.escuelaId = draft.escuelaId;
   }
 
   if (normalizeCedulas(draft.cedulas) !== normalizeCedulas(baseline.cedulas)) {

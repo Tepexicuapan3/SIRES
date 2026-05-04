@@ -45,7 +45,7 @@ export const buildUsersTableColumns = ({
     {
       key: "user",
       header: "Usuario",
-      className: "w-[260px]",
+      className: "w-[210px]",
       skeleton: (
         <div className="flex items-center gap-3">
           <Skeleton className="size-8 rounded-full" />
@@ -86,22 +86,22 @@ export const buildUsersTableColumns = ({
       key: "email",
       header: "Correo",
       accessorKey: "email",
-      className: "w-[240px]",
-      cellContentClassName: "max-w-[220px]",
+      className: "w-[190px]",
+      cellContentClassName: "max-w-[170px]",
     },
     {
       key: "clinic",
       header: "Centro",
       accessorKey: "clinic",
-      className: "w-[180px]",
-      cellContentClassName: "max-w-[180px]",
+      className: "w-[150px]",
+      cellContentClassName: "max-w-[150px]",
       render: (row) => row.clinic?.name ?? "Sin centro",
     },
     {
       key: "areaClinica",
       header: "Área clínica",
-      className: "w-[160px]",
-      cellContentClassName: "max-w-[160px]",
+      className: "w-[130px]",
+      cellContentClassName: "max-w-[130px]",
       render: (row) => row.areaClinica?.name ?? (
         <span className="text-txt-muted">—</span>
       ),
@@ -109,9 +109,31 @@ export const buildUsersTableColumns = ({
     {
       key: "cdLaboral",
       header: "Clave lab.",
-      className: "w-[110px]",
+      className: "w-[95px]",
       render: (row) => row.cdLaboral ? (
         <span className="font-mono text-xs">{row.cdLaboral}</span>
+      ) : (
+        <span className="text-txt-muted">—</span>
+      ),
+    },
+    {
+      key: "escolaridad",
+      header: "Escolaridad",
+      className: "w-[120px]",
+      cellContentClassName: "max-w-[120px]",
+      render: (row) => row.escolaridad?.name ?? (
+        <span className="text-txt-muted">—</span>
+      ),
+    },
+    {
+      key: "escuela",
+      header: "Escuela",
+      className: "w-[150px]",
+      cellContentClassName: "max-w-[150px]",
+      render: (row) => row.escuela ? (
+        <span className="block truncate" title={row.escuela.code ? `${row.escuela.code} — ${row.escuela.name}` : row.escuela.name}>
+          {row.escuela.code ?? row.escuela.name}
+        </span>
       ) : (
         <span className="text-txt-muted">—</span>
       ),
@@ -120,7 +142,7 @@ export const buildUsersTableColumns = ({
       key: "cedulas",
       header: "Cédulas",
       align: "center" as const,
-      className: "w-[90px]",
+      className: "w-[80px]",
       render: (row) => {
         const count = row.cedulas?.length ?? 0;
         if (count === 0) return <span className="text-txt-muted">—</span>;
@@ -136,7 +158,7 @@ export const buildUsersTableColumns = ({
       header: "Rol",
       align: "center",
       accessorKey: "primaryRole",
-      className: "w-[160px]",
+      className: "w-[130px]",
       render: (row) => {
         const roleLabel = row.primaryRole?.trim() || "Sin rol";
         const roleVariant = getRoleBadgeVariant(roleLabel);
@@ -239,6 +261,8 @@ export const buildUsersVisibilityOptions = (
     { key: "clinic", label: "Centro" },
     { key: "areaClinica", label: "Área clínica" },
     { key: "cdLaboral", label: "Clave lab." },
+    { key: "escolaridad", label: "Escolaridad" },
+    { key: "escuela", label: "Escuela" },
     { key: "cedulas", label: "Cédulas" },
     { key: "primaryRole", label: "Rol" },
     { key: "isActive", label: "Estado" },

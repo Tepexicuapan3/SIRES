@@ -21,6 +21,8 @@ const mapDetailToListPatch = (user: UserDetail): Partial<UserListItem> => ({
   clinic: user.clinic,
   areaClinica: user.areaClinica,
   cdLaboral: user.cdLaboral,
+  escolaridad: user.escolaridad,
+  escuela: user.escuela,
   cedulas: user.cedulas,
   primaryRole: user.primaryRole,
   isActive: user.isActive,

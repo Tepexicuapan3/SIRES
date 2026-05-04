@@ -74,6 +74,8 @@ export const userDetailsSchema = z
     noExp: z.string().trim().max(20).nullable().default(null),
     cdLaboral: z.string().trim().max(100).nullable().default(null),
     areaClinicaId: optionalNumber,
+    escolaridadId: optionalNumber,
+    escuelaId: optionalNumber,
     cedulas: z
       .array(cedulaSchema)
       .max(3, { message: "Solo se permiten hasta 3 cédulas" })
@@ -100,6 +102,8 @@ export const createUserSchema = z
     noExp: z.string().trim().max(20).nullable().default(null),
     cdLaboral: z.string().trim().max(100).nullable().default(null),
     areaClinicaId: optionalNumber,
+    escolaridadId: optionalNumber,
+    escuelaId: optionalNumber,
     cedulas: z
       .array(cedulaSchema)
       .max(3, { message: "Solo se permiten hasta 3 cédulas" })

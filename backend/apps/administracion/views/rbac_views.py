@@ -364,6 +364,8 @@ def _serialize_user_list_item(user):
         full_name = detail.nombre_completo
 
     area = getattr(detail, "id_area_clinica", None) if detail else None
+    escolaridad = getattr(detail, "id_escolaridad", None) if detail else None
+    escuela = getattr(detail, "id_escuela", None) if detail else None
     cedulas = list(user.cedulas.all().order_by("orden")) if hasattr(user, "cedulas") else []
 
     return {
@@ -375,6 +377,8 @@ def _serialize_user_list_item(user):
         "clinic": _clinic_ref(detail),
         "areaClinica": {"id": area.id, "name": area.name} if area else None,
         "cdLaboral": detail.cd_laboral if detail else None,
+        "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
+        "escuela": {"id": escuela.id, "name": escuela.name, "code": escuela.code, "isActive": escuela.is_active} if escuela else None,
         "cedulas": [_serialize_cedula(c) for c in cedulas],
         "primaryRole": primary.id_rol.rol if primary else "",
         "isActive": bool(user.est_activo),
@@ -398,6 +402,8 @@ def _serialize_user_detail(user):
     base = _serialize_user_list_item(user)
 
     area = getattr(detail, "id_area_clinica", None) if detail else None
+    escolaridad = getattr(detail, "id_escolaridad", None) if detail else None
+    escuela = getattr(detail, "id_escuela", None) if detail else None
 
     cedulas = [
         _serialize_cedula(c)
@@ -412,6 +418,8 @@ def _serialize_user_detail(user):
         "noExp": detail.no_exp if detail else None,
         "cdLaboral": detail.cd_laboral if detail else None,
         "areaClinica": {"id": area.id, "name": area.name} if area else None,
+        "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
+        "escuela": {"id": escuela.id, "name": escuela.name, "code": escuela.code, "isActive": escuela.is_active} if escuela else None,
         "cedulas": cedulas,
         "termsAccepted": bool(user.terminos_acept),
         "mustChangePassword": bool(user.cambiar_clave),
@@ -1200,7 +1208,8 @@ class UsersListCreateView(APIView):
             return pagination_error
 
         queryset = SyUsuario.objects.select_related(
-            "detalle", "detalle__id_centro_atencion"
+            "detalle", "detalle__id_centro_atencion",
+            "detalle__id_area_clinica", "detalle__id_escolaridad", "detalle__id_escuela",
         ).all()
 
         search = request.query_params.get("search")
@@ -1261,7 +1270,8 @@ class UsersListCreateView(APIView):
         users_by_id = {
             user.id_usuario: user
             for user in SyUsuario.objects.select_related(
-                "detalle", "detalle__id_centro_atencion", "detalle__id_area_clinica"
+                "detalle", "detalle__id_centro_atencion", "detalle__id_area_clinica",
+                "detalle__id_escolaridad", "detalle__id_escuela",
             ).prefetch_related("cedulas").filter(id_usuario__in=page_user_ids)
         }
         ordered_users = [
@@ -1409,6 +1419,18 @@ class UsersListCreateView(APIView):
                 id=area_clinica_id, is_active=True
             ).first()
 
+        escolaridad = None
+        escolaridad_id = request.data.get("escolaridadId")
+        if escolaridad_id is not None:
+            from apps.catalogos.models import Escolaridad
+            escolaridad = Escolaridad.objects.filter(id=escolaridad_id).first()
+
+        escuela = None
+        escuela_id = request.data.get("escuelaId")
+        if escuela_id is not None:
+            from apps.catalogos.models import Escuelas
+            escuela = Escuelas.objects.filter(id=escuela_id).first()
+
         DetUsuario.objects.create(
             id_usuario=user,
             nombre=request.data.get("firstName"),
@@ -1419,6 +1441,8 @@ class UsersListCreateView(APIView):
             no_exp=request.data.get("noExp") or None,
             cd_laboral=request.data.get("cdLaboral") or None,
             id_area_clinica=area_clinica,
+            id_escolaridad=escolaridad,
+            id_escuela=escuela,
         )
 
         RelUsuarioRol.objects.create(
@@ -1530,6 +1554,8 @@ class UserDetailView(APIView):
                 "detalle",
                 "detalle__id_centro_atencion",
                 "detalle__id_area_clinica",
+                "detalle__id_escolaridad",
+                "detalle__id_escuela",
             )
             .prefetch_related("cedulas")
             .filter(id_usuario=user_id)
@@ -1690,6 +1716,22 @@ class UserDetailView(APIView):
 
         if "cdLaboral" in request.data:
             detail.cd_laboral = request.data.get("cdLaboral") or None
+
+        if "escolaridadId" in request.data:
+            esc_id = request.data.get("escolaridadId")
+            if esc_id is None:
+                detail.id_escolaridad = None
+            else:
+                from apps.catalogos.models import Escolaridad
+                detail.id_escolaridad = Escolaridad.objects.filter(id=esc_id).first()
+
+        if "escuelaId" in request.data:
+            esc_id = request.data.get("escuelaId")
+            if esc_id is None:
+                detail.id_escuela = None
+            else:
+                from apps.catalogos.models import Escuelas
+                detail.id_escuela = Escuelas.objects.filter(id=esc_id).first()
 
         if "areaClinicaId" in request.data:
             area_id = request.data.get("areaClinicaId")

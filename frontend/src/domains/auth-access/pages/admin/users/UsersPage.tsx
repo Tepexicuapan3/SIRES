@@ -25,6 +25,8 @@ import { useDeactivateUser } from "@/domains/auth-access/hooks/rbac/users/useDea
 import { useRolesList } from "@/domains/auth-access/hooks/rbac/roles/useRolesList";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useAreasClinicasList } from "@features/admin/modules/catalogos/areas-clinicas/queries/useAreasClinicasList";
+import { useEscolaridadList } from "@features/admin/modules/catalogos/escolaridad/queries/useEscolaridadList";
+import { useEscuelasList } from "@features/admin/modules/catalogos/escuelas/queries/useEscuelasList";
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import { UserDetailsDialog } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsDialog";
 import { UserCreateDialog } from "@/domains/auth-access/components/admin/rbac/users/UserCreateDialog";
@@ -75,6 +77,8 @@ export function UsersPage() {
       clinic: true,
       areaClinica: true,
       cdLaboral: true,
+      escolaridad: true,
+      escuela: true,
       cedulas: true,
       primaryRole: true,
       isActive: true,
@@ -168,7 +172,15 @@ export function UsersPage() {
     },
   );
   const { data: areasClinicasData } = useAreasClinicasList(
-    { page: 1, pageSize: 200 },
+    { page: 1, pageSize: 100 },
+    { enabled: canReadUser || canCreateUser || canUpdateUser },
+  );
+  const { data: escolaridadData } = useEscolaridadList(
+    { page: 1, pageSize: 100, isActive: true },
+    { enabled: canReadUser || canCreateUser || canUpdateUser },
+  );
+  const { data: escuelasData } = useEscuelasList(
+    { page: 1, pageSize: 100, isActive: true },
     { enabled: canReadUser || canCreateUser || canUpdateUser },
   );
   const roleOptions = rolesData?.items ?? [];
@@ -176,6 +188,17 @@ export function UsersPage() {
   const areaClinicaOptions = (areasClinicasData?.items ?? []).map((a) => ({
     id: a.id,
     name: a.name,
+  }));
+  const escolaridadOptions = (escolaridadData?.items ?? []).map((e) => ({
+    id: e.id,
+    name: e.name,
+    isActive: e.isActive,
+  }));
+  const escuelaOptions = (escuelasData?.items ?? []).map((e) => ({
+    id: e.id,
+    name: e.name,
+    code: e.code,
+    isActive: e.isActive,
   }));
 
   const canManageUsersFully = resolveCapability("admin.users.editFull", {
@@ -435,6 +458,8 @@ export function UsersPage() {
         roleOptions={roleOptions}
         clinicOptions={clinicOptions}
         areaClinicaOptions={areaClinicaOptions}
+        escolaridadOptions={escolaridadOptions}
+        escuelaOptions={escuelaOptions}
         isClinicsCatalogLoading={
           isLoadingClinicsCatalog || isFetchingClinicsCatalog
         }
@@ -450,6 +475,8 @@ export function UsersPage() {
         roleOptions={roleOptions}
         clinicOptions={clinicOptions}
         areaClinicaOptions={areaClinicaOptions}
+        escolaridadOptions={escolaridadOptions}
+        escuelaOptions={escuelaOptions}
       />
     </div>
   );
