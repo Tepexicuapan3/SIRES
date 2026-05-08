@@ -18,7 +18,7 @@ export interface ConsultorioCatalogRef {
 export interface ConsultorioListItem {
   id: number;
   name: string;
-  code: number;
+  numero: number;
   isActive: boolean;
 }
 
@@ -33,7 +33,7 @@ export interface ConsultorioDetail extends ConsultorioListItem {
 
 export interface CreateConsultorioRequest {
   name: string;
-  code: number;
+  numero: number;
   idTurn: number;
   idCenter: number;
   isActive?: boolean;
@@ -41,7 +41,7 @@ export interface CreateConsultorioRequest {
 
 export interface UpdateConsultorioRequest {
   name?: string;
-  code?: number;
+  numero?: number;
   idTurn?: number;
   idCenter?: number;
   isActive?: boolean;

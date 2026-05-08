@@ -7,7 +7,7 @@ from datetime import datetime, time, timezone as dt_timezone
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from rest_framework import status
@@ -291,11 +291,30 @@ def _serialize_role(role):
 
 
 def _active_user_role_relations(user):
+    # Usado en vistas donde el usuario ya viene sin prefetch (ej. detalle de roles).
     return (
         RelUsuarioRol.objects.select_related("id_rol", "usr_asignacion")
         .filter(id_usuario=user, fch_baja__isnull=True, id_rol__is_active=True)
         .order_by("id_usuario_rol")
     )
+
+
+# Prefetch reutilizable: resuelve el N+1 de roles en listados y exports.
+_ROLES_PREFETCH = Prefetch(
+    "relusuariorol_set",
+    queryset=RelUsuarioRol.objects.select_related("id_rol")
+    .filter(fch_baja__isnull=True, id_rol__is_active=True)
+    .order_by("id_usuario_rol"),
+    to_attr="active_roles_cache",
+)
+
+
+def _get_active_roles(user):
+    """Devuelve roles activos usando caché del prefetch si existe, o query directa."""
+    cached = getattr(user, "active_roles_cache", None)
+    if cached is not None:
+        return cached
+    return list(_active_user_role_relations(user))
 
 
 def _active_user_ids_for_role(role):
@@ -354,7 +373,7 @@ def _serialize_user_overrides(user):
 
 def _serialize_user_list_item(user):
     detail = getattr(user, "detalle", None)
-    roles = _active_user_role_relations(user)
+    roles = _get_active_roles(user)
     primary = next((relation for relation in roles if relation.is_primary), None)
     if not primary:
         primary = roles[0] if roles else None
@@ -366,7 +385,8 @@ def _serialize_user_list_item(user):
     area = getattr(detail, "id_area_clinica", None) if detail else None
     escolaridad = getattr(detail, "id_escolaridad", None) if detail else None
     escuela = getattr(detail, "id_escuela", None) if detail else None
-    cedulas = list(user.cedulas.all().order_by("orden")) if hasattr(user, "cedulas") else []
+    # user.cedulas.all() usa el prefetch cache cuando el queryset viene prefetcheado.
+    cedulas = list(user.cedulas.all()) if hasattr(user, "cedulas") else []
 
     return {
         "id": user.id_usuario,
@@ -399,16 +419,12 @@ def _serialize_cedula(cedula):
 
 def _serialize_user_detail(user):
     detail = getattr(user, "detalle", None)
+    # base ya serializa cedulas y roles usando el prefetch cache.
     base = _serialize_user_list_item(user)
 
     area = getattr(detail, "id_area_clinica", None) if detail else None
     escolaridad = getattr(detail, "id_escolaridad", None) if detail else None
     escuela = getattr(detail, "id_escuela", None) if detail else None
-
-    cedulas = [
-        _serialize_cedula(c)
-        for c in user.cedulas.all().order_by("orden")
-    ]
 
     return {
         **base,
@@ -420,7 +436,6 @@ def _serialize_user_detail(user):
         "areaClinica": {"id": area.id, "name": area.name} if area else None,
         "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
         "escuela": {"id": escuela.id, "name": escuela.name, "code": escuela.code, "isActive": escuela.is_active} if escuela else None,
-        "cedulas": cedulas,
         "termsAccepted": bool(user.terminos_acept),
         "mustChangePassword": bool(user.cambiar_clave),
         "lastLoginAt": _to_utc_iso(user.last_conexion),
@@ -1272,7 +1287,7 @@ class UsersListCreateView(APIView):
             for user in SyUsuario.objects.select_related(
                 "detalle", "detalle__id_centro_atencion", "detalle__id_area_clinica",
                 "detalle__id_escolaridad", "detalle__id_escuela",
-            ).prefetch_related("cedulas").filter(id_usuario__in=page_user_ids)
+            ).prefetch_related("cedulas", _ROLES_PREFETCH).filter(id_usuario__in=page_user_ids)
         }
         ordered_users = [
             users_by_id[user_id] for user_id in page_user_ids if user_id in users_by_id
@@ -1557,7 +1572,7 @@ class UserDetailView(APIView):
                 "detalle__id_escolaridad",
                 "detalle__id_escuela",
             )
-            .prefetch_related("cedulas")
+            .prefetch_related("cedulas", _ROLES_PREFETCH)
             .filter(id_usuario=user_id)
             .first()
         )
@@ -2340,13 +2355,9 @@ class UsersNotifyView(APIView):
         if cd_laboral:
             qs = qs.filter(detalle__cd_laboral__icontains=cd_laboral)
 
-        role_id = request.data.get("roleId")
-        if role_id:
-            user_ids_with_role = RelUsuarioRol.objects.filter(
-                id_rol_id=role_id,
-                fch_baja__isnull=True,
-            ).values_list("id_usuario_id", flat=True)
-            qs = qs.filter(id_usuario__in=user_ids_with_role)
+        user_id = request.data.get("userId")
+        if user_id:
+            qs = qs.filter(id_usuario=user_id)
 
         clinic_id = request.data.get("clinicId")
         if clinic_id:
@@ -2355,6 +2366,7 @@ class UsersNotifyView(APIView):
         recipients = [
             {
                 "email": u.correo,
+                "username": u.usuario,
                 "name": getattr(u.detalle, "nombre_completo", None) or u.usuario,
             }
             for u in qs
@@ -2372,7 +2384,7 @@ class UsersNotifyView(APIView):
         if preview:
             return Response({"count": len(recipients)}, status=status.HTTP_200_OK)
 
-        queued = send_notification_email_batch(
+        result = send_notification_email_batch(
             recipients=recipients,
             subject=subject,
             message=message,
@@ -2383,9 +2395,32 @@ class UsersNotifyView(APIView):
             "RBAC_USER_NOTIFY",
             "user",
             result="SUCCESS",
-            after={"queued": queued, "subject": subject, "category": category},
+            after={"sent": result["sent"], "failed": len(result["failed"]), "subject": subject},
         )
-        return Response({"queued": queued}, status=status.HTTP_202_ACCEPTED)
+        return Response(result, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Valores distintos de cd_laboral registrados en el sistema
+# ---------------------------------------------------------------------------
+
+class UserCdLaboralesView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        _, auth_error = _authorize(request, "admin:gestion:usuarios:read")
+        if auth_error:
+            return auth_error
+
+        values = (
+            DetUsuario.objects.filter(cd_laboral__isnull=False)
+            .exclude(cd_laboral="")
+            .values_list("cd_laboral", flat=True)
+            .distinct()
+            .order_by("cd_laboral")
+        )
+        return Response({"items": list(values)}, status=status.HTTP_200_OK)
 
 
 # ---------------------------------------------------------------------------
@@ -2414,7 +2449,7 @@ class UserExportView(APIView):
             "detalle__id_area_clinica",
             "detalle__id_escolaridad",
             "detalle__id_escuela",
-        ).prefetch_related("cedulas").all()
+        ).prefetch_related("cedulas", _ROLES_PREFETCH).all()
 
         search = request.query_params.get("search")
         if search:
@@ -2490,9 +2525,9 @@ class UserExportView(APIView):
 
         for row_idx, user in enumerate(users, start=2):
             detail = getattr(user, "detalle", None)
-            roles = _active_user_role_relations(user)
+            roles = _get_active_roles(user)
             primary = next((r for r in roles if r.is_primary), roles[0] if roles else None)
-            cedulas = list(user.cedulas.all().order_by("orden"))
+            cedulas = list(user.cedulas.all())
 
             if user.est_activo and getattr(user, "terminos_acept", True) and not getattr(user, "cambiar_clave", False):
                 est_label = "Activo"

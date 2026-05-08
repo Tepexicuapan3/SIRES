@@ -508,7 +508,6 @@ export function UsersPage() {
       <UserNotifyDialog
         open={notifyOpen}
         onOpenChange={setNotifyOpen}
-        roleOptions={roleOptions}
         clinicOptions={clinicOptions}
       />
     </div>

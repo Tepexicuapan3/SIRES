@@ -152,12 +152,12 @@ def send_user_credentials_email(
 
 def send_notification_email_batch(recipients, subject, message, category="Notificación SISEM"):
     """
-    Envía una notificación masiva en un thread de background.
-    recipients: [{"email": str, "name": str}, ...]
-    Usa una sola conexión SMTP para todos los mensajes.
+    Envía una notificación masiva de forma síncrona con una sola conexión SMTP.
+    recipients: [{"email": str, "name": str, "username": str}, ...]
+    Devuelve {"sent": N, "failed": [{"username": ..., "name": ..., "email": ...}]}
     """
     if not recipients:
-        return 0
+        return {"sent": 0, "failed": []}
 
     company_name = getattr(settings, "EMAIL_COMPANY_NAME", "SISEM STC Metro")
     logo_url = getattr(settings, "EMAIL_LOGO_URL", "https://i.ibb.co/zhdkzrZp/SISEM.webp")
@@ -169,53 +169,61 @@ def send_notification_email_batch(recipients, subject, message, category="Notifi
     )
     current_year = timezone.now().year
 
-    def _send():
-        sent = 0
-        failed = 0
-        try:
-            conn = get_connection()
-            conn.open()
-            for recipient in recipients:
-                try:
-                    html = render_to_string(
-                        "authentication/notification_email.html",
-                        {
-                            "user_name": recipient["name"],
-                            "subject": subject,
-                            "message": message,
-                            "category": category,
-                            "company_name": company_name,
-                            "logo_url": logo_url,
-                            "metro_logo_url": metro_logo_url,
-                            "support_email": support_email,
-                            "current_year": current_year,
-                        },
-                    )
-                    email = EmailMultiAlternatives(
-                        subject=subject,
-                        body=message,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        to=[recipient["email"]],
-                        connection=conn,
-                    )
-                    email.attach_alternative(html, "text/html")
-                    email.send()
-                    sent += 1
-                except Exception:
-                    logger.exception("Fallo al enviar notificación a %s", recipient.get("email"))
-                    failed += 1
-        except Exception:
-            logger.exception("Fallo al abrir conexión SMTP para notificación masiva")
-        finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
-        logger.info("Notificación masiva completada: %d enviados, %d fallidos", sent, failed)
+    sent = 0
+    failed = []
 
-    thread = threading.Thread(target=_send, daemon=True)
-    thread.start()
-    return len(recipients)
+    try:
+        conn = get_connection()
+        conn.open()
+        for recipient in recipients:
+            try:
+                html = render_to_string(
+                    "authentication/notification_email.html",
+                    {
+                        "user_name": recipient["name"],
+                        "subject": subject,
+                        "message": message,
+                        "category": category,
+                        "company_name": company_name,
+                        "logo_url": logo_url,
+                        "metro_logo_url": metro_logo_url,
+                        "support_email": support_email,
+                        "current_year": current_year,
+                    },
+                )
+                email_msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[recipient["email"]],
+                    connection=conn,
+                )
+                email_msg.attach_alternative(html, "text/html")
+                email_msg.send()
+                sent += 1
+            except Exception:
+                logger.exception("Fallo al enviar notificación a %s", recipient.get("email"))
+                failed.append({
+                    "username": recipient.get("username", ""),
+                    "name": recipient.get("name", ""),
+                    "email": recipient.get("email", ""),
+                })
+    except Exception:
+        logger.exception("Fallo al abrir conexión SMTP para notificación masiva")
+        # Si la conexión falló por completo, todos son fallidos
+        if sent == 0 and not failed:
+            failed = [
+                {"username": r.get("username", ""), "name": r.get("name", ""), "email": r.get("email", "")}
+                for r in recipients
+            ]
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    logger.info("Notificación masiva: %d enviados, %d fallidos", sent, len(failed))
+    return {"sent": sent, "failed": failed}
 
 
 def _smtp_is_configured():

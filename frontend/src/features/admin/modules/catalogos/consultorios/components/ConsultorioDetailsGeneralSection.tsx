@@ -79,10 +79,10 @@ export function ConsultorioDetailsGeneralSection({
           />
           <FormField
             control={form.control}
-            name="code"
+            name="numero"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Codigo</FormLabel>
+                <FormLabel>No. Consultorio</FormLabel>
                 <FormControl>
                   <Input
                     {...field}

@@ -627,26 +627,27 @@ class VacunasWriteSerializer(CatalogWriteSerializer):
 # Consultorios
 # ---------------------------------------------------------------------------
 
-class ConsultoriosListSerializer(CatalogListWithCodeSerializer):
-    class Meta(CatalogListWithCodeSerializer.Meta):
+class ConsultoriosListSerializer(CatalogListSerializer):
+    class Meta(CatalogListSerializer.Meta):
         model = Consultorios
+        fields = CatalogListSerializer.Meta.fields + ("numero",)
 
-class ConsultoriosDetailSerializer(CatalogDetailWithCodeSerializer):
+class ConsultoriosDetailSerializer(CatalogDetailSerializer):
     turn = CatalogRefSerializer(source="id_turn", read_only=True)
     center = CatalogRefSerializer(source="id_center", read_only=True)
 
-    class Meta(CatalogDetailWithCodeSerializer.Meta):
+    class Meta(CatalogDetailSerializer.Meta):
         model = Consultorios
-        fields = CatalogDetailWithCodeSerializer.Meta.fields + ("turn", "center")
+        fields = CatalogDetailSerializer.Meta.fields + ("numero", "turn", "center")
 
 class ConsultoriosWriteSerializer(CatalogWriteSerializer):
-    code = serializers.IntegerField()
+    numero = serializers.IntegerField()
     idTurn = serializers.IntegerField(source="id_turn_id")
     idCenter = serializers.IntegerField(source="id_center_id")
 
     class Meta(CatalogWriteSerializer.Meta):
         model = Consultorios
-        fields = CatalogWriteSerializer.Meta.fields + ("code", "idTurn", "idCenter")
+        fields = CatalogWriteSerializer.Meta.fields + ("numero", "idTurn", "idCenter")
 
 
 # ---------------------------------------------------------------------------

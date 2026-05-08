@@ -8,15 +8,15 @@ from apps.catalogos.models import Consultorios
 
 class ConsultoriosRepository:
     @staticmethod
-    def get_all(*, search=None, est_activo=None, sort_by="code", sort_order="asc"):
+    def get_all(*, search=None, est_activo=None, sort_by="numero", sort_order="asc"):
         queryset = Consultorios.objects.select_related("id_turn", "id_center").all()
 
         if search:
             queryset = queryset.annotate(
-                code_text=Cast("code", output_field=CharField())
+                numero_text=Cast("numero", output_field=CharField())
             )
             queryset = queryset.filter(
-                Q(name__icontains=search) | Q(code_text__icontains=search)
+                Q(name__icontains=search) | Q(numero_text__icontains=search)
             )
 
         if est_activo is not None:
@@ -25,11 +25,11 @@ class ConsultoriosRepository:
         allowed_sort_fields = {
             "id": "id",
             "name": "name",
-            "code": "code",
+            "numero": "numero",
             "isActive": "is_active",
             "is_active": "is_active",
         }
-        order_field = allowed_sort_fields.get(sort_by, "code")
+        order_field = allowed_sort_fields.get(sort_by, "numero")
         if sort_order == "desc":
             order_field = f"-{order_field}"
 

@@ -42,7 +42,7 @@ interface ConsultorioCreateDialogProps {
 
 const DEFAULT_VALUES: CreateConsultorioFormValues = {
   name: "",
-  code: "",
+  numero: "",
   idTurn: 0,
   idCenter: 0,
 };
@@ -81,7 +81,7 @@ export function ConsultorioCreateDialog({
       const result = await createConsultorio.mutateAsync({
         data: {
           name: values.name,
-          code: Number(values.code),
+          numero: Number(values.numero),
           idTurn: values.idTurn,
           idCenter: values.idCenter,
           isActive: true,
@@ -144,10 +144,10 @@ export function ConsultorioCreateDialog({
                       />
                       <FormField
                         control={form.control}
-                        name="code"
+                        name="numero"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Codigo</FormLabel>
+                            <FormLabel>No. Consultorio</FormLabel>
                             <FormControl>
                               <Input {...field} inputMode="numeric" />
                             </FormControl>

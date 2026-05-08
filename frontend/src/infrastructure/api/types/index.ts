@@ -84,6 +84,14 @@ export type {
   AddUserOverrideRequest,
   AddUserOverrideResponse,
   RemoveUserOverrideResponse,
+  // Notificaciones
+  NotifyUsersRequest,
+  NotifyUsersResponse,
+  NotifyUsersPreviewResponse,
+  NotifyFailedItem,
+  // Refs
+  EscolaridadRef,
+  EscuelaRef,
 } from "@api/types/users.types";
 
 // =============================================================================

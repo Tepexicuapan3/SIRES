@@ -8,6 +8,7 @@ from .views.rbac_views import (
     RoleDetailView,
     RolesListCreateView,
     UserActivateView,
+    UserCdLaboralesView,
     UserDeactivateView,
     UserDetailView,
     UserExportView,
@@ -47,4 +48,5 @@ urlpatterns = [
     path('users/empleados-sermed/<str:no_exp>', EmpleadoSermedLookupView.as_view(), name='rbac-empleado-sermed-lookup'),
     path("users/notify", UsersNotifyView.as_view(), name="rbac-users-notify"),
     path("users/export", UserExportView.as_view(), name="rbac-users-export"),
+    path("users/cd-laborales", UserCdLaboralesView.as_view(), name="rbac-users-cd-laborales"),
 ]

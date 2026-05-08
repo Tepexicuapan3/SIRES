@@ -37,11 +37,11 @@ export const buildConsultoriosTableColumns = ({
       cellContentClassName: "max-w-[260px]",
     },
     {
-      key: "code",
-      header: "Codigo",
-      accessorKey: "code",
-      className: "w-[180px]",
-      cellContentClassName: "max-w-[160px]",
+      key: "numero",
+      header: "No. Consultorio",
+      accessorKey: "numero",
+      className: "w-[160px]",
+      cellContentClassName: "max-w-[140px]",
     },
     {
       key: "isActive",
@@ -133,7 +133,7 @@ export const buildConsultoriosVisibilityOptions = (
 ): TableColumnVisibilityItem[] => {
   const options: TableColumnVisibilityItem[] = [
     { key: "name", label: "Consultorio" },
-    { key: "code", label: "Codigo" },
+    { key: "numero", label: "No. Consultorio" },
     { key: "isActive", label: "Estado" },
   ];
 

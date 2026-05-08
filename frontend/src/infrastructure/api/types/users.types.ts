@@ -261,12 +261,19 @@ export interface NotifyUsersRequest {
   message: string;
   category?: string;
   cdLaboral?: string;
-  roleId?: number | null;
+  userId?: number | null;
   clinicId?: number | null;
 }
 
+export interface NotifyFailedItem {
+  username: string;
+  name: string;
+  email: string;
+}
+
 export interface NotifyUsersResponse {
-  queued: number;
+  sent: number;
+  failed: NotifyFailedItem[];
 }
 
 export interface NotifyUsersPreviewResponse {

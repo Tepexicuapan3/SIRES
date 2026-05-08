@@ -17,7 +17,7 @@ const requiredPositiveIntegerString = (label: string) =>
 
 export const consultorioDetailsSchema = z.object({
   name: requiredText("Nombre"),
-  code: requiredPositiveIntegerString("Codigo"),
+  numero: requiredPositiveIntegerString("No. consultorio"),
   idTurn: z.number({ error: "Turno requerido" }).min(1, { error: "Turno requerido" }),
   idCenter: z.number({ error: "Centro requerido" }).min(1, { error: "Centro requerido" }),
 });

@@ -140,6 +140,15 @@ export const usersAPI = {
   },
 
   /**
+   * Valores distintos de cd_laboral registrados en el sistema.
+   * @endpoint GET /api/v1/users/cd-laborales
+   */
+  getCdLaborales: async (): Promise<{ items: string[] }> => {
+    const response = await apiClient.get<{ items: string[] }>("/users/cd-laborales");
+    return response.data;
+  },
+
+  /**
    * Exportar usuarios a Excel con los filtros actuales.
    * @endpoint GET /api/v1/users/export
    * @permission admin:gestion:usuarios:read
