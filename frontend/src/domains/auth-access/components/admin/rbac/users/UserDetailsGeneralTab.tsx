@@ -380,6 +380,36 @@ export function UserDetailsGeneralTab({
           />
         </div>
 
+        {/* Tipo personal */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="tipoPersonal"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de personal</FormLabel>
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || null)}
+                  disabled={!isEditable}
+                >
+                  <FormControl>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Selecciona tipo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="MEDICO">Médico</SelectItem>
+                    <SelectItem value="ENFERMERIA">Enfermería</SelectItem>
+                    <SelectItem value="ADMINISTRATIVO">Administrativo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <Separator />
 
         {/* Cédulas profesionales */}

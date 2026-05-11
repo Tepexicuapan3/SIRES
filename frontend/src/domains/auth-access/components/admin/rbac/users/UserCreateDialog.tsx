@@ -74,6 +74,7 @@ const DEFAULT_VALUES: CreateUserFormValues = {
   areaClinicaId: null,
   escolaridadId: null,
   escuelaId: null,
+  tipoPersonal: null,
   cedulas: [],
 };
 
@@ -155,6 +156,7 @@ export function UserCreateDialog({
           areaClinicaId: values.areaClinicaId ?? null,
           escolaridadId: values.escolaridadId ?? null,
           escuelaId: values.escuelaId ?? null,
+          tipoPersonal: values.tipoPersonal ?? null,
           cedulas: values.cedulas.length > 0 ? values.cedulas : undefined,
         },
       });
@@ -495,6 +497,35 @@ export function UserCreateDialog({
                                   searchPlaceholder="Buscar por siglas o nombre..."
                                 />
                               </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Tipo personal + Calidad laboral */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="tipoPersonal"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tipo de personal</FormLabel>
+                              <Select
+                                value={field.value ?? ""}
+                                onValueChange={(v) => field.onChange(v || null)}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-11">
+                                    <SelectValue placeholder="Selecciona tipo" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="MEDICO">Médico</SelectItem>
+                                  <SelectItem value="ENFERMERIA">Enfermería</SelectItem>
+                                  <SelectItem value="ADMINISTRATIVO">Administrativo</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}

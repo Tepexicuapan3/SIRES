@@ -154,6 +154,17 @@ export const buildUsersTableColumns = ({
       },
     },
     {
+      key: "tipoPersonal",
+      header: "Tipo",
+      align: "center" as const,
+      className: "w-[120px]",
+      render: (row) => {
+        if (!row.tipoPersonal) return <span className="text-txt-muted">—</span>;
+        const labels: Record<string, string> = { MEDICO: "Médico", ENFERMERIA: "Enfermería", ADMINISTRATIVO: "Administrativo" };
+        return <span className="text-xs font-medium">{labels[row.tipoPersonal] ?? row.tipoPersonal}</span>;
+      },
+    },
+    {
       key: "primaryRole",
       header: "Rol",
       align: "center",
@@ -264,6 +275,7 @@ export const buildUsersVisibilityOptions = (
     { key: "escolaridad", label: "Escolaridad" },
     { key: "escuela", label: "Escuela" },
     { key: "cedulas", label: "Cédulas" },
+    { key: "tipoPersonal", label: "Tipo" },
     { key: "primaryRole", label: "Rol" },
     { key: "isActive", label: "Estado" },
   ];

@@ -1,6 +1,7 @@
 import * as z from "zod";
 
 const CEDULA_TIPOS = ["PROFESIONAL", "ESPECIALIDAD", "SUBESPECIALIDAD"] as const;
+const TIPO_PERSONAL_VALORES = ["MEDICO", "ENFERMERIA", "ADMINISTRATIVO"] as const;
 
 const requiredText = (label: string) =>
   z
@@ -76,6 +77,7 @@ export const userDetailsSchema = z
     areaClinicaId: optionalNumber,
     escolaridadId: optionalNumber,
     escuelaId: optionalNumber,
+    tipoPersonal: z.enum(TIPO_PERSONAL_VALORES).nullable().default(null),
     cedulas: z
       .array(cedulaSchema)
       .max(3, { message: "Solo se permiten hasta 3 cédulas" })
@@ -104,6 +106,7 @@ export const createUserSchema = z
     areaClinicaId: optionalNumber,
     escolaridadId: optionalNumber,
     escuelaId: optionalNumber,
+    tipoPersonal: z.enum(TIPO_PERSONAL_VALORES).nullable().default(null),
     cedulas: z
       .array(cedulaSchema)
       .max(3, { message: "Solo se permiten hasta 3 cédulas" })

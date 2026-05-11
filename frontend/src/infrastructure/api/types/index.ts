@@ -92,6 +92,7 @@ export type {
   // Refs
   EscolaridadRef,
   EscuelaRef,
+  TipoPersonal,
 } from "@api/types/users.types";
 
 // =============================================================================

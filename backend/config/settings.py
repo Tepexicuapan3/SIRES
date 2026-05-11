@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "apps.consulta_medica",
     "apps.catalogos",
     "apps.administracion",
+    "apps.personal",
     "apps.realtime",
     "apps.farmacia",
     'apps.recepcion.routers',

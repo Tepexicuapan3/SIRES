@@ -110,6 +110,7 @@ const DEFAULT_FORM_VALUES: UserDetailsFormValues = {
   areaClinicaId: null,
   escolaridadId: null,
   escuelaId: null,
+  tipoPersonal: null,
   cedulas: [],
 };
 
@@ -190,6 +191,9 @@ export function UserDetailsDialog({
     draftNoExp,
     draftCdLaboral,
     draftAreaClinicaId,
+    draftEscolaridadId,
+    draftEscuelaId,
+    draftTipoPersonal,
     draftCedulas,
   ] = form.watch([
     "firstName",
@@ -200,6 +204,9 @@ export function UserDetailsDialog({
     "noExp",
     "cdLaboral",
     "areaClinicaId",
+    "escolaridadId",
+    "escuelaId",
+    "tipoPersonal",
     "cedulas",
   ]);
 
@@ -212,6 +219,9 @@ export function UserDetailsDialog({
     noExp: draftNoExp ?? null,
     cdLaboral: draftCdLaboral ?? null,
     areaClinicaId: draftAreaClinicaId ?? null,
+    escolaridadId: draftEscolaridadId ?? null,
+    escuelaId: draftEscuelaId ?? null,
+    tipoPersonal: draftTipoPersonal ?? null,
     cedulas: draftCedulas ?? [],
   };
   const baselineFormValues = userDetail

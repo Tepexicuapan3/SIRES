@@ -53,6 +53,7 @@ const USER_STATUS_FILTER = {
 
 const ROLE_FILTER_ALL = "all";
 const CLINIC_FILTER_ALL = "all";
+const TIPO_PERSONAL_ALL = "all";
 
 type UserStatusFilter =
   (typeof USER_STATUS_FILTER)[keyof typeof USER_STATUS_FILTER];
@@ -73,6 +74,7 @@ export function UsersPage() {
   );
   const [roleFilter, setRoleFilter] = useState(ROLE_FILTER_ALL);
   const [clinicFilter, setClinicFilter] = useState(CLINIC_FILTER_ALL);
+  const [tipoPersonalFilter, setTipoPersonalFilter] = useState(TIPO_PERSONAL_ALL);
   const [columnVisibility, setColumnVisibility] =
     useState<ColumnVisibilityState>({
       user: true,
@@ -80,6 +82,7 @@ export function UsersPage() {
       clinic: true,
       areaClinica: true,
       cdLaboral: true,
+      tipoPersonal: true,
       escolaridad: true,
       escuela: true,
       cedulas: true,
@@ -145,6 +148,8 @@ export function UsersPage() {
       roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
       clinicId:
         clinicFilter === CLINIC_FILTER_ALL ? undefined : Number(clinicFilter),
+      tipoPersonal:
+        tipoPersonalFilter === TIPO_PERSONAL_ALL ? undefined : tipoPersonalFilter,
     },
     {
       enabled: canReadUser,
@@ -254,6 +259,7 @@ export function UsersPage() {
     statusFilter !== USER_STATUS_FILTER.ALL,
     roleFilter !== ROLE_FILTER_ALL,
     clinicFilter !== CLINIC_FILTER_ALL,
+    tipoPersonalFilter !== TIPO_PERSONAL_ALL,
   ].filter(Boolean).length;
 
   const isSearchPending = search.trim() !== debouncedSearch.trim();
@@ -271,6 +277,7 @@ export function UsersPage() {
     setStatusFilter(USER_STATUS_FILTER.ALL);
     setRoleFilter(ROLE_FILTER_ALL);
     setClinicFilter(CLINIC_FILTER_ALL);
+    setTipoPersonalFilter(TIPO_PERSONAL_ALL);
     setPage(1);
   };
 
@@ -303,6 +310,7 @@ export function UsersPage() {
           status: statusFilter === USER_STATUS_FILTER.ALL ? undefined : statusFilter,
           roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
           clinicId: clinicFilter === CLINIC_FILTER_ALL ? undefined : Number(clinicFilter),
+          tipoPersonal: tipoPersonalFilter === TIPO_PERSONAL_ALL ? undefined : tipoPersonalFilter,
         });
       },
     },
@@ -380,6 +388,15 @@ export function UsersPage() {
           },
         ]
       : []),
+    {
+      id: "tipoPersonal",
+      label: "Tipo personal",
+      options: [
+        { id: "MEDICO", label: "Médico", selected: tipoPersonalFilter === "MEDICO", onSelect: () => { setTipoPersonalFilter("MEDICO"); setPage(1); } },
+        { id: "ENFERMERIA", label: "Enfermería", selected: tipoPersonalFilter === "ENFERMERIA", onSelect: () => { setTipoPersonalFilter("ENFERMERIA"); setPage(1); } },
+        { id: "ADMINISTRATIVO", label: "Administrativo", selected: tipoPersonalFilter === "ADMINISTRATIVO", onSelect: () => { setTipoPersonalFilter("ADMINISTRATIVO"); setPage(1); } },
+      ],
+    },
   ];
 
   return (

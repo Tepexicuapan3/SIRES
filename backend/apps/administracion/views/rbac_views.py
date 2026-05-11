@@ -385,7 +385,6 @@ def _serialize_user_list_item(user):
     area = getattr(detail, "id_area_clinica", None) if detail else None
     escolaridad = getattr(detail, "id_escolaridad", None) if detail else None
     escuela = getattr(detail, "id_escuela", None) if detail else None
-    # user.cedulas.all() usa el prefetch cache cuando el queryset viene prefetcheado.
     cedulas = list(user.cedulas.all()) if hasattr(user, "cedulas") else []
 
     return {
@@ -399,6 +398,7 @@ def _serialize_user_list_item(user):
         "cdLaboral": detail.cd_laboral if detail else None,
         "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
         "escuela": {"id": escuela.id, "name": escuela.name, "code": escuela.code, "isActive": escuela.is_active} if escuela else None,
+        "tipoPersonal": detail.tipo_personal if detail else None,
         "cedulas": [_serialize_cedula(c) for c in cedulas],
         "primaryRole": primary.id_rol.rol if primary else "",
         "isActive": bool(user.est_activo),
@@ -436,6 +436,7 @@ def _serialize_user_detail(user):
         "areaClinica": {"id": area.id, "name": area.name} if area else None,
         "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
         "escuela": {"id": escuela.id, "name": escuela.name, "code": escuela.code, "isActive": escuela.is_active} if escuela else None,
+        "tipoPersonal": detail.tipo_personal if detail else None,
         "termsAccepted": bool(user.terminos_acept),
         "mustChangePassword": bool(user.cambiar_clave),
         "lastLoginAt": _to_utc_iso(user.last_conexion),
@@ -1272,6 +1273,10 @@ class UsersListCreateView(APIView):
         elif status_filter == "pending":
             queryset = queryset.filter(Q(terminos_acept=False) | Q(cambiar_clave=True))
 
+        tipo_personal = request.query_params.get("tipoPersonal")
+        if tipo_personal:
+            queryset = queryset.filter(detalle__tipo_personal=tipo_personal)
+
         user_ids_queryset = (
             queryset.order_by("usuario", "id_usuario")
             .values_list("id_usuario", flat=True)
@@ -1446,6 +1451,8 @@ class UsersListCreateView(APIView):
             from apps.catalogos.models import Escuelas
             escuela = Escuelas.objects.filter(id=escuela_id).first()
 
+        tipo_personal = request.data.get("tipoPersonal") or None
+
         DetUsuario.objects.create(
             id_usuario=user,
             nombre=request.data.get("firstName"),
@@ -1458,6 +1465,7 @@ class UsersListCreateView(APIView):
             id_area_clinica=area_clinica,
             id_escolaridad=escolaridad,
             id_escuela=escuela,
+            tipo_personal=tipo_personal,
         )
 
         RelUsuarioRol.objects.create(
@@ -1747,6 +1755,9 @@ class UserDetailView(APIView):
             else:
                 from apps.catalogos.models import Escuelas
                 detail.id_escuela = Escuelas.objects.filter(id=esc_id).first()
+
+        if "tipoPersonal" in request.data:
+            detail.tipo_personal = request.data.get("tipoPersonal") or None
 
         if "areaClinicaId" in request.data:
             area_id = request.data.get("areaClinicaId")
@@ -2399,7 +2410,6 @@ class UsersNotifyView(APIView):
         )
         return Response(result, status=status.HTTP_200_OK)
 
-
 # ---------------------------------------------------------------------------
 # Valores distintos de cd_laboral registrados en el sistema
 # ---------------------------------------------------------------------------
@@ -2501,10 +2511,10 @@ class UserExportView(APIView):
         )
 
         HEADERS = [
-            "Usuario", "Nombre", "Ap. Paterno", "Ap. Materno",
+            "Usuario", "Tipo personal", "Nombre", "Ap. Paterno", "Ap. Materno",
             "Nombre completo", "Correo", "Centro de atención",
-            "Área clínica", "Clave laboral", "Escolaridad",
-            "Escuela (siglas)", "Escuela (nombre)",
+            "Área clínica", "Clave laboral",
+            "Escolaridad", "Escuela (siglas)", "Escuela (nombre)",
             "Cédula 1", "Cédula 2", "Cédula 3",
             "Rol primario", "Estado",
         ]
@@ -2542,8 +2552,10 @@ class UserExportView(APIView):
                     return f"{c.numero} ({c.tipo})"
                 return ""
 
+            TIPO_LABELS = {"MEDICO": "Médico", "ENFERMERIA": "Enfermería", "ADMINISTRATIVO": "Administrativo"}
             row_data = [
                 user.usuario,
+                TIPO_LABELS.get(detail.tipo_personal, "") if detail and detail.tipo_personal else "",
                 detail.nombre if detail else "",
                 detail.paterno if detail else "",
                 detail.materno if detail else "",

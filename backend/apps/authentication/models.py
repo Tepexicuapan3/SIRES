@@ -109,6 +109,17 @@ class DetUsuario(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
+    tipo_personal = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        db_column="tipo_personal",
+        choices=[
+            ("MEDICO", "Médico"),
+            ("ENFERMERIA", "Enfermería"),
+            ("ADMINISTRATIVO", "Administrativo"),
+        ],
+    )
 
     class Meta:
         db_table = "det_usuarios"
