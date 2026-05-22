@@ -33,9 +33,13 @@ class PermissionDependency(RBACException):
     default_code = "PERMISSION_DEPENDENCY"'''
 
 
+import logging
+
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 def _utc_now_iso():
@@ -47,6 +51,7 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
 
     if response is None:
+        logger.exception("Unhandled exception in %s", context.get("view"))
         return Response(
             {
                 "code": "INTERNAL_SERVER_ERROR",

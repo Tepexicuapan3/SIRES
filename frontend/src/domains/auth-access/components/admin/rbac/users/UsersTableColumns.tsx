@@ -117,6 +117,27 @@ export const buildUsersTableColumns = ({
       ),
     },
     {
+      key: "telefono",
+      header: "Teléfono",
+      className: "w-[110px]",
+      render: (row) => row.telefono ? (
+        <span className="text-xs">{row.telefono}</span>
+      ) : (
+        <span className="text-txt-muted">—</span>
+      ),
+    },
+    {
+      key: "sexo",
+      header: "Sexo",
+      align: "center" as const,
+      className: "w-[70px]",
+      render: (row) => row.sexo ? (
+        <span className="text-xs">{row.sexo === "M" ? "Masc." : "Fem."}</span>
+      ) : (
+        <span className="text-txt-muted">—</span>
+      ),
+    },
+    {
       key: "escolaridad",
       header: "Escolaridad",
       className: "w-[120px]",
@@ -272,6 +293,8 @@ export const buildUsersVisibilityOptions = (
     { key: "clinic", label: "Centro" },
     { key: "areaClinica", label: "Área clínica" },
     { key: "cdLaboral", label: "Clave lab." },
+    { key: "telefono",  label: "Teléfono" },
+    { key: "sexo",      label: "Sexo" },
     { key: "escolaridad", label: "Escolaridad" },
     { key: "escuela", label: "Escuela" },
     { key: "cedulas", label: "Cédulas" },

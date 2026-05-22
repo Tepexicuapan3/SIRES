@@ -8,6 +8,7 @@ import type {
   CloseVisitResponse,
   CreateVisitRequest,
   CreateVisitResponse,
+  PatientLookupResponse,
   SaveDiagnosisRequest,
   SaveDiagnosisResponse,
   SavePrescriptionRequest,
@@ -105,5 +106,20 @@ export const visitsAPI = {
       data,
     );
     return response.data;
+  },
+
+  patientLookup: async (noExp: string, historico = false): Promise<PatientLookupResponse> => {
+    const response = await apiClient.get<PatientLookupResponse>(
+      "/visits/patient-lookup",
+      { params: { noExp, ...(historico ? { historico: "true" } : {}) } },
+    );
+    return response.data;
+  },
+
+  downloadFicha: async (visitId: number): Promise<Blob> => {
+    const response = await apiClient.get(`/visits/${visitId}/ficha`, {
+      responseType: "blob",
+    });
+    return response.data as Blob;
   },
 };

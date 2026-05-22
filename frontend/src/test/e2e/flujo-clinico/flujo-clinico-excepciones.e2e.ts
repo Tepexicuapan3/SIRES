@@ -3,12 +3,12 @@ import { expect, test } from "@playwright/test";
 
 import { FLUJO_CLINICO_USERS, FlujoClinicoPage } from "./flujo-clinico-page";
 
-const createPatientId = (): number => {
-  return 910000 + ((Date.now() + Math.floor(Math.random() * 1000)) % 80000);
+const createNoExp = (): string => {
+  return String(910000 + ((Date.now() + Math.floor(Math.random() * 1000)) % 80000));
 };
 
-const createAppointmentId = (patientId: number): string => {
-  return `APP-KAN19-${patientId}`;
+const createAppointmentId = (noExp: string): string => {
+  return `APP-KAN19-${noExp}`;
 };
 
 const isVisitStatusPayload = (
@@ -50,10 +50,10 @@ test.describe("Flujo clinico excepciones", () => {
         );
         await recepcionPage.login(FLUJO_CLINICO_USERS.recepcion);
 
-        const patientId = createPatientId();
+        const noExp = createNoExp();
         const visit = await recepcionPage.registerArrival({
-          patientId,
-          appointmentId: createAppointmentId(patientId),
+          noExp,
+          appointmentId: createAppointmentId(noExp),
           doctorId: 121,
           notes: "KAN-19 cancelada exception",
         });
@@ -123,10 +123,10 @@ test.describe("Flujo clinico excepciones", () => {
         );
         await recepcionPage.login(FLUJO_CLINICO_USERS.recepcion);
 
-        const patientId = createPatientId();
+        const noExp = createNoExp();
         const visit = await recepcionPage.registerArrival({
-          patientId,
-          appointmentId: createAppointmentId(patientId),
+          noExp,
+          appointmentId: createAppointmentId(noExp),
           doctorId: 121,
           notes: "KAN-19 no_show exception",
         });
@@ -195,10 +195,10 @@ test.describe("Flujo clinico excepciones", () => {
         );
         await recepcionPage.login(FLUJO_CLINICO_USERS.recepcion);
 
-        const patientId = createPatientId();
+        const noExp = createNoExp();
         const visit = await recepcionPage.registerArrival({
-          patientId,
-          appointmentId: createAppointmentId(patientId),
+          noExp,
+          appointmentId: createAppointmentId(noExp),
           doctorId: 121,
           notes: "KAN-19 invalid transition",
         });

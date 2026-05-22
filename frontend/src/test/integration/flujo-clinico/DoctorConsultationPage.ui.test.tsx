@@ -73,15 +73,17 @@ vi.mock("sonner", () => ({
 const createVisit = (
   overrides: Partial<VisitQueueItem> = {},
 ): VisitQueueItem => ({
-  id: 1,
-  folio: "VST-2001",
-  patientId: 2001,
-  arrivalType: "appointment",
-  serviceType: "medicina_general",
+  id:            1,
+  folio:         "VST-2001",
+  noExp:         "20001",
+  pkNum:         0,
+  arrivalType:   "appointment",
+  serviceType:   "medicina_general",
   appointmentId: "APP-2001",
-  doctorId: 77,
-  notes: "Paciente listo para valoracion",
-  status: "lista_para_doctor",
+  doctorId:      77,
+  notes:         "Paciente listo para valoracion",
+  status:        "lista_para_doctor",
+  vitals:        null,
   ...overrides,
 });
 
@@ -173,15 +175,17 @@ describe("DoctorConsultationPage UI", () => {
     } as unknown as ReturnType<typeof useCloseVisit>);
 
     startMutateAsync.mockResolvedValue({
-      id: 1,
-      folio: "VST-2001",
-      patientId: 2001,
-      arrivalType: "appointment",
-      serviceType: "medicina_general",
+      id:            1,
+      folio:         "VST-2001",
+      noExp:         "20001",
+      pkNum:         0,
+      arrivalType:   "appointment",
+      serviceType:   "medicina_general",
       appointmentId: "APP-2001",
-      doctorId: 77,
-      notes: "Paciente listo para valoracion",
-      status: "en_consulta",
+      doctorId:      77,
+      notes:         "Paciente listo para valoracion",
+      status:        "en_consulta",
+      vitals:        null,
     });
 
     saveDiagnosisMutateAsync.mockResolvedValue({
@@ -199,15 +203,16 @@ describe("DoctorConsultationPage UI", () => {
 
     closeMutateAsync.mockResolvedValue({
       visit: {
-        id: 1,
-        folio: "VST-2001",
-        patientId: 2001,
-        arrivalType: "appointment",
-        serviceType: "medicina_general",
+        id:            1,
+        folio:         "VST-2001",
+        noExp:         "20001",
+        pkNum:         0,
+        arrivalType:   "appointment",
+        serviceType:   "medicina_general",
         appointmentId: "APP-2001",
-        doctorId: 77,
-        notes: "Paciente listo para valoracion",
-        status: "cerrada",
+        doctorId:      77,
+        notes:         "Paciente listo para valoracion",
+        status:        "cerrada",
       },
       consultation: {
         id: 900,
@@ -288,11 +293,11 @@ describe("DoctorConsultationPage UI", () => {
         items: [
           createVisit(),
           createVisit({
-            id: 2,
-            folio: "VST-2002",
-            patientId: 2002,
+            id:            2,
+            folio:         "VST-2002",
+            noExp:         "20002",
             appointmentId: "APP-2002",
-            notes: "Paciente con control de seguimiento",
+            notes:         "Paciente con control de seguimiento",
           }),
         ],
         page: 1,
@@ -307,9 +312,9 @@ describe("DoctorConsultationPage UI", () => {
 
     startMutateAsync.mockResolvedValueOnce({
       ...createVisit({
-        id: 2,
-        folio: "VST-2002",
-        patientId: 2002,
+        id:            2,
+        folio:         "VST-2002",
+        noExp:         "20002",
         appointmentId: "APP-2002",
       }),
       status: "en_consulta",

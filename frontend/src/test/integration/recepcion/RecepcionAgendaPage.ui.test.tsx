@@ -36,15 +36,17 @@ vi.mock("sonner", () => ({
 const createVisit = (
   overrides: Partial<VisitQueueItem> = {},
 ): VisitQueueItem => ({
-  id: 1,
-  folio: "VST-001",
-  patientId: 1001,
-  arrivalType: "appointment",
-  serviceType: "medicina_general",
+  id:            1,
+  folio:         "VST-001",
+  noExp:         "10001",
+  pkNum:         0,
+  arrivalType:   "appointment",
+  serviceType:   "medicina_general",
   appointmentId: "APP-1001",
-  doctorId: 12,
-  notes: "Paciente puntual",
-  status: "en_espera",
+  doctorId:      12,
+  notes:         "Paciente puntual",
+  status:        "en_espera",
+  vitals:        null,
   ...overrides,
 });
 

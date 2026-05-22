@@ -90,6 +90,9 @@ export interface UserListItem {
   clinic: CentroAtencionRef | null;
   areaClinica: AreaClinicaRef | null;
   cdLaboral: string | null;
+  telefono: string | null;
+  sexo: "M" | "F" | null;
+  fechaNac: string | null;
   escolaridad: EscolaridadRef | null;
   escuela: EscuelaRef | null;
   tipoPersonal: TipoPersonal | null;
@@ -108,7 +111,7 @@ export interface UserListItem {
  */
 export interface UserDetail extends UserListItem {
   // --- Datos personales (para edición) ---
-  /** Nombre(s) del usuario */
+  // telefono, sexo, fechaNac heredados de UserListItem
   firstName: string;
   paternalName: string;
   maternalName: string;
@@ -180,6 +183,9 @@ export interface CreateUserRequest {
   primaryRoleId: number;
   noExp?: string | null;
   cdLaboral?: string | null;
+  telefono?: string | null;
+  sexo?: "M" | "F" | null;
+  fechaNac?: string | null;
   areaClinicaId?: number | null;
   escolaridadId?: number | null;
   escuelaId?: number | null;
@@ -199,6 +205,9 @@ export interface UpdateUserRequest {
   clinicId?: number | null;
   noExp?: string | null;
   cdLaboral?: string | null;
+  telefono?: string | null;
+  sexo?: "M" | "F" | null;
+  fechaNac?: string | null;
   areaClinicaId?: number | null;
   escolaridadId?: number | null;
   escuelaId?: number | null;

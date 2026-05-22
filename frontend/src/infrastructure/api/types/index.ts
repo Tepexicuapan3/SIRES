@@ -419,6 +419,8 @@ export type {
   VisitsListResponse,
   CreateVisitRequest,
   CreateVisitResponse,
+  PatientMember,
+  PatientLookupResponse,
   RecepcionStatusAction,
   UpdateVisitStatusRequest,
   UpdateVisitStatusResponse,
@@ -437,6 +439,22 @@ export type {
   CloseVisitRequest,
   CloseVisitResponse,
 } from "@api/types/visits.types";
+
+// =============================================================================
+// CITAS
+// =============================================================================
+export type {
+  EstatusCita,
+  CitaListItem,
+  SlotDisponible,
+  CreateCitaRequest,
+  UpdateEstatusCitaRequest,
+  CitasListParams,
+  SlotsParams,
+  CitasListResponse,
+  SlotsResponse,
+} from "@api/types/citas.types";
+export { ESTATUS_CITA } from "@api/types/citas.types";
 
 export {
   ARRIVAL_TYPE,

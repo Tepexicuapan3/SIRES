@@ -10,7 +10,8 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
-from .models import CitaMedica, EstatusCita, CatMedicoClin
+from apps.medicos.models import CatMedico
+from .models import CitaMedica, EstatusCita
 from .repositories.citas_repository import CitasRepository
 from .services.notificacion_service import NotificacionCitaService
 
@@ -100,8 +101,8 @@ def generar_slots_todos_medicos(self):
     citas_repo = CitasRepository()
 
     medicos = (
-        CatMedicoClin.objects.filter(est_medclin="A")
-        .order_by("id_medclin")
+        CatMedico.objects.filter(estatus_medico="ACTIVO")
+        .order_by("id_usuario_id")
     )
 
     total_slots = 0
@@ -111,7 +112,7 @@ def generar_slots_todos_medicos(self):
     for medico in medicos:
         try:
             creados = citas_repo.generar_slots_medico(
-                medico_id=medico.id_medclin,
+                medico_id=medico.id_usuario_id,
                 dias_adelante=30,
             )
             total_slots += creados

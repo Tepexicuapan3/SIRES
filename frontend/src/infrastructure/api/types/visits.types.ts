@@ -28,36 +28,73 @@ export const VISIT_STATUS = {
 export type VisitStatus = (typeof VISIT_STATUS)[keyof typeof VISIT_STATUS];
 
 export interface VisitQueueItem {
-  id: number;
-  folio: string;
-  patientId: number;
-  arrivalType: ArrivalType;
-  serviceType: VisitService;
-  appointmentId: string | null;
-  doctorId: number | null;
-  notes: string | null;
-  status: VisitStatus;
-  vitals: VisitVitalsPayload | null;
-}
-
-export interface VisitsListParams {
-  page?: number;
-  pageSize?: number;
-  status?: VisitStatus;
-  serviceType?: VisitService;
-  date?: string;
-  doctorId?: number;
+  id:                 number;
+  folio:              string;
+  noExp:              string;
+  pkNum:              number;
+  nombrePaciente:     string | null;
+  arrivalType:        ArrivalType;
+  serviceType:        VisitService;
+  appointmentId:      string | null;
+  doctorId:           number | null;
+  doctorNombre:       string | null;
+  consultorioId:      number | null;
+  consultorioNombre:  string | null;
+  centroId:           number | null;
+  centroNombre:       string | null;
+  notes:              string | null;
+  horaConsulta:       string | null;  // HH:mm
+  numFicha:           number | null;
+  turnoNombre:        string;
+  status:             VisitStatus;
+  fechaAlta:          string | null;
+  vitals:             VisitVitalsPayload | null;
 }
 
 export type VisitsListResponse = ListResponse<VisitQueueItem>;
 
 export interface CreateVisitRequest {
-  patientId: number;
-  arrivalType: ArrivalType;
-  serviceType: VisitService;
-  appointmentId?: string;
-  doctorId?: number;
-  notes?: string;
+  noExp:           string;
+  pkNum?:          number;
+  nombrePaciente?: string;
+  arrivalType:     ArrivalType;
+  serviceType:     VisitService;
+  appointmentId?:  string;
+  doctorId?:       number;
+  consultorioId?:  number;
+  notes?:          string;
+  horaConsulta?:   string;  // HH:mm
+}
+
+export interface VisitsListParams {
+  page?:          number;
+  pageSize?:      number;
+  status?:        VisitStatus;
+  serviceType?:   VisitService;
+  date?:          string;
+  doctorId?:      number;
+  consultorioId?: number;
+  centroId?:      number;
+  noExp?:         string;
+}
+
+// ── Lookup de paciente por expediente ────────────────────────────────────────
+
+export interface PatientMember {
+  noExp:      string;
+  pkNum:      number;
+  nombre:     string;
+  edad:       number | null;
+  fechaNac:   string | null;  // YYYY-MM-DD
+  parentesco: string | null;
+  estatus:    string | null;
+  cdClinica:  string | null;
+}
+
+export interface PatientLookupResponse {
+  /** null cuando el trabajador titular está de baja */
+  titular:      PatientMember | null;
+  dependientes: PatientMember[];
 }
 
 export type CreateVisitResponse = VisitQueueItem;

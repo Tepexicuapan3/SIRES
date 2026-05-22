@@ -30,6 +30,7 @@ import VacunasPage from "@features/admin/modules/catalogos/vacunas/pages/Vacunas
 import AreasClinicasPage from "@features/admin/modules/catalogos/areas-clinicas/pages/AreasClinicasPage";
 import CentrosAreasClinicasPage from "@features/admin/modules/catalogos/centro-area-clinica/pages/CentrosAreasClinicasPage";
 import PlaceholderPage from "@shared/components/PlaceholderPage";
+import MedicosPage from "@features/admin/modules/medicos/pages/MedicosPage";
 import { lazy, Suspense } from "react";
 
 // Administracion
@@ -70,6 +71,18 @@ export const adminRoutes: RouteObject[] = [
         dependencyAware
       >
         <RolesPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "medicos",
+    element: (
+      <ProtectedRoute
+        requiredCapability="admin.medicos.read"
+        fallbackRequirement={{ allOf: ["admin:gestion:medicos:read"] }}
+        dependencyAware
+      >
+        <MedicosPage />
       </ProtectedRoute>
     ),
   },

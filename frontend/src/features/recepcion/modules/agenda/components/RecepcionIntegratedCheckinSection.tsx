@@ -26,12 +26,15 @@ import {
   ARRIVAL_TYPE,
   RECEPCION_STATUS_ACTION,
   VISIT_STATUS,
+  type PatientMember,
   type VisitQueueItem,
 } from "@api/types";
 import { ApiError } from "@api/utils/errors";
 import { useCreateVisit } from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
 import { useVisitStatusAction } from "@features/recepcion/modules/checkin/mutations/useVisitStatusAction";
 import { mapCheckinFormToCreateVisitRequest } from "@features/recepcion/modules/checkin/domain/checkin.mappers";
+import { usePatientLookup } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
+import { useDebounce } from "@shared/hooks/useDebounce";
 import {
   createCheckinFormSchema,
   DEFAULT_CHECKIN_FORM_VALUES,
@@ -50,6 +53,7 @@ import {
   resolveRecepcionService,
 } from "@features/recepcion/shared/domain/recepcion.services";
 import { VisitStageNavigator } from "@features/operativo/shared/components/VisitStageNavigator";
+import { PatientMemberCard } from "@features/recepcion/shared/components/PatientMemberCard";
 import { RecepcionServiceBadge } from "@features/recepcion/shared/components/RecepcionServiceBadge";
 import { RecepcionStatusBadge } from "@features/recepcion/shared/components/RecepcionStatusBadge";
 import { formatArrivalTypeLabel } from "@features/recepcion/shared/utils/recepcion-format";
@@ -186,16 +190,16 @@ const resolveDomainErrorMessage = <TDomainCode extends string>(
 
 const sortVisits = (
   sortOption: SortOption,
-  firstVisit: { folio: string; patientId: number },
-  secondVisit: { folio: string; patientId: number },
+  firstVisit: { folio: string; noExp: string | null },
+  secondVisit: { folio: string; noExp: string | null },
 ): number => {
   switch (sortOption) {
     case SORT_OPTION.FOLIO_DESC:
       return secondVisit.folio.localeCompare(firstVisit.folio, "es");
     case SORT_OPTION.PATIENT_ASC:
-      return firstVisit.patientId - secondVisit.patientId;
+      return (firstVisit.noExp ?? "").localeCompare(secondVisit.noExp ?? "", "es");
     case SORT_OPTION.PATIENT_DESC:
-      return secondVisit.patientId - firstVisit.patientId;
+      return (secondVisit.noExp ?? "").localeCompare(firstVisit.noExp ?? "", "es");
     case SORT_OPTION.FOLIO_ASC:
     default:
       return firstVisit.folio.localeCompare(secondVisit.folio, "es");
@@ -241,13 +245,27 @@ export const RecepcionIntegratedCheckinSection = ({
     defaultValues: DEFAULT_CHECKIN_FORM_VALUES,
   });
 
-  const [serviceType, arrivalType] = useWatch({
+  const [serviceType, arrivalType, noExpWatch, pkNumWatch] = useWatch({
     control: form.control,
-    name: ["serviceType", "arrivalType"],
+    name: ["serviceType", "arrivalType", "noExp", "pkNum"],
   });
   const isWalkInOnlyService = isServiceForcedToWalkIn(serviceType);
   const serviceTypeField = form.register("serviceType");
   const arrivalTypeField = form.register("arrivalType");
+
+  const debouncedNoExp = useDebounce(noExpWatch ?? "", 400);
+  const { data: patientData, isFetching: isSearchingPatient, isError: lookupFailed } =
+    usePatientLookup(debouncedNoExp);
+  // Solo miembros ACTIVOS: titular (si no es null) + dependientes activos
+  const allMembers: PatientMember[] = patientData
+    ? [
+        ...(patientData.titular ? [patientData.titular] : []),
+        ...patientData.dependientes,
+      ]
+    : [];
+
+  // Miembro actualmente seleccionado
+  const selectedMember = allMembers.find((m) => m.pkNum === pkNumWatch);
 
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
@@ -264,14 +282,14 @@ export const RecepcionIntegratedCheckinSection = ({
       return matchesService && matchesArrivalType;
     }
 
-    const patientIdAsText = String(visit.patientId);
+    const noExp = (visit.noExp ?? "").toLowerCase();
     const folio = visit.folio.toLowerCase();
 
     return (
       matchesService &&
       matchesArrivalType &&
       (folio.includes(normalizedSearchTerm) ||
-        patientIdAsText.includes(normalizedSearchTerm))
+        noExp.includes(normalizedSearchTerm))
     );
   });
 
@@ -298,7 +316,9 @@ export const RecepcionIntegratedCheckinSection = ({
     }
 
     try {
-      await createVisit.mutateAsync(mapCheckinFormToCreateVisitRequest(values));
+      await createVisit.mutateAsync(
+        mapCheckinFormToCreateVisitRequest(values, selectedMember?.nombre),
+      );
       toast.success("Llegada registrada correctamente.");
       form.reset(DEFAULT_CHECKIN_FORM_VALUES);
     } catch (error) {
@@ -508,7 +528,14 @@ export const RecepcionIntegratedCheckinSection = ({
                             <td className="px-3 py-2 font-medium">
                               {visit.folio}
                             </td>
-                            <td className="px-3 py-2">{visit.patientId}</td>
+                            <td className="px-3 py-2 font-mono text-xs">
+                              {visit.noExp || <span className="font-sans text-txt-muted">—</span>}
+                              {visit.noExp && visit.pkNum > 0 ? (
+                                <span className="ml-1 font-sans text-txt-muted">
+                                  ·{visit.pkNum}
+                                </span>
+                              ) : null}
+                            </td>
                             <td className="px-3 py-2">
                               <RecepcionServiceBadge service={visitService} />
                             </td>
@@ -620,21 +647,74 @@ export const RecepcionIntegratedCheckinSection = ({
                 </select>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="patientId">ID paciente</Label>
-                  <Input
-                    id="patientId"
-                    type="number"
-                    disabled={!canWrite || createVisit.isPending}
-                    {...form.register("patientId")}
-                  />
-                  {form.formState.errors.patientId?.message ? (
-                    <p className="text-sm text-status-critical" role="alert">
-                      {form.formState.errors.patientId.message}
+              {/* ── Expediente + selector de paciente ────────────────── */}
+              <div className="space-y-2">
+                <Label htmlFor="noExp">Número de expediente</Label>
+                <Input
+                  id="noExp"
+                  placeholder="Ej. 12345"
+                  disabled={!canWrite || createVisit.isPending}
+                  {...form.register("noExp")}
+                />
+                {form.formState.errors.noExp?.message ? (
+                  <p className="text-sm text-status-critical" role="alert">
+                    {form.formState.errors.noExp.message}
+                  </p>
+                ) : null}
+              </div>
+
+              {debouncedNoExp.trim().length > 0 ? (
+                <div className="space-y-1.5">
+                  <Label>Paciente</Label>
+                  {isSearchingPatient ? (
+                    <p className="text-sm text-txt-muted">Buscando expediente...</p>
+                  ) : lookupFailed || allMembers.length === 0 ? (
+                    <p className="text-sm text-status-critical">
+                      {lookupFailed
+                        ? "Sin derecho al servicio o expediente no encontrado."
+                        : "No hay miembros activos para este expediente."}
                     </p>
-                  ) : null}
+                  ) : (
+                    <>
+                      {allMembers.map((member) => (
+                        <PatientMemberCard
+                          key={`${member.noExp}-${member.pkNum}`}
+                          member={member}
+                          selected={pkNumWatch === member.pkNum}
+                          onSelect={() =>
+                            form.setValue("pkNum", member.pkNum, { shouldValidate: true })
+                          }
+                        />
+                      ))}
+
+                      {/* Confirmación del paciente seleccionado */}
+                      {selectedMember ? (
+                        <div className="flex items-center gap-2.5 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5">
+                          <span className="size-4 shrink-0 rounded-full bg-primary flex items-center justify-center">
+                            <span className="size-2 rounded-full bg-white" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-primary">
+                              {selectedMember.nombre}
+                            </p>
+                            <p className="truncate text-xs text-txt-muted">
+                              {selectedMember.pkNum === 0 ? "Titular" : selectedMember.parentesco ?? "Familiar"}
+                              {" · Exp. "}{selectedMember.noExp}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-txt-muted italic">
+                          ↑ Selecciona a quien se le generará la ficha.
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
+              ) : null}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>{/* placeholder para mantener el grid */}</div>
 
                 <div className="space-y-2">
                   <Label htmlFor="arrivalType">Tipo de llegada</Label>
@@ -695,7 +775,7 @@ export const RecepcionIntegratedCheckinSection = ({
 
               <Button
                 type="submit"
-                disabled={!canWrite || createVisit.isPending}
+                disabled={!canWrite || createVisit.isPending || !selectedMember}
               >
                 Registrar llegada
               </Button>

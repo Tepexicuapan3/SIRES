@@ -82,6 +82,8 @@ export function UsersPage() {
       clinic: true,
       areaClinica: true,
       cdLaboral: true,
+      telefono: false,
+      sexo: true,
       tipoPersonal: true,
       escolaridad: true,
       escuela: true,
@@ -496,6 +498,7 @@ export function UsersPage() {
         emptyDescription="Cuando existan usuarios registrados se listarán aquí."
       />
       <UserDetailsDialog
+        key={selectedUser?.id ?? "none"}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         userSummary={selectedUser}

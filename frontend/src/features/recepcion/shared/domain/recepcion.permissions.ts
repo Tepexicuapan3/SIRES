@@ -19,3 +19,10 @@ export const RECEPCION_WRITE_PERMISSION_REQUIREMENT = {
 export const RECEPCION_QUEUE_PERMISSION_REQUIREMENT = {
   anyOf: RECEPCION_QUEUE_READ_PERMISSIONS,
 } as const satisfies PermissionRequirement;
+
+export const CITAS_READ_PERMISSION  = "recepcion:citas:read"  as const;
+export const CITAS_WRITE_PERMISSION = "recepcion:citas:write" as const;
+
+export const CITAS_READ_PERMISSION_REQUIREMENT = {
+  anyOf: [CITAS_READ_PERMISSION, CITAS_WRITE_PERMISSION],
+} as const satisfies PermissionRequirement;

@@ -124,6 +124,13 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "admin.catalogs.especialidades.update": {"allOf": ["admin:catalogos:especialidades:update"]},
     "admin.catalogs.especialidades.delete": {"allOf": ["admin:catalogos:especialidades:delete"]},
     "admin.catalogs.cies.upload": {"allOf": ["admin:catalogos:cies:upload"]},
+    # Médicos
+    "admin.medicos.read":        {"allOf": ["admin:gestion:medicos:read"]},
+    "admin.medicos.create":      {"allOf": ["admin:gestion:medicos:create"]},
+    "admin.medicos.update":      {"allOf": ["admin:gestion:medicos:update"]},
+    "admin.medicos.horarios":    {"allOf": ["admin:gestion:medicos:horarios"]},
+    "admin.medicos.excepciones": {"allOf": ["admin:gestion:medicos:excepciones"]},
+    "admin.medicos.coberturas":  {"allOf": ["admin:gestion:medicos:coberturas"]},
     "farmacia.vacunas.read": {"allOf": ["farmacia:vacunas:read"]},
     "farmacia.vacunas.create": {"allOf": ["farmacia:vacunas:create"]},
     "farmacia.vacunas.update": {"allOf": ["farmacia:vacunas:update"]},
@@ -158,6 +165,13 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     },
     "flow.doctor.consultation.close": {
         "allOf": ["clinico:consultas:read"]
+    },
+    # ── Citas médicas ──────────────────────────────────────────────────────────
+    "recepcion:citas:read": {
+        "allOf": ["recepcion:citas:read"]
+    },
+    "recepcion:citas:write": {
+        "allOf": ["recepcion:citas:write"]
     },
 }
 

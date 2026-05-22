@@ -33,22 +33,38 @@ export const buildConsultoriosTableColumns = ({
       key: "name",
       header: "Consultorio",
       accessorKey: "name",
-      className: "w-[260px]",
-      cellContentClassName: "max-w-[260px]",
+      className: "w-[220px]",
+      cellContentClassName: "max-w-[220px]",
     },
     {
       key: "numero",
-      header: "No. Consultorio",
+      header: "No.",
       accessorKey: "numero",
-      className: "w-[160px]",
+      className: "w-[80px]",
+      cellContentClassName: "max-w-[80px]",
+    },
+    {
+      key: "centerName",
+      header: "Centro de atención",
+      accessorKey: "centerName",
+      className: "w-[200px]",
+      cellContentClassName: "max-w-[200px] truncate",
+      render: (row) => row.centerName ?? <span className="text-txt-muted">—</span>,
+    },
+    {
+      key: "turnName",
+      header: "Turno",
+      accessorKey: "turnName",
+      className: "w-[140px]",
       cellContentClassName: "max-w-[140px]",
+      render: (row) => row.turnName ?? <span className="text-txt-muted">—</span>,
     },
     {
       key: "isActive",
       header: "Estado",
       align: "center",
       accessorKey: "isActive",
-      className: "w-[130px]",
+      className: "w-[110px]",
       render: (row) => (
         <CatalogStatusBadge
           isActive={row.isActive}
@@ -132,9 +148,11 @@ export const buildConsultoriosVisibilityOptions = (
   showActions: boolean,
 ): TableColumnVisibilityItem[] => {
   const options: TableColumnVisibilityItem[] = [
-    { key: "name", label: "Consultorio" },
-    { key: "numero", label: "No. Consultorio" },
-    { key: "isActive", label: "Estado" },
+    { key: "name",       label: "Consultorio" },
+    { key: "numero",     label: "No." },
+    { key: "centerName", label: "Centro de atención" },
+    { key: "turnName",   label: "Turno" },
+    { key: "isActive",   label: "Estado" },
   ];
 
   if (showActions) {

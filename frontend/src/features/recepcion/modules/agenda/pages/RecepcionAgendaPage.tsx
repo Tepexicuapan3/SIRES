@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarClock, RefreshCcw } from "lucide-react";
+import { CalendarClock, Printer, RefreshCcw, Settings2 } from "lucide-react";
+import { TurnoIndicator } from "@features/recepcion/shared/components/TurnoIndicator";
 import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
 import {
   AlertDialog,
@@ -31,6 +32,10 @@ import { RecepcionQuickCheckinDialog } from "@features/recepcion/modules/agenda/
 import { mapVisitToCheckinDefaults } from "@features/recepcion/modules/checkin/domain/checkin.mappers";
 import type { CheckinFormInput } from "@features/recepcion/modules/checkin/domain/checkin.schemas";
 import { canRunRecepcionStatusAction } from "@features/operativo/shared/domain/visit-flow.constants";
+import { FichaModal } from "@features/recepcion/shared/components/FichaModal";
+import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
+import { useConsultoriosList } from "@features/admin/modules/catalogos/consultorios/queries/useConsultoriosList";
+import { useMedicosList } from "@features/admin/modules/medicos/hooks/useMedicos";
 import {
   RECEPCION_QUEUE_PERMISSION_REQUIREMENT,
   RECEPCION_WRITE_PERMISSION_REQUIREMENT,
@@ -46,7 +51,6 @@ import { RecepcionServiceBadge } from "@features/recepcion/shared/components/Rec
 import { RecepcionStatusBadge } from "@features/recepcion/shared/components/RecepcionStatusBadge";
 import {
   formatArrivalTypeLabel,
-  formatVisitStatusLabel,
   isOpenVisitStatus,
 } from "@features/recepcion/shared/utils/recepcion-format";
 
@@ -204,13 +208,13 @@ const matchesSearch = (visit: VisitQueueItem, searchTerm: string): boolean => {
     return true;
   }
 
-  const patientId = String(visit.patientId).toLowerCase();
-  const folio = visit.folio.toLowerCase();
+  const noExp         = visit.noExp.toLowerCase();
+  const folio         = visit.folio.toLowerCase();
   const appointmentId = (visit.appointmentId ?? "").toLowerCase();
 
   return (
     folio.includes(normalizedSearch) ||
-    patientId.includes(normalizedSearch) ||
+    noExp.includes(normalizedSearch) ||
     appointmentId.includes(normalizedSearch)
   );
 };
@@ -277,6 +281,7 @@ const shouldRefreshQueueAfterError = (error: unknown): boolean => {
 
 export const RecepcionAgendaPage = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const shouldFocusCheckin = searchParams.get("focus") === "checkin";
   const focusFolio = searchParams.get("folio");
 
@@ -302,6 +307,12 @@ export const RecepcionAgendaPage = () => {
   const [serviceFilter, setServiceFilter] = useState<ServiceFilter>(
     SERVICE_FILTER.ALL,
   );
+  const [doctorFilter,      setDoctorFilter]      = useState<number | "all">("all");
+  const [consultorioFilter, setConsultorioFilter] = useState<number | "all">("all");
+  const [centroFilter,      setCentroFilter]      = useState<number | "all">("all");
+  const [fichaOpen, setFichaOpen] = useState(false);
+  const [fichaVisit, setFichaVisit] = useState<VisitQueueItem | null>(null);
+
   const [quickCheckinOpen, setQuickCheckinOpen] = useState(
     () => shouldFocusCheckin,
   );
@@ -346,6 +357,38 @@ export const RecepcionAgendaPage = () => {
     (visit) => visit.doctorId == null,
   ).length;
 
+  // ── Catálogos reales para filtros (carga única, filtrado client-side) ────────
+  // Estrategia: cargar TODO una sola vez al montar; filtrar en memoria.
+  // Sin llamadas extra al cambiar filtros → O(1) por interacción.
+
+  const { data: centrosData } = useCentrosAtencionList({ isActive: true });
+  const centroOptions = (centrosData?.items ?? []).map((c) => ({ id: c.id, nombre: c.name }));
+
+  const { data: consultoriosData } = useConsultoriosList(
+    { isActive: true, pageSize: 500 },
+  );
+  const allConsultorios = consultoriosData?.items ?? [];
+
+  const { data: medicosData } = useMedicosList({ estatusMedico: "ACTIVO" });
+  const allMedicos = medicosData?.items ?? [];
+
+  // Filtrado client-side: si hay centro seleccionado → solo los de ese centro
+  const selectedCentroId = centroFilter !== "all" ? centroFilter : null;
+
+  const consultorioOptions = (
+    selectedCentroId
+      ? allConsultorios.filter((c) => c.centerId === selectedCentroId)
+      : allConsultorios
+  ).map((c) => ({ id: c.id, nombre: `#${c.numero} — ${c.name}` }));
+
+  const doctorOptions = (
+    selectedCentroId
+      ? allMedicos.filter((m) =>
+          m.centros.some((mc) => mc.centroId === selectedCentroId),
+        )
+      : allMedicos
+  ).map((m) => ({ id: m.id, nombre: m.nombreCompleto }));
+
   const filteredVisits = visits
     .filter((visit) => matchesStatus(visit, statusFilter))
     .filter((visit) => matchesArrivalType(visit, arrivalTypeFilter))
@@ -354,6 +397,9 @@ export const RecepcionAgendaPage = () => {
       const service = resolveRecepcionService(visit);
       return matchesService(service, serviceFilter);
     })
+    .filter((visit) => doctorFilter      === "all" || visit.doctorId      === doctorFilter)
+    .filter((visit) => consultorioFilter === "all" || visit.consultorioId === consultorioFilter)
+    .filter((visit) => centroFilter      === "all" || visit.centroId      === centroFilter)
     .sort(sortAgendaVisits);
   const legacyFocusedVisit = focusFolio
     ? visits.find((visit) => visit.folio === focusFolio)
@@ -433,6 +479,17 @@ export const RecepcionAgendaPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <TurnoIndicator />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            title="Configurar turnos y fichas"
+            onClick={() => navigate("/recepcion/turnos")}
+          >
+            <Settings2 className="size-4" />
+          </Button>
           <span className="rounded-full border border-line-hairline bg-subtle px-3 py-1 text-xs font-medium text-txt-muted">
             Sync: {queueQuery.connectionStatus ?? "idle"}
           </span>
@@ -447,9 +504,7 @@ export const RecepcionAgendaPage = () => {
             type="button"
             variant="ghost"
             className="gap-2"
-            onClick={() => {
-              void queueQuery.refetch?.();
-            }}
+            onClick={() => void queueQuery.refetch?.()}
           >
             <RefreshCcw className="size-4" />
             Actualizar
@@ -599,6 +654,59 @@ export const RecepcionAgendaPage = () => {
                   ))}
                 </select>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="agenda-centro-filter">Centro de atención</Label>
+                <select
+                  id="agenda-centro-filter"
+                  className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                  value={centroFilter === "all" ? "all" : String(centroFilter)}
+                  onChange={(e) => {
+                    setCentroFilter(e.target.value === "all" ? "all" : Number(e.target.value));
+                    setConsultorioFilter("all");
+                    setDoctorFilter("all");
+                  }}
+                >
+                  <option value="all">Todos los centros</option>
+                  {centroOptions.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="agenda-cons-filter">Consultorio</Label>
+                <select
+                  id="agenda-cons-filter"
+                  className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                  value={consultorioFilter === "all" ? "all" : String(consultorioFilter)}
+                  onChange={(e) =>
+                    setConsultorioFilter(e.target.value === "all" ? "all" : Number(e.target.value))
+                  }
+                >
+                  <option value="all">Todos los consultorios</option>
+                  {consultorioOptions.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="agenda-doctor-filter">Médico</Label>
+                <select
+                  id="agenda-doctor-filter"
+                  className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                  value={doctorFilter === "all" ? "all" : String(doctorFilter)}
+                  onChange={(e) =>
+                    setDoctorFilter(e.target.value === "all" ? "all" : Number(e.target.value))
+                  }
+                >
+                  <option value="all">Todos los médicos</option>
+                  {doctorOptions.map((d) => (
+                    <option key={d.id} value={d.id}>{d.nombre}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {filteredVisits.length === 0 ? (
@@ -622,43 +730,96 @@ export const RecepcionAgendaPage = () => {
                   return (
                     <article
                       key={visit.id}
-                      className="flex flex-col gap-3 rounded-xl border border-line-struct bg-paper p-4"
+                      className="flex flex-col gap-0 rounded-xl border border-line-struct bg-paper overflow-hidden"
                     >
-                      <header className="flex items-start justify-between gap-3">
+                      {/* ── Banda superior: ficha + estado ─────────────── */}
+                      <div className="flex items-center justify-between gap-2 border-b border-line-hairline bg-subtle/30 px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          {visit.numFicha ? (
+                            <span className="text-2xl font-black text-primary leading-none">
+                              #{visit.numFicha}
+                            </span>
+                          ) : null}
+                          {visit.turnoNombre ? (
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wide">
+                              {visit.turnoNombre}
+                            </span>
+                          ) : null}
+                          <span className="font-mono text-xs text-txt-muted">{visit.folio}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            title="Ver e imprimir ficha"
+                            className="rounded-lg p-1.5 text-txt-muted hover:bg-subtle hover:text-primary transition-colors"
+                            onClick={() => { setFichaVisit(visit); setFichaOpen(true); }}
+                          >
+                            <Printer className="size-4" />
+                          </button>
+                          <RecepcionStatusBadge status={visit.status} />
+                        </div>
+                      </div>
+
+                      {/* ── Datos del paciente ──────────────────────────── */}
+                      <div className="px-4 pt-3 pb-2">
+                        {visit.nombrePaciente ? (
+                          <p className="text-base font-bold text-txt-body truncate">
+                            {visit.nombrePaciente}
+                          </p>
+                        ) : null}
+                        <p className="mt-0.5 font-mono text-xs text-txt-muted">
+                          Exp.&nbsp;
+                          <span className="font-semibold text-txt-body">{visit.noExp || "—"}</span>
+                          {visit.pkNum > 0 ? (
+                            <span className="ml-1 font-sans font-normal"> · Familiar #{visit.pkNum}</span>
+                          ) : (
+                            <span className="ml-1 font-sans font-normal"> · Titular</span>
+                          )}
+                        </p>
+                      </div>
+
+                      {/* ── Detalles en grid de 2 columnas ─────────────── */}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 border-t border-line-hairline">
+                        {visit.horaConsulta ? (
+                          <div>
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Hora cita</p>
+                            <p className="text-sm font-bold text-primary font-mono">{visit.horaConsulta}</p>
+                          </div>
+                        ) : null}
+
                         <div>
-                          <p className="text-xs font-medium text-txt-muted">
-                            Folio
-                          </p>
-                          <p className="text-lg font-semibold text-txt-body">
-                            {visit.folio}
-                          </p>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Servicio</p>
+                          <div className="mt-0.5"><RecepcionServiceBadge service={visitService} /></div>
                         </div>
-                        <RecepcionStatusBadge status={visit.status} />
-                      </header>
 
-                      <dl className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between gap-3">
-                          <dt className="text-txt-muted">Paciente</dt>
-                          <dd className="font-medium text-txt-body">
-                            {visit.patientId}
-                          </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <dt className="text-txt-muted">Servicio</dt>
-                          <dd>
-                            <RecepcionServiceBadge service={visitService} />
-                          </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <dt className="text-txt-muted">Tipo</dt>
-                          <dd>{formatArrivalTypeLabel(visit.arrivalType)}</dd>
-                        </div>
-                      </dl>
+                        {visit.doctorNombre ? (
+                          <div className="col-span-2">
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Médico</p>
+                            <p className="text-xs font-semibold text-txt-body truncate">{visit.doctorNombre}</p>
+                          </div>
+                        ) : null}
 
-                      <footer className="mt-auto space-y-2 border-t border-line-hairline pt-3">
-                        <span className="text-xs text-txt-muted">
-                          {formatVisitStatusLabel(visit.status)}
-                        </span>
+                        {visit.consultorioNombre ? (
+                          <div>
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Consultorio</p>
+                            <p className="text-xs font-medium text-txt-body">{visit.consultorioNombre}</p>
+                          </div>
+                        ) : null}
+
+                        {visit.centroNombre ? (
+                          <div>
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Centro</p>
+                            <p className="text-xs font-medium text-txt-body truncate">{visit.centroNombre}</p>
+                          </div>
+                        ) : null}
+
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Llegada</p>
+                          <p className="text-xs font-medium text-txt-body">{formatArrivalTypeLabel(visit.arrivalType)}</p>
+                        </div>
+                      </div>
+
+                      <footer className="border-t border-line-hairline px-4 py-3">
                         <div className="flex flex-wrap items-center justify-end gap-2">
                           <Button
                             type="button"
@@ -780,6 +941,12 @@ export const RecepcionAgendaPage = () => {
         }}
         canWrite={canWriteRecepcion}
         initialValues={resolvedQuickCheckinDefaults}
+      />
+
+      <FichaModal
+        open={fichaOpen}
+        onOpenChange={setFichaOpen}
+        visit={fichaVisit}
       />
     </section>
   );

@@ -795,20 +795,30 @@ export const DoctorConsultationPage = () => {
                       }}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-txt-body">
+                        <p className="text-sm font-semibold text-txt-body font-mono">
                           {visit.folio}
                         </p>
                         <Badge variant="outline" className="uppercase">
                           {formatStatusLabel(visit.status)}
                         </Badge>
                       </div>
-                      <p className="mt-2 text-sm text-txt-muted">
-                        Paciente #{visit.patientId}
+                      {visit.nombrePaciente ? (
+                        <p className="mt-1.5 text-sm font-semibold text-txt-body">
+                          {visit.nombrePaciente}
+                        </p>
+                      ) : null}
+                      <p className="mt-1 text-xs text-txt-muted font-mono">
+                        Exp. {visit.noExp}{visit.pkNum > 0 ? ` · familiar #${visit.pkNum}` : ""}
                       </p>
                       <p className="mt-1 text-xs text-txt-muted">
-                        {formatServiceTypeLabel(visit.serviceType)} -{" "}
+                        {formatServiceTypeLabel(visit.serviceType)} ·{" "}
                         {formatArrivalTypeLabel(visit.arrivalType)}
                       </p>
+                      {visit.doctorNombre ? (
+                        <p className="mt-1 text-xs text-txt-muted">
+                          Dr. {visit.doctorNombre}
+                        </p>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -835,30 +845,74 @@ export const DoctorConsultationPage = () => {
               {selectedVisit ? (
                 <div className="space-y-4">
                   <div className="space-y-4 rounded-lg border border-line-hairline bg-subtle/30 p-4">
+                    {/* Encabezado: folio + estado */}
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-base font-semibold text-txt-body">
-                        Folio {selectedVisit.folio}
+                      <p className="text-sm font-mono font-medium text-txt-muted">
+                        {selectedVisit.folio}
                       </p>
                       <Badge variant="outline" className="uppercase">
                         {formatStatusLabel(selectedVisitStatus)}
                       </Badge>
                     </div>
-                    <p className="text-sm text-txt-muted">
-                      Paciente #{selectedVisit.patientId}
-                    </p>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <p className="text-sm text-txt-muted">
-                        <span className="font-medium text-txt-body">
-                          Servicio:
-                        </span>{" "}
-                        {formatServiceTypeLabel(selectedVisit.serviceType)}
+
+                    {/* Nombre del paciente */}
+                    {selectedVisit.nombrePaciente ? (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
+                          Paciente
+                        </p>
+                        <p className="text-xl font-bold text-txt-body">
+                          {selectedVisit.nombrePaciente}
+                        </p>
+                        <p className="text-xs text-txt-muted font-mono mt-0.5">
+                          Exp. {selectedVisit.noExp}
+                          {selectedVisit.pkNum > 0 ? ` · familiar #${selectedVisit.pkNum}` : " · Titular"}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-txt-muted font-mono">
+                        Exp. {selectedVisit.noExp}{selectedVisit.pkNum > 0 ? ` · familiar #${selectedVisit.pkNum}` : ""}
                       </p>
-                      <p className="text-sm text-txt-muted">
-                        <span className="font-medium text-txt-body">
-                          Modalidad:
-                        </span>{" "}
-                        {formatArrivalTypeLabel(selectedVisit.arrivalType)}
-                      </p>
+                    )}
+
+                    {/* Datos de la cita */}
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <p className="text-xs text-txt-muted">Servicio</p>
+                        <p className="text-sm font-medium text-txt-body">
+                          {formatServiceTypeLabel(selectedVisit.serviceType)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-txt-muted">Modalidad</p>
+                        <p className="text-sm font-medium text-txt-body">
+                          {formatArrivalTypeLabel(selectedVisit.arrivalType)}
+                        </p>
+                      </div>
+                      {selectedVisit.doctorNombre ? (
+                        <div>
+                          <p className="text-xs text-txt-muted">Médico</p>
+                          <p className="text-sm font-medium text-txt-body">
+                            {selectedVisit.doctorNombre}
+                          </p>
+                        </div>
+                      ) : null}
+                      {selectedVisit.consultorioNombre ? (
+                        <div>
+                          <p className="text-xs text-txt-muted">Consultorio</p>
+                          <p className="text-sm font-medium text-txt-body">
+                            {selectedVisit.consultorioNombre}
+                          </p>
+                        </div>
+                      ) : null}
+                      {selectedVisit.horaConsulta ? (
+                        <div>
+                          <p className="text-xs text-txt-muted">Hora cita</p>
+                          <p className="text-sm font-medium text-txt-body font-mono">
+                            {selectedVisit.horaConsulta}
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="rounded-lg border border-line-hairline bg-paper p-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">

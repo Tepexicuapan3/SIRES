@@ -227,6 +227,69 @@ export function UserDetailsGeneralTab({
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="telefono"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Teléfono</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                    placeholder="Ej. 5512345678"
+                    disabled={!isEditable}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="sexo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Sexo</FormLabel>
+                <Select
+                  value={field.value ?? undefined}
+                  onValueChange={(v) => field.onChange(v || null)}
+                  disabled={!isEditable}
+                >
+                  <FormControl>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="No registrado" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="M">Masculino</SelectItem>
+                    <SelectItem value="F">Femenino</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fechaNac"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fecha de nacimiento <span className="text-txt-muted text-xs">(opcional)</span></FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                    disabled={!isEditable}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* Centro + Estado + Área clínica */}
@@ -386,16 +449,16 @@ export function UserDetailsGeneralTab({
             control={form.control}
             name="tipoPersonal"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="sm:col-span-2">
                 <FormLabel>Tipo de personal</FormLabel>
                 <Select
-                  value={field.value ?? ""}
+                  value={field.value ?? undefined}
                   onValueChange={(v) => field.onChange(v || null)}
                   disabled={!isEditable}
                 >
                   <FormControl>
                     <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Selecciona tipo" />
+                      <SelectValue placeholder="No registrado" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>

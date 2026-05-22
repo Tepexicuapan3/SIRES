@@ -10,6 +10,7 @@ export const useCreateVisit = () => {
     mutationFn: (data: CreateVisitRequest) => visitsAPI.create(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: visitFlowKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ["agenda-semanal"] });
     },
   });
 };

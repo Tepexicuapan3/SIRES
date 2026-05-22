@@ -5,7 +5,7 @@ class CatCies(CatalogBase):
     code = models.CharField(
         primary_key=True,
         max_length=8,
-        db_column="clave"
+        db_column="codigo"
     )
     description = models.CharField(
         max_length=400,
@@ -13,7 +13,7 @@ class CatCies(CatalogBase):
     )
     version = models.CharField(
         max_length=10,
-        db_column="version"
+        db_column="version_cie"
     )
     is_active = models.BooleanField(default=True)
 

@@ -27,10 +27,11 @@ export interface VisitRecord {
 }
 
 interface RegisterArrivalInput {
-  patientId: number;
+  noExp:         string;
+  pkNum?:        number;
   appointmentId: string;
-  doctorId?: number;
-  notes?: string;
+  doctorId?:     number;
+  notes?:        string;
 }
 
 interface CloseConsultationInput {
@@ -173,12 +174,10 @@ export class FlujoClinicoPage {
             );
 
             const hasInlineInputs =
-              document.querySelector("#patientId") !== null ||
-              document.querySelector("#quick-patientId") !== null;
+              document.querySelector("#noExp") !== null;
 
             const hasLabeledInput =
-              document.querySelector('label[for="patientId"]') !== null ||
-              document.querySelector('label[for="quick-patientId"]') !== null;
+              document.querySelector('label[for="noExp"]') !== null;
 
             return hasPrimaryAction || hasInlineInputs || hasLabeledInput;
           },
@@ -201,8 +200,8 @@ export class FlujoClinicoPage {
         .first();
       const hasPrimaryAction = (await primaryAction.count()) > 0;
       const hasInlineForm =
-        (await this.page.locator("#patientId, #quick-patientId").count()) > 0 ||
-        (await this.page.getByLabel("ID paciente").count()) > 0;
+        (await this.page.locator("#noExp").count()) > 0 ||
+        (await this.page.getByLabel("Número de expediente").count()) > 0;
 
       if (hasPrimaryAction || hasInlineForm) {
         if (hasPrimaryAction) {
@@ -219,14 +218,14 @@ export class FlujoClinicoPage {
       return false;
     }
 
-    let patientIdField = this.page.locator("#quick-patientId").first();
-    if ((await patientIdField.count()) === 0) {
-      patientIdField = this.page.getByLabel("ID paciente").first();
+    let noExpField = this.page.locator("#noExp").first();
+    if ((await noExpField.count()) === 0) {
+      noExpField = this.page.getByLabel("Número de expediente").first();
     }
 
     if (
-      (await patientIdField.count()) === 0 ||
-      !(await patientIdField.isVisible())
+      (await noExpField.count()) === 0 ||
+      !(await noExpField.isVisible())
     ) {
       await this.page
         .getByRole("button", {
@@ -239,10 +238,10 @@ export class FlujoClinicoPage {
         this.page.getByRole("dialog").getByText("Generar ficha de consulta"),
       ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
 
-      patientIdField = this.page.locator("#quick-patientId").first();
+      noExpField = this.page.locator("#noExp").first();
     }
 
-    await expect(patientIdField).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+    await expect(noExpField).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
     return true;
   }
 
@@ -301,12 +300,13 @@ export class FlujoClinicoPage {
           requestUrl: `${apiBaseUrl}/visits`,
           requestId: `kan27-create-visit-${Date.now()}`,
           payload: {
-            patientId: input.patientId,
-            arrivalType: "appointment",
-            serviceType: "medicina_general",
+            noExp:         input.noExp,
+            pkNum:         input.pkNum ?? 0,
+            arrivalType:   "appointment",
+            serviceType:   "medicina_general",
             appointmentId: input.appointmentId,
-            doctorId: input.doctorId,
-            notes: input.notes,
+            doctorId:      input.doctorId,
+            notes:         input.notes,
           },
         },
       );
@@ -319,16 +319,14 @@ export class FlujoClinicoPage {
       return fallbackResponse.body as VisitRecord;
     }
 
-    const patientIdInput = this.page
-      .locator("#quick-patientId, #patientId")
-      .first();
+    const noExpInput = this.page.locator("#noExp").first();
     const appointmentInput = this.page
       .locator("#quick-appointmentId, #appointmentId")
       .first();
     const doctorInput = this.page.locator("#quick-doctorId, #doctorId").first();
     const notesInput = this.page.locator("#quick-notes, #notes").first();
 
-    await patientIdInput.fill(String(input.patientId));
+    await noExpInput.fill(input.noExp);
     await appointmentInput.fill(input.appointmentId);
     if (input.doctorId) {
       await doctorInput.fill(String(input.doctorId));

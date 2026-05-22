@@ -43,6 +43,12 @@ PERMISSIONS = [
     ("admin:gestion:usuarios:create", "Admin - Crear usuarios"),
     ("admin:gestion:usuarios:update", "Admin - Editar usuarios"),
     ("admin:gestion:usuarios:delete", "Admin - Eliminar usuarios"),
+    ("admin:gestion:medicos:read",        "Admin - Ver catalogo de medicos"),
+    ("admin:gestion:medicos:create",      "Admin - Registrar medico desde usuario"),
+    ("admin:gestion:medicos:update",      "Admin - Editar perfil medico"),
+    ("admin:gestion:medicos:horarios",    "Admin - Gestionar horarios y consultorios"),
+    ("admin:gestion:medicos:excepciones", "Admin - Registrar excepciones del medico"),
+    ("admin:gestion:medicos:coberturas",  "Admin - Registrar coberturas entre medicos"),
     ("admin:gestion:expedientes:read", "Admin - Ver expedientes"),
     ("admin:gestion:roles:read", "Admin - Ver roles"),
     ("admin:gestion:roles:create", "Admin - Crear roles"),
@@ -116,7 +122,9 @@ PERMISSIONS = [
     ),
     ("recepcion:fichas:urgencias:read", "Recepcion - Ver ficha urgencias"),
     ("recepcion:fichas:urgencias:create", "Recepcion - Ficha urgencias"),
-    ("recepcion:incapacidad:create", "Recepcion - Incapacidad"),
+    ("recepcion:incapacidad:create",   "Recepcion - Incapacidad"),
+    ("recepcion:citas:read",           "Recepcion - Ver citas médicas"),
+    ("recepcion:citas:write",          "Recepcion - Agendar y gestionar citas"),
     ("farmacia:recetas:dispensar", "Farmacia - Dispensar recetas"),
     ("farmacia:inventario:update", "Farmacia - Actualizar inventario"),
     ("farmacia:vacunas:read", "Farmacia - Ver inventario de vacunas"),
@@ -291,6 +299,8 @@ ROLE_DEFS = [
             "recepcion:fichas:urgencias:read",
             "recepcion:fichas:urgencias:create",
             "recepcion:incapacidad:create",
+            "recepcion:citas:read",
+            "recepcion:citas:write",
         ],
     },
     {
@@ -703,7 +713,7 @@ USER_OVERRIDE_DEFS = [
 DEMO_VISITS = [
     {
         "folio": "RCP-DEMO-0001",
-        "patient_id": 81001,
+        "no_exp": "81001", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.APPOINTMENT,
         "appointment_id": "APP-DEMO-0001",
         "doctor_id": 120,
@@ -712,7 +722,7 @@ DEMO_VISITS = [
     },
     {
         "folio": "RCP-DEMO-0002",
-        "patient_id": 81002,
+        "no_exp": "81002", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.WALK_IN,
         "appointment_id": None,
         "doctor_id": None,
@@ -721,7 +731,7 @@ DEMO_VISITS = [
     },
     {
         "folio": "SMT-DEMO-0001",
-        "patient_id": 82001,
+        "no_exp": "82001", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.APPOINTMENT,
         "appointment_id": "APP-DEMO-0101",
         "doctor_id": 121,
@@ -730,7 +740,7 @@ DEMO_VISITS = [
     },
     {
         "folio": "SMT-DEMO-0002",
-        "patient_id": 82002,
+        "no_exp": "82002", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.WALK_IN,
         "appointment_id": None,
         "doctor_id": 121,
@@ -739,7 +749,7 @@ DEMO_VISITS = [
     },
     {
         "folio": "SMT-DEMO-0003",
-        "patient_id": 82003,
+        "no_exp": "82003", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.APPOINTMENT,
         "appointment_id": "APP-DEMO-0103",
         "doctor_id": 123,
@@ -748,7 +758,7 @@ DEMO_VISITS = [
     },
     {
         "folio": "SMT-DEMO-0004",
-        "patient_id": 82004,
+        "no_exp": "82004", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.WALK_IN,
         "appointment_id": None,
         "doctor_id": None,
@@ -757,7 +767,7 @@ DEMO_VISITS = [
     },
     {
         "folio": "DOC-DEMO-0001",
-        "patient_id": 83001,
+        "no_exp": "83001", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.APPOINTMENT,
         "appointment_id": "APP-DEMO-0201",
         "doctor_id": 122,
@@ -766,7 +776,7 @@ DEMO_VISITS = [
     },
     {
         "folio": "DOC-DEMO-0002",
-        "patient_id": 83002,
+        "no_exp": "83002", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.WALK_IN,
         "appointment_id": None,
         "doctor_id": 122,
@@ -775,7 +785,7 @@ DEMO_VISITS = [
     },
     {
         "folio": "DOC-DEMO-0003",
-        "patient_id": 83003,
+        "no_exp": "83003", "pk_num": 0,
         "arrival_type": Visit.ArrivalType.APPOINTMENT,
         "appointment_id": "APP-DEMO-0203",
         "doctor_id": 123,
@@ -1185,13 +1195,14 @@ def _seed_demo_visits():
         Visit.objects.update_or_create(
             folio=visit_def["folio"],
             defaults={
-                "patient_id": visit_def["patient_id"],
-                "arrival_type": visit_def["arrival_type"],
+                "no_exp":         visit_def["no_exp"],
+                "pk_num":         visit_def["pk_num"],
+                "arrival_type":   visit_def["arrival_type"],
                 "appointment_id": visit_def["appointment_id"],
-                "doctor_id": visit_def["doctor_id"],
-                "notes": visit_def["notes"],
-                "status": visit_def["status"],
-                "fch_baja": None,
+                "doctor_id":      visit_def["doctor_id"],
+                "notes":          visit_def["notes"],
+                "status":         visit_def["status"],
+                "fch_baja":       None,
             },
         )
         total += 1

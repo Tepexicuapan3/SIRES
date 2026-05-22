@@ -8,7 +8,7 @@ from apps.catalogos.models import Consultorios
 
 class ConsultoriosRepository:
     @staticmethod
-    def get_all(*, search=None, est_activo=None, sort_by="numero", sort_order="asc"):
+    def get_all(*, search=None, est_activo=None, id_center=None, sort_by="numero", sort_order="asc"):
         queryset = Consultorios.objects.select_related("id_turn", "id_center").all()
 
         if search:
@@ -21,6 +21,9 @@ class ConsultoriosRepository:
 
         if est_activo is not None:
             queryset = queryset.filter(is_active=est_activo)
+
+        if id_center is not None:
+            queryset = queryset.filter(id_center_id=id_center)
 
         allowed_sort_fields = {
             "id": "id",

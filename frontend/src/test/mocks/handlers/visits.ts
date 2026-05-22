@@ -19,15 +19,16 @@ const buildVisit = (
   overrides: Partial<VisitQueueItem> = {},
 ): VisitQueueItem => ({
   id,
-  folio: `VST-${id.toString().padStart(6, "0")}`,
-  patientId: 900000 + id,
-  arrivalType: ARRIVAL_TYPE.APPOINTMENT,
-  serviceType: VISIT_SERVICE.MEDICINA_GENERAL,
+  folio:         `VST-${id.toString().padStart(6, "0")}`,
+  noExp:         `9${String(id).padStart(5, "0")}`,
+  pkNum:         0,
+  arrivalType:   ARRIVAL_TYPE.APPOINTMENT,
+  serviceType:   VISIT_SERVICE.MEDICINA_GENERAL,
   appointmentId: `APP-${id}`,
-  doctorId: 121,
-  notes: "mock visit",
-  status: VISIT_STATUS.EN_ESPERA,
-  vitals: null,
+  doctorId:      121,
+  notes:         "mock visit",
+  status:        VISIT_STATUS.EN_ESPERA,
+  vitals:        null,
   ...overrides,
 });
 
@@ -89,17 +90,19 @@ export const visitsHandlers = [
   http.post(getApiUrl("visits"), async ({ request }) => {
     const state = getVisitsState();
     const payload = (await request.json()) as {
-      patientId: number;
+      noExp:          string;
+      pkNum?:         number;
       appointmentId?: string;
-      doctorId?: number;
-      notes?: string;
+      doctorId?:      number;
+      notes?:         string;
     };
 
     const visit = buildVisit(state.nextVisitId++, {
-      patientId: payload.patientId,
+      noExp:         payload.noExp,
+      pkNum:         payload.pkNum ?? 0,
       appointmentId: payload.appointmentId ?? null,
-      doctorId: payload.doctorId ?? null,
-      notes: payload.notes ?? null,
+      doctorId:      payload.doctorId ?? null,
+      notes:         payload.notes ?? null,
     });
 
     state.visitsStore = [visit, ...state.visitsStore];

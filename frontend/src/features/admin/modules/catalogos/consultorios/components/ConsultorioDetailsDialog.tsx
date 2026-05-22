@@ -37,7 +37,7 @@ interface ConsultorioDetailsDialogProps {
 
 const DEFAULT_FORM_VALUES: ConsultorioDetailsFormValues = {
   name: "",
-  code: "",
+  numero: "",
   idTurn: 0,
   idCenter: 0,
 };
@@ -74,9 +74,9 @@ export function ConsultorioDetailsDialog({
   useEffect(() => {
     if (!consultorioDetail || !open || isDirty) return;
     form.reset({
-      name: consultorioDetail.name ?? "",
-      code: String(consultorioDetail.code ?? ""),
-      idTurn: consultorioDetail.turn?.id ?? 0,
+      name:     consultorioDetail.name ?? "",
+      numero:   String(consultorioDetail.numero ?? ""),
+      idTurn:   consultorioDetail.turn?.id ?? 0,
       idCenter: consultorioDetail.center?.id ?? 0,
     });
   }, [consultorioDetail, form, isDirty, open]);
@@ -85,9 +85,9 @@ export function ConsultorioDetailsDialog({
     markClosing();
     if (consultorioDetail) {
       form.reset({
-        name: consultorioDetail.name ?? "",
-        code: String(consultorioDetail.code ?? ""),
-        idTurn: consultorioDetail.turn?.id ?? 0,
+        name:     consultorioDetail.name ?? "",
+        numero:   String(consultorioDetail.numero ?? ""),
+        idTurn:   consultorioDetail.turn?.id ?? 0,
         idCenter: consultorioDetail.center?.id ?? 0,
       });
     } else {
@@ -109,8 +109,8 @@ export function ConsultorioDetailsDialog({
     const payload: UpdateConsultorioRequest = {};
     const { dirtyFields } = form.formState;
 
-    if (dirtyFields.name) payload.name = values.name;
-    if (dirtyFields.code) payload.code = Number(values.code);
+    if (dirtyFields.name)   payload.name   = values.name;
+    if (dirtyFields.numero) payload.numero = Number(values.numero);
     if (dirtyFields.idTurn) payload.idTurn = values.idTurn;
     if (dirtyFields.idCenter) payload.idCenter = values.idCenter;
 
@@ -160,8 +160,8 @@ export function ConsultorioDetailsDialog({
   const title =
     consultorioDetail?.name || consultorioSummary?.name || "Consultorio";
   const subtitle =
-    consultorioDetail?.code?.toString() ||
-    consultorioSummary?.code?.toString() ||
+    consultorioDetail?.numero?.toString() ||
+    consultorioSummary?.numero?.toString() ||
     null;
   const isActive = consultorioDetail?.isActive ?? consultorioSummary?.isActive;
 

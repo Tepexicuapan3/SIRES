@@ -86,9 +86,7 @@ export function ConsultorioDetailsGeneralSection({
                 <FormControl>
                   <Input
                     {...field}
-                    type="number"
-                    value={field.value}
-                    onChange={(event) => field.onChange(event.target.value)}
+                    inputMode="numeric"
                     disabled={!isEditable}
                   />
                 </FormControl>

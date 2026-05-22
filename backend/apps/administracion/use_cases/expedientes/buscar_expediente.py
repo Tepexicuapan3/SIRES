@@ -35,6 +35,7 @@ SQL_EMPLEADO = """
         e.fe_nac,
         e.fec_vig,
         e.cve_baja,
+        e.cd_clinica,
         'TRABAJADOR' AS parentesco,
         c.ds_clinica AS clinica,
         CASE
@@ -91,6 +92,7 @@ SQL_FAMILIAR = """
         f.fe_nac,
         f.fec_vig,
         f.pk_num,
+        f.cd_clinica,
         c.ds_clinica AS clinica,
         CASE
             WHEN f.fec_vig < CURRENT_DATE THEN 'NO ACTIVO'

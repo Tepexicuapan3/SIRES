@@ -396,6 +396,9 @@ def _serialize_user_list_item(user):
         "clinic": _clinic_ref(detail),
         "areaClinica": {"id": area.id, "name": area.name} if area else None,
         "cdLaboral": detail.cd_laboral if detail else None,
+        "telefono": detail.telefono if detail else None,
+        "sexo": detail.sexo if detail else None,
+        "fechaNac": str(detail.fecha_nac) if detail and detail.fecha_nac else None,
         "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
         "escuela": {"id": escuela.id, "name": escuela.name, "code": escuela.code, "isActive": escuela.is_active} if escuela else None,
         "tipoPersonal": detail.tipo_personal if detail else None,
@@ -432,6 +435,9 @@ def _serialize_user_detail(user):
         "paternalName": detail.paterno if detail else "",
         "maternalName": detail.materno if detail and detail.materno else "",
         "noExp": detail.no_exp if detail else None,
+        "telefono": detail.telefono if detail else None,
+        "sexo": detail.sexo if detail else None,
+        "fechaNac": str(detail.fecha_nac) if detail and detail.fecha_nac else None,
         "cdLaboral": detail.cd_laboral if detail else None,
         "areaClinica": {"id": area.id, "name": area.name} if area else None,
         "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
@@ -1462,7 +1468,11 @@ class UsersListCreateView(APIView):
             id_centro_atencion=clinic,
             no_exp=request.data.get("noExp") or None,
             cd_laboral=request.data.get("cdLaboral") or None,
+            telefono=request.data.get("telefono") or None,
+            sexo=request.data.get("sexo") or None,
+            fecha_nac=request.data.get("fechaNac") or None,
             id_area_clinica=area_clinica,
+
             id_escolaridad=escolaridad,
             id_escuela=escuela,
             tipo_personal=tipo_personal,
@@ -1739,6 +1749,15 @@ class UserDetailView(APIView):
 
         if "cdLaboral" in request.data:
             detail.cd_laboral = request.data.get("cdLaboral") or None
+
+        if "telefono" in request.data:
+            detail.telefono = request.data.get("telefono") or None
+
+        if "sexo" in request.data:
+            detail.sexo = request.data.get("sexo") or None
+
+        if "fechaNac" in request.data:
+            detail.fecha_nac = request.data.get("fechaNac") or None
 
         if "escolaridadId" in request.data:
             esc_id = request.data.get("escolaridadId")
@@ -2511,12 +2530,30 @@ class UserExportView(APIView):
         )
 
         HEADERS = [
-            "Usuario", "Tipo personal", "Nombre", "Ap. Paterno", "Ap. Materno",
-            "Nombre completo", "Correo", "Centro de atención",
-            "Área clínica", "Clave laboral",
-            "Escolaridad", "Escuela (siglas)", "Escuela (nombre)",
-            "Cédula 1", "Cédula 2", "Cédula 3",
-            "Rol primario", "Estado",
+            "Usuario",
+            "Tipo personal",
+            "Nombre",
+            "Ap. Paterno",
+            "Ap. Materno",
+            "Nombre completo",
+            "Correo",
+            "Teléfono",
+            "Sexo",
+            "Fecha nacimiento",
+            "No. expediente SERMED",
+            "Clave laboral",
+            "Centro de atención",
+            "Área clínica",
+            "Escolaridad",
+            "Escuela (siglas)",
+            "Escuela (nombre)",
+            "Cédula 1",
+            "Cédula 2",
+            "Cédula 3",
+            "Rol primario",
+            "Estado",
+            "Fecha de alta",
+            "Fecha de modificación",
         ]
 
         # Encabezados
@@ -2553,6 +2590,7 @@ class UserExportView(APIView):
                 return ""
 
             TIPO_LABELS = {"MEDICO": "Médico", "ENFERMERIA": "Enfermería", "ADMINISTRATIVO": "Administrativo"}
+            SEXO_LABELS = {"M": "Masculino", "F": "Femenino"}
             row_data = [
                 user.usuario,
                 TIPO_LABELS.get(detail.tipo_personal, "") if detail and detail.tipo_personal else "",
@@ -2561,9 +2599,13 @@ class UserExportView(APIView):
                 detail.materno if detail else "",
                 detail.nombre_completo if detail else "",
                 user.correo,
+                detail.telefono if detail else "",
+                SEXO_LABELS.get(detail.sexo, detail.sexo or "") if detail else "",
+                str(detail.fecha_nac) if detail and detail.fecha_nac else "",
+                detail.no_exp if detail else "",
+                detail.cd_laboral if detail else "",
                 detail.id_centro_atencion.name if detail and detail.id_centro_atencion else "",
                 detail.id_area_clinica.name if detail and detail.id_area_clinica else "",
-                detail.cd_laboral if detail else "",
                 detail.id_escolaridad.name if detail and detail.id_escolaridad else "",
                 detail.id_escuela.code if detail and detail.id_escuela else "",
                 detail.id_escuela.name if detail and detail.id_escuela else "",
@@ -2572,6 +2614,8 @@ class UserExportView(APIView):
                 _cedula_str(2),
                 primary.id_rol.rol if primary else "",
                 est_label,
+                user.fch_alta.strftime("%d/%m/%Y") if user.fch_alta else "",
+                user.fch_modf.strftime("%d/%m/%Y") if user.fch_modf else "",
             ]
 
             fill = FILL_ODD if row_idx % 2 == 0 else None

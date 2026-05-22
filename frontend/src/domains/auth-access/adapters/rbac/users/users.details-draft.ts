@@ -18,6 +18,9 @@ interface UserDetailFormSource {
   clinic?: { id: number } | null;
   noExp?: string | null;
   cdLaboral?: string | null;
+  telefono?: string | null;
+  sexo?: string | null;
+  fechaNac?: string | null;
   areaClinica?: { id: number } | null;
   escolaridad?: { id: number } | null;
   escuela?: { id: number } | null;
@@ -56,6 +59,9 @@ export const mapUserDetailToFormValues = (
       : null,
   noExp: detail?.noExp ?? null,
   cdLaboral: detail?.cdLaboral ?? null,
+  telefono: detail?.telefono ?? null,
+  sexo: (detail?.sexo as "M" | "F" | null) ?? null,
+  fechaNac: detail?.fechaNac ?? null,
   areaClinicaId:
     typeof detail?.areaClinica?.id === "number" && detail.areaClinica.id > 0
       ? detail.areaClinica.id
@@ -141,6 +147,18 @@ export const buildUserProfilePayload = (
 
   if (normalizeDraftText(draft.cdLaboral) !== normalizeDraftText(baseline.cdLaboral)) {
     payload.cdLaboral = draft.cdLaboral?.trim() || null;
+  }
+
+  if ((draft.telefono ?? null) !== (baseline.telefono ?? null)) {
+    payload.telefono = draft.telefono?.trim() || null;
+  }
+
+  if ((draft.sexo ?? null) !== (baseline.sexo ?? null)) {
+    payload.sexo = draft.sexo;
+  }
+
+  if ((draft.fechaNac ?? null) !== (baseline.fechaNac ?? null)) {
+    payload.fechaNac = draft.fechaNac || null;
   }
 
   if (

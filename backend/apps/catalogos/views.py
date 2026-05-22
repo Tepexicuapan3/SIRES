@@ -122,7 +122,7 @@ class PaginationMixin:
                 )
             )
 
-        if page < 1 or page_size < 1 or page_size > 100:
+        if page < 1 or page_size < 1 or page_size > 500:
             raise _PaginationError(
                 self._error(
                     request,
@@ -131,7 +131,7 @@ class PaginationMixin:
                     http_status=status.HTTP_400_BAD_REQUEST,
                     details={
                         "page": ["Debe ser mayor o igual a 1"],
-                        "pageSize": ["Debe estar entre 1 y 100"],
+                        "pageSize": ["Debe estar entre 1 y 500"],
                     },
                 )
             )
@@ -660,9 +660,13 @@ class ConsultoriosListCreateView(PaginationMixin, CatalogPermissionMixin, ErrorM
                     details={"isActive": ["Debe ser 'true' o 'false'"]},
                 )
 
+        id_center_raw = request.query_params.get("idCenter")
+        id_center = int(id_center_raw) if id_center_raw and id_center_raw.isdigit() else None
+
         qs = self.repository.get_all(
             search=request.query_params.get("search"),
             est_activo=est_activo,
+            id_center=id_center,
             sort_by=request.query_params.get("sortBy", "code"),
             sort_order=request.query_params.get("sortOrder", "asc"),
         )
@@ -1178,7 +1182,7 @@ class CatCiesConfirmAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
             )
 
         try:
-            result = ConfirmCiesUseCase().execute(rows=rows, user_id=request.user.id)
+            result = ConfirmCiesUseCase().execute(rows=rows, user_id=request.user.id_usuario)
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             traceback.print_exc()

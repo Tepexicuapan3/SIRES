@@ -37,15 +37,17 @@ vi.mock("@/domains/auth-access/hooks/usePermissionDependencies", () => ({
 const createVisit = (
   overrides: Partial<VisitQueueItem> = {},
 ): VisitQueueItem => ({
-  id: 1,
-  folio: "VST-1001",
-  patientId: 1001,
-  arrivalType: "appointment",
-  serviceType: "medicina_general",
+  id:            1,
+  folio:         "VST-1001",
+  noExp:         "10001",
+  pkNum:         0,
+  arrivalType:   "appointment",
+  serviceType:   "medicina_general",
   appointmentId: "APP-1001",
-  doctorId: 90,
-  notes: "Paciente en observacion",
-  status: "en_somatometria",
+  doctorId:      90,
+  notes:         "Paciente en observacion",
+  status:        "en_somatometria",
+  vitals:        null,
   ...overrides,
 });
 

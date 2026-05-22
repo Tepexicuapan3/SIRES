@@ -15,24 +15,27 @@ import {
 
 export const mapCheckinFormToCreateVisitRequest = (
   values: CheckinFormValues,
-): CreateVisitRequest => {
-  return {
-    patientId: values.patientId,
-    arrivalType: values.arrivalType,
-    serviceType: values.serviceType,
-    appointmentId:
-      values.arrivalType === ARRIVAL_TYPE.APPOINTMENT
-        ? values.appointmentId?.trim()
-        : undefined,
-    doctorId: values.doctorId,
-    notes: values.notes?.trim() || undefined,
-  };
-};
+  nombrePaciente?: string,
+): CreateVisitRequest => ({
+  noExp:           values.noExp,
+  pkNum:           values.pkNum,
+  nombrePaciente:  nombrePaciente || undefined,
+  arrivalType:     values.arrivalType,
+  serviceType:     values.serviceType,
+  appointmentId:
+    values.arrivalType === ARRIVAL_TYPE.APPOINTMENT
+      ? values.appointmentId?.trim()
+      : undefined,
+  doctorId:      values.doctorId,
+  consultorioId: values.consultorioId,
+  notes:         values.notes?.trim() || undefined,
+});
 
 export const mapVisitToCheckinDefaults = (
   visit: Pick<
     VisitQueueItem,
-    | "patientId"
+    | "noExp"
+    | "pkNum"
     | "serviceType"
     | "arrivalType"
     | "appointmentId"
@@ -47,11 +50,12 @@ export const mapVisitToCheckinDefaults = (
       : resolvedService;
 
   return {
-    patientId: visit.patientId,
+    noExp:         visit.noExp,
+    pkNum:         visit.pkNum,
     serviceType,
-    arrivalType: visit.arrivalType,
+    arrivalType:   visit.arrivalType,
     appointmentId: visit.appointmentId ?? "",
-    doctorId: visit.doctorId ?? undefined,
-    notes: stripRecepcionServiceTag(visit.notes),
+    doctorId:      visit.doctorId ?? undefined,
+    notes:         stripRecepcionServiceTag(visit.notes),
   };
 };

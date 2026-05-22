@@ -1,0 +1,247 @@
+import { useState } from "react";
+import { Loader2, Printer } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@shared/ui/button";
+import { Badge }  from "@shared/ui/badge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@shared/ui/dialog";
+import type { VisitQueueItem, VisitService, VisitStatus } from "@api/types";
+import { visitsAPI } from "@api/resources/visits.api";
+import { usePatientLookupHistorico } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
+
+const SERVICE_LABEL: Record<VisitService, string> = {
+  medicina_general: "Medicina General",
+  especialidad:     "Especialidad",
+  urgencias:        "Urgencias",
+};
+
+const STATUS_LABEL: Record<VisitStatus, string> = {
+  en_espera:         "En espera",
+  en_somatometria:   "En somatometría",
+  lista_para_doctor: "Lista para doctor",
+  en_consulta:       "En consulta",
+  cerrada:           "Cerrada",
+  cancelada:         "Cancelada",
+  no_show:           "No se presentó",
+};
+
+const STATUS_VARIANT: Record<VisitStatus,
+  "outline" | "stable" | "alert" | "secondary" | "critical"
+> = {
+  en_espera:         "outline",
+  en_somatometria:   "alert",
+  lista_para_doctor: "alert",
+  en_consulta:       "stable",
+  cerrada:           "secondary",
+  cancelada:         "critical",
+  no_show:           "critical",
+};
+
+function formatFechaHora(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("es-MX", {
+    day: "2-digit", month: "long", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-3 border-b border-line-struct/40 py-2 last:border-0">
+      <dt className="w-36 shrink-0 text-xs font-medium text-txt-muted uppercase tracking-wide">
+        {label}
+      </dt>
+      <dd className="flex-1 text-sm font-medium text-txt-body">{value}</dd>
+    </div>
+  );
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface FichaModalProps {
+  open:         boolean;
+  onOpenChange: (open: boolean) => void;
+  visit:        VisitQueueItem | null;
+}
+
+// ─── Componente ───────────────────────────────────────────────────────────────
+
+export function FichaModal({ open, onOpenChange, visit }: FichaModalProps) {
+  const [downloading, setDownloading] = useState(false);
+
+  const { data: patientData, isFetching: loadingPatient } = usePatientLookupHistorico(
+    visit?.noExp ?? "",
+    open && !!visit?.noExp,
+  );
+
+  const paciente = patientData
+    ? [patientData.titular, ...patientData.dependientes]
+        .filter(Boolean)
+        .find((m) => m!.pkNum === visit?.pkNum) ?? null
+    : null;
+
+  const handleDownload = async () => {
+    if (!visit) return;
+    setDownloading(true);
+    try {
+      const blob = await visitsAPI.downloadFicha(visit.id);
+      const url  = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `ficha_${visit.folio}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch {
+      toast.error("No se pudo generar el PDF de la ficha.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (!visit) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton
+        className="w-[96vw] max-w-none overflow-hidden rounded-3xl bg-paper p-0 sm:max-w-[560px]"
+      >
+        <DialogHeader className="border-b border-line-struct px-6 pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-base font-semibold">
+              Ficha de consulta
+            </DialogTitle>
+            <Badge variant={STATUS_VARIANT[visit.status]} className="text-xs">
+              {STATUS_LABEL[visit.status]}
+            </Badge>
+          </div>
+        </DialogHeader>
+
+        {/* ── Contenido ─────────────────────────────────────────── */}
+        <div className="px-6 py-4 max-h-[65vh] overflow-y-auto">
+
+          {/* Folio + ficha */}
+          <div className="mb-4 rounded-xl border border-line-struct/60 bg-subtle/20 px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs text-txt-muted">Folio</p>
+                <p className="text-xl font-bold text-txt-body font-mono tracking-widest">
+                  {visit.folio}
+                </p>
+              </div>
+              {visit.numFicha ? (
+                <div className="text-right">
+                  <p className="text-xs text-txt-muted">Ficha N°</p>
+                  <p className="text-2xl font-bold text-primary">{visit.numFicha}</p>
+                  {visit.turnoNombre ? (
+                    <p className="text-xs text-txt-muted">{visit.turnoNombre}</p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            {visit.fechaAlta ? (
+              <p className="mt-1 text-xs text-txt-muted">
+                {formatFechaHora(visit.fechaAlta)}
+              </p>
+            ) : null}
+          </div>
+
+          {/* Datos */}
+          <dl className="space-y-0">
+            <InfoRow label="Paciente"    value={visit.nombrePaciente} />
+            <InfoRow
+              label="Expediente"
+              value={
+                visit.noExp ? (
+                  <span className="font-mono">
+                    {visit.noExp}
+                    <span className="ml-2 font-sans text-xs text-txt-muted font-normal">
+                      {visit.pkNum > 0 ? `Familiar #${visit.pkNum}` : "Titular"}
+                    </span>
+                  </span>
+                ) : null
+              }
+            />
+            <InfoRow
+              label="Edad"
+              value={
+                loadingPatient
+                  ? "Cargando..."
+                  : paciente?.edad != null
+                  ? `${paciente.edad} años`
+                  : null
+              }
+            />
+            <InfoRow label="Fecha nac."  value={loadingPatient ? "..." : paciente?.fechaNac} />
+            <InfoRow label="Centro"      value={visit.centroNombre} />
+            <InfoRow label="Médico"      value={visit.doctorNombre} />
+            <InfoRow label="Consultorio" value={visit.consultorioNombre} />
+            <InfoRow label="Servicio"    value={SERVICE_LABEL[visit.serviceType] ?? visit.serviceType} />
+            <InfoRow
+              label="Tipo llegada"
+              value={visit.arrivalType === "appointment" ? "Con cita" : "Sin cita"}
+            />
+            <InfoRow label="Hora cita"   value={visit.horaConsulta} />
+            {visit.appointmentId ? (
+              <InfoRow label="ID Cita" value={<span className="font-mono">{visit.appointmentId}</span>} />
+            ) : null}
+            {visit.notes ? (
+              <InfoRow label="Motivo" value={visit.notes} />
+            ) : null}
+
+            {/* Vitales */}
+            {visit.vitals ? (
+              <>
+                <div className="pt-3 pb-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
+                    Signos vitales
+                  </p>
+                </div>
+                <InfoRow label="Peso"       value={`${visit.vitals.weightKg} kg`} />
+                <InfoRow label="Talla"      value={`${visit.vitals.heightCm} cm`} />
+                <InfoRow label="IMC"        value={visit.vitals.bmi?.toFixed(1)} />
+                <InfoRow label="Temperatura" value={`${visit.vitals.temperatureC} °C`} />
+                <InfoRow label="Saturación" value={`${visit.vitals.oxygenSaturationPct} %`} />
+                {visit.vitals.heartRateBpm ? (
+                  <InfoRow label="Frec. cardíaca" value={`${visit.vitals.heartRateBpm} lpm`} />
+                ) : null}
+                {visit.vitals.bloodPressureSystolic ? (
+                  <InfoRow
+                    label="Tensión arterial"
+                    value={`${visit.vitals.bloodPressureSystolic}/${visit.vitals.bloodPressureDiastolic} mmHg`}
+                  />
+                ) : null}
+                {visit.vitals.respiratoryRateBpm ? (
+                  <InfoRow label="Frec. respiratoria" value={`${visit.vitals.respiratoryRateBpm} rpm`} />
+                ) : null}
+              </>
+            ) : null}
+          </dl>
+        </div>
+
+        {/* ── Footer ────────────────────────────────────────────── */}
+        <div className="flex justify-between border-t border-line-struct px-6 py-3.5">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cerrar
+          </Button>
+          <Button
+            className="gap-2"
+            disabled={downloading}
+            onClick={() => void handleDownload()}
+          >
+            {downloading
+              ? <Loader2 className="size-4 animate-spin" />
+              : <Printer className="size-4" />}
+            {downloading ? "Generando PDF..." : "Imprimir ficha"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -22,6 +22,7 @@ from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.serializers import (
     CreateVisitSerializer,
     ListVisitsQuerySerializer,
+    PatientLookupQuerySerializer,
     UpdateVisitStatusSerializer,
 )
 from apps.recepcion.services.errors import VisitDomainError
@@ -31,6 +32,7 @@ from apps.recepcion.uses_case.visit_queue_usecase import (
     ensure_recepcion_role,
     ensure_visit_queue_access,
     list_visits,
+    lookup_patient,
 )
 
 logger = logging.getLogger(__name__)
@@ -177,14 +179,27 @@ class VisitsView(APIView):
                 request_id=get_request_id(request),
             )
 
+        hora_consulta = None
+        hora_raw = serializer.validated_data.get("horaConsulta")
+        if hora_raw:
+            try:
+                from datetime import datetime as _dt
+                hora_consulta = _dt.strptime(hora_raw.strip()[:5], "%H:%M").time()
+            except (ValueError, AttributeError):
+                pass
+        logger.warning("horaConsulta raw=%s → parsed=%s", hora_raw, hora_consulta)
+
         try:
             visit = create_visit(
-                patient_id=serializer.validated_data["patientId"],
+                no_exp=serializer.validated_data["noExp"],
+                pk_num=serializer.validated_data.get("pkNum", 0),
                 arrival_type=serializer.validated_data["arrivalType"],
                 service_type=serializer.validated_data.get("serviceType"),
                 appointment_id=serializer.validated_data.get("appointmentId"),
                 doctor_id=serializer.validated_data.get("doctorId"),
+                consultorio_id=serializer.validated_data.get("consultorioId"),
                 notes=serializer.validated_data.get("notes"),
+                hora_consulta=hora_consulta,
             )
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)
@@ -233,7 +248,10 @@ class VisitsView(APIView):
             status_filter=serializer.validated_data.get("status"),
             date_filter=serializer.validated_data.get("date"),
             doctor_id=serializer.validated_data.get("doctorId"),
+            consultorio_id=serializer.validated_data.get("consultorioId"),
+            centro_id=serializer.validated_data.get("centroId"),
             service_type=serializer.validated_data.get("serviceType"),
+            no_exp=serializer.validated_data.get("noExp"),
         )
         return Response(payload, status=status.HTTP_200_OK)
 
@@ -326,6 +344,54 @@ class VisitStatusView(APIView):
         )
 
         return Response(visit, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PatientLookupView(APIView):
+    """
+    Busca titular y derechohabientes por número de expediente.
+
+    GET /visits/patient-lookup?noExp=12345
+
+    Respuesta:
+        {
+            "titular":     { noExp, pkNum, nombre, edad, parentesco, estatus },
+            "dependientes": [{ noExp, pkNum, nombre, edad, parentesco, estatus }, ...]
+        }
+
+    Usado por recepción para identificar al paciente antes del check-in.
+    """
+
+    authentication_classes = []
+    permission_classes     = []
+
+    def get(self, request):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        try:
+            _require_visit_queue_access(user)
+        except VisitDomainError as exc:
+            return _visit_error_response(request, exc)
+
+        serializer = PatientLookupQuerySerializer(data=request.query_params)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Parámetros inválidos",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        historico = request.query_params.get("historico", "false").lower() == "true"
+        try:
+            payload = lookup_patient(serializer.validated_data["noExp"], historico=historico)
+        except VisitDomainError as exc:
+            return _visit_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
 
 
 def _visit_error_response(request, exc):

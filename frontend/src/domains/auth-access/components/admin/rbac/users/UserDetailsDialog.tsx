@@ -107,6 +107,9 @@ const DEFAULT_FORM_VALUES: UserDetailsFormValues = {
   clinicId: null,
   noExp: null,
   cdLaboral: null,
+  telefono: null,
+  sexo: null,
+  fechaNac: null,
   areaClinicaId: null,
   escolaridadId: null,
   escuelaId: null,
@@ -182,6 +185,7 @@ export function UserDetailsDialog({
     defaultValues: DEFAULT_FORM_VALUES,
   });
   const formStateIsDirty = form.formState.isDirty;
+  const prevOpenRef = useRef(false);
   const [
     draftFirstName,
     draftPaternalName,
@@ -190,6 +194,9 @@ export function UserDetailsDialog({
     draftClinicId,
     draftNoExp,
     draftCdLaboral,
+    draftTelefono,
+    draftSexo,
+    draftFechaNac,
     draftAreaClinicaId,
     draftEscolaridadId,
     draftEscuelaId,
@@ -203,6 +210,9 @@ export function UserDetailsDialog({
     "clinicId",
     "noExp",
     "cdLaboral",
+    "telefono",
+    "sexo",
+    "fechaNac",
     "areaClinicaId",
     "escolaridadId",
     "escuelaId",
@@ -218,6 +228,9 @@ export function UserDetailsDialog({
     clinicId: draftClinicId ?? null,
     noExp: draftNoExp ?? null,
     cdLaboral: draftCdLaboral ?? null,
+    telefono: draftTelefono ?? null,
+    sexo: draftSexo ?? null,
+    fechaNac: draftFechaNac ?? null,
     areaClinicaId: draftAreaClinicaId ?? null,
     escolaridadId: draftEscolaridadId ?? null,
     escuelaId: draftEscuelaId ?? null,
@@ -254,8 +267,14 @@ export function UserDetailsDialog({
     isFormDirty || rolesDirty || overridesDirty || accountStatusDirty;
 
   useEffect(() => {
-    if (!userDetail || !open || formStateIsDirty) return;
-    form.reset(mapUserDetailToFormValues(userDetail));
+    const justOpened = open && !prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    if (!userDetail) return;
+    // Siempre reset cuando el dialog acaba de abrir; respeta dirty en sesión activa
+    if (justOpened || !formStateIsDirty) {
+      form.reset(mapUserDetailToFormValues(userDetail));
+    }
   }, [form, formStateIsDirty, open, userDetail]);
 
   useEffect(() => {

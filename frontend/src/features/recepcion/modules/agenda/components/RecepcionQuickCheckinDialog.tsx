@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { CheckCircle2, Clock, Stethoscope } from "lucide-react";
 import { Button } from "@shared/ui/button";
+import { Badge }  from "@shared/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -11,12 +13,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@shared/ui/dialog";
-import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
+import { Input }    from "@shared/ui/input";
+import { Label }    from "@shared/ui/label";
 import { Textarea } from "@shared/ui/textarea";
+import { Separator } from "@shared/ui/separator";
 import { ARRIVAL_TYPE } from "@api/types";
-import { ApiError } from "@api/utils/errors";
-import { useCreateVisit } from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
+import type { PatientMember } from "@api/types";
+import type { MedicoDisponible } from "@api/types/medicos.types";
+import { ApiError }        from "@api/utils/errors";
+import { PatientMemberCard } from "@features/recepcion/shared/components/PatientMemberCard";
+import { useCreateVisit }   from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
+import { usePatientLookup } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
 import { mapCheckinFormToCreateVisitRequest } from "@features/recepcion/modules/checkin/domain/checkin.mappers";
 import {
   createCheckinFormSchema,
@@ -29,46 +36,112 @@ import {
   RECEPCION_SERVICE_PROFILES,
   isServiceForcedToWalkIn,
 } from "@features/recepcion/shared/domain/recepcion.services";
+import { useMedicosDisponibles } from "@features/admin/modules/medicos/hooks/useMedicos";
+import { useAgendaSemanal }       from "@features/recepcion/modules/citas/queries/useAgendaSemanal";
+import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
+import { useDebounce } from "@shared/hooks/useDebounce";
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
+
+const DOMAIN_ERROR_MESSAGE: Record<string, string> = {
+  VISIT_DUPLICATE_SUBMIT: "Ya existe una visita abierta para este paciente.",
+  VISIT_SLOT_CONFLICT:    "El médico ya tiene una ficha generada para ese horario.",
+  PATIENT_NOT_FOUND:      "Expediente no encontrado en el sistema.",
+  PATIENT_NO_SERVICE:     "El trabajador está de baja y no hay derechohabientes con vigencia activa.",
+  ROLE_NOT_ALLOWED:       "No tienes permiso para registrar llegadas en recepción.",
+  VALIDATION_ERROR:       "Revisa los datos de llegada antes de continuar.",
+  PERMISSION_DENIED:      "No tienes permiso para ejecutar esta acción.",
+};
+
+const FALLBACK_ERROR = "No se pudo generar la ficha. Intenta nuevamente.";
+
+const resolveDomainError = (error: unknown): string => {
+  if (!(error instanceof ApiError)) return FALLBACK_ERROR;
+  return DOMAIN_ERROR_MESSAGE[error.code] ?? error.message ?? FALLBACK_ERROR;
+};
+
+// ─── Sub-componente: tarjeta de disponibilidad de médico ─────────────────────
+
+function MedicoDisponibleCard({
+  medico,
+  selected,
+  onSelect,
+}: {
+  medico:   MedicoDisponible;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const tieneHorario = medico.horaInicio && medico.horaFin;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={!medico.disponible}
+      className={[
+        "flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
+        selected
+          ? "border-primary bg-primary/5"
+          : "border-line-struct hover:bg-subtle/40",
+        !medico.disponible ? "cursor-not-allowed opacity-50" : "",
+      ].join(" ")}
+    >
+      {/* Radio indicator */}
+      <div
+        className={[
+          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+          selected ? "border-primary bg-primary" : "border-line-struct",
+        ].join(" ")}
+      >
+        {selected ? <span className="size-1.5 rounded-full bg-white" /> : null}
+      </div>
+
+      {/* Info del médico */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-txt-body">
+          {medico.nombreCompleto}
+        </p>
+        {medico.servicio ? (
+          <p className="truncate text-xs text-txt-muted">{medico.servicio}</p>
+        ) : null}
+
+        {/* Horario y consultorio */}
+        {tieneHorario ? (
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1 text-xs text-primary">
+              <Clock className="size-3" />
+              {medico.horaInicio?.slice(0, 5)} – {medico.horaFin?.slice(0, 5)}
+            </span>
+            {medico.consultorioNumero != null ? (
+              <span className="text-xs text-txt-muted">
+                Consultorio #{medico.consultorioNumero}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Badge disponibilidad */}
+      <Badge
+        variant={medico.disponible ? "stable" : "secondary"}
+        className="shrink-0 text-xs"
+      >
+        {medico.disponible ? "Disponible" : "No disponible"}
+      </Badge>
+    </button>
+  );
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface RecepcionQuickCheckinDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  canWrite: boolean;
+  open:          boolean;
+  onOpenChange:  (open: boolean) => void;
+  canWrite:      boolean;
   initialValues?: Partial<CheckinFormInput>;
 }
 
-const CREATE_VISIT_DOMAIN_ERROR_MESSAGE: Record<
-  | "VISIT_DUPLICATE_SUBMIT"
-  | "ROLE_NOT_ALLOWED"
-  | "VALIDATION_ERROR"
-  | "PERMISSION_DENIED",
-  string
-> = {
-  VISIT_DUPLICATE_SUBMIT: "Ya existe una visita abierta para este paciente.",
-  ROLE_NOT_ALLOWED: "No tenes permiso para registrar llegadas en recepcion.",
-  VALIDATION_ERROR: "Revisa los datos de llegada antes de continuar.",
-  PERMISSION_DENIED: "No tenes permiso para ejecutar esta accion.",
-};
-
-const FALLBACK_CREATE_VISIT_ERROR_MESSAGE =
-  "No se pudo registrar la llegada. Intenta nuevamente.";
-
-const resolveDomainErrorMessage = <TDomainCode extends string>(
-  error: unknown,
-  domainErrors: Record<TDomainCode, string>,
-  fallback: string,
-): string => {
-  if (!(error instanceof ApiError)) {
-    return fallback;
-  }
-
-  const domainCode = error.code as TDomainCode;
-  if (Object.prototype.hasOwnProperty.call(domainErrors, domainCode)) {
-    return domainErrors[domainCode];
-  }
-
-  return error.message || fallback;
-};
+// ─── Dialog ───────────────────────────────────────────────────────────────────
 
 export const RecepcionQuickCheckinDialog = ({
   open,
@@ -78,116 +151,278 @@ export const RecepcionQuickCheckinDialog = ({
 }: RecepcionQuickCheckinDialogProps) => {
   const createVisit = useCreateVisit();
 
+  // ── Estado local (no va al form) ─────────────────────────────────────────
+  const [noExpSearch,  setNoExpSearch]  = useState("");
+  const [fechaSlot,    setFechaSlot]    = useState(new Date().toISOString().slice(0, 10));
+  const [centroId,          setCentroId]          = useState<number | null>(null);
+  const [consultorioFiltro, setConsultorioFiltro] = useState<number | null>(null);
+  const [selectedMedico,    setSelectedMedico]    = useState<MedicoDisponible | null>(null);
+  const [selectedHora,      setSelectedHora]      = useState<string | null>(null);
+
+  const debouncedNoExp = useDebounce(noExpSearch, 400);
+
+  // ── Form ──────────────────────────────────────────────────────────────────
   const form = useForm<CheckinFormInput, unknown, CheckinFormValues>({
     resolver: zodResolver(createCheckinFormSchema),
     defaultValues: DEFAULT_CHECKIN_FORM_VALUES,
   });
 
-  const [serviceType, arrivalType] = useWatch({
+  const [serviceType, arrivalType, pkNumWatch] = useWatch({
     control: form.control,
-    name: ["serviceType", "arrivalType"],
+    name:    ["serviceType", "arrivalType", "pkNum"],
   });
+
   const isWalkInOnlyService = isServiceForcedToWalkIn(serviceType);
-  const serviceTypeField = form.register("serviceType");
-  const arrivalTypeField = form.register("arrivalType");
+  const serviceTypeField    = form.register("serviceType");
+  const arrivalTypeField    = form.register("arrivalType");
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    onOpenChange(nextOpen);
-  };
+  // ── Búsqueda de paciente ──────────────────────────────────────────────────
+  const { data: patientData, isFetching: isSearching, isError: lookupFailed } =
+    usePatientLookup(debouncedNoExp);
 
+  const allMembers: PatientMember[] = patientData
+    ? [
+        ...(patientData.titular ? [patientData.titular] : []),
+        ...patientData.dependientes,
+      ]
+    : [];
+
+  const selectedMember = allMembers.find((m) => m.pkNum === pkNumWatch);
+
+  // ── Centros disponibles ───────────────────────────────────────────────────
+  const { data: centrosData } = useCentrosAtencionList({ isActive: true });
+  const centros = centrosData?.items ?? [];
+
+  // Auto-seleccionar centro según cd_clinica del paciente seleccionado
   useEffect(() => {
-    if (!open) {
+    if (!selectedMember) {
+      // Sin paciente: auto-seleccionar si solo hay un centro
+      if (centros.length === 1 && !centroId) {
+        setCentroId(centros[0].id);
+      }
       return;
     }
+    const cdClinica = selectedMember.cdClinica;
+    if (!cdClinica) return;
+    const centroMatch = centros.find((c) => String(c.id) === String(cdClinica));
+    if (centroMatch) {
+      setCentroId(centroMatch.id);
+      setSelectedMedico(null);
+      setConsultorioFiltro(null);
+    }
+  }, [selectedMember, centros]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    form.reset({
-      ...DEFAULT_CHECKIN_FORM_VALUES,
-      ...initialValues,
-    });
+  // ── Médicos disponibles ───────────────────────────────────────────────────
+  const { data: disponibilidadData, isFetching: cargandoMedicos } =
+    useMedicosDisponibles(centroId ?? undefined, fechaSlot, open && !!centroId);
+
+  const medicosDisponibles = disponibilidadData?.medicos ?? [];
+
+  // ── Slots del médico seleccionado (generados desde su horario, sin llamada API) ──
+  const slots: string[] = (() => {
+    if (!selectedMedico?.horaInicio || !selectedMedico?.horaFin) return [];
+    const intervalo = selectedMedico.intervaloCitaMin ?? 20;
+    const result: string[] = [];
+    const [hI, mI] = selectedMedico.horaInicio.split(":").map(Number);
+    const [hF, mF] = selectedMedico.horaFin.split(":").map(Number);
+    let total = hI * 60 + mI;
+    const fin  = hF * 60 + mF;
+    while (total < fin) {
+      const h = String(Math.floor(total / 60)).padStart(2, "0");
+      const m = String(total % 60).padStart(2, "0");
+      result.push(`${h}:${m}`);
+      total += intervalo;
+    }
+    return result;
+  })();
+
+  // ── Horarios ocupados para el médico/fecha seleccionados ─────────────────
+  const { data: agendaData } = useAgendaSemanal(
+    selectedMedico?.medicoId ?? null,
+    fechaSlot,
+    fechaSlot,
+    { refetchInterval: open ? 30_000 : undefined },
+  );
+  const horasOcupadas = new Set(
+    (agendaData?.agenda[fechaSlot] ?? [])
+      .filter((s) => !s.disponible)
+      .map((s) => s.hora),
+  );
+
+  // Consultorios únicos derivados de la disponibilidad
+  const consultoriosDisponibles = Array.from(
+    new Map(
+      medicosDisponibles
+        .filter((m) => m.consultorioId != null)
+        .map((m) => [m.consultorioId, { id: m.consultorioId!, numero: m.consultorioNumero, nombre: m.consultorioNombre }])
+    ).values()
+  ).sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0));
+
+  const medicosFiltrados = consultorioFiltro
+    ? medicosDisponibles.filter((m) => m.consultorioId === consultorioFiltro)
+    : medicosDisponibles;
+
+  // ── Reset al abrir/cerrar ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!open) return;
+    form.reset({ ...DEFAULT_CHECKIN_FORM_VALUES, ...initialValues });
+    setNoExpSearch("");
+    setSelectedMedico(null);
+    setConsultorioFiltro(null);
+    setSelectedHora(null);
   }, [form, initialValues, open]);
 
+  // Limpiar selección de miembro cuando cambia el expediente
+  useEffect(() => { form.setValue("pkNum", 0); }, [debouncedNoExp, form]);
+
+  // Sincronizar médico con el form y pre-llenar hora con su horaInicio
+  useEffect(() => {
+    if (selectedMedico) {
+      form.setValue("doctorId",      selectedMedico.medicoId,         { shouldValidate: true });
+      form.setValue("consultorioId", selectedMedico.consultorioId ?? undefined, { shouldValidate: true });
+      setSelectedHora(selectedMedico.horaInicio?.slice(0, 5) ?? null);
+    } else {
+      setSelectedHora(null);
+    }
+  }, [selectedMedico, form]);
+
+  // Verificar que el paciente pertenece a un centro registrado
+  const cdClinicaPaciente = selectedMember?.cdClinica ?? null;
+  const centroDelPaciente = cdClinicaPaciente
+    ? centros.find((c) => String(c.id) === String(cdClinicaPaciente))
+    : null;
+  const pacienteSinCentro = !!selectedMember && !!cdClinicaPaciente && !centroDelPaciente;
+
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (values: CheckinFormValues) => {
-    if (!canWrite) {
+    if (!canWrite) return;
+    if (pacienteSinCentro) {
+      toast.error("No se puede generar la ficha", {
+        description: `El paciente pertenece a la clínica ${cdClinicaPaciente} que no está registrada en el sistema.`,
+      });
       return;
     }
-
     try {
-      await createVisit.mutateAsync(mapCheckinFormToCreateVisitRequest(values));
+      await createVisit.mutateAsync({
+        ...mapCheckinFormToCreateVisitRequest(values, selectedMember?.nombre),
+        horaConsulta: selectedHora ?? undefined,
+      });
       toast.success("Ficha de consulta generada.");
       form.reset(DEFAULT_CHECKIN_FORM_VALUES);
+      setNoExpSearch("");
+      setSelectedMedico(null);
       onOpenChange(false);
     } catch (error) {
       toast.error("No se pudo generar la ficha", {
-        description: resolveDomainErrorMessage(
-          error,
-          CREATE_VISIT_DOMAIN_ERROR_MESSAGE,
-          FALLBACK_CREATE_VISIT_ERROR_MESSAGE,
-        ),
+        description: resolveDomainError(error),
       });
     }
   };
 
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Generar ficha de consulta</DialogTitle>
           <DialogDescription>
-            Registra una llegada con cita o walk-in sin salir de agenda.
+            Busca al paciente, elige médico y genera la ficha de llegada.
           </DialogDescription>
         </DialogHeader>
 
         <form
-          className="space-y-3"
+          className="space-y-4"
           noValidate
           onSubmit={form.handleSubmit(handleSubmit)}
         >
-          <div className="space-y-2">
-            <Label htmlFor="quick-serviceType">Servicio de atencion</Label>
-            <select
-              id="quick-serviceType"
-              className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-              disabled={!canWrite || createVisit.isPending}
-              {...serviceTypeField}
-              onChange={(event) => {
-                serviceTypeField.onChange(event);
-                const nextService = event.target
-                  .value as CheckinFormValues["serviceType"];
 
-                if (isServiceForcedToWalkIn(nextService)) {
-                  form.setValue("arrivalType", ARRIVAL_TYPE.WALK_IN, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
-                  form.setValue("appointmentId", "", {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
-                }
+          {/* ── 1. Paciente ─────────────────────────────────────────── */}
+          <div className="space-y-2">
+            <Label htmlFor="quick-noExp">Número de expediente</Label>
+            <Input
+              id="quick-noExp"
+              placeholder="Ej. 12345"
+              value={noExpSearch}
+              onChange={(e) => {
+                setNoExpSearch(e.target.value);
+                form.setValue("noExp", e.target.value, { shouldValidate: false });
               }}
-            >
-              {RECEPCION_SERVICE_LIST.map((service) => (
-                <option key={service} value={service}>
-                  {RECEPCION_SERVICE_PROFILES[service].label}
-                </option>
-              ))}
-            </select>
+              disabled={!canWrite || createVisit.isPending}
+            />
           </div>
 
+          {debouncedNoExp.trim().length > 0 ? (
+            <div className="space-y-1.5">
+              <Label>Paciente</Label>
+              {isSearching ? (
+                <p className="text-sm text-txt-muted">Buscando expediente...</p>
+              ) : lookupFailed || allMembers.length === 0 ? (
+                <p className="text-sm text-status-critical">
+                  {lookupFailed
+                    ? "Sin derecho al servicio o expediente no encontrado."
+                    : "Sin miembros activos."}
+                </p>
+              ) : (
+                <>
+                  {allMembers.map((member) => (
+                    <PatientMemberCard
+                      key={`${member.noExp}-${member.pkNum}`}
+                      member={member}
+                      selected={pkNumWatch === member.pkNum}
+                      onSelect={() =>
+                        form.setValue("pkNum", member.pkNum, { shouldValidate: true })
+                      }
+                    />
+                  ))}
+
+                  {selectedMember ? (
+                    <div className="flex items-center gap-2.5 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5">
+                      <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-primary">
+                          {selectedMember.nombre}
+                        </p>
+                        <p className="truncate text-xs text-txt-muted">
+                          {selectedMember.pkNum === 0 ? "Titular" : selectedMember.parentesco ?? "Familiar"}
+                          {" · Exp. "}{selectedMember.noExp}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-txt-muted italic">
+                      ↑ Selecciona a quien se le generará la ficha.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          ) : null}
+
+          <Separator />
+
+          {/* ── 2. Servicio y tipo de llegada ────────────────────────── */}
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="quick-patientId">ID paciente</Label>
-              <Input
-                id="quick-patientId"
-                type="number"
+              <Label htmlFor="quick-serviceType">Servicio</Label>
+              <select
+                id="quick-serviceType"
+                className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
                 disabled={!canWrite || createVisit.isPending}
-                {...form.register("patientId")}
-              />
-              {form.formState.errors.patientId?.message ? (
-                <p className="text-sm text-status-critical" role="alert">
-                  {form.formState.errors.patientId.message}
-                </p>
-              ) : null}
+                {...serviceTypeField}
+                onChange={(e) => {
+                  serviceTypeField.onChange(e);
+                  const next = e.target.value as CheckinFormValues["serviceType"];
+                  if (isServiceForcedToWalkIn(next)) {
+                    form.setValue("arrivalType",   ARRIVAL_TYPE.WALK_IN, { shouldValidate: true });
+                    form.setValue("appointmentId", "",                   { shouldValidate: true });
+                  }
+                }}
+              >
+                {RECEPCION_SERVICE_LIST.map((s) => (
+                  <option key={s} value={s}>{RECEPCION_SERVICE_PROFILES[s].label}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
@@ -195,9 +430,7 @@ export const RecepcionQuickCheckinDialog = ({
               <select
                 id="quick-arrivalType"
                 className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-                disabled={
-                  !canWrite || createVisit.isPending || isWalkInOnlyService
-                }
+                disabled={!canWrite || createVisit.isPending || isWalkInOnlyService}
                 {...arrivalTypeField}
               >
                 <option value={ARRIVAL_TYPE.APPOINTMENT}>Con cita</option>
@@ -227,29 +460,223 @@ export const RecepcionQuickCheckinDialog = ({
             </div>
           ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="quick-doctorId">ID doctor (opcional)</Label>
-            <Input
-              id="quick-doctorId"
-              type="number"
-              disabled={!canWrite || createVisit.isPending}
-              {...form.register("doctorId")}
-            />
+          <Separator />
+
+          {/* ── 3. Disponibilidad de médicos ─────────────────────────── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Stethoscope className="size-3.5 text-txt-muted" />
+              <p className="text-xs font-semibold tracking-wide text-txt-body uppercase">
+                Médico y consultorio
+              </p>
+            </div>
+
+            {/* Fecha y centro */}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Fecha de consulta</Label>
+                <Input
+                  type="date"
+                  value={fechaSlot}
+                  onChange={(e) => { setFechaSlot(e.target.value); setSelectedMedico(null); }}
+                  className="h-9"
+                />
+              </div>
+
+              {centros.length > 1 ? (
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    Centro de atención
+                    {centroDelPaciente ? (
+                      <span className="text-[10px] font-normal text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">
+                        Adscrito
+                      </span>
+                    ) : null}
+                  </Label>
+                  <select
+                    className={[
+                      "h-9 w-full rounded-md border px-3 text-sm",
+                      centroDelPaciente
+                        ? "border-primary/40 bg-primary/5 text-txt-body cursor-not-allowed"
+                        : "border-line-struct bg-paper",
+                    ].join(" ")}
+                    value={centroId ?? ""}
+                    disabled={!!centroDelPaciente}
+                    onChange={(e) => {
+                      setCentroId(e.target.value ? Number(e.target.value) : null);
+                      setSelectedMedico(null);
+                      setConsultorioFiltro(null);
+                    }}
+                  >
+                    <option value="">Selecciona centro</option>
+                    {centros.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Filtro de consultorio */}
+            {!cargandoMedicos && consultoriosDisponibles.length > 1 ? (
+              <div className="space-y-1">
+                <Label className="text-xs">Consultorio</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setConsultorioFiltro(null); setSelectedMedico(null); }}
+                    className={[
+                      "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                      consultorioFiltro === null
+                        ? "border-primary bg-primary text-white"
+                        : "border-line-struct hover:border-primary/60 hover:bg-primary/5",
+                    ].join(" ")}
+                  >
+                    Todos
+                  </button>
+                  {consultoriosDisponibles.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => { setConsultorioFiltro(c.id); setSelectedMedico(null); }}
+                      className={[
+                        "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                        consultorioFiltro === c.id
+                          ? "border-primary bg-primary text-white"
+                          : "border-line-struct hover:border-primary/60 hover:bg-primary/5",
+                      ].join(" ")}
+                    >
+                      {`Consultorio #${c.numero ?? c.id}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Lista de médicos disponibles */}
+            {!centroId ? (
+              <p className="text-xs text-txt-muted italic">
+                Selecciona un centro para ver médicos disponibles.
+              </p>
+            ) : cargandoMedicos ? (
+              <p className="text-sm text-txt-muted">Cargando disponibilidad...</p>
+            ) : medicosFiltrados.length === 0 ? (
+              <p className="text-sm text-txt-muted italic">
+                {consultorioFiltro
+                  ? "Sin médicos disponibles para ese consultorio."
+                  : "Sin médicos configurados para esa fecha en este centro."}
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                {medicosFiltrados.map((med) => (
+                  <MedicoDisponibleCard
+                    key={med.medicoId}
+                    medico={med}
+                    selected={selectedMedico?.medicoId === med.medicoId}
+                    onSelect={() => setSelectedMedico(med)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Confirmación del médico seleccionado */}
+            {selectedMedico ? (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="size-4 shrink-0 text-primary mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-primary">
+                      {selectedMedico.nombreCompleto}
+                    </p>
+                    {selectedMedico.servicio ? (
+                      <p className="text-xs text-txt-muted">{selectedMedico.servicio}</p>
+                    ) : null}
+                    <div className="mt-1 flex flex-wrap gap-3 text-xs text-txt-muted">
+                      {selectedMedico.horaInicio && selectedMedico.horaFin ? (
+                        <span className="flex items-center gap-1">
+                          <Clock className="size-3" />
+                          {selectedMedico.horaInicio.slice(0, 5)} – {selectedMedico.horaFin.slice(0, 5)}
+                        </span>
+                      ) : null}
+                      {selectedMedico.consultorioNumero != null ? (
+                        <span>Consultorio #{selectedMedico.consultorioNumero}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-txt-muted italic">
+                ↑ Selecciona el médico que atenderá al paciente.
+              </p>
+            )}
+
+            {/* ── Selector/escritura de horario ────────────────────── */}
+            {selectedMedico ? (
+              <div className="space-y-2">
+                <Label className="text-xs">Horario de consulta</Label>
+
+                {/* Input manual — siempre visible */}
+                <Input
+                  type="time"
+                  className="h-9 w-36"
+                  value={selectedHora ?? ""}
+                  onChange={(e) => setSelectedHora(e.target.value || null)}
+                  disabled={!canWrite || createVisit.isPending}
+                />
+
+                {/* Chips rápidos si el médico tiene horario configurado */}
+                {slots.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {slots.map((hora) => {
+                      const ocupado = horasOcupadas.has(hora);
+                      return (
+                        <button
+                          key={hora}
+                          type="button"
+                          disabled={ocupado}
+                          onClick={() => !ocupado && setSelectedHora(hora)}
+                          className={[
+                            "flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                            ocupado
+                              ? "cursor-not-allowed border-red-200 bg-red-50 text-red-400 line-through"
+                              : selectedHora === hora
+                                ? "border-primary bg-primary text-white"
+                                : "border-line-struct hover:border-primary/60 hover:bg-primary/5",
+                          ].join(" ")}
+                        >
+                          <Clock className="size-3" />
+                          {hora}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
+          {/* ── 4. Notas ─────────────────────────────────────────────── */}
           <div className="space-y-2">
             <Label htmlFor="quick-notes">Motivo de consulta</Label>
             <Textarea
               id="quick-notes"
-              rows={3}
+              rows={2}
               disabled={!canWrite || createVisit.isPending}
               {...form.register("notes")}
             />
           </div>
 
+          {pacienteSinCentro ? (
+            <p className="text-sm text-status-critical" role="alert">
+              El paciente pertenece a la clínica <strong>{cdClinicaPaciente}</strong> que no está
+              registrada en el sistema. No se puede generar la ficha.
+            </p>
+          ) : null}
+
           {!canWrite ? (
             <p className="text-sm text-txt-muted" role="status">
-              No tenes permisos completos para registrar llegadas desde agenda.
+              No tienes permisos completos para registrar llegadas desde agenda.
             </p>
           ) : null}
 
@@ -261,7 +688,10 @@ export const RecepcionQuickCheckinDialog = ({
             >
               Cerrar
             </Button>
-            <Button type="submit" disabled={!canWrite || createVisit.isPending}>
+            <Button
+              type="submit"
+              disabled={!canWrite || createVisit.isPending || !selectedMember || pacienteSinCentro}
+            >
               Generar ficha de consulta
             </Button>
           </DialogFooter>

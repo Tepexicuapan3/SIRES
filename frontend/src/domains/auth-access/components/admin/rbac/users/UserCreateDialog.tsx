@@ -71,6 +71,9 @@ const DEFAULT_VALUES: CreateUserFormValues = {
   primaryRoleId: 0,
   noExp: null,
   cdLaboral: null,
+  telefono: null,
+  sexo: null,
+  fechaNac: null,
   areaClinicaId: null,
   escolaridadId: null,
   escuelaId: null,
@@ -153,6 +156,9 @@ export function UserCreateDialog({
           primaryRoleId: values.primaryRoleId,
           noExp: values.noExp ?? null,
           cdLaboral: values.cdLaboral ?? null,
+          telefono: values.telefono ?? null,
+          sexo: values.sexo ?? null,
+          fechaNac: values.fechaNac ?? null,
           areaClinicaId: values.areaClinicaId ?? null,
           escolaridadId: values.escolaridadId ?? null,
           escuelaId: values.escuelaId ?? null,
@@ -356,6 +362,69 @@ export function UserCreateDialog({
                                     field.onChange(e.target.value || null)
                                   }
                                   placeholder="Se llena al buscar expediente"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="telefono"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Teléfono <span className="text-txt-muted text-xs">(opcional)</span></FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) => field.onChange(e.target.value || null)}
+                                  placeholder="Ej. 5512345678"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="sexo"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sexo <span className="text-txt-muted text-xs">(opcional)</span></FormLabel>
+                              <Select
+                                value={field.value ?? ""}
+                                onValueChange={(v) => field.onChange(v || null)}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-11">
+                                    <SelectValue placeholder="Selecciona" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="M">Masculino</SelectItem>
+                                  <SelectItem value="F">Femenino</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="fechaNac"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Fecha de nacimiento <span className="text-txt-muted text-xs">(opcional)</span></FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) => field.onChange(e.target.value || null)}
                                 />
                               </FormControl>
                               <FormMessage />

@@ -3,6 +3,7 @@ import {
   Ambulance,
   BookOpen,
   CalendarClock,
+  CalendarDays,
   Database,
   FileText,
   FolderOpen,
@@ -53,6 +54,11 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Usuarios",
             url: "/admin/usuarios",
             permissions: ["admin:gestion:usuarios:read"],
+          },
+          {
+            title: "Médicos",
+            url: "/admin/medicos",
+            permissions: ["admin:gestion:medicos:read"],
           },
           {
             title: "Expedientes",
@@ -330,6 +336,12 @@ export const NAV_CONFIG: NavSection[] = [
           "clinico:consultas:read",
           "clinico:somatometria:read",
         ],
+      },
+      {
+        title: "Agenda semanal",
+        url: "/recepcion/agenda-semanal",
+        icon: CalendarDays,
+        permissions: ["recepcion:citas:read"],
       },
     ],
   },

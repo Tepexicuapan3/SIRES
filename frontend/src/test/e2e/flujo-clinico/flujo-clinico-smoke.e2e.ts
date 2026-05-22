@@ -4,12 +4,12 @@ import { expect, test } from "@playwright/test";
 
 import { FLUJO_CLINICO_USERS, FlujoClinicoPage } from "./flujo-clinico-page";
 
-const createPatientId = (): number => {
-  return 900000 + (Date.now() % 90000);
+const createNoExp = (): string => {
+  return String(900000 + (Date.now() % 90000));
 };
 
-const createAppointmentId = (patientId: number): string => {
-  return `APP-KAN27-${patientId}`;
+const createAppointmentId = (noExp: string): string => {
+  return `APP-KAN27-${noExp}`;
 };
 
 test.describe("Flujo clinico smoke", () => {
@@ -45,10 +45,10 @@ test.describe("Flujo clinico smoke", () => {
         );
         await recepcionPage.login(FLUJO_CLINICO_USERS.recepcion);
 
-        const patientId = createPatientId();
+        const noExp = createNoExp();
         const createdVisit = await recepcionPage.registerArrival({
-          patientId,
-          appointmentId: createAppointmentId(patientId),
+          noExp,
+          appointmentId: createAppointmentId(noExp),
           doctorId: 121,
           notes: "KAN-27 happy path smoke",
         });
@@ -158,10 +158,10 @@ test.describe("Flujo clinico smoke", () => {
         const doctorNavigationEntriesBefore =
           await actorC.getNavigationEntryCount();
 
-        const patientId = createPatientId();
+        const noExp = createNoExp();
         const createdVisit = await actorA.registerArrival({
-          patientId,
-          appointmentId: createAppointmentId(patientId),
+          noExp,
+          appointmentId: createAppointmentId(noExp),
           doctorId: 121,
           notes: "KAN-27 realtime smoke",
         });

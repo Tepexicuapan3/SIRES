@@ -16,10 +16,13 @@ export interface ConsultorioCatalogRef {
 }
 
 export interface ConsultorioListItem {
-  id: number;
-  name: string;
-  numero: number;
-  isActive: boolean;
+  id:         number;
+  name:       string;
+  numero:     number;
+  isActive:   boolean;
+  centerId:   number | null;
+  centerName: string | null;
+  turnName:   string | null;
 }
 
 export interface ConsultorioDetail extends ConsultorioListItem {
@@ -67,4 +70,5 @@ export type DeleteConsultorioResponse = SuccessResponse;
 export interface ConsultoriosListParams extends PaginationParams {
   isActive?: boolean;
   search?: string;
+  idCenter?: number;
 }

@@ -55,6 +55,7 @@ else:
     ]
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -74,6 +75,7 @@ INSTALLED_APPS = [
     "apps.catalogos",
     "apps.administracion",
     "apps.personal",
+    "apps.medicos",
     "apps.realtime",
     "apps.farmacia",
     'apps.recepcion.routers',
@@ -134,7 +136,7 @@ DATABASES = {
         "PASSWORD": config("POSTGRES_PASSWORD", default="112233"),
         "HOST": config("POSTGRES_HOST", default="50.192.41.223"),
         "PORT": config("POSTGRES_PORT", default="5432"),
-        "OPTIONS": {"client_encoding": "UTF8"},
+        "OPTIONS": {"client_encoding": "UTF8", "options": "-c search_path=public,sires"},
     },
     "expedientes": {
         "ENGINE": "django.db.backends.postgresql",
@@ -161,14 +163,15 @@ DATABASE_ROUTERS = [
 ]
 
 # ── Channels ──────────────────────────────────────────────────────────────────
-if "test" in sys.argv:
+CHANNEL_REDIS_URL = config("CHANNEL_REDIS_URL", default="")
+
+if "test" in sys.argv or not CHANNEL_REDIS_URL:
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",
         }
     }
 else:
-    CHANNEL_REDIS_URL = config("CHANNEL_REDIS_URL", default="redis://redis:6379/1")
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -179,6 +182,12 @@ else:
     }
 
 # ── Celery ────────────────────────────────────────────────────────────────────
+CELERY_BROKER_URL      = config("CELERY_BROKER_URL",     default="redis://127.0.0.1:6379/1")
+CELERY_RESULT_BACKEND  = config("CELERY_RESULT_BACKEND",  default="redis://127.0.0.1:6379/1")
+CELERY_TIMEZONE        = "America/Mexico_City"
+CELERY_TASK_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT  = ["json"]
+
 CELERY_BEAT_SCHEDULE = {
     "citas-recordatorios-24h": {
         "task": "apps.recepcion.tasks.enviar_recordatorios_proximos",
@@ -186,7 +195,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "citas-generar-slots": {
         "task": "apps.recepcion.tasks.generar_slots_todos_medicos",
-        "schedule": crontab(hour=1, minute=0, day_of_week=1),
+        "schedule": crontab(hour=1, minute=0),  # diario a la 1am
     },
     "citas-marcar-no-asistio": {
         "task": "apps.recepcion.tasks.marcar_no_asistio",

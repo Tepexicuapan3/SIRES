@@ -1,9 +1,15 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import { ProtectedRoute } from "@routes/guards/ProtectedRoute";
 import PlaceholderPage from "@shared/components/PlaceholderPage";
-import RecepcionAgendaPage from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
-import RecepcionCheckinPage from "@features/recepcion/modules/checkin/pages/RecepcionCheckinPage";
-import { RECEPCION_QUEUE_READ_PERMISSIONS } from "@features/recepcion/shared/domain/recepcion.permissions";
+import RecepcionAgendaPage    from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
+import RecepcionCheckinPage   from "@features/recepcion/modules/checkin/pages/RecepcionCheckinPage";
+import TurnosConfigPage       from "@features/recepcion/modules/turnos/pages/TurnosConfigPage";
+import AgendaSemanalPage  from "@features/recepcion/modules/citas/pages/AgendaSemanalPage";
+import {
+  RECEPCION_QUEUE_READ_PERMISSIONS,
+  CITAS_READ_PERMISSION,
+  CITAS_WRITE_PERMISSION,
+} from "@features/recepcion/shared/domain/recepcion.permissions";
 
 const agendaElement = (
   <ProtectedRoute
@@ -34,6 +40,25 @@ export const recepcionRoutes: RouteObject[] = [
   {
     path: "fichas/*",
     element: <RecepcionCheckinPage />,
+  },
+  {
+    path: "turnos",
+    element: <TurnosConfigPage />,
+  },
+  {
+    path: "citas",
+    element: <Navigate to="/recepcion/agenda" replace />,
+  },
+  {
+    path: "agenda-semanal",
+    element: (
+      <ProtectedRoute
+        requiredAnyPermissions={[CITAS_READ_PERMISSION, CITAS_WRITE_PERMISSION]}
+        dependencyAware
+      >
+        <AgendaSemanalPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "incapacidad",

@@ -628,9 +628,13 @@ class VacunasWriteSerializer(CatalogWriteSerializer):
 # ---------------------------------------------------------------------------
 
 class ConsultoriosListSerializer(CatalogListSerializer):
+    centerId   = serializers.IntegerField(source="id_center_id",       read_only=True)
+    centerName = serializers.CharField(source="id_center.name",        read_only=True, default=None)
+    turnName   = serializers.CharField(source="id_turn.name",          read_only=True, default=None)
+
     class Meta(CatalogListSerializer.Meta):
         model = Consultorios
-        fields = CatalogListSerializer.Meta.fields + ("numero",)
+        fields = CatalogListSerializer.Meta.fields + ("numero", "centerId", "centerName", "turnName")
 
 class ConsultoriosDetailSerializer(CatalogDetailSerializer):
     turn = CatalogRefSerializer(source="id_turn", read_only=True)
