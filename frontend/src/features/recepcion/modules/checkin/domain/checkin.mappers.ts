@@ -28,7 +28,9 @@ export const mapCheckinFormToCreateVisitRequest = (
       : undefined,
   doctorId:      values.doctorId,
   consultorioId: values.consultorioId,
-  notes:         values.notes?.trim() || undefined,
+  notes:          values.notes?.trim() || undefined,
+  horaConsulta:   values.horaConsulta?.trim() || undefined,
+  fechaConsulta:  values.fechaConsulta || undefined,
 });
 
 export const mapVisitToCheckinDefaults = (

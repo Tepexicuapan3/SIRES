@@ -496,24 +496,15 @@ export const RecepcionIntegratedCheckinSection = ({
                   >
                     <thead className="bg-subtle">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium">
-                          Folio
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          Paciente
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          Servicio
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          Tipo
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          Estado
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          Acciones
-                        </th>
+                        <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Ficha / Folio</th>
+                        <th className="px-3 py-2 text-left font-medium">Paciente</th>
+                        <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Hora</th>
+                        <th className="px-3 py-2 text-left font-medium">Médico</th>
+                        <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Consultorio</th>
+                        <th className="px-3 py-2 text-left font-medium">Servicio</th>
+                        <th className="px-3 py-2 text-left font-medium">Tipo</th>
+                        <th className="px-3 py-2 text-left font-medium">Estado</th>
+                        <th className="px-3 py-2 text-left font-medium">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line-struct">
@@ -525,21 +516,62 @@ export const RecepcionIntegratedCheckinSection = ({
 
                         return (
                           <tr key={visit.id}>
-                            <td className="px-3 py-2 font-medium">
-                              {visit.folio}
+                            {/* Ficha # + turno + folio */}
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-1.5">
+                                {visit.numFicha ? (
+                                  <span className="text-base font-black text-primary leading-none">
+                                    #{visit.numFicha}
+                                  </span>
+                                ) : null}
+                                {visit.turnoNombre ? (
+                                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wide">
+                                    {visit.turnoNombre}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <span className="font-mono text-xs text-txt-muted">{visit.folio}</span>
                             </td>
-                            <td className="px-3 py-2 font-mono text-xs">
-                              {visit.noExp || <span className="font-sans text-txt-muted">—</span>}
-                              {visit.noExp && visit.pkNum > 0 ? (
-                                <span className="ml-1 font-sans text-txt-muted">
-                                  ·{visit.pkNum}
-                                </span>
+                            {/* Nombre + expediente */}
+                            <td className="px-3 py-2 max-w-[160px]">
+                              {visit.nombrePaciente ? (
+                                <p className="text-sm font-semibold text-txt-body truncate">{visit.nombrePaciente}</p>
+                              ) : null}
+                              <p className="font-mono text-xs text-txt-muted">
+                                {visit.noExp || "—"}
+                                {visit.pkNum > 0
+                                  ? <span className="ml-1 font-sans">· Fam.{visit.pkNum}</span>
+                                  : <span className="ml-1 font-sans">· Titular</span>}
+                              </p>
+                            </td>
+                            {/* Hora */}
+                            <td className="px-3 py-2">
+                              {visit.horaConsulta ? (
+                                <span className="font-mono text-sm font-bold text-primary">{visit.horaConsulta}</span>
+                              ) : (
+                                <span className="text-txt-muted text-xs">—</span>
+                              )}
+                            </td>
+                            {/* Médico */}
+                            <td className="px-3 py-2 max-w-[140px]">
+                              <p className="text-xs font-medium text-txt-body truncate">{visit.doctorNombre ?? "—"}</p>
+                            </td>
+                            {/* Consultorio / Centro */}
+                            <td className="px-3 py-2 max-w-[120px]">
+                              {visit.consultorioNombre ? (
+                                <p className="text-xs text-txt-body truncate">{visit.consultorioNombre}</p>
+                              ) : null}
+                              {visit.centroNombre ? (
+                                <p className="text-[10px] text-txt-muted truncate">{visit.centroNombre}</p>
+                              ) : null}
+                              {!visit.consultorioNombre && !visit.centroNombre ? (
+                                <span className="text-txt-muted text-xs">—</span>
                               ) : null}
                             </td>
                             <td className="px-3 py-2">
                               <RecepcionServiceBadge service={visitService} />
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 whitespace-nowrap">
                               {formatArrivalTypeLabel(visit.arrivalType)}
                             </td>
                             <td className="px-3 py-2">
@@ -760,6 +792,16 @@ export const RecepcionIntegratedCheckinSection = ({
                   type="number"
                   disabled={!canWrite || createVisit.isPending}
                   {...form.register("doctorId")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="horaConsulta">Hora de consulta (opcional)</Label>
+                <Input
+                  id="horaConsulta"
+                  type="time"
+                  disabled={!canWrite || createVisit.isPending}
+                  {...form.register("horaConsulta")}
                 />
               </div>
 

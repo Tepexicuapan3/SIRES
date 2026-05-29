@@ -18,6 +18,7 @@ class CreateVisitSerializer(serializers.Serializer):
     consultorioId  = serializers.IntegerField(min_value=1, required=False)
     notes          = serializers.CharField(required=False, allow_blank=True, max_length=255)
     horaConsulta   = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None, max_length=8)
+    fechaConsulta  = serializers.DateField(required=False, allow_null=True, default=None, input_formats=["%Y-%m-%d"])
 
     def validate(self, attrs):
         arrival_type   = attrs.get("arrivalType")

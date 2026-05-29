@@ -31,7 +31,9 @@ export const createCheckinFormSchema = z
     appointmentId: z.preprocess(parseOptionalText, z.string().optional()),
     doctorId:      z.preprocess(parseOptionalNumber, z.coerce.number().int().min(1).optional()),
     consultorioId: z.preprocess(parseOptionalNumber, z.coerce.number().int().min(1).optional()),
-    notes:         z.preprocess(parseOptionalText, z.string().max(255).optional()),
+    notes:          z.preprocess(parseOptionalText, z.string().max(255).optional()),
+    horaConsulta:   z.string().optional(),
+    fechaConsulta:  z.string().optional(),  // YYYY-MM-DD
   })
   .superRefine((data, ctx) => {
     if (data.arrivalType === ARRIVAL_TYPE.APPOINTMENT && !data.appointmentId?.trim()) {
@@ -71,4 +73,6 @@ export const DEFAULT_CHECKIN_FORM_VALUES: CheckinFormInput = {
   doctorId:       undefined,
   consultorioId:  undefined,
   notes:          "",
+  horaConsulta:   undefined,
+  fechaConsulta:  undefined,
 };

@@ -16,6 +16,7 @@ import type {
   StartConsultationResponse,
   UpdateVisitStatusRequest,
   UpdateVisitStatusResponse,
+  VisitStatusLogResponse,
   VisitsListParams,
   VisitsListResponse,
 } from "@api/types";
@@ -121,5 +122,12 @@ export const visitsAPI = {
       responseType: "blob",
     });
     return response.data as Blob;
+  },
+
+  getStatusLog: async (visitId: number): Promise<VisitStatusLogResponse> => {
+    const response = await apiClient.get<VisitStatusLogResponse>(
+      `/visits/${visitId}/status-log`,
+    );
+    return response.data;
   },
 };

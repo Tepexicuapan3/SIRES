@@ -19,7 +19,7 @@ from .models import (
     EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, EstudiosMed,
     GruposDeMedicamentos, Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
     Roles, TipoDeCitas, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
-    Vacunas,
+    Vacunas, CatTipoPersonal,
 )
 from .permissions import CatalogPermissionMixin, HasAnyOfPermissions
 from .repositories.consultorios_repository import ConsultoriosRepository
@@ -40,6 +40,7 @@ from .serializers import (
     EdoCivilDetailSerializer, EdoCivilListSerializer, EdoCivilWriteSerializer,
     EnfermedadesDetailSerializer, EnfermedadesListSerializer, EnfermedadesWriteSerializer,
     EscolaridadDetailSerializer, EscolaridadListSerializer, EscolaridadWriteSerializer,
+    TipoPersonalDetailSerializer, TipoPersonalListSerializer, TipoPersonalWriteSerializer,
     EscuelasDetailSerializer, EscuelasListSerializer, EscuelasWriteSerializer,
     EspecialidadesDetailSerializer, EspecialidadesListSerializer, EspecialidadesWriteSerializer,
     EstudiosMedDetailSerializer, EstudiosMedListSerializer, EstudiosMedWriteSerializer,
@@ -857,6 +858,22 @@ class EscolaridadDetailView(CatalogBaseDetailView):
     error_codes = MappingProxyType({"not_found": "EDUCATION_LEVEL_NOT_FOUND", "exists": "EDUCATION_LEVEL_EXISTS"})
 
 
+class TipoPersonalListCreateView(CatalogBaseListCreateView):
+    catalog = "tipo_personal"
+    model = CatTipoPersonal
+    list_serializer = TipoPersonalListSerializer
+    write_serializer = TipoPersonalWriteSerializer
+    error_codes = MappingProxyType({"exists": "PERSONAL_TYPE_EXISTS"})
+
+class TipoPersonalDetailView(CatalogBaseDetailView):
+    catalog = "tipo_personal"
+    model = CatTipoPersonal
+    detail_serializer = TipoPersonalDetailSerializer
+    write_serializer = TipoPersonalWriteSerializer
+    wrapper_key = "personalType"
+    error_codes = MappingProxyType({"not_found": "PERSONAL_TYPE_NOT_FOUND", "exists": "PERSONAL_TYPE_EXISTS"})
+
+
 class EscuelasListCreateView(CatalogBaseListCreateView):
     catalog = "escuelas"
     model = Escuelas
@@ -1369,6 +1386,32 @@ class CatAreaClinicaDetailView(CatalogBaseDetailView):
         "not_found": "CLINICAL_AREA_NOT_FOUND",
         "exists": "CLINICAL_AREA_EXISTS",
     })
+
+    def _cascade_deactivate_centers(self, area_id, actor_id):
+        CentroAreaClinica.objects.filter(
+            area_clinica_id=area_id,
+            is_active=True,
+        ).update(
+            is_active=False,
+            updated_at=timezone.now(),
+            updated_by_id=actor_id,
+        )
+
+    def put(self, request, pk):
+        item = self.get_object(pk)
+        was_active = item.is_active if item else None
+        response = super().put(request, pk)
+        if response.status_code == status.HTTP_200_OK and was_active:
+            item.refresh_from_db()
+            if not item.is_active:
+                self._cascade_deactivate_centers(pk, _get_actor_id(request.user))
+        return response
+
+    def delete(self, request, pk):
+        item = self.get_object(pk)
+        if item and item.is_active:
+            self._cascade_deactivate_centers(pk, _get_actor_id(request.user))
+        return super().delete(request, pk)
 
 
 # ---------------------------------------------------------------------------

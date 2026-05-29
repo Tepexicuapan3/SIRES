@@ -1,7 +1,14 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarClock, Printer, RefreshCcw, Settings2 } from "lucide-react";
+import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, FileText, List, Loader2, Printer, RefreshCcw, Search, Settings2 } from "lucide-react";
+import { SlotCalendar, addDays } from "@features/recepcion/modules/citas/components/SlotCalendar";
+import { useDebounce }           from "@shared/hooks/useDebounce";
+import { useCitasList }          from "@features/recepcion/modules/citas/queries/useCitasList";
+import { usePatientLookupHistorico }  from "@features/recepcion/modules/checkin/queries/usePatientLookup";
+import { useVisitStatusLog }           from "@features/recepcion/modules/checkin/queries/useVisitStatusLog";
+import { visitsAPI }                   from "@api/resources/visits.api";
 import { TurnoIndicator } from "@features/recepcion/shared/components/TurnoIndicator";
 import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
 import {
@@ -14,13 +21,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@shared/ui/alert-dialog";
+import { Badge }  from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
-import { Input } from "@shared/ui/input";
-import { Label } from "@shared/ui/label";
+import { Input }  from "@shared/ui/input";
+import { Label }  from "@shared/ui/label";
 import {
   ARRIVAL_TYPE,
+  ESTATUS_CITA,
   RECEPCION_STATUS_ACTION,
   VISIT_STATUS,
+  type CitaListItem,
+  type EstatusCita,
   type VisitQueueItem,
   type VisitStatus,
 } from "@api/types";
@@ -53,6 +64,182 @@ import {
   formatArrivalTypeLabel,
   isOpenVisitStatus,
 } from "@features/recepcion/shared/utils/recepcion-format";
+
+// ─── Etiquetas de estado de visita ───────────────────────────────────────────
+
+const VISIT_STATUS_LABEL: Record<string, string> = {
+  en_espera:         "En espera",
+  en_somatometria:   "En somatometría",
+  lista_para_doctor: "Lista para doctor",
+  en_consulta:       "En consulta",
+  cerrada:           "Cerrada",
+  cancelada:         "Cancelada",
+  no_show:           "No se presentó",
+};
+
+const VISIT_BADGE_VARIANT: Record<string,
+  "outline" | "stable" | "alert" | "secondary" | "critical"
+> = {
+  en_espera:         "outline",
+  en_somatometria:   "alert",
+  lista_para_doctor: "alert",
+  en_consulta:       "stable",
+  cerrada:           "secondary",
+  cancelada:         "critical",
+  no_show:           "critical",
+};
+
+// ─── Tarjeta de visita con movimientos expandibles ────────────────────────────
+
+function HistVisitCard({ visit }: { visit: VisitQueueItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: log, isLoading: logLoading } = useVisitStatusLog(visit.id, expanded);
+
+  return (
+    <article className="rounded-xl border border-line-struct bg-paper overflow-hidden">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 px-5 py-3 bg-subtle/20 border-b border-line-struct/50">
+        <div>
+          <p className="font-mono text-sm font-bold text-txt-body tracking-widest">{visit.folio}</p>
+          <p className="text-[10px] text-txt-muted mt-0.5">Ficha de consulta · {visit.arrivalType === "appointment" ? "Con cita" : "Sin cita"}</p>
+        </div>
+        <Badge variant={VISIT_BADGE_VARIANT[visit.status] ?? "outline"} className="text-xs shrink-0">
+          {VISIT_STATUS_LABEL[visit.status] ?? visit.status}
+        </Badge>
+      </div>
+
+      {/* Datos */}
+      <div className="px-5 py-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Fecha de registro</p>
+          <p className="font-medium">{visit.fechaAlta ? formatCitaFechaHora(visit.fechaAlta) : "—"}</p>
+        </div>
+        {visit.doctorNombre ? (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Médico</p>
+            <p className="font-medium">{visit.doctorNombre}</p>
+          </div>
+        ) : null}
+        {visit.consultorioNombre ? (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Consultorio</p>
+            <p className="font-medium">{visit.consultorioNombre}</p>
+          </div>
+        ) : null}
+        {visit.horaConsulta ? (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Hora de cita</p>
+            <p className="font-mono font-semibold text-primary">{visit.horaConsulta}</p>
+          </div>
+        ) : null}
+        {visit.notes ? (
+          <div className="sm:col-span-2 lg:col-span-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Motivo</p>
+            <p className="text-txt-body/80 text-sm">{visit.notes}</p>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Movimientos NOM-024 */}
+      <div className="px-5 py-2.5 border-t border-line-struct/40 bg-subtle/10">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+        >
+          <ChevronRight className={`size-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
+          {expanded ? "Ocultar movimientos" : "Ver movimientos — auditoría NOM-024 §6"}
+        </button>
+
+        {expanded ? (
+          <div className="mt-3">
+            {logLoading ? (
+              <div className="flex items-center gap-2 text-xs text-txt-muted py-1">
+                <Loader2 className="size-3 animate-spin" /> Cargando historial de movimientos...
+              </div>
+            ) : log && log.length > 0 ? (
+              <div className="space-y-0 pl-1 border-l-2 border-line-struct/40">
+                {log.map((entry) => (
+                  <div key={entry.id} className="relative flex items-start gap-3 py-2 pl-3">
+                    <div className="absolute -left-[5px] top-3 size-2 rounded-full bg-primary/50 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1 text-xs">
+                        {entry.fromStatus ? (
+                          <span className="text-txt-muted">
+                            {VISIT_STATUS_LABEL[entry.fromStatus] ?? entry.fromStatus}
+                          </span>
+                        ) : null}
+                        {entry.fromStatus ? <span className="text-txt-muted">→</span> : null}
+                        <span className="font-semibold text-txt-body">
+                          {VISIT_STATUS_LABEL[entry.toStatus] ?? entry.toStatus}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-txt-muted mt-0.5">
+                        {new Date(entry.changedAt).toLocaleString("es-MX", {
+                          day: "2-digit", month: "short", year: "numeric",
+                          hour: "2-digit", minute: "2-digit",
+                          timeZone: "America/Mexico_City",
+                        })}
+                        {entry.changedByNombre ? ` · ${entry.changedByNombre}` : ""}
+                      </p>
+                      {entry.notes ? (
+                        <p className="text-[10px] italic text-txt-muted/70 mt-0.5">{entry.notes}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-txt-muted py-1 italic">Sin movimientos registrados.</p>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+// ─── Constantes historial NOM-024 ────────────────────────────────────────────
+
+const ESTATUS_LABEL: Record<EstatusCita, string> = {
+  agendada:   "Agendada",
+  confirmada: "Confirmada",
+  atendida:   "Atendida",
+  cancelada:  "Cancelada",
+  no_asistio: "No asistió",
+};
+
+const ESTATUS_VARIANT: Record<EstatusCita,
+  "outline" | "stable" | "alert" | "secondary" | "critical"
+> = {
+  agendada:   "outline",
+  confirmada: "stable",
+  atendida:   "secondary",
+  cancelada:  "critical",
+  no_asistio: "alert",
+};
+
+function formatCitaFechaHora(iso: string): string {
+  return new Date(iso).toLocaleString("es-MX", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+    timeZone: "America/Mexico_City",
+  });
+}
+
+function getMonday(date: Date): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+  return d.toISOString().slice(0, 10);
+}
+
+function formatWeekRange(weekStart: string): string {
+  const from = new Date(weekStart + "T00:00:00");
+  const to   = new Date(addDays(weekStart, 6) + "T00:00:00");
+  const fmt  = (d: Date) => d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+  return `${fmt(from)} — ${fmt(to)}`;
+}
 
 const RECEPCION_ACTION = {
   EN_SOMATOMETRIA: RECEPCION_STATUS_ACTION.EN_SOMATOMETRIA,
@@ -297,6 +484,50 @@ export const RecepcionAgendaPage = () => {
   const queueQuery = useRecepcionAgendaQueue({ enabled: canReadAgenda });
   const visitStatusAction = useVisitStatusAction();
 
+  const [view,         setView]         = useState<"bandeja" | "disponibilidad" | "historial">("bandeja");
+  const [calCentroId,  setCalCentroId]  = useState<number | null>(null);
+  const [calMedicoId,  setCalMedicoId]  = useState<number | null>(null);
+  const [calWeekStart, setCalWeekStart] = useState(() => getMonday(new Date()));
+
+  // ── Historial NOM-024 ───────────────────────────────────────────────────────
+  const [histNoExp,         setHistNoExp]         = useState("");
+  const [histFechaDesde,    setHistFechaDesde]    = useState("");
+  const [histFechaHasta,    setHistFechaHasta]    = useState("");
+  const [histSelectedPkNum, setHistSelectedPkNum] = useState<number | null>(null);
+  const [histTab,           setHistTab]           = useState<"citas" | "visitas">("citas");
+
+  const histDebouncedNoExp = useDebounce(histNoExp, 400);
+  const histEnabled = view === "historial" && canReadAgenda && histDebouncedNoExp.trim().length >= 4;
+
+  const { data: histPatient } = usePatientLookupHistorico(histDebouncedNoExp.trim(), histEnabled);
+
+  // Citas del expediente (filtradas por pkNum client-side)
+  const { data: histCitasData, isLoading: histCitasLoading } = useCitasList(
+    { noExp: histDebouncedNoExp.trim() || undefined, pageSize: 500,
+      fechaDesde: histFechaDesde || undefined, fechaHasta: histFechaHasta || undefined },
+    { enabled: histEnabled },
+  );
+  const histCitas = [...(histCitasData?.items ?? [])]
+    .filter((c) => histSelectedPkNum === null || c.pkNum === histSelectedPkNum)
+    .sort((a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime());
+
+  // Visitas (fichas) del expediente — para movimientos NOM-024
+  const { data: histVisitsData, isLoading: histVisitsLoading } = useQuery({
+    queryKey: ["hist-visits", histDebouncedNoExp.trim(), histFechaDesde, histFechaHasta],
+    queryFn:  () => visitsAPI.getAll({ noExp: histDebouncedNoExp.trim(), pageSize: 500 }),
+    enabled:  histEnabled,
+    staleTime: 30_000,
+  });
+  const histVisits = [...(histVisitsData?.items ?? [])]
+    .filter((v) => histSelectedPkNum === null || v.pkNum === histSelectedPkNum)
+    .sort((a, b) => new Date(b.fechaAlta ?? 0).getTime() - new Date(a.fechaAlta ?? 0).getTime());
+
+  // Reset member selector al cambiar expediente
+  const prevNoExp = useDebounce(histNoExp, 600);
+  if (prevNoExp !== histNoExp && histSelectedPkNum !== null) {
+    setHistSelectedPkNum(null);
+  }
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     STATUS_FILTER.OPEN,
@@ -479,6 +710,46 @@ export const RecepcionAgendaPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Tab switcher */}
+          <div className="flex items-center gap-1 rounded-xl border border-line-struct bg-subtle/20 p-1">
+            <button
+              type="button"
+              onClick={() => setView("bandeja")}
+              className={[
+                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                view === "bandeja"
+                  ? "bg-paper text-txt-body shadow-sm"
+                  : "text-txt-muted hover:text-txt-body",
+              ].join(" ")}
+            >
+              <List className="size-3.5" /> Bandeja
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("disponibilidad")}
+              className={[
+                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                view === "disponibilidad"
+                  ? "bg-paper text-txt-body shadow-sm"
+                  : "text-txt-muted hover:text-txt-body",
+              ].join(" ")}
+            >
+              <CalendarDays className="size-3.5" /> Disponibilidad
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("historial")}
+              className={[
+                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                view === "historial"
+                  ? "bg-paper text-txt-body shadow-sm"
+                  : "text-txt-muted hover:text-txt-body",
+              ].join(" ")}
+            >
+              <ClipboardList className="size-3.5" /> Historial
+            </button>
+          </div>
+
           <TurnoIndicator />
           <Button
             type="button"
@@ -490,9 +761,11 @@ export const RecepcionAgendaPage = () => {
           >
             <Settings2 className="size-4" />
           </Button>
-          <span className="rounded-full border border-line-hairline bg-subtle px-3 py-1 text-xs font-medium text-txt-muted">
-            Sync: {queueQuery.connectionStatus ?? "idle"}
-          </span>
+          {view === "bandeja" ? (
+            <span className="rounded-full border border-line-hairline bg-subtle px-3 py-1 text-xs font-medium text-txt-muted">
+              Sync: {queueQuery.connectionStatus ?? "idle"}
+            </span>
+          ) : null}
           <Button
             type="button"
             onClick={() => handleOpenQuickCheckin()}
@@ -500,32 +773,129 @@ export const RecepcionAgendaPage = () => {
           >
             Generar ficha de consulta
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="gap-2"
-            onClick={() => void queueQuery.refetch?.()}
-          >
-            <RefreshCcw className="size-4" />
-            Actualizar
-          </Button>
+          {view === "bandeja" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="gap-2"
+              onClick={() => void queueQuery.refetch?.()}
+            >
+              <RefreshCcw className="size-4" />
+              Actualizar
+            </Button>
+          ) : null}
         </div>
       </header>
 
-      {!canReadAgenda ? (
+      {/* ── Vista disponibilidad ────────────────────────────────────── */}
+      {view === "disponibilidad" ? (
+        <div className="space-y-4 rounded-xl border border-line-struct/60 bg-subtle/10 p-4">
+
+          {/* Controles: centro + médico + navegación semana */}
+          <div className="flex flex-wrap items-end gap-3">
+
+            {/* Filtro centro */}
+            {centroOptions.length > 1 ? (
+              <div className="space-y-1 w-52">
+                <p className="text-xs font-medium text-txt-muted">Centro de atención</p>
+                <select
+                  className="h-9 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                  value={calCentroId ?? ""}
+                  onChange={(e) => {
+                    setCalCentroId(e.target.value ? Number(e.target.value) : null);
+                    setCalMedicoId(null);
+                  }}
+                >
+                  <option value="">Todos los centros</option>
+                  {centroOptions.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
+            {/* Filtro médico (filtrado por centro si está seleccionado) */}
+            <div className="space-y-1 w-64">
+              <p className="text-xs font-medium text-txt-muted">Médico</p>
+              <select
+                className="h-9 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                value={calMedicoId ?? ""}
+                onChange={(e) => setCalMedicoId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">Seleccionar médico...</option>
+                {(calCentroId
+                  ? allMedicos.filter((m) => m.centros.some((c) => c.centroId === calCentroId))
+                  : allMedicos
+                ).map((m) => (
+                  <option key={m.id} value={m.id}>{m.nombreCompleto}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Navegación de semana */}
+            <div className="ml-auto flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="size-8"
+                disabled={calWeekStart <= getMonday(new Date())}
+                onClick={() => setCalWeekStart((s) => addDays(s, -7))}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="px-2 text-sm text-txt-muted whitespace-nowrap">
+                {formatWeekRange(calWeekStart)}
+              </span>
+              <Button variant="ghost" size="icon" className="size-8"
+                onClick={() => setCalWeekStart((s) => addDays(s, 7))}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Grilla de slots */}
+          {calMedicoId ? (
+            <SlotCalendar
+              medicoId={calMedicoId}
+              medicoNombre={allMedicos.find((m) => m.id === calMedicoId)?.nombreCompleto}
+              weekStart={calWeekStart}
+              onSlotClick={(fecha, slot) => {
+                handleOpenQuickCheckin({
+                  doctorId:      calMedicoId,
+                  consultorioId: slot.consultorioId ?? undefined,
+                  horaConsulta:  slot.hora,
+                  fechaConsulta: fecha,
+                  arrivalType:   ARRIVAL_TYPE.APPOINTMENT,
+                });
+              }}
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-14 text-center">
+              <CalendarDays className="size-12 text-txt-muted/30" />
+              <p className="text-sm text-txt-muted">
+                Selecciona un médico para ver su disponibilidad semanal.
+              </p>
+              <p className="text-xs text-txt-muted/70">
+                Los slots en verde están disponibles — hacé clic para generar una ficha.
+              </p>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {/* ── Vista bandeja ────────────────────────────────────────────── */}
+      {view === "bandeja" && !canReadAgenda ? (
         <p className="text-sm text-txt-muted" role="status">
           No tenes permisos completos para cargar la agenda operativa de
           recepcion.
         </p>
       ) : null}
 
-      {canReadAgenda && queueQuery.isLoading ? (
+      {view === "bandeja" && canReadAgenda && queueQuery.isLoading ? (
         <p className="text-sm text-txt-muted">
           Cargando agenda de recepcion...
         </p>
       ) : null}
 
-      {canReadAgenda && queueQuery.isError ? (
+      {view === "bandeja" && canReadAgenda && queueQuery.isError ? (
         <Alert variant="warning">
           <AlertTitle>Error al cargar</AlertTitle>
           <AlertDescription>
@@ -534,7 +904,8 @@ export const RecepcionAgendaPage = () => {
         </Alert>
       ) : null}
 
-      {canReadAgenda &&
+      {view === "bandeja" &&
+      canReadAgenda &&
       !queueQuery.isLoading &&
       !queueQuery.isError &&
       visits.length > 0 ? (
@@ -654,7 +1025,9 @@ export const RecepcionAgendaPage = () => {
                   ))}
                 </select>
               </div>
+              
 
+              
               <div className="space-y-2">
                 <Label htmlFor="agenda-centro-filter">Centro de atención</Label>
                 <select
@@ -674,7 +1047,7 @@ export const RecepcionAgendaPage = () => {
                 </select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label htmlFor="agenda-cons-filter">Consultorio</Label>
                 <select
                   id="agenda-cons-filter"
@@ -780,10 +1153,29 @@ export const RecepcionAgendaPage = () => {
 
                       {/* ── Detalles en grid de 2 columnas ─────────────── */}
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 border-t border-line-hairline">
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Hora registro</p>
+                          <p className="text-sm font-bold font-mono text-txt-muted">
+                            {visit.fechaAlta
+                              ? new Date(visit.fechaAlta).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false })
+                              : "—"}
+                          </p>
+                          {visit.fechaAlta && (
+                            <p className="text-[10px] font-mono text-txt-muted/60">
+                              {new Date(visit.fechaAlta).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                            </p>
+                          )}
+                        </div>
+
                         {visit.horaConsulta ? (
                           <div>
                             <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Hora cita</p>
-                            <p className="text-sm font-bold text-primary font-mono">{visit.horaConsulta}</p>
+                            <p className="text-sm font-bold font-mono text-primary">{visit.horaConsulta}</p>
+                            {(visit.fechaConsulta ?? visit.fechaCita ?? visit.fechaAlta) && (
+                              <p className="text-[10px] font-mono text-primary/60">
+                                {new Date(visit.fechaConsulta ?? visit.fechaCita ?? visit.fechaAlta!).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                              </p>
+                            )}
                           </div>
                         ) : null}
 
@@ -817,10 +1209,17 @@ export const RecepcionAgendaPage = () => {
                           <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Llegada</p>
                           <p className="text-xs font-medium text-txt-body">{formatArrivalTypeLabel(visit.arrivalType)}</p>
                         </div>
+
+                        {visit.notes ? (
+                          <div className="col-span-2">
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Motivo</p>
+                            <p className="text-xs text-txt-muted truncate">{visit.notes}</p>
+                          </div>
+                        ) : null}
                       </div>
 
-                      <footer className="border-t border-line-hairline px-4 py-3">
-                        <div className="flex flex-wrap items-center justify-end gap-2">
+                      <footer className="border-t border-line-hairline px-4 py-2">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
                           <Button
                             type="button"
                             size="sm"
@@ -897,6 +1296,228 @@ export const RecepcionAgendaPage = () => {
         </p>
       ) : null}
 
+      {/* ── Historial NOM-024 ─────────────────────────────────────────── */}
+      {view === "historial" ? (
+        <div className="space-y-5">
+
+          {/* ── Búsqueda ──────────────────────────────────────────────── */}
+          <div className="rounded-xl border border-line-struct bg-paper px-6 py-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="size-4 text-primary" />
+                  <h2 className="text-base font-semibold text-txt-body">Historial de encuentros clínicos</h2>
+                </div>
+                <p className="text-xs text-txt-muted">NOM-024-SSA3-2012 · NOM-004-SSA3-2012 · Registro electrónico de salud</p>
+              </div>
+              <Badge variant="outline" className="text-xs shrink-0 font-mono">Sistema de información en salud</Badge>
+            </div>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[220px] space-y-1">
+                <Label className="text-xs">Número de expediente</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-txt-muted pointer-events-none" />
+                  <Input placeholder="Ej. 12345 (mín. 4 caracteres)" value={histNoExp}
+                    onChange={(e) => { setHistNoExp(e.target.value); setHistSelectedPkNum(null); }}
+                    className="pl-9 h-9" />
+                </div>
+              </div>
+              <div className="space-y-1 w-36">
+                <Label className="text-xs">Desde</Label>
+                <Input type="date" value={histFechaDesde} onChange={(e) => setHistFechaDesde(e.target.value)} className="h-9" />
+              </div>
+              <div className="space-y-1 w-36">
+                <Label className="text-xs">Hasta <span className="font-normal text-txt-muted">(opc.)</span></Label>
+                <Input type="date" value={histFechaHasta} min={histFechaDesde} onChange={(e) => setHistFechaHasta(e.target.value)} className="h-9" />
+              </div>
+            </div>
+            {histDebouncedNoExp.trim().length > 0 && histDebouncedNoExp.trim().length < 4 ? (
+              <p className="mt-2 text-xs text-txt-muted italic">Ingresa al menos 4 caracteres para buscar.</p>
+            ) : null}
+          </div>
+
+          {/* ── Selector de miembro del núcleo familiar ─────────────── */}
+          {histPatient && histEnabled ? (() => {
+            const allMembers = [
+              ...(histPatient.titular ? [histPatient.titular] : []),
+              ...histPatient.dependientes,
+            ];
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
+                    Núcleo familiar · Expediente <span className="font-mono text-txt-body">{histDebouncedNoExp.trim()}</span>
+                  </p>
+                  <p className="text-xs text-txt-muted">{allMembers.length} miembro(s)</p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                  {allMembers.map((member) => {
+                    const sel = histSelectedPkNum === member.pkNum;
+                    return (
+                      <button
+                        key={member.pkNum}
+                        type="button"
+                        onClick={() => { setHistSelectedPkNum(member.pkNum); setHistTab("citas"); }}
+                        className={[
+                          "flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
+                          sel ? "border-primary bg-primary/5" : "border-line-struct hover:bg-subtle/40",
+                        ].join(" ")}
+                      >
+                        <div className={[
+                          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2",
+                          sel ? "border-primary bg-primary" : "border-line-struct",
+                        ].join(" ")}>
+                          {sel ? <span className="size-1.5 rounded-full bg-white" /> : null}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-txt-body">{member.nombre}</p>
+                          <p className="text-xs text-txt-muted">
+                            {member.pkNum === 0 ? "Titular" : (member.parentesco ?? "Familiar")}
+                            {member.edad != null ? ` · ${member.edad} años` : ""}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })() : null}
+
+          {/* ── Contenido del miembro seleccionado ──────────────────── */}
+          {histSelectedPkNum !== null && histEnabled ? (
+            <div className="space-y-4">
+
+              {/* Inner tabs */}
+              <div className="flex items-center gap-1 rounded-xl border border-line-struct p-1 bg-subtle/20 w-fit">
+                {(["citas", "visitas"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setHistTab(t)}
+                    className={[
+                      "rounded-lg px-4 py-1.5 text-xs font-medium transition-colors",
+                      histTab === t ? "bg-paper text-txt-body shadow-sm" : "text-txt-muted hover:text-txt-body",
+                    ].join(" ")}
+                  >
+                    {t === "citas"
+                      ? `Citas agendadas (${histCitas.length})`
+                      : `Visitas y movimientos (${histVisits.length})`}
+                  </button>
+                ))}
+              </div>
+
+              {/* ─ Tab: Citas ───────────────────────────────────────── */}
+              {histTab === "citas" ? (
+                histCitasLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-txt-muted py-4">
+                    <Loader2 className="size-4 animate-spin" /> Cargando citas...
+                  </div>
+                ) : histCitas.length === 0 ? (
+                  <div className="rounded-xl border border-line-struct bg-paper py-12 text-center">
+                    <FileText className="size-10 text-txt-muted/30 mx-auto mb-3" />
+                    <p className="text-sm text-txt-muted">Sin citas registradas para este paciente.</p>
+                  </div>
+                ) : (
+                  <div className="relative pl-5 border-l-2 border-line-struct/60 space-y-4">
+                    {histCitas.map((cita: CitaListItem) => {
+                      const dot =
+                        cita.estatus === ESTATUS_CITA.ATENDIDA   ? "bg-green-500" :
+                        cita.estatus === ESTATUS_CITA.CANCELADA  ? "bg-red-400"   :
+                        cita.estatus === ESTATUS_CITA.NO_ASISTIO ? "bg-amber-400" :
+                        cita.estatus === ESTATUS_CITA.CONFIRMADA ? "bg-primary"   :
+                                                                   "bg-txt-muted/40";
+                      return (
+                        <div key={cita.id} className="relative">
+                          <div className={`absolute -left-[25px] top-4 size-3 rounded-full border-2 border-paper ${dot}`} />
+                          <article className="rounded-xl border border-line-struct bg-paper overflow-hidden">
+                            <div className="flex items-start justify-between gap-3 px-5 py-3 bg-subtle/20 border-b border-line-struct/50">
+                              <div>
+                                <p className="font-mono text-sm font-bold text-txt-body tracking-widest">{cita.folio}</p>
+                                <p className="text-[10px] text-txt-muted mt-0.5">Identificador único de encuentro clínico</p>
+                              </div>
+                              <Badge variant={ESTATUS_VARIANT[cita.estatus]} className="text-xs shrink-0">
+                                {ESTATUS_LABEL[cita.estatus]}
+                              </Badge>
+                            </div>
+                            <div className="px-5 py-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Fecha y hora</p>
+                                <p className="text-sm font-semibold text-txt-body">{formatCitaFechaHora(cita.fechaHora)}</p>
+                                <p className="text-xs text-txt-muted">{cita.duracionMin} min</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Prestador del servicio</p>
+                                <p className="text-sm font-semibold text-txt-body">{cita.medicoNombre}</p>
+                                <p className="text-xs text-txt-muted capitalize">{cita.servicioTipo.replace("_", " ")}</p>
+                              </div>
+                              {cita.consultorioNombre ? (
+                                <div>
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Unidad de atención</p>
+                                  <p className="text-sm font-semibold text-txt-body">{cita.consultorioNombre}</p>
+                                </div>
+                              ) : null}
+                              {cita.motivo ? (
+                                <div className="sm:col-span-2 lg:col-span-3">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-txt-muted mb-0.5">Motivo de consulta</p>
+                                  <p className="text-sm text-txt-body">{cita.motivo}</p>
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="px-5 py-2 border-t border-line-struct/40 bg-subtle/10 flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-[10px] text-txt-muted">
+                                <span className="font-semibold">Registro:</span> {formatCitaFechaHora(cita.createdAt)}
+                              </p>
+                              <p className="text-[10px] font-mono text-txt-muted/70">Folio: {cita.folio}</p>
+                            </div>
+                          </article>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : null}
+
+              {/* ─ Tab: Visitas y movimientos ──────────────────────── */}
+              {histTab === "visitas" ? (
+                histVisitsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-txt-muted py-4">
+                    <Loader2 className="size-4 animate-spin" /> Cargando visitas...
+                  </div>
+                ) : histVisits.length === 0 ? (
+                  <div className="rounded-xl border border-line-struct bg-paper py-12 text-center">
+                    <FileText className="size-10 text-txt-muted/30 mx-auto mb-3" />
+                    <p className="text-sm text-txt-muted">Sin visitas registradas para este paciente.</p>
+                    <p className="text-xs text-txt-muted/70 mt-1">Las visitas se generan en el módulo de check-in.</p>
+                  </div>
+                ) : (
+                  <div className="relative pl-5 border-l-2 border-line-struct/60 space-y-4">
+                    {histVisits.map((visit) => (
+                      <div key={visit.id} className="relative">
+                        <div className={[
+                          "absolute -left-[25px] top-4 size-3 rounded-full border-2 border-paper",
+                          visit.status === "cerrada"  ? "bg-green-500" :
+                          visit.status === "cancelada" || visit.status === "no_show" ? "bg-red-400" :
+                          visit.status === "en_consulta" ? "bg-blue-500" :
+                          "bg-txt-muted/40",
+                        ].join(" ")} />
+                        <HistVisitCard visit={visit} />
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : null}
+
+            </div>
+          ) : histEnabled && !histPatient ? (
+            <div className="rounded-xl border border-line-struct bg-paper py-12 text-center">
+              <p className="text-sm text-txt-muted">Expediente no encontrado en el sistema.</p>
+            </div>
+          ) : null}
+
+        </div>
+      ) : null}
+
       <AlertDialog
         open={pendingStatusAction !== null}
         onOpenChange={(nextOpen) => {
@@ -934,13 +1555,11 @@ export const RecepcionAgendaPage = () => {
         open={quickCheckinOpen}
         onOpenChange={(nextOpen) => {
           setQuickCheckinOpen(nextOpen);
-
-          if (!nextOpen) {
-            setQuickCheckinDefaults(undefined);
-          }
+          if (!nextOpen) setQuickCheckinDefaults(undefined);
         }}
         canWrite={canWriteRecepcion}
         initialValues={resolvedQuickCheckinDefaults}
+        activeVisits={visits}
       />
 
       <FichaModal

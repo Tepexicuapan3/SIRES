@@ -31,6 +31,7 @@ from apps.recepcion.uses_case.visit_queue_usecase import (
     create_visit,
     ensure_recepcion_role,
     ensure_visit_queue_access,
+    get_visit_status_log,
     list_visits,
     lookup_patient,
 )
@@ -153,6 +154,15 @@ class VisitsView(APIView):
                                   status.HTTP_422_UNPROCESSABLE_ENTITY,
                                   details=serializer.errors, request_id=get_request_id(request))
 
+        hora_consulta = None
+        hora_raw = serializer.validated_data.get("horaConsulta")
+        if hora_raw:
+            try:
+                from datetime import datetime as _dt
+                hora_consulta = _dt.strptime(hora_raw.strip()[:5], "%H:%M").time()
+            except (ValueError, AttributeError):
+                pass
+
         try:
             visit = create_visit(
                 no_exp=serializer.validated_data["noExp"],
@@ -164,6 +174,9 @@ class VisitsView(APIView):
                 doctor_id=serializer.validated_data.get("doctorId"),
                 consultorio_id=serializer.validated_data.get("consultorioId"),
                 notes=serializer.validated_data.get("notes"),
+                hora_consulta=hora_consulta,
+                fecha_consulta=serializer.validated_data.get("fechaConsulta"),
+                created_by_id=getattr(user, "id_usuario", None),
             )
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)
@@ -231,7 +244,11 @@ class VisitStatusView(APIView):
             current_visit   = VisitRepository.get_by_id(visit_id)
             if current_visit is not None:
                 previous_status = current_visit.status
-            visit = change_visit_status(visit_id, target_status)
+            visit = change_visit_status(
+                visit_id,
+                target_status,
+                changed_by_id=getattr(user, "id_usuario", None),
+            )
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)
 
@@ -287,3 +304,32 @@ class PatientLookupView(APIView):
             return _visit_error_response(request, exc)
 
         return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VisitStatusLogView(APIView):
+    """
+    GET /visits/{visit_id}/status-log
+
+    Retorna el historial de cambios de estado de una visita.
+    Requerido por NOM-024-SSA3-2012 para trazabilidad clínica.
+    """
+
+    authentication_classes = []
+    permission_classes     = []
+
+    def get(self, request, visit_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+        try:
+            _require_visit_queue_access(user)
+        except VisitDomainError as exc:
+            return _visit_error_response(request, exc)
+
+        try:
+            logs = get_visit_status_log(visit_id)
+        except VisitDomainError as exc:
+            return _visit_error_response(request, exc)
+
+        return Response({"items": logs}, status=status.HTTP_200_OK)

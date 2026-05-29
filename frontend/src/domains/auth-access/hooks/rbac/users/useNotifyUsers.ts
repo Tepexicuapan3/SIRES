@@ -2,9 +2,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { usersAPI } from "@api/resources/users.api";
 import type { NotifyUsersRequest } from "@api/types";
 
+interface NotifyPayload {
+  data: NotifyUsersRequest;
+  files?: File[];
+}
+
 export const useNotifyUsers = () =>
   useMutation({
-    mutationFn: (data: NotifyUsersRequest) => usersAPI.notify(data),
+    mutationFn: ({ data, files }: NotifyPayload) => usersAPI.notify(data, files),
   });
 
 export const useNotifyUsersPreview = (data: NotifyUsersRequest | null) =>

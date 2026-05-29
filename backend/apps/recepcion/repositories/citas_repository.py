@@ -10,7 +10,6 @@ from datetime import date, timedelta
 from django.db import transaction
 
 from apps.recepcion.models import CitaMedica, EstatusCita, HorarioDisponible
-from apps.medicos.models import RelMedicoConsultorioHorario
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -119,8 +118,8 @@ class CitasRepository:
         notas: str | None = None,
         created_by_id: int | None = None,
     ) -> dict:
-        # 4. El médico debe estar disponible ese día — se valida ANTES de abrir
-        # la transacción porque es una consulta externa más costosa.
+        # Valida disponibilidad del médico (status, horario, excepciones) ANTES de
+        # abrir la transacción porque es una consulta más costosa.
         from apps.medicos.models import CatMedico
         from apps.medicos.disponibilidad import get_disponibilidad_medico
         medico = CatMedico.objects.filter(id_usuario_id=medico_id).first()
@@ -128,6 +127,19 @@ class CitasRepository:
             disp = get_disponibilidad_medico(medico, fecha_hora.date())
             if not disp["disponible"]:
                 raise ValueError(f"El médico no está disponible: {disp['motivo']}")
+            exc_parcial = disp.get("excepcionParcial")
+            if exc_parcial:
+                from datetime import time as _time
+                exc_inicio = _time.fromisoformat(str(exc_parcial["horaInicio"])[:5])
+                exc_fin    = _time.fromisoformat(str(exc_parcial["horaFin"])[:5])
+                hora_cita  = fecha_hora.time().replace(second=0, microsecond=0)
+                if exc_inicio <= hora_cita < exc_fin:
+                    tipo = exc_parcial["tipo"].lower().replace("_", " ")
+                    raise ValueError(
+                        f"El médico tiene {tipo} de "
+                        f"{str(exc_parcial['horaInicio'])[:5]} a "
+                        f"{str(exc_parcial['horaFin'])[:5]}."
+                    )
 
         with transaction.atomic():
             # 1. Bloquea la fila del slot con SELECT FOR UPDATE.
@@ -196,8 +208,8 @@ class CitasRepository:
             cita.estatus = estatus
             cita.save(update_fields=["estatus", "updated_at"])
 
-            # Liberar slot si se cancela — dentro de la misma transacción
-            if estatus == EstatusCita.CANCELADA:
+            # Liberar slot si se cancela o no asistió — dentro de la misma transacción
+            if estatus in (EstatusCita.CANCELADA, EstatusCita.NO_ASISTIO):
                 HorarioDisponible.objects.filter(cita=cita).update(
                     disponible=True, cita=None
                 )

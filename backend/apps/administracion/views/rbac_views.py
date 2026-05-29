@@ -385,6 +385,7 @@ def _serialize_user_list_item(user):
     area = getattr(detail, "id_area_clinica", None) if detail else None
     escolaridad = getattr(detail, "id_escolaridad", None) if detail else None
     escuela = getattr(detail, "id_escuela", None) if detail else None
+    tipo_personal = getattr(detail, "id_tipo_personal", None) if detail else None
     cedulas = list(user.cedulas.all()) if hasattr(user, "cedulas") else []
 
     return {
@@ -401,7 +402,7 @@ def _serialize_user_list_item(user):
         "fechaNac": str(detail.fecha_nac) if detail and detail.fecha_nac else None,
         "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
         "escuela": {"id": escuela.id, "name": escuela.name, "code": escuela.code, "isActive": escuela.is_active} if escuela else None,
-        "tipoPersonal": detail.tipo_personal if detail else None,
+        "tipoPersonal": {"id": tipo_personal.id, "name": tipo_personal.name, "isActive": tipo_personal.is_active} if tipo_personal else None,
         "cedulas": [_serialize_cedula(c) for c in cedulas],
         "primaryRole": primary.id_rol.rol if primary else "",
         "isActive": bool(user.est_activo),
@@ -442,7 +443,7 @@ def _serialize_user_detail(user):
         "areaClinica": {"id": area.id, "name": area.name} if area else None,
         "escolaridad": {"id": escolaridad.id, "name": escolaridad.name, "isActive": escolaridad.is_active} if escolaridad else None,
         "escuela": {"id": escuela.id, "name": escuela.name, "code": escuela.code, "isActive": escuela.is_active} if escuela else None,
-        "tipoPersonal": detail.tipo_personal if detail else None,
+        "tipoPersonal": base.get("tipoPersonal"),
         "termsAccepted": bool(user.terminos_acept),
         "mustChangePassword": bool(user.cambiar_clave),
         "lastLoginAt": _to_utc_iso(user.last_conexion),
@@ -1279,9 +1280,9 @@ class UsersListCreateView(APIView):
         elif status_filter == "pending":
             queryset = queryset.filter(Q(terminos_acept=False) | Q(cambiar_clave=True))
 
-        tipo_personal = request.query_params.get("tipoPersonal")
-        if tipo_personal:
-            queryset = queryset.filter(detalle__tipo_personal=tipo_personal)
+        tipo_personal_id = request.query_params.get("tipoPersonalId")
+        if tipo_personal_id:
+            queryset = queryset.filter(detalle__id_tipo_personal_id=tipo_personal_id)
 
         user_ids_queryset = (
             queryset.order_by("usuario", "id_usuario")
@@ -1297,7 +1298,7 @@ class UsersListCreateView(APIView):
             user.id_usuario: user
             for user in SyUsuario.objects.select_related(
                 "detalle", "detalle__id_centro_atencion", "detalle__id_area_clinica",
-                "detalle__id_escolaridad", "detalle__id_escuela",
+                "detalle__id_escolaridad", "detalle__id_escuela", "detalle__id_tipo_personal",
             ).prefetch_related("cedulas", _ROLES_PREFETCH).filter(id_usuario__in=page_user_ids)
         }
         ordered_users = [
@@ -1457,7 +1458,11 @@ class UsersListCreateView(APIView):
             from apps.catalogos.models import Escuelas
             escuela = Escuelas.objects.filter(id=escuela_id).first()
 
-        tipo_personal = request.data.get("tipoPersonal") or None
+        tipo_personal_obj = None
+        tipo_personal_id = request.data.get("tipoPersonalId")
+        if tipo_personal_id is not None:
+            from apps.catalogos.models import CatTipoPersonal
+            tipo_personal_obj = CatTipoPersonal.objects.filter(id=tipo_personal_id).first()
 
         DetUsuario.objects.create(
             id_usuario=user,
@@ -1475,7 +1480,7 @@ class UsersListCreateView(APIView):
 
             id_escolaridad=escolaridad,
             id_escuela=escuela,
-            tipo_personal=tipo_personal,
+            id_tipo_personal=tipo_personal_obj,
         )
 
         RelUsuarioRol.objects.create(
@@ -1494,11 +1499,6 @@ class UsersListCreateView(APIView):
                     status.HTTP_400_BAD_REQUEST,
                     request_id=_request_id(request),
                 )
-            tipos_validos = {
-                DetUsuarioCedula.TIPO_PROFESIONAL,
-                DetUsuarioCedula.TIPO_ESPECIALIDAD,
-                DetUsuarioCedula.TIPO_SUBESPECIALIDAD,
-            }
             for idx, cedula_item in enumerate(cedulas_data):
                 if not cedula_item.get("numero", "").strip():
                     return error_response(
@@ -1507,10 +1507,18 @@ class UsersListCreateView(APIView):
                         status.HTTP_400_BAD_REQUEST,
                         request_id=_request_id(request),
                     )
-                if cedula_item.get("tipo") not in tipos_validos:
+                tipo_val = (cedula_item.get("tipo") or "").strip()
+                if not tipo_val:
                     return error_response(
                         "VALIDATION_ERROR",
-                        f"Tipo de cédula inválido en posición {idx + 1}",
+                        f"La cédula {idx + 1} debe tener un tipo",
+                        status.HTTP_400_BAD_REQUEST,
+                        request_id=_request_id(request),
+                    )
+                if len(tipo_val) > 80:
+                    return error_response(
+                        "VALIDATION_ERROR",
+                        f"El tipo de la cédula {idx + 1} es demasiado largo (máx. 80 caracteres)",
                         status.HTTP_400_BAD_REQUEST,
                         request_id=_request_id(request),
                     )
@@ -1526,7 +1534,7 @@ class UsersListCreateView(APIView):
                 DetUsuarioCedula.objects.create(
                     id_usuario=user,
                     numero=cedula_item["numero"].strip(),
-                    tipo=cedula_item.get("tipo", DetUsuarioCedula.TIPO_PROFESIONAL),
+                    tipo=(cedula_item.get("tipo") or "").strip(),
                     es_principal=bool(cedula_item.get("esPrincipal", False)),
                     orden=idx + 1,
                 )
@@ -1589,6 +1597,7 @@ class UserDetailView(APIView):
                 "detalle__id_area_clinica",
                 "detalle__id_escolaridad",
                 "detalle__id_escuela",
+                "detalle__id_tipo_personal",
             )
             .prefetch_related("cedulas", _ROLES_PREFETCH)
             .filter(id_usuario=user_id)
@@ -1775,8 +1784,13 @@ class UserDetailView(APIView):
                 from apps.catalogos.models import Escuelas
                 detail.id_escuela = Escuelas.objects.filter(id=esc_id).first()
 
-        if "tipoPersonal" in request.data:
-            detail.tipo_personal = request.data.get("tipoPersonal") or None
+        if "tipoPersonalId" in request.data:
+            tp_id = request.data.get("tipoPersonalId")
+            if tp_id is None:
+                detail.id_tipo_personal = None
+            else:
+                from apps.catalogos.models import CatTipoPersonal
+                detail.id_tipo_personal = CatTipoPersonal.objects.filter(id=tp_id).first()
 
         if "areaClinicaId" in request.data:
             area_id = request.data.get("areaClinicaId")
@@ -1818,11 +1832,6 @@ class UserDetailView(APIView):
                     status.HTTP_400_BAD_REQUEST,
                     request_id=_request_id(request),
                 )
-            tipos_validos = {
-                DetUsuarioCedula.TIPO_PROFESIONAL,
-                DetUsuarioCedula.TIPO_ESPECIALIDAD,
-                DetUsuarioCedula.TIPO_SUBESPECIALIDAD,
-            }
             for idx, cedula_item in enumerate(cedulas_data):
                 if not cedula_item.get("numero", "").strip():
                     return error_response(
@@ -1831,10 +1840,18 @@ class UserDetailView(APIView):
                         status.HTTP_400_BAD_REQUEST,
                         request_id=_request_id(request),
                     )
-                if cedula_item.get("tipo") not in tipos_validos:
+                tipo_val = (cedula_item.get("tipo") or "").strip()
+                if not tipo_val:
                     return error_response(
                         "VALIDATION_ERROR",
-                        f"Tipo de cédula inválido en posición {idx + 1}",
+                        f"La cédula {idx + 1} debe tener un tipo",
+                        status.HTTP_400_BAD_REQUEST,
+                        request_id=_request_id(request),
+                    )
+                if len(tipo_val) > 80:
+                    return error_response(
+                        "VALIDATION_ERROR",
+                        f"El tipo de la cédula {idx + 1} es demasiado largo (máx. 80 caracteres)",
                         status.HTTP_400_BAD_REQUEST,
                         request_id=_request_id(request),
                     )
@@ -1855,7 +1872,7 @@ class UserDetailView(APIView):
                 DetUsuarioCedula.objects.create(
                     id_usuario=user,
                     numero=cedula_item["numero"].strip(),
-                    tipo=cedula_item.get("tipo", DetUsuarioCedula.TIPO_PROFESIONAL),
+                    tipo=(cedula_item.get("tipo") or "").strip(),
                     es_principal=bool(cedula_item.get("esPrincipal", False)),
                     orden=idx + 1,
                 )
@@ -2414,11 +2431,35 @@ class UsersNotifyView(APIView):
         if preview:
             return Response({"count": len(recipients)}, status=status.HTTP_200_OK)
 
+        # Adjuntos opcionales (multipart/form-data)
+        MAX_FILE_BYTES  = 10 * 1024 * 1024   # 10 MB por archivo
+        MAX_TOTAL_BYTES = 25 * 1024 * 1024   # 25 MB total (límite Gmail)
+        attachments = []
+        total_size  = 0
+        for uploaded in request.FILES.getlist("attachments"):
+            if uploaded.size > MAX_FILE_BYTES:
+                return error_response(
+                    "ATTACHMENT_TOO_LARGE",
+                    f"El archivo '{uploaded.name}' supera el límite de 10 MB.",
+                    status.HTTP_400_BAD_REQUEST,
+                    request_id=_request_id(request),
+                )
+            total_size += uploaded.size
+            if total_size > MAX_TOTAL_BYTES:
+                return error_response(
+                    "ATTACHMENTS_EXCEED_LIMIT",
+                    "El tamaño total de los adjuntos supera el límite de 25 MB.",
+                    status.HTTP_400_BAD_REQUEST,
+                    request_id=_request_id(request),
+                )
+            attachments.append((uploaded.name, uploaded.read(), uploaded.content_type or "application/octet-stream"))
+
         result = send_notification_email_batch(
             recipients=recipients,
             subject=subject,
             message=message,
             category=category,
+            attachments=attachments or None,
         )
         _audit(
             request,
@@ -2589,11 +2630,10 @@ class UserExportView(APIView):
                     return f"{c.numero} ({c.tipo})"
                 return ""
 
-            TIPO_LABELS = {"MEDICO": "Médico", "ENFERMERIA": "Enfermería", "ADMINISTRATIVO": "Administrativo"}
             SEXO_LABELS = {"M": "Masculino", "F": "Femenino"}
             row_data = [
                 user.usuario,
-                TIPO_LABELS.get(detail.tipo_personal, "") if detail and detail.tipo_personal else "",
+                detail.id_tipo_personal.name if detail and detail.id_tipo_personal else "",
                 detail.nombre if detail else "",
                 detail.paterno if detail else "",
                 detail.materno if detail else "",

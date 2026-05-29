@@ -174,11 +174,30 @@ export const usersAPI = {
   },
 
   /**
-   * Enviar notificación masiva (respuesta 202, envío en background).
+   * Enviar notificación masiva con adjuntos opcionales.
+   * - Sin adjuntos → JSON
+   * - Con adjuntos  → multipart/form-data (DRF acepta ambos)
    * @endpoint POST /api/v1/users/notify
    * @permission admin:gestion:usuarios:update
    */
-  notify: async (data: NotifyUsersRequest): Promise<NotifyUsersResponse> => {
+  notify: async (data: NotifyUsersRequest, files?: File[]): Promise<NotifyUsersResponse> => {
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      formData.append("subject", data.subject);
+      formData.append("message", data.message);
+      if (data.category) formData.append("category", data.category);
+      if (data.cdLaboral) formData.append("cdLaboral", data.cdLaboral);
+      if (data.userId != null) formData.append("userId", String(data.userId));
+      if (data.clinicId != null) formData.append("clinicId", String(data.clinicId));
+      files.forEach((file) => formData.append("attachments", file));
+      // Eliminar Content-Type del default (application/json) para que el browser
+      // genere automáticamente "multipart/form-data; boundary=..." con el FormData.
+      // Sin esto DRF recibe Content-Type: application/json → usa JSONParser → request.FILES vacío.
+      const response = await apiClient.post<NotifyUsersResponse>("/users/notify", formData, {
+        headers: { "Content-Type": undefined },
+      });
+      return response.data;
+    }
     const response = await apiClient.post<NotifyUsersResponse>("/users/notify", data);
     return response.data;
   },

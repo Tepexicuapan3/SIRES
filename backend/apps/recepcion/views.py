@@ -187,8 +187,6 @@ class VisitsView(APIView):
                 hora_consulta = _dt.strptime(hora_raw.strip()[:5], "%H:%M").time()
             except (ValueError, AttributeError):
                 pass
-        logger.warning("horaConsulta raw=%s → parsed=%s", hora_raw, hora_consulta)
-
         try:
             visit = create_visit(
                 no_exp=serializer.validated_data["noExp"],

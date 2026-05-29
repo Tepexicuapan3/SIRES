@@ -447,6 +447,19 @@ class MedicoConsultorioHorarioView(APIView):
                 intervalo_cita_min=h.get("intervaloCitaMin", 20),
             )
 
+        # Regenerar slots: elimina futuros disponibles y vuelve a generar
+        # desde el nuevo horario. Los slots con cita asignada se preservan.
+        from datetime import date as _date
+        from apps.recepcion.models import HorarioDisponible
+        from apps.recepcion.repositories.citas_repository import CitasRepository
+        HorarioDisponible.objects.filter(
+            medico_id=rmc.medico_id,
+            fecha__gte=_date.today(),
+            disponible=True,
+            cita__isnull=True,
+        ).delete()
+        CitasRepository.generar_slots_medico(medico_id=rmc.medico_id, dias_adelante=60)
+
         return Response(_serialize_consultorio_asignacion(
             RelMedicoConsultorio.objects.prefetch_related("horarios").get(id=rmc.id)
         ))

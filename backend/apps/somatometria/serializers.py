@@ -50,6 +50,12 @@ class CaptureVitalsSerializer(serializers.Serializer):
         required=False,
         allow_null=True,
     )
+    glucosaCapilarMgdl = serializers.IntegerField(
+        min_value=20,
+        max_value=800,
+        required=False,
+        allow_null=True,
+    )
     notes = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
 
     def validate(self, attrs):

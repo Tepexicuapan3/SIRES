@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Clock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -248,6 +249,34 @@ const formatSomatometriaNotes = (value: string | null | undefined): string => {
   return normalized;
 };
 
+// ── Helpers hora/fecha de cita ────────────────────────────────────────────────
+
+function formatDateShort(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso.includes("T") ? iso : `${iso}T00:00:00`);
+  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function getMinutesUntilAppointment(horaConsulta: string | null, now: Date): number | null {
+  if (!horaConsulta) return null;
+  const [h, m] = horaConsulta.split(":").map(Number);
+  const appt = h * 60 + m;
+  const curr = now.getHours() * 60 + now.getMinutes();
+  return appt - curr;
+}
+
+function AppointmentAlertBadge({ minutesUntil }: { minutesUntil: number | null }) {
+  if (minutesUntil === null || minutesUntil > 15 || minutesUntil < -30) return null;
+
+  if (minutesUntil >= -5 && minutesUntil <= 5) {
+    return <Badge variant="critical" className="shrink-0 text-[10px] py-0 animate-pulse">¡Ahora!</Badge>;
+  }
+  if (minutesUntil > 5) {
+    return <Badge variant="alert" className="shrink-0 text-[10px] py-0">En {minutesUntil} min</Badge>;
+  }
+  return <Badge variant="alert" className="shrink-0 text-[10px] py-0">{Math.abs(minutesUntil)} min tarde</Badge>;
+}
+
 const hasVitalValue = (value: number | null | undefined): boolean => {
   return value !== null && value !== undefined;
 };
@@ -334,6 +363,12 @@ export const DoctorConsultationPage = () => {
   const [selectedCieByVisitId, setSelectedCieByVisitId] = useState<
     Record<number, CieSearchItem>
   >({});
+
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const diagnosisForm = useForm<
     SaveDiagnosisFormInput,
@@ -427,6 +462,16 @@ export const DoctorConsultationPage = () => {
     : [];
 
   const selectedVitals = selectedVisit?.vitals ?? null;
+  const selectedMinutesUntil = selectedVisit
+    ? getMinutesUntilAppointment(selectedVisit.horaConsulta, now)
+    : null;
+  const selectedAppointmentDate = selectedVisit
+    ? (selectedVisit.fechaConsulta
+        ? formatDateShort(selectedVisit.fechaConsulta)
+        : selectedVisit.fechaCita
+        ? formatDateShort(selectedVisit.fechaCita)
+        : null)
+    : null;
   const hasOptionalVitals =
     hasVitalValue(selectedVitals?.heartRateBpm) ||
     hasVitalValue(selectedVitals?.respiratoryRateBpm) ||
@@ -783,24 +828,39 @@ export const DoctorConsultationPage = () => {
                 data-testid="doctor-open-consultations-grid"
               >
                 {visits.map((visit) => {
+                  const minutesUntil = getMinutesUntilAppointment(visit.horaConsulta, now);
+                  const appointmentDate = visit.fechaConsulta
+                    ? formatDateShort(visit.fechaConsulta)
+                    : visit.fechaCita
+                    ? formatDateShort(visit.fechaCita)
+                    : null;
+                  const isNow    = minutesUntil !== null && minutesUntil >= -5  && minutesUntil <= 5;
+                  const isUrgent = minutesUntil !== null && minutesUntil > 5    && minutesUntil <= 15;
+
                   return (
                     <button
                       key={visit.id}
                       type="button"
-                      className="rounded-lg border border-line-hairline bg-paper p-3 text-left transition hover:border-brand/50"
+                      className={[
+                        "rounded-lg border bg-paper p-3 text-left transition hover:border-brand/50",
+                        isNow    ? "border-red-300"    :
+                        isUrgent ? "border-amber-300"  :
+                                   "border-line-hairline",
+                      ].join(" ")}
                       data-testid={`doctor-visit-card-${visit.id}`}
                       data-visit-folio={visit.folio}
-                      onClick={() => {
-                        handleVisitChange(visit.id);
-                      }}
+                      onClick={() => { handleVisitChange(visit.id); }}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-txt-body font-mono">
                           {visit.folio}
                         </p>
-                        <Badge variant="outline" className="uppercase">
-                          {formatStatusLabel(visit.status)}
-                        </Badge>
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <AppointmentAlertBadge minutesUntil={minutesUntil} />
+                          <Badge variant="outline" className="uppercase">
+                            {formatStatusLabel(visit.status)}
+                          </Badge>
+                        </div>
                       </div>
                       {visit.nombrePaciente ? (
                         <p className="mt-1.5 text-sm font-semibold text-txt-body">
@@ -814,6 +874,17 @@ export const DoctorConsultationPage = () => {
                         {formatServiceTypeLabel(visit.serviceType)} ·{" "}
                         {formatArrivalTypeLabel(visit.arrivalType)}
                       </p>
+                      {visit.horaConsulta ? (
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <Clock className="size-3 text-primary/70 shrink-0" />
+                          <span className="text-xs font-mono font-semibold text-primary">
+                            {visit.horaConsulta}
+                          </span>
+                          {appointmentDate ? (
+                            <span className="text-xs text-txt-muted">{appointmentDate}</span>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {visit.doctorNombre ? (
                         <p className="mt-1 text-xs text-txt-muted">
                           Dr. {visit.doctorNombre}
@@ -908,9 +979,15 @@ export const DoctorConsultationPage = () => {
                       {selectedVisit.horaConsulta ? (
                         <div>
                           <p className="text-xs text-txt-muted">Hora cita</p>
-                          <p className="text-sm font-medium text-txt-body font-mono">
-                            {selectedVisit.horaConsulta}
-                          </p>
+                          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                            <p className="text-sm font-medium text-txt-body font-mono">
+                              {selectedVisit.horaConsulta}
+                            </p>
+                            {selectedAppointmentDate ? (
+                              <span className="text-xs text-txt-muted">{selectedAppointmentDate}</span>
+                            ) : null}
+                            <AppointmentAlertBadge minutesUntil={selectedMinutesUntil} />
+                          </div>
                         </div>
                       ) : null}
                     </div>

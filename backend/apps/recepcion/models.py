@@ -76,7 +76,7 @@ class CitaMedica(models.Model):
     created_by_id   = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
-        db_table = "citas_medicas"
+        db_table = '"sires"."citas_medicas"'
         indexes  = [
             models.Index(fields=["medico", "fecha_hora"],            name="citas_medico_fechahora_idx"),
             models.Index(fields=["no_exp", "pk_num"],                name="citas_noexp_pknum_idx"),
@@ -212,7 +212,8 @@ class Visit(models.Model):
         null=True,
         blank=True,
     )
-    hora_consulta = models.TimeField(db_column="hora_consulta", null=True, blank=True)
+    hora_consulta  = models.TimeField(db_column="hora_consulta", null=True, blank=True)
+    fecha_consulta = models.DateField(db_column="fecha_consulta", null=True, blank=True)
     # Número secuencial de ficha dentro del turno del día — asignado al crear la visita
     num_ficha     = models.PositiveSmallIntegerField(db_column="num_ficha", null=True, blank=True)
     # Nombre del turno al momento de la creación (inmutable para historial)
@@ -223,7 +224,9 @@ class Visit(models.Model):
     fch_modf = models.DateTimeField(auto_now=True, db_column="fch_modf")
     # baja logica: null cuando sigue activa
     fch_baja = models.DateTimeField(db_column="fch_baja", null=True, blank=True)
-    
+    # id del usuario de recepción que registró la visita
+    created_by_id = models.BigIntegerField(db_column="created_by_id", null=True, blank=True)
+
     class Meta:
         db_table = "rcp_visits"
         indexes = [
@@ -268,3 +271,31 @@ class TurnoFichaConfig(models.Model):
 
     def __str__(self) -> str:
         return f"{self.nombre} ({self.hora_inicio}–{self.hora_fin}, max {self.max_fichas})"
+
+
+# ─── Auditoría de estatus (NOM-024-SSA3-2012) ─────────────────────────────────
+
+class VisitStatusLog(models.Model):
+    """
+    Registro inmutable de cada cambio de estado de una visita.
+    Requerido por NOM-024-SSA3-2012 para trazabilidad clínica.
+    """
+
+    visit         = models.ForeignKey(
+        Visit,
+        on_delete=models.CASCADE,
+        related_name="status_logs",
+        db_column="visit_id",
+    )
+    from_status   = models.CharField(max_length=32, null=True, blank=True, db_column="from_status")
+    to_status     = models.CharField(max_length=32, db_column="to_status")
+    changed_by_id = models.BigIntegerField(null=True, blank=True, db_column="changed_by_id")
+    changed_at    = models.DateTimeField(auto_now_add=True, db_column="changed_at")
+    notes         = models.CharField(max_length=255, null=True, blank=True, db_column="notes")
+
+    class Meta:
+        db_table = '"sires"."rcp_visit_status_log"'
+        ordering = ["changed_at"]
+
+    def __str__(self) -> str:
+        return f"Visit {self.visit_id}: {self.from_status} → {self.to_status}"

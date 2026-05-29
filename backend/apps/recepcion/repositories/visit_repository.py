@@ -4,7 +4,7 @@ import uuid
 from django.core.exceptions import ObjectDoesNotExist
 
 from apps.authentication.models import DetUsuario
-from apps.recepcion.models import Visit
+from apps.recepcion.models import Visit, VisitStatusLog
 from apps.somatometria.repositories.vitals_repository import VitalsRepository
 
 
@@ -22,8 +22,10 @@ class VisitRepository:
         consultorio_id: int | None = None,
         notes: str | None = None,
         hora_consulta=None,
+        fecha_consulta=None,
         num_ficha: int | None = None,
         turno_nombre: str | None = None,
+        created_by_id: int | None = None,
     ) -> Visit:
         return Visit.objects.create(
             folio=VisitRepository._build_folio(),
@@ -37,9 +39,35 @@ class VisitRepository:
             consultorio_id=consultorio_id,
             notes=notes,
             hora_consulta=hora_consulta,
+            fecha_consulta=fecha_consulta,
             num_ficha=num_ficha,
             turno_nombre=turno_nombre,
+            created_by_id=created_by_id,
             status="en_espera",
+        )
+
+    @staticmethod
+    def log_status_change(
+        visit: Visit,
+        from_status: str | None,
+        to_status: str,
+        changed_by_id: int | None = None,
+        notes: str | None = None,
+    ) -> VisitStatusLog:
+        return VisitStatusLog.objects.create(
+            visit=visit,
+            from_status=from_status,
+            to_status=to_status,
+            changed_by_id=changed_by_id,
+            notes=notes,
+        )
+
+    @staticmethod
+    def get_status_log(visit_id: int) -> list[VisitStatusLog]:
+        return list(
+            VisitStatusLog.objects
+            .filter(visit_id=visit_id)
+            .order_by("changed_at")
         )
 
     @staticmethod
@@ -112,10 +140,23 @@ class VisitRepository:
             dets = DetUsuario.objects.filter(id_usuario_id__in=doctor_ids)
             doctor_nombres = {d.id_usuario_id: d.nombre_completo for d in dets}
 
-        return visits, total, total_pages, doctor_nombres
+        # Batch-fetch fecha_hora de citas vinculadas (evita N+1)
+        from django.utils import timezone as tz
+        from apps.recepcion.models import CitaMedica
+        appointment_ids = {v.appointment_id for v in visits if v.appointment_id}
+        cita_fechas: dict[str, str] = {}
+        if appointment_ids:
+            citas = CitaMedica.objects.filter(folio__in=appointment_ids).only("folio", "fecha_hora")
+            cita_fechas = {c.folio: tz.localtime(c.fecha_hora).isoformat() for c in citas}
+
+        return visits, total, total_pages, doctor_nombres, cita_fechas
 
     @staticmethod
-    def to_contract(visit: Visit, doctor_nombres: dict | None = None) -> dict:
+    def to_contract(
+        visit: Visit,
+        doctor_nombres: dict | None = None,
+        cita_fechas: dict | None = None,
+    ) -> dict:
         try:
             vital_signs = visit.vital_signs
         except ObjectDoesNotExist:
@@ -124,6 +165,21 @@ class VisitRepository:
         doctor_nombre = None
         if visit.doctor_id and doctor_nombres:
             doctor_nombre = doctor_nombres.get(visit.doctor_id)
+
+        # Fecha+hora ISO de la cita vinculada (para mostrar en frontend)
+        fecha_cita = None
+        if visit.appointment_id:
+            if cita_fechas is not None:
+                fecha_cita = cita_fechas.get(visit.appointment_id)
+            else:
+                try:
+                    from django.utils import timezone as tz
+                    from apps.recepcion.models import CitaMedica
+                    cita = CitaMedica.objects.filter(folio=visit.appointment_id).only("fecha_hora").first()
+                    if cita:
+                        fecha_cita = tz.localtime(cita.fecha_hora).isoformat()
+                except Exception:
+                    pass
 
         consultorio_nombre = None
         centro_nombre      = None
@@ -156,15 +212,33 @@ class VisitRepository:
             "centroNombre":      centro_nombre,
             "notes":             visit.notes,
             "horaConsulta":      visit.hora_consulta.strftime("%H:%M") if visit.hora_consulta else None,
+            "fechaConsulta":     visit.fecha_consulta.isoformat() if visit.fecha_consulta else None,
+            "fechaCita":         fecha_cita,
             "numFicha":          visit.num_ficha,
             "turnoNombre":       visit.turno_nombre or "",
             "status":            visit.status,
             "fechaAlta":         visit.fch_alta.isoformat() if visit.fch_alta else None,
+            "createdById":       visit.created_by_id,
             "vitals": (
                 VitalsRepository.to_contract(vital_signs)
                 if vital_signs is not None
                 else None
             ),
+        }
+
+    @staticmethod
+    def status_log_to_contract(log: VisitStatusLog, user_nombres: dict | None = None) -> dict:
+        usuario_nombre = None
+        if log.changed_by_id and user_nombres:
+            usuario_nombre = user_nombres.get(log.changed_by_id)
+        return {
+            "id":             log.id,
+            "fromStatus":     log.from_status,
+            "toStatus":       log.to_status,
+            "changedById":    log.changed_by_id,
+            "changedByNombre": usuario_nombre,
+            "changedAt":      log.changed_at.isoformat() if log.changed_at else None,
+            "notes":          log.notes,
         }
 
     # ── Helpers ───────────────────────────────────────────────────────────────

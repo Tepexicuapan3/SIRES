@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.recepcion.views import PatientLookupView, VisitStatusView, VisitsView
+from apps.recepcion.views import PatientLookupView, VisitStatusLogView, VisitStatusView, VisitsView
 from apps.recepcion.views.citas_views import (
     CitasListCreateView,
     CitaDetailView,
@@ -17,8 +17,9 @@ urlpatterns = [
     # ── Visitas (check-in y cola de recepción) ────────────────────────────────
     path("visits",                          VisitsView.as_view(),        name="visits"),
     path("visits/<int:visit_id>/status",    VisitStatusView.as_view(),   name="visits-status"),
-    path("visits/<int:visit_id>/ficha",     FichaVisitView.as_view(),    name="visits-ficha"),
-    path("visits/patient-lookup",           PatientLookupView.as_view(), name="visits-patient-lookup"),
+    path("visits/<int:visit_id>/ficha",       FichaVisitView.as_view(),       name="visits-ficha"),
+    path("visits/<int:visit_id>/status-log", VisitStatusLogView.as_view(),   name="visits-status-log"),
+    path("visits/patient-lookup",            PatientLookupView.as_view(),    name="visits-patient-lookup"),
 
     # ── Turnos de fichas ──────────────────────────────────────────────────────
     path("turnos-ficha",              TurnoFichaListCreateView.as_view(), name="turnos-ficha"),

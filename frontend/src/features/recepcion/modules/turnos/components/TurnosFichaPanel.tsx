@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Clock, Settings } from "lucide-react";
+import { Clock, Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { Badge }   from "@shared/ui/badge";
 import { Button }  from "@shared/ui/button";
@@ -16,6 +16,7 @@ import { Label }   from "@shared/ui/label";
 import {
   useTurnoActual,
   useTurnosFichaList,
+  useCreateTurnoFicha,
   useUpdateTurnoFicha,
 } from "@features/recepcion/modules/turnos/hooks/useTurnosFicha";
 import type { TurnoFichaConfig } from "@api/types/turnos-ficha.types";
@@ -164,9 +165,72 @@ function TurnoRow({ turno }: { turno: TurnoFichaConfig }) {
   );
 }
 
+// ─── Formulario de creación ───────────────────────────────────────────────────
+
+const EMPTY_FORM: TurnoForm & { nombre: string } = {
+  nombre:     "",
+  horaInicio: "",
+  horaFin:    "",
+  maxFichas:  "30",
+};
+
+function CreateTurnoForm({ onCreated }: { onCreated: () => void }) {
+  const [form, setForm] = useState(EMPTY_FORM);
+  const create = useCreateTurnoFicha();
+
+  const setField = (field: keyof typeof EMPTY_FORM) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleCreate = async () => {
+    if (!form.nombre.trim()) { toast.error("El nombre del turno es requerido."); return; }
+    if (!form.horaInicio || !form.horaFin) { toast.error("Las horas de inicio y fin son requeridas."); return; }
+    if (form.horaInicio >= form.horaFin) { toast.error("La hora de inicio debe ser menor a la hora de fin."); return; }
+    const maxFichas = Number(form.maxFichas);
+    if (!maxFichas || maxFichas < 1) { toast.error("El número de fichas debe ser mayor a 0."); return; }
+    try {
+      await create.mutateAsync({ nombre: form.nombre.trim(), horaInicio: form.horaInicio, horaFin: form.horaFin, maxFichas });
+      toast.success(`Turno "${form.nombre}" creado.`);
+      setForm(EMPTY_FORM);
+      onCreated();
+    } catch {
+      toast.error("No se pudo crear el turno.");
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-4">
+      <p className="text-sm font-semibold text-primary">Nuevo turno</p>
+      <div className="grid gap-3 sm:grid-cols-4">
+        <div className="space-y-1.5 sm:col-span-1">
+          <Label className="text-xs">Nombre</Label>
+          <Input placeholder="Ej. Matutino" value={form.nombre} onChange={setField("nombre")} className="h-9" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Hora inicio</Label>
+          <Input type="time" value={form.horaInicio} onChange={setField("horaInicio")} className="h-9" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Hora fin</Label>
+          <Input type="time" value={form.horaFin} onChange={setField("horaFin")} className="h-9" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Máx. fichas</Label>
+          <Input type="number" min={1} max={500} value={form.maxFichas} onChange={setField("maxFichas")} className="h-9" />
+        </div>
+      </div>
+      <Button size="sm" className="gap-2" onClick={() => void handleCreate()} disabled={create.isPending}>
+        <Plus className="size-4" />
+        {create.isPending ? "Creando..." : "Crear turno"}
+      </Button>
+    </div>
+  );
+}
+
 // ─── Panel principal ──────────────────────────────────────────────────────────
 
 export function TurnosFichaPanel() {
+  const [showCreate, setShowCreate] = useState(false);
   const { data: actual, isLoading: loadingActual } = useTurnoActual();
   const { data: turnos, isLoading: loadingTurnos } = useTurnosFichaList();
 
@@ -212,14 +276,31 @@ export function TurnosFichaPanel() {
 
       {/* ── Configuración de turnos ───────────────────────────────────── */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
-          Configuración de fichas por turno
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
+            Configuración de fichas por turno
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            onClick={() => setShowCreate((v) => !v)}
+          >
+            <Plus className="size-3.5" />
+            {showCreate ? "Cancelar" : "Agregar turno"}
+          </Button>
+        </div>
+
+        {showCreate ? (
+          <CreateTurnoForm onCreated={() => setShowCreate(false)} />
+        ) : null}
+
         {loadingTurnos ? (
           <p className="text-xs text-txt-muted">Cargando...</p>
         ) : turnosLista.length === 0 ? (
           <p className="text-xs text-txt-muted italic">
-            Sin turnos configurados. Contacta al administrador del sistema.
+            Sin turnos configurados. Usá el botón "Agregar turno" para crear el primero.
           </p>
         ) : (
           <div className="space-y-2">

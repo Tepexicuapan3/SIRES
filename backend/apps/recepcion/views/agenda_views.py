@@ -5,7 +5,6 @@ Devuelve la agenda semanal de un médico: todos los slots del rango de fechas
 con su estado (libre / ocupado) y datos de la cita si la hay.
 """
 
-import logging
 from datetime import date, timedelta
 
 from apps.recepcion.repositories.citas_repository import CitasRepository
@@ -21,8 +20,6 @@ from apps.authentication.services.authorization_service import has_capability
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.recepcion.models import HorarioDisponible
 from apps.recepcion.services.errors import VisitDomainError
-
-logger = logging.getLogger(__name__)
 
 CITAS_READ_CAPABILITY = "recepcion:citas:read"
 
@@ -82,7 +79,7 @@ class AgendaSemanalView(APIView):
             fecha__gte=fecha_desde,
             fecha__lte=fecha_hasta,
         )
-        _slot_select = ("consultorio",)
+        _slot_select = ("consultorio", "cita")
 
         slots = (
             HorarioDisponible.objects
@@ -92,7 +89,7 @@ class AgendaSemanalView(APIView):
         )
 
         if not slots.exists() and fecha_hasta >= date.today():
-            dias = (fecha_hasta - date.today()).days + 1
+            dias = max((fecha_hasta - date.today()).days + 1, 30)
             CitasRepository.generar_slots_medico(medico_id=medico_id, dias_adelante=dias)
             slots = (
                 HorarioDisponible.objects
@@ -112,8 +109,7 @@ class AgendaSemanalView(APIView):
             fecha_key = slot.fecha.isoformat()
             cita_data = None
             if slot.cita:
-                cita    = slot.cita
-                det     = getattr(cita.medico.id_usuario, "detalle", None) if cita.medico else None
+                cita = slot.cita
                 cita_data = {
                     "id":             cita.id,
                     "folio":          cita.folio,
@@ -125,13 +121,14 @@ class AgendaSemanalView(APIView):
                 }
 
             agenda[fecha_key].append({
-                "id":            slot.id,
-                "hora":          slot.hora.strftime("%H:%M"),
-                "duracionMin":   slot.duracion_min,
-                "disponible":    slot.disponible,
-                "consultorioId": slot.consultorio_id,
+                "id":              slot.id,
+                "hora":            slot.hora.strftime("%H:%M"),
+                "duracionMin":     slot.duracion_min,
+                "disponible":      slot.disponible,
+                "consultorioId":   slot.consultorio_id,
                 "consultorioNumero": slot.consultorio.numero if slot.consultorio else None,
-                "cita":          cita_data,
+                "consultorioNombre": slot.consultorio.name   if slot.consultorio else None,
+                "cita":            cita_data,
             })
 
         return Response({

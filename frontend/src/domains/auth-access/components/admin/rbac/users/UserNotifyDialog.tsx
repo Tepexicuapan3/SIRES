@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Check, CheckCircle2, ChevronsUpDown, Loader2, Mail, Search, Users, X } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronsUpDown, File as FileIcon, Loader2, Mail, Paperclip, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@shared/ui/button";
 import {
@@ -42,6 +42,14 @@ interface SelectedUser {
 }
 
 const EMPTY_FILTERS = { cdLaboral: "", clinicId: "" };
+const MAX_FILE_BYTES  = 10 * 1024 * 1024; // 10 MB por archivo
+const MAX_TOTAL_BYTES = 25 * 1024 * 1024; // 25 MB total (límite Gmail)
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export function UserNotifyDialog({
   open,
@@ -57,7 +65,9 @@ export function UserNotifyDialog({
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
   const [previewPayload, setPreviewPayload] = useState<NotifyUsersRequest | null>(null);
   const [sendResult, setSendResult] = useState<{ sent: number; failed: NotifyFailedItem[] } | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const userSearchRef = useRef<HTMLInputElement>(null);
+  const fileInputRef   = useRef<HTMLInputElement>(null);
 
   const notify = useNotifyUsers();
   const { data: preview, isFetching: isLoadingPreview } = useNotifyUsersPreview(previewPayload);
@@ -84,6 +94,7 @@ export function UserNotifyDialog({
       setSelectedUser(null); setUserSearch("");
       setPreviewPayload(null);
       setSendResult(null);
+      setFiles([]);
     }
   }, [open]);
 
@@ -96,6 +107,21 @@ export function UserNotifyDialog({
     clinicId: filters.clinicId ? Number(filters.clinicId) : undefined,
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const incoming = Array.from(e.target.files ?? []);
+    setFiles((prev) => [...prev, ...incoming]);
+    // Resetear para que el mismo archivo pueda elegirse de nuevo si se quitó
+    e.target.value = "";
+  };
+
+  const removeFile = (idx: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const totalSize        = files.reduce((acc, f) => acc + f.size, 0);
+  const hasFileSizeError = files.some((f) => f.size > MAX_FILE_BYTES);
+  const totalSizeExceeded = totalSize > MAX_TOTAL_BYTES;
+
   const handlePreview = () => {
     if (!subject.trim() || !message.trim()) return;
     setPreviewPayload(buildPayload());
@@ -105,7 +131,7 @@ export function UserNotifyDialog({
     if (!subject.trim() || !message.trim()) return;
     setSendResult(null);
     try {
-      const result = await notify.mutateAsync(buildPayload());
+      const result = await notify.mutateAsync({ data: buildPayload(), files });
       setSendResult(result);
       if (result.failed.length === 0) {
         toast.success(
@@ -121,7 +147,11 @@ export function UserNotifyDialog({
   };
 
   const hasActiveFilters = filters.cdLaboral || filters.clinicId || selectedUser;
-  const canSend = subject.trim().length > 0 && message.trim().length > 0;
+  const canSend =
+    subject.trim().length > 0 &&
+    message.trim().length > 0 &&
+    !hasFileSizeError &&
+    !totalSizeExceeded;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -363,6 +393,95 @@ export function UserNotifyDialog({
                   maxLength={2000}
                 />
                 <p className="text-right text-xs text-txt-muted">{message.length}/2000</p>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* ── Adjuntos ─────────────────────────────────────── */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold tracking-wide text-txt-muted uppercase">
+                Archivos adjuntos{" "}
+                <span className="font-normal normal-case">(opcional)</span>
+              </p>
+
+              {/* Input nativo oculto */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              {/* Lista de archivos seleccionados */}
+              {files.length > 0 ? (
+                <div className="space-y-1.5">
+                  {files.map((file, idx) => {
+                    const sizeExceeded = file.size > MAX_FILE_BYTES;
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl border px-3 py-2.5",
+                          sizeExceeded
+                            ? "border-status-critical/40 bg-status-critical/5"
+                            : "border-line-struct bg-subtle/20",
+                        )}
+                      >
+                        <FileIcon className="size-4 shrink-0 text-txt-muted" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm text-txt-body">{file.name}</p>
+                          <p
+                            className={cn(
+                              "text-xs",
+                              sizeExceeded ? "text-status-critical" : "text-txt-muted",
+                            )}
+                          >
+                            {formatFileSize(file.size)}
+                            {sizeExceeded ? " — supera el límite de 10 MB" : ""}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="shrink-0 rounded p-0.5 text-txt-muted hover:text-txt-body"
+                          onClick={() => removeFile(idx)}
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Resumen de tamaño total */}
+                  {totalSizeExceeded ? (
+                    <p className="text-xs text-status-critical">
+                      El tamaño total ({formatFileSize(totalSize)}) supera el límite de 25 MB.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-txt-muted">
+                      Total: {formatFileSize(totalSize)} / 25 MB
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="size-3.5" />
+                  Adjuntar archivos
+                </Button>
+                {files.length === 0 ? (
+                  <p className="text-xs text-txt-muted">
+                    Máx. 10 MB por archivo · 25 MB en total
+                  </p>
+                ) : null}
               </div>
             </div>
 

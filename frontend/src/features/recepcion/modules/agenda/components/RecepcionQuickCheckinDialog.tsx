@@ -18,8 +18,9 @@ import { Label }    from "@shared/ui/label";
 import { Textarea } from "@shared/ui/textarea";
 import { Separator } from "@shared/ui/separator";
 import { ARRIVAL_TYPE } from "@api/types";
-import type { PatientMember } from "@api/types";
+import type { PatientMember, VisitQueueItem } from "@api/types";
 import type { MedicoDisponible } from "@api/types/medicos.types";
+import { isOpenVisitStatus } from "@features/recepcion/shared/utils/recepcion-format";
 import { ApiError }        from "@api/utils/errors";
 import { PatientMemberCard } from "@features/recepcion/shared/components/PatientMemberCard";
 import { useCreateVisit }   from "@features/recepcion/modules/checkin/mutations/useCreateVisit";
@@ -139,6 +140,7 @@ interface RecepcionQuickCheckinDialogProps {
   onOpenChange:  (open: boolean) => void;
   canWrite:      boolean;
   initialValues?: Partial<CheckinFormInput>;
+  activeVisits?: VisitQueueItem[];
 }
 
 // ─── Dialog ───────────────────────────────────────────────────────────────────
@@ -148,28 +150,32 @@ export const RecepcionQuickCheckinDialog = ({
   onOpenChange,
   canWrite,
   initialValues,
+  activeVisits = [],
 }: RecepcionQuickCheckinDialogProps) => {
   const createVisit = useCreateVisit();
 
+  // Cuando viene de un slot ya está todo pre-llenado — se oculta la sección de médico
+  const fromSlot = !!initialValues?.horaConsulta;
+
   // ── Estado local (no va al form) ─────────────────────────────────────────
   const [noExpSearch,  setNoExpSearch]  = useState("");
-  const [fechaSlot,    setFechaSlot]    = useState(new Date().toISOString().slice(0, 10));
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const [fechaSlot,    setFechaSlot]    = useState(todayISO);
   const [centroId,          setCentroId]          = useState<number | null>(null);
   const [consultorioFiltro, setConsultorioFiltro] = useState<number | null>(null);
   const [selectedMedico,    setSelectedMedico]    = useState<MedicoDisponible | null>(null);
-  const [selectedHora,      setSelectedHora]      = useState<string | null>(null);
 
   const debouncedNoExp = useDebounce(noExpSearch, 400);
 
   // ── Form ──────────────────────────────────────────────────────────────────
   const form = useForm<CheckinFormInput, unknown, CheckinFormValues>({
     resolver: zodResolver(createCheckinFormSchema),
-    defaultValues: DEFAULT_CHECKIN_FORM_VALUES,
+    defaultValues: { ...DEFAULT_CHECKIN_FORM_VALUES, fechaConsulta: todayISO },
   });
 
-  const [serviceType, arrivalType, pkNumWatch] = useWatch({
+  const [serviceType, arrivalType, pkNumWatch, horaConsultaWatch] = useWatch({
     control: form.control,
-    name:    ["serviceType", "arrivalType", "pkNum"],
+    name:    ["serviceType", "arrivalType", "pkNum", "horaConsulta"],
   });
 
   const isWalkInOnlyService = isServiceForcedToWalkIn(serviceType);
@@ -236,19 +242,38 @@ export const RecepcionQuickCheckinDialog = ({
     return result;
   })();
 
-  // ── Horarios ocupados para el médico/fecha seleccionados ─────────────────
+  // ── Horarios ocupados — dos fuentes para máxima precisión ───────────────
   const { data: agendaData } = useAgendaSemanal(
     selectedMedico?.medicoId ?? null,
     fechaSlot,
     fechaSlot,
     { refetchInterval: open ? 30_000 : undefined },
   );
-  const horasOcupadas = new Set(
+
+  // Fuente 1: slots marcados en HorarioDisponible (citas + visits nuevas)
+  const agendaHorasOcupadas = new Set(
     (agendaData?.agenda[fechaSlot] ?? [])
       .filter((s) => !s.disponible)
       .map((s) => s.hora),
   );
 
+  // Fuente 2: visits activas ya existentes en la cola del día
+  // slice(0, 5) normaliza "08:00:00" → "08:00" para que coincida con los slot buttons
+  const visitHorasOcupadas = new Set(
+    activeVisits
+      .filter(
+        (v) =>
+          v.doctorId === selectedMedico?.medicoId &&
+          v.horaConsulta !== null &&
+          isOpenVisitStatus(v.status),
+      )
+      .map((v) => (v.horaConsulta as string).slice(0, 5)),
+  );
+
+  const horasOcupadas = new Set([...agendaHorasOcupadas, ...visitHorasOcupadas]);
+
+  // Hora efectiva: si la seleccionada está ocupada (o no hay selección),
+  // usa el primer slot libre. Se recalcula en cada render → siempre fresco.
   // Consultorios únicos derivados de la disponibilidad
   const consultoriosDisponibles = Array.from(
     new Map(
@@ -269,21 +294,28 @@ export const RecepcionQuickCheckinDialog = ({
     setNoExpSearch("");
     setSelectedMedico(null);
     setConsultorioFiltro(null);
-    setSelectedHora(null);
   }, [form, initialValues, open]);
 
   // Limpiar selección de miembro cuando cambia el expediente
   useEffect(() => { form.setValue("pkNum", 0); }, [debouncedNoExp, form]);
 
-  // Sincronizar médico con el form y pre-llenar hora con su horaInicio
+  // Sincronizar médico con el form y pre-llenar hora con el PRIMER slot libre
   useEffect(() => {
     if (selectedMedico) {
       form.setValue("doctorId",      selectedMedico.medicoId,         { shouldValidate: true });
       form.setValue("consultorioId", selectedMedico.consultorioId ?? undefined, { shouldValidate: true });
-      setSelectedHora(selectedMedico.horaInicio?.slice(0, 5) ?? null);
-    } else {
-      setSelectedHora(null);
+      const primerLibre = slots.find((h) => !horasOcupadas.has(h));
+      // Fallback chain: primer slot libre → hora inicio del médico → hora actual
+      const defaultHora =
+        primerLibre ??
+        selectedMedico.horaInicio?.slice(0, 5) ??
+        new Date().toTimeString().slice(0, 5);
+      form.setValue("horaConsulta", defaultHora, { shouldValidate: true });
+    } else if (!fromSlot) {
+      // No limpiar si viene de slot — horaConsulta ya está pre-llenada
+      form.setValue("horaConsulta", "");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMedico, form]);
 
   // Verificar que el paciente pertenece a un centro registrado
@@ -303,10 +335,9 @@ export const RecepcionQuickCheckinDialog = ({
       return;
     }
     try {
-      await createVisit.mutateAsync({
-        ...mapCheckinFormToCreateVisitRequest(values, selectedMember?.nombre),
-        horaConsulta: selectedHora ?? undefined,
-      });
+      await createVisit.mutateAsync(
+        mapCheckinFormToCreateVisitRequest(values, selectedMember?.nombre),
+      );
       toast.success("Ficha de consulta generada.");
       form.reset(DEFAULT_CHECKIN_FORM_VALUES);
       setNoExpSearch("");
@@ -462,8 +493,31 @@ export const RecepcionQuickCheckinDialog = ({
 
           <Separator />
 
-          {/* ── 3. Disponibilidad de médicos ─────────────────────────── */}
-          <div className="space-y-3">
+          {/* ── 3a. Resumen de slot (cuando viene del calendario) ────── */}
+          {fromSlot ? (
+            <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 space-y-1">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                <p className="text-sm font-semibold text-emerald-700">Horario del slot</p>
+              </div>
+              <div className="flex flex-wrap gap-x-5 gap-y-0.5 pl-6 text-xs text-emerald-700">
+                {initialValues?.fechaConsulta ? (
+                  <span>
+                    {new Date(initialValues.fechaConsulta + "T00:00:00").toLocaleDateString(
+                      "es-MX", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }
+                    )}
+                  </span>
+                ) : null}
+                <span className="flex items-center gap-1 font-mono font-semibold">
+                  <Clock className="size-3" />
+                  {initialValues?.horaConsulta}
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          {/* ── 3b. Selector médico (cuando NO viene del calendario) ─── */}
+          <div className={fromSlot ? "hidden" : "space-y-3"}>
             <div className="flex items-center gap-2">
               <Stethoscope className="size-3.5 text-txt-muted" />
               <p className="text-xs font-semibold tracking-wide text-txt-body uppercase">
@@ -478,7 +532,11 @@ export const RecepcionQuickCheckinDialog = ({
                 <Input
                   type="date"
                   value={fechaSlot}
-                  onChange={(e) => { setFechaSlot(e.target.value); setSelectedMedico(null); }}
+                  onChange={(e) => {
+                    setFechaSlot(e.target.value);
+                    setSelectedMedico(null);
+                    form.setValue("fechaConsulta", e.target.value, { shouldValidate: false });
+                  }}
                   className="h-9"
                 />
               </div>
@@ -614,16 +672,24 @@ export const RecepcionQuickCheckinDialog = ({
             {/* ── Selector/escritura de horario ────────────────────── */}
             {selectedMedico ? (
               <div className="space-y-2">
-                <Label className="text-xs">Horario de consulta</Label>
+                <Label className="text-xs">
+                  Horario de consulta
+                  <span className="ml-1 text-status-critical">*</span>
+                </Label>
 
                 {/* Input manual — siempre visible */}
                 <Input
                   type="time"
                   className="h-9 w-36"
-                  value={selectedHora ?? ""}
-                  onChange={(e) => setSelectedHora(e.target.value || null)}
                   disabled={!canWrite || createVisit.isPending}
+                  {...form.register("horaConsulta")}
                 />
+
+                {!horaConsultaWatch ? (
+                  <p className="text-xs text-amber-600">
+                    Selecciona o escribe la hora de consulta del paciente.
+                  </p>
+                ) : null}
 
                 {/* Chips rápidos si el médico tiene horario configurado */}
                 {slots.length > 0 ? (
@@ -635,12 +701,12 @@ export const RecepcionQuickCheckinDialog = ({
                           key={hora}
                           type="button"
                           disabled={ocupado}
-                          onClick={() => !ocupado && setSelectedHora(hora)}
+                          onClick={() => !ocupado && form.setValue("horaConsulta", hora, { shouldValidate: true })}
                           className={[
                             "flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
                             ocupado
                               ? "cursor-not-allowed border-red-200 bg-red-50 text-red-400 line-through"
-                              : selectedHora === hora
+                              : horaConsultaWatch === hora
                                 ? "border-primary bg-primary text-white"
                                 : "border-line-struct hover:border-primary/60 hover:bg-primary/5",
                           ].join(" ")}

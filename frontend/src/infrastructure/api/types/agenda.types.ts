@@ -5,6 +5,7 @@ export interface AgendaSlot {
   disponible:        boolean;
   consultorioId:     number | null;
   consultorioNumero: number | null;
+  consultorioNombre: string | null;
   cita: {
     id:           number;
     folio:        string;

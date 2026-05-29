@@ -49,6 +49,11 @@ class VisitVitalSigns(models.Model):
         blank=True,
     )
     bmi = models.DecimalField(max_digits=6, decimal_places=2, db_column="bmi")
+    glucosa_capilar_mgdl = models.PositiveSmallIntegerField(
+        db_column="glucosa_capilar_mgdl",
+        null=True,
+        blank=True,
+    )
     notes = models.CharField(max_length=255, db_column="notes", null=True, blank=True)
     fch_alta = models.DateTimeField(auto_now_add=True, db_column="fch_alta")
     fch_modf = models.DateTimeField(auto_now=True, db_column="fch_modf")

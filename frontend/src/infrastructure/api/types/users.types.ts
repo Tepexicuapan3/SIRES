@@ -24,7 +24,11 @@ export interface EscuelaRef {
   isActive: boolean;
 }
 
-export type TipoPersonal = "MEDICO" | "ENFERMERIA" | "ADMINISTRATIVO";
+export interface TipoPersonalRef {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
 
 // =============================================================================
 // OBJETOS ANIDADOS (Relaciones)
@@ -95,7 +99,7 @@ export interface UserListItem {
   fechaNac: string | null;
   escolaridad: EscolaridadRef | null;
   escuela: EscuelaRef | null;
-  tipoPersonal: TipoPersonal | null;
+  tipoPersonal: TipoPersonalRef | null;
   cedulas: CedulaItem[];
   primaryRole: string;
   isActive: boolean;
@@ -189,7 +193,7 @@ export interface CreateUserRequest {
   areaClinicaId?: number | null;
   escolaridadId?: number | null;
   escuelaId?: number | null;
-  tipoPersonal?: TipoPersonal | null;
+  tipoPersonalId?: number | null;
   cedulas?: Omit<CedulaItem, "orden">[];
 }
 
@@ -211,7 +215,7 @@ export interface UpdateUserRequest {
   areaClinicaId?: number | null;
   escolaridadId?: number | null;
   escuelaId?: number | null;
-  tipoPersonal?: TipoPersonal | null;
+  tipoPersonalId?: number | null;
   cedulas?: Omit<CedulaItem, "orden">[];
 }
 
@@ -258,7 +262,7 @@ export interface UsersListParams extends PaginationParams {
   roleId?: number;
   clinicId?: number;
   status?: "active" | "inactive" | "pending";
-  tipoPersonal?: string;
+  tipoPersonalId?: number;
 }
 
 /**

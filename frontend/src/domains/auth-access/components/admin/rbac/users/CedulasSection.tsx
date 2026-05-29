@@ -9,20 +9,7 @@ import {
   FormMessage,
 } from "@shared/ui/form";
 import { Input } from "@shared/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@shared/ui/select";
 import { cn } from "@shared/utils/styling/cn";
-
-const TIPO_LABELS: Record<string, string> = {
-  PROFESIONAL: "Profesional",
-  ESPECIALIDAD: "Especialidad",
-  SUBESPECIALIDAD: "Subespecialidad",
-};
 
 interface CedulasSectionProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,7 +34,7 @@ export function CedulasSection({ form, isEditable = true }: CedulasSectionProps)
 
   const handleAdd = () => {
     if (!canAdd) return;
-    append({ numero: "", tipo: "PROFESIONAL", esPrincipal: fields.length === 0 });
+    append({ numero: "", tipo: "", esPrincipal: fields.length === 0 });
   };
 
   return (
@@ -122,24 +109,15 @@ export function CedulasSection({ form, isEditable = true }: CedulasSectionProps)
                     render={({ field: f }) => (
                       <FormItem>
                         <FormLabel className="text-xs">Tipo</FormLabel>
-                        <Select
-                          value={f.value}
-                          onValueChange={f.onChange}
-                          disabled={!isEditable}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {Object.entries(TIPO_LABELS).map(([val, label]) => (
-                              <SelectItem key={val} value={val}>
-                                {label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <Input
+                            {...f}
+                            placeholder="Ej. Profesional, Especialidad..."
+                            disabled={!isEditable}
+                            className="h-9"
+                            maxLength={80}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

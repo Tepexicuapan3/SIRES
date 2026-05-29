@@ -58,6 +58,13 @@ export const catalogDefinitions = {
     endpoint: "education-level",
     permissionRead: "admin:catalogos:escolaridad:read",
   },
+  tipoPersonal: {
+    slug: "tipo-personal",
+    title: "Tipos de personal",
+    description: "Catalogo de tipos de personal del sistema.",
+    endpoint: "personal-types",
+    permissionRead: "admin:catalogos:tipo_personal:read",
+  },
   escuelas: {
     slug: "escuelas",
     title: "Escuelas",

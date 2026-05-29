@@ -92,6 +92,7 @@ interface UserDetailsDialogProps {
   areaClinicaOptions?: AreaClinicaOption[];
   escolaridadOptions?: CatalogOption[];
   escuelaOptions?: CatalogOption[];
+  tipoPersonalOptions?: CatalogOption[];
   isClinicsCatalogLoading?: boolean;
   canEdit: boolean;
   canReadRolesCatalog?: boolean;
@@ -113,7 +114,7 @@ const DEFAULT_FORM_VALUES: UserDetailsFormValues = {
   areaClinicaId: null,
   escolaridadId: null,
   escuelaId: null,
-  tipoPersonal: null,
+  tipoPersonalId: null,
   cedulas: [],
 };
 
@@ -134,6 +135,7 @@ export function UserDetailsDialog({
   areaClinicaOptions = [],
   escolaridadOptions = [],
   escuelaOptions = [],
+  tipoPersonalOptions = [],
   isClinicsCatalogLoading = false,
   canEdit,
   canReadRolesCatalog = true,
@@ -184,7 +186,7 @@ export function UserDetailsDialog({
     resolver: zodResolver(userDetailsSchema) as Resolver<UserDetailsFormValues>,
     defaultValues: DEFAULT_FORM_VALUES,
   });
-  const formStateIsDirty = form.formState.isDirty;
+  const [formHydrated, setFormHydrated] = useState(false);
   const prevOpenRef = useRef(false);
   const [
     draftFirstName,
@@ -200,7 +202,7 @@ export function UserDetailsDialog({
     draftAreaClinicaId,
     draftEscolaridadId,
     draftEscuelaId,
-    draftTipoPersonal,
+    draftTipoPersonalId,
     draftCedulas,
   ] = form.watch([
     "firstName",
@@ -216,7 +218,7 @@ export function UserDetailsDialog({
     "areaClinicaId",
     "escolaridadId",
     "escuelaId",
-    "tipoPersonal",
+    "tipoPersonalId",
     "cedulas",
   ]);
 
@@ -234,7 +236,7 @@ export function UserDetailsDialog({
     areaClinicaId: draftAreaClinicaId ?? null,
     escolaridadId: draftEscolaridadId ?? null,
     escuelaId: draftEscuelaId ?? null,
-    tipoPersonal: draftTipoPersonal ?? null,
+    tipoPersonalId: draftTipoPersonalId ?? null,
     cedulas: draftCedulas ?? [],
   };
   const baselineFormValues = userDetail
@@ -270,12 +272,15 @@ export function UserDetailsDialog({
     const justOpened = open && !prevOpenRef.current;
     prevOpenRef.current = open;
 
-    if (!userDetail) return;
-    // Siempre reset cuando el dialog acaba de abrir; respeta dirty en sesión activa
-    if (justOpened || !formStateIsDirty) {
-      form.reset(mapUserDetailToFormValues(userDetail));
+    if (!open) {
+      setFormHydrated(false);
+      return;
     }
-  }, [form, formStateIsDirty, open, userDetail]);
+    if (userDetail && (justOpened || !formHydrated)) {
+      form.reset(mapUserDetailToFormValues(userDetail));
+      setFormHydrated(true);
+    }
+  }, [form, formHydrated, open, userDetail]);
 
   useEffect(() => {
     if (!open || !userDetailResponse) return;
@@ -633,7 +638,7 @@ export function UserDetailsDialog({
     </div>
   );
 
-  const sections: AdminDetailsDialogSection[] = userDetail
+  const sections: AdminDetailsDialogSection[] = (userDetail && formHydrated)
     ? [
         {
           id: "general",
@@ -648,6 +653,7 @@ export function UserDetailsDialog({
                 areaClinicaOptions={areaClinicaOptions}
                 escolaridadOptions={escolaridadOptions}
                 escuelaOptions={escuelaOptions}
+                tipoPersonalOptions={tipoPersonalOptions}
                 isClinicsCatalogLoading={isClinicsCatalogLoading}
                 userDetail={userDetail}
                 accountIsActive={workingAccountIsActive}

@@ -17,7 +17,7 @@ from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.authorization_service import has_capability
 from apps.recepcion.models import CitaMedica, EstatusCita
-from apps.recepcion.repositories.citas_repository import CitasRepository
+from apps.recepcion.repositories.citas_repository import CitasRepository, _serialize_cita
 from apps.recepcion.services.errors import VisitDomainError
 
 logger = logging.getLogger(__name__)
@@ -251,6 +251,10 @@ class CitasListCreateView(APIView):
                 notas=s.validated_data.get("notas") or None,
                 created_by_id=auth_user.get("id"),
             )
+        except ValueError as exc:
+            return error_response("CITA_NOT_AVAILABLE", str(exc),
+                                  status.HTTP_400_BAD_REQUEST,
+                                  request_id=get_request_id(request))
         except Exception as exc:
             logger.exception("Error creando cita: %s", exc)
             return error_response("CITA_CREATE_ERROR", "No se pudo agendar la cita.",
@@ -284,7 +288,6 @@ class CitaDetailView(APIView):
                                   status.HTTP_404_NOT_FOUND,
                                   request_id=get_request_id(request))
 
-        from apps.recepcion.repositories.citas_repository import _serialize_cita
         return Response(_serialize_cita(cita))
 
 

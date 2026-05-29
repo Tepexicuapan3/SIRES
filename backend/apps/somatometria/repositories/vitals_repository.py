@@ -14,6 +14,7 @@ class VitalsRepository:
             "blood_pressure_systolic": vitals_payload.get("bloodPressureSystolic"),
             "blood_pressure_diastolic": vitals_payload.get("bloodPressureDiastolic"),
             "waist_circumference_cm": vitals_payload.get("waistCircumferenceCm"),
+            "glucosa_capilar_mgdl": vitals_payload.get("glucosaCapilarMgdl"),
             "bmi": vitals_payload["bmi"],
             "notes": vitals_payload.get("notes"),
         }
@@ -39,6 +40,7 @@ class VitalsRepository:
             "bloodPressureSystolic": vital_signs.blood_pressure_systolic,
             "bloodPressureDiastolic": vital_signs.blood_pressure_diastolic,
             "waistCircumferenceCm": vital_signs.waist_circumference_cm,
+            "glucosaCapilarMgdl": vital_signs.glucosa_capilar_mgdl,
             "bmi": float(vital_signs.bmi),
             "notes": vital_signs.notes,
         }

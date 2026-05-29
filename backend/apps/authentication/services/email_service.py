@@ -150,10 +150,11 @@ def send_user_credentials_email(
     return True
 
 
-def send_notification_email_batch(recipients, subject, message, category="Notificación SISEM"):
+def send_notification_email_batch(recipients, subject, message, category="Notificación SISEM", attachments=None):
     """
     Envía una notificación masiva de forma síncrona con una sola conexión SMTP.
-    recipients: [{"email": str, "name": str, "username": str}, ...]
+    recipients:  [{"email": str, "name": str, "username": str}, ...]
+    attachments: [(filename: str, content: bytes, mimetype: str), ...] | None
     Devuelve {"sent": N, "failed": [{"username": ..., "name": ..., "email": ...}]}
     """
     if not recipients:
@@ -199,6 +200,9 @@ def send_notification_email_batch(recipients, subject, message, category="Notifi
                     connection=conn,
                 )
                 email_msg.attach_alternative(html, "text/html")
+                if attachments:
+                    for filename, content, mimetype in attachments:
+                        email_msg.attach(filename, content, mimetype or "application/octet-stream")
                 email_msg.send()
                 sent += 1
             except Exception:

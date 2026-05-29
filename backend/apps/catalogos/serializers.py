@@ -33,6 +33,7 @@ from apps.catalogos.models import (
     TpAutorizacion,
     Turnos,
     Vacunas,
+    CatTipoPersonal,
 )
 from apps.catalogos.models.cies import CatCies
 
@@ -415,6 +416,19 @@ class EscolaridadDetailSerializer(CatalogDetailSerializer):
 class EscolaridadWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = Escolaridad
+
+
+class TipoPersonalListSerializer(CatalogListSerializer):
+    class Meta(CatalogListSerializer.Meta):
+        model = CatTipoPersonal
+
+class TipoPersonalDetailSerializer(CatalogDetailSerializer):
+    class Meta(CatalogDetailSerializer.Meta):
+        model = CatTipoPersonal
+
+class TipoPersonalWriteSerializer(CatalogWriteSerializer):
+    class Meta(CatalogWriteSerializer.Meta):
+        model = CatTipoPersonal
 
 
 class EscuelasListSerializer(CatalogListWithCodeSerializer):
@@ -941,3 +955,17 @@ class CentroAreaClinicaWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = CentroAreaClinica
         fields = ("centerId", "areaClinicaId", "isActive")
+
+    def update(self, instance, validated_data):
+        # Django uses only center_id (the declared PK) in the WHERE clause of UPDATE,
+        # ignoring area_clinica_id. This causes a UniqueViolation when a center has
+        # multiple areas. Filter by both columns explicitly instead.
+        validated_data.pop("center_id", None)
+        validated_data.pop("area_clinica_id", None)
+        CentroAreaClinica.objects.filter(
+            center_id=instance.center_id,
+            area_clinica_id=instance.area_clinica_id,
+        ).update(**validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        return instance

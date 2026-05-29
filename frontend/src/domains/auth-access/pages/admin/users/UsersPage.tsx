@@ -29,6 +29,7 @@ import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centro
 import { useAreasClinicasList } from "@features/admin/modules/catalogos/areas-clinicas/queries/useAreasClinicasList";
 import { useEscolaridadList } from "@features/admin/modules/catalogos/escolaridad/queries/useEscolaridadList";
 import { useEscuelasList } from "@features/admin/modules/catalogos/escuelas/queries/useEscuelasList";
+import { useTipoPersonalList } from "@features/admin/modules/catalogos/tipo-personal/queries/useTipoPersonalList";
 import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDetailsDialog";
 import { UserDetailsDialog } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsDialog";
 import { UserCreateDialog } from "@/domains/auth-access/components/admin/rbac/users/UserCreateDialog";
@@ -150,8 +151,8 @@ export function UsersPage() {
       roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
       clinicId:
         clinicFilter === CLINIC_FILTER_ALL ? undefined : Number(clinicFilter),
-      tipoPersonal:
-        tipoPersonalFilter === TIPO_PERSONAL_ALL ? undefined : tipoPersonalFilter,
+      tipoPersonalId:
+        tipoPersonalFilter === TIPO_PERSONAL_ALL ? undefined : Number(tipoPersonalFilter),
     },
     {
       enabled: canReadUser,
@@ -195,6 +196,10 @@ export function UsersPage() {
     { page: 1, pageSize: 100, isActive: true },
     { enabled: canReadUser || canCreateUser || canUpdateUser },
   );
+  const { data: tipoPersonalData } = useTipoPersonalList(
+    { page: 1, pageSize: 100, isActive: true },
+    { enabled: canReadUser || canCreateUser || canUpdateUser },
+  );
   const roleOptions = rolesData?.items ?? [];
   const clinicOptions = clinicsData?.items ?? [];
   const areaClinicaOptions = (areasClinicasData?.items ?? []).map((a) => ({
@@ -211,6 +216,11 @@ export function UsersPage() {
     name: e.name,
     code: e.code,
     isActive: e.isActive,
+  }));
+  const tipoPersonalOptions = (tipoPersonalData?.items ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    isActive: t.isActive,
   }));
 
   const canManageUsersFully = resolveCapability("admin.users.editFull", {
@@ -312,7 +322,7 @@ export function UsersPage() {
           status: statusFilter === USER_STATUS_FILTER.ALL ? undefined : statusFilter,
           roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
           clinicId: clinicFilter === CLINIC_FILTER_ALL ? undefined : Number(clinicFilter),
-          tipoPersonal: tipoPersonalFilter === TIPO_PERSONAL_ALL ? undefined : tipoPersonalFilter,
+          tipoPersonalId: tipoPersonalFilter === TIPO_PERSONAL_ALL ? undefined : Number(tipoPersonalFilter),
         });
       },
     },
@@ -390,15 +400,23 @@ export function UsersPage() {
           },
         ]
       : []),
-    {
-      id: "tipoPersonal",
-      label: "Tipo personal",
-      options: [
-        { id: "MEDICO", label: "Médico", selected: tipoPersonalFilter === "MEDICO", onSelect: () => { setTipoPersonalFilter("MEDICO"); setPage(1); } },
-        { id: "ENFERMERIA", label: "Enfermería", selected: tipoPersonalFilter === "ENFERMERIA", onSelect: () => { setTipoPersonalFilter("ENFERMERIA"); setPage(1); } },
-        { id: "ADMINISTRATIVO", label: "Administrativo", selected: tipoPersonalFilter === "ADMINISTRATIVO", onSelect: () => { setTipoPersonalFilter("ADMINISTRATIVO"); setPage(1); } },
-      ],
-    },
+    ...(tipoPersonalOptions.length > 0
+      ? [
+          {
+            id: "tipoPersonal",
+            label: "Tipo personal",
+            options: tipoPersonalOptions.map((tp) => ({
+              id: tp.id.toString(),
+              label: tp.name,
+              selected: tipoPersonalFilter === tp.id.toString(),
+              onSelect: () => {
+                setTipoPersonalFilter(tp.id.toString());
+                setPage(1);
+              },
+            })),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -507,6 +525,7 @@ export function UsersPage() {
         areaClinicaOptions={areaClinicaOptions}
         escolaridadOptions={escolaridadOptions}
         escuelaOptions={escuelaOptions}
+        tipoPersonalOptions={tipoPersonalOptions}
         isClinicsCatalogLoading={
           isLoadingClinicsCatalog || isFetchingClinicsCatalog
         }
@@ -524,6 +543,7 @@ export function UsersPage() {
         areaClinicaOptions={areaClinicaOptions}
         escolaridadOptions={escolaridadOptions}
         escuelaOptions={escuelaOptions}
+        tipoPersonalOptions={tipoPersonalOptions}
       />
       <UserNotifyDialog
         open={notifyOpen}

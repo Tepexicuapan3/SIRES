@@ -92,7 +92,7 @@ export type {
   // Refs
   EscolaridadRef,
   EscuelaRef,
-  TipoPersonal,
+  TipoPersonalRef,
 } from "@api/types/users.types";
 
 // =============================================================================
@@ -274,6 +274,27 @@ export type {
 } from "@api/types/catalogos/tipos-areas.types";
 
 // =============================================================================
+// TIPO PERSONAL TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  TipoPersonalListItem,
+  TipoPersonalDetail,
+  // CRUD Requests
+  CreateTipoPersonalRequest,
+  UpdateTipoPersonalRequest,
+  // CRUD Responses
+  CreateTipoPersonalResponse,
+  UpdateTipoPersonalResponse,
+  DeleteTipoPersonalResponse,
+  // Listados
+  TipoPersonalListParams,
+  TipoPersonalListResponse,
+  // Detalle
+  TipoPersonalDetailResponse,
+} from "@api/types/catalogos/tipo-personal.types";
+
+// =============================================================================
 // ESCOLARIDAD TYPES (CRUD)
 // =============================================================================
 export type {
@@ -438,6 +459,8 @@ export type {
   VisitConsultationSummary,
   CloseVisitRequest,
   CloseVisitResponse,
+  VisitStatusLogItem,
+  VisitStatusLogResponse,
 } from "@api/types/visits.types";
 
 // =============================================================================

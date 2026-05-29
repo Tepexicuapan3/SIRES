@@ -34,6 +34,8 @@ SIRES_MANAGED_MODELS = {
     "citamedica",
     "citanotificacion",
     "horariodisponible",
+    "visit",
+    "turnofichaconfig",
 }
 
 

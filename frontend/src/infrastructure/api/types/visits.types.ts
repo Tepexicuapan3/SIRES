@@ -44,11 +44,30 @@ export interface VisitQueueItem {
   centroNombre:       string | null;
   notes:              string | null;
   horaConsulta:       string | null;  // HH:mm
+  fechaConsulta:      string | null;  // YYYY-MM-DD — fecha elegida por recepcionista al check-in
+  fechaCita:          string | null;  // ISO 8601 — datetime de la cita médica vinculada
   numFicha:           number | null;
   turnoNombre:        string;
   status:             VisitStatus;
   fechaAlta:          string | null;
+  createdById:        number | null;
   vitals:             VisitVitalsPayload | null;
+}
+
+// ── Auditoría NOM-024-SSA3-2012 ───────────────────────────────────────────────
+
+export interface VisitStatusLogItem {
+  id:               number;
+  fromStatus:       VisitStatus | null;
+  toStatus:         VisitStatus;
+  changedById:      number | null;
+  changedByNombre:  string | null;
+  changedAt:        string;   // ISO 8601
+  notes:            string | null;
+}
+
+export interface VisitStatusLogResponse {
+  items: VisitStatusLogItem[];
 }
 
 export type VisitsListResponse = ListResponse<VisitQueueItem>;
@@ -64,6 +83,7 @@ export interface CreateVisitRequest {
   consultorioId?:  number;
   notes?:          string;
   horaConsulta?:   string;  // HH:mm
+  fechaConsulta?:  string;  // YYYY-MM-DD — fecha elegida por recepcionista
 }
 
 export interface VisitsListParams {
@@ -127,6 +147,7 @@ export interface CaptureVitalsRequest {
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
   waistCircumferenceCm?: number;
+  glucosaCapilarMgdl?: number;
   notes?: string;
 }
 

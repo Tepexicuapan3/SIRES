@@ -1,8 +1,5 @@
 import * as z from "zod";
 
-const CEDULA_TIPOS = ["PROFESIONAL", "ESPECIALIDAD", "SUBESPECIALIDAD"] as const;
-const TIPO_PERSONAL_VALORES = ["MEDICO", "ENFERMERIA", "ADMINISTRATIVO"] as const;
-
 const requiredText = (label: string) =>
   z
     .string({ error: `${label} requerido` })
@@ -59,7 +56,11 @@ const cedulaSchema = z.object({
     .trim()
     .min(1, { error: "Número de cédula requerido" })
     .max(30, { error: "Número de cédula demasiado largo" }),
-  tipo: z.enum(CEDULA_TIPOS, { error: "Tipo de cédula inválido" }),
+  tipo: z
+    .string({ error: "Tipo de cédula requerido" })
+    .trim()
+    .min(1, { error: "El tipo de cédula es requerido" })
+    .max(80, { error: "El tipo es demasiado largo" }),
   esPrincipal: z.boolean().default(false),
 });
 
@@ -80,7 +81,7 @@ export const userDetailsSchema = z
     areaClinicaId: optionalNumber,
     escolaridadId: optionalNumber,
     escuelaId: optionalNumber,
-    tipoPersonal: z.enum(TIPO_PERSONAL_VALORES).nullable().default(null),
+    tipoPersonalId: optionalNumber,
     cedulas: z
       .array(cedulaSchema)
       .max(3, { message: "Solo se permiten hasta 3 cédulas" })
@@ -112,7 +113,7 @@ export const createUserSchema = z
     areaClinicaId: optionalNumber,
     escolaridadId: optionalNumber,
     escuelaId: optionalNumber,
-    tipoPersonal: z.enum(TIPO_PERSONAL_VALORES).nullable().default(null),
+    tipoPersonalId: optionalNumber,
     cedulas: z
       .array(cedulaSchema)
       .max(3, { message: "Solo se permiten hasta 3 cédulas" })

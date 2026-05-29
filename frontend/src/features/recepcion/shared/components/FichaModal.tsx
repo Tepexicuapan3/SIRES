@@ -6,9 +6,10 @@ import { Badge }  from "@shared/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@shared/ui/dialog";
-import type { VisitQueueItem, VisitService, VisitStatus } from "@api/types";
+import type { VisitQueueItem, VisitService, VisitStatus, VisitStatusLogItem } from "@api/types";
 import { visitsAPI } from "@api/resources/visits.api";
 import { usePatientLookupHistorico } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
+import { useVisitStatusLog } from "@features/recepcion/modules/checkin/queries/useVisitStatusLog";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -48,6 +49,46 @@ function formatFechaHora(iso: string | null | undefined): string {
   });
 }
 
+function formatHora(iso: string): string {
+  return new Date(iso).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function formatFecha(iso: string | null | undefined): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function StatusLogEntry({ entry }: { entry: VisitStatusLogItem }) {
+  return (
+    <div className="flex items-start gap-3 py-2 border-b border-line-struct/30 last:border-0">
+      <div className="mt-0.5 flex flex-col items-center gap-0.5">
+        <div className="size-2 rounded-full bg-primary/60 shrink-0" />
+        <div className="w-px flex-1 bg-line-struct/40 min-h-[12px]" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          {entry.fromStatus ? (
+            <>
+              <Badge variant={STATUS_VARIANT[entry.fromStatus as VisitStatus] ?? "outline"} className="text-[10px] py-0">
+                {STATUS_LABEL[entry.fromStatus as VisitStatus] ?? entry.fromStatus}
+              </Badge>
+              <span className="text-txt-muted text-xs">→</span>
+            </>
+          ) : null}
+          <Badge variant={STATUS_VARIANT[entry.toStatus as VisitStatus] ?? "outline"} className="text-[10px] py-0">
+            {STATUS_LABEL[entry.toStatus as VisitStatus] ?? entry.toStatus}
+          </Badge>
+        </div>
+        <p className="text-xs text-txt-muted mt-0.5">
+          {formatHora(entry.changedAt)}
+          {entry.changedByNombre ? ` · ${entry.changedByNombre}` : ""}
+        </p>
+        {entry.notes ? <p className="text-xs text-txt-body/70 mt-0.5 italic">{entry.notes}</p> : null}
+      </div>
+    </div>
+  );
+}
+
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
   return (
@@ -76,6 +117,11 @@ export function FichaModal({ open, onOpenChange, visit }: FichaModalProps) {
   const { data: patientData, isFetching: loadingPatient } = usePatientLookupHistorico(
     visit?.noExp ?? "",
     open && !!visit?.noExp,
+  );
+
+  const { data: statusLog, isFetching: loadingLog } = useVisitStatusLog(
+    visit?.id,
+    open && !!visit?.id,
   );
 
   const paciente = patientData
@@ -187,10 +233,45 @@ export function FichaModal({ open, onOpenChange, visit }: FichaModalProps) {
               label="Tipo llegada"
               value={visit.arrivalType === "appointment" ? "Con cita" : "Sin cita"}
             />
-            <InfoRow label="Hora cita"   value={visit.horaConsulta} />
+            <InfoRow
+              label="Hora registro"
+              value={
+                visit.fechaAlta ? (
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono font-bold">{formatHora(visit.fechaAlta)}</span>
+                    <span className="text-txt-muted font-normal text-xs">{formatFecha(visit.fechaAlta)}</span>
+                  </span>
+                ) : null
+              }
+            />
+            <InfoRow
+              label="Hora cita"
+              value={
+                visit.horaConsulta ? (
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-primary">{visit.horaConsulta}</span>
+                    <span className="text-txt-muted font-normal text-xs">{formatFecha(visit.fechaConsulta ?? visit.fechaCita ?? visit.fechaAlta)}</span>
+                  </span>
+                ) : "—"
+              }
+            />
             {visit.appointmentId ? (
               <InfoRow label="ID Cita" value={<span className="font-mono">{visit.appointmentId}</span>} />
             ) : null}
+            {(() => {
+              const cierre = statusLog?.find((e) => e.toStatus === "cerrada");
+              return cierre ? (
+                <InfoRow
+                  label="Hora cierre"
+                  value={
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-status-critical">{formatHora(cierre.changedAt)}</span>
+                      <span className="text-txt-muted font-normal text-xs">{formatFecha(cierre.changedAt)}</span>
+                    </span>
+                  }
+                />
+              ) : null;
+            })()}
             {visit.notes ? (
               <InfoRow label="Motivo" value={visit.notes} />
             ) : null}
@@ -223,6 +304,27 @@ export function FichaModal({ open, onOpenChange, visit }: FichaModalProps) {
               </>
             ) : null}
           </dl>
+
+          {/* ── Historial de estados (NOM-024) ───────────────────── */}
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted mb-2">
+              Historial de movimientos
+            </p>
+            {loadingLog ? (
+              <div className="flex items-center gap-2 text-xs text-txt-muted py-2">
+                <Loader2 className="size-3 animate-spin" />
+                Cargando historial...
+              </div>
+            ) : statusLog && statusLog.length > 0 ? (
+              <div>
+                {statusLog.map((entry) => (
+                  <StatusLogEntry key={entry.id} entry={entry} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-txt-muted py-2 italic">Sin movimientos registrados.</p>
+            )}
+          </div>
         </div>
 
         {/* ── Footer ────────────────────────────────────────────── */}

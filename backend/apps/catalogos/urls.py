@@ -11,6 +11,7 @@ routes = [
     ("civil-status", EdoCivilListCreateView, EdoCivilDetailView, "int"),
     ("diseases", EnfermedadesListCreateView, EnfermedadesDetailView, "int"),
     ("education-level", EscolaridadListCreateView, EscolaridadDetailView, "int"),
+    ("personal-types", TipoPersonalListCreateView, TipoPersonalDetailView, "int"),
     ("schools", EscuelasListCreateView, EscuelasDetailView, "int"),
     ("specialties", EspecialidadesListCreateView, EspecialidadesDetailView, "int"),
     ("med-studies", EstudiosMedListCreateView, EstudiosMedDetailView, "int"),

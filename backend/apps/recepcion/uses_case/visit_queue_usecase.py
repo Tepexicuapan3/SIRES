@@ -96,16 +96,13 @@ def _check_and_reserve_slot(doctor_id: int, hora_consulta) -> None:
     """
     Verifica que el médico no tenga ya una ficha activa en ese horario hoy
     y marca el slot de HorarioDisponible como ocupado.
-
-    Usa SELECT FOR UPDATE sobre el slot para evitar race conditions cuando
-    dos requests llegan simultáneamente al mismo horario.
+    Usa SELECT FOR UPDATE para prevenir race conditions.
     """
     from django.utils import timezone
 
     hoy = timezone.localtime(timezone.now()).date()
 
     with transaction.atomic():
-        # Intentar bloquear el slot (previene race condition cuando el slot existe)
         slot = (
             HorarioDisponible.objects
             .select_for_update()
@@ -120,11 +117,9 @@ def _check_and_reserve_slot(doctor_id: int, hora_consulta) -> None:
                 409,
             )
 
-        # Validación a nivel de Visit (cubre el caso en que no existe slot generado)
         if Visit.objects.filter(
             doctor_id=doctor_id,
             hora_consulta=hora_consulta,
-            fch_alta__date=hoy,
             fch_baja__isnull=True,
             status__in=_ACTIVE_VISIT_STATUSES,
         ).exists():
@@ -137,6 +132,13 @@ def _check_and_reserve_slot(doctor_id: int, hora_consulta) -> None:
         if slot:
             slot.disponible = False
             slot.save(update_fields=["disponible"])
+        else:
+            HorarioDisponible.objects.create(
+                medico_id=doctor_id,
+                fecha=hoy,
+                hora=hora_consulta,
+                disponible=False,
+            )
 
 
 def create_visit(
@@ -150,6 +152,8 @@ def create_visit(
     consultorio_id: int | None = None,
     notes: str | None = None,
     hora_consulta=None,
+    fecha_consulta=None,
+    created_by_id: int | None = None,
 ) -> dict:
     if VisitRepository.exists_open_visit_for_patient(no_exp, pk_num):
         raise VisitDomainError(
@@ -158,11 +162,7 @@ def create_visit(
             409,
         )
 
-    # Fallback: si el frontend no mandó hora, tomarla del horario del médico
-    if not hora_consulta and doctor_id:
-        hora_consulta = _resolver_hora_medico(doctor_id)
-
-    # Validar que el médico no tenga ya una ficha para ese horario hoy
+    # Validar conflicto solo cuando se envió hora explícita
     if doctor_id and hora_consulta:
         _check_and_reserve_slot(doctor_id, hora_consulta)
 
@@ -180,8 +180,18 @@ def create_visit(
         consultorio_id=consultorio_id,
         notes=notes,
         hora_consulta=hora_consulta,
+        fecha_consulta=fecha_consulta,
         num_ficha=num_ficha,
         turno_nombre=turno_nombre,
+        created_by_id=created_by_id,
+    )
+    # Registrar el estado inicial en el log de auditoría
+    VisitRepository.log_status_change(
+        visit=visit,
+        from_status=None,
+        to_status="en_espera",
+        changed_by_id=created_by_id,
+        notes="Check-in inicial",
     )
     return VisitRepository.to_contract(visit)
 
@@ -255,7 +265,7 @@ def list_visits(
     service_type: str | None = None,
     no_exp: str | None = None,
 ) -> dict:
-    visits, total, total_pages, doctor_nombres = VisitRepository.list_paginated(
+    visits, total, total_pages, doctor_nombres, cita_fechas = VisitRepository.list_paginated(
         page=page,
         page_size=page_size,
         status_filter=status_filter,
@@ -267,7 +277,7 @@ def list_visits(
         no_exp=no_exp,
     )
     return {
-        "items":      [VisitRepository.to_contract(v, doctor_nombres) for v in visits],
+        "items":      [VisitRepository.to_contract(v, doctor_nombres, cita_fechas) for v in visits],
         "page":       page,
         "pageSize":   page_size,
         "total":      total,
@@ -275,13 +285,26 @@ def list_visits(
     }
 
 
-def change_visit_status(visit_id: int, target_status: str) -> dict:
+def change_visit_status(
+    visit_id: int,
+    target_status: str,
+    changed_by_id: int | None = None,
+) -> dict:
     visit = VisitRepository.get_by_id(visit_id)
     if not visit:
         raise VisitDomainError("VISIT_NOT_FOUND", "Visita no encontrada.", 404)
 
-    next_state = transition_visit_state(visit.status, target_status, ROLE_RECEPCION)
-    visit      = VisitRepository.update_status(visit, next_state)
+    previous_status = visit.status
+    next_state      = transition_visit_state(previous_status, target_status, ROLE_RECEPCION)
+    visit           = VisitRepository.update_status(visit, next_state)
+
+    # Log de auditoría NOM-024
+    VisitRepository.log_status_change(
+        visit=visit,
+        from_status=previous_status,
+        to_status=next_state,
+        changed_by_id=changed_by_id,
+    )
 
     # Liberar el slot si la visita se cancela o marca como no-show
     if next_state in ("cancelada", "no_show") and visit.doctor_id and visit.hora_consulta:
@@ -295,3 +318,19 @@ def change_visit_status(visit_id: int, target_status: str) -> dict:
         ).update(disponible=True)
 
     return VisitRepository.to_contract(visit)
+
+
+def get_visit_status_log(visit_id: int) -> list[dict]:
+    """Retorna el historial de estados de una visita con nombres de usuario resueltos."""
+    logs = VisitRepository.get_status_log(visit_id)
+    if not logs:
+        return []
+
+    user_ids = {log.changed_by_id for log in logs if log.changed_by_id}
+    user_nombres: dict[int, str] = {}
+    if user_ids:
+        from apps.authentication.models import DetUsuario
+        dets = DetUsuario.objects.filter(id_usuario_id__in=user_ids)
+        user_nombres = {d.id_usuario_id: d.nombre_completo for d in dets}
+
+    return [VisitRepository.status_log_to_contract(log, user_nombres) for log in logs]

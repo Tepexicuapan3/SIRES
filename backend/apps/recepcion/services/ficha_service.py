@@ -51,24 +51,72 @@ def _get_nombre_components(no_exp: str, pk_num: int) -> dict:
     return {"a_paterno": "", "a_materno": "", "nombre_paciente": "", "edad": "", "fecha_nac": ""}
 
 
+def _get_cita_datetime(visit):
+    """Retorna el datetime local de la cita vinculada, o None."""
+    from django.utils import timezone as tz
+    if visit.appointment_id:
+        try:
+            from apps.recepcion.models import CitaMedica
+            cita = CitaMedica.objects.filter(folio=visit.appointment_id).first()
+            if cita:
+                return tz.localtime(cita.fecha_hora)
+        except Exception:
+            pass
+    return None
+
+
+def _get_hora_cierre(visit) -> str:
+    """Hora en que la visita fue cerrada (status → cerrada)."""
+    from django.utils import timezone as tz
+    from apps.recepcion.models import VisitStatusLog
+    log = VisitStatusLog.objects.filter(
+        visit=visit, to_status="cerrada"
+    ).order_by("changed_at").last()
+    if log:
+        return tz.localtime(log.changed_at).strftime("%H:%M")
+    return ""
+
+
+def _get_fecha_cierre(visit) -> str:
+    from django.utils import timezone as tz
+    from apps.recepcion.models import VisitStatusLog
+    log = VisitStatusLog.objects.filter(
+        visit=visit, to_status="cerrada"
+    ).order_by("changed_at").last()
+    if log:
+        return tz.localtime(log.changed_at).strftime("%d/%m/%Y")
+    return ""
+
+
 def _get_hora_consulta(visit) -> str:
     from django.utils import timezone as tz
 
     # 1. Horario seleccionado explícitamente al check-in
     if visit.hora_consulta:
         return visit.hora_consulta.strftime("%H:%M")
-    # 2. Cita médica vinculada → tomar fecha_hora de la cita (en hora local)
-    if visit.appointment_id:
-        try:
-            from apps.recepcion.models import CitaMedica
-            cita = CitaMedica.objects.filter(folio=visit.appointment_id).first()
-            if cita:
-                return tz.localtime(cita.fecha_hora).strftime("%H:%M")
-        except Exception:
-            pass
-    # 3. Fallback: hora del check-in en hora local (no UTC)
+    # 2. Cita médica vinculada
+    cita_dt = _get_cita_datetime(visit)
+    if cita_dt:
+        return cita_dt.strftime("%H:%M")
+    # 3. Fallback: hora del check-in en hora local
     if visit.fch_alta:
         return tz.localtime(visit.fch_alta).strftime("%H:%M")
+    return ""
+
+
+def _get_fecha_consulta(visit) -> str:
+    from django.utils import timezone as tz
+
+    # 1. Fecha explícita elegida por el recepcionista al hacer check-in
+    if visit.fecha_consulta:
+        return visit.fecha_consulta.strftime("%d/%m/%Y")
+    # 2. Cita médica vinculada → fecha de la cita
+    cita_dt = _get_cita_datetime(visit)
+    if cita_dt:
+        return cita_dt.strftime("%d/%m/%Y")
+    # 3. Fallback: fecha del check-in
+    if visit.fch_alta:
+        return tz.localtime(visit.fch_alta).strftime("%d/%m/%Y")
     return ""
 
 
@@ -128,8 +176,12 @@ def build_context(visit, usuario_nombre: str = "") -> dict:
             pass
 
     ta = ""
+    sistolica   = ""
+    diastolica  = ""
     if vitals and vitals.blood_pressure_systolic and vitals.blood_pressure_diastolic:
-        ta = f"{vitals.blood_pressure_systolic}/{vitals.blood_pressure_diastolic}"
+        sistolica  = str(vitals.blood_pressure_systolic)
+        diastolica = str(vitals.blood_pressure_diastolic)
+        ta = f"{sistolica}/{diastolica}"
 
     return {
         "a_paterno":             nombre["a_paterno"],
@@ -147,15 +199,28 @@ def build_context(visit, usuario_nombre: str = "") -> dict:
         "centro_atencion":       centro_atencion,   # sin acento
         "centro_atención":       centro_atencion,   # con acento (como está en el Word)
         "hora_consulta":         _get_hora_consulta(visit),
+        "fecha_consulta":        _get_fecha_consulta(visit),
+        "hora_registro":         tz.localtime(visit.fch_alta).strftime("%H:%M") if visit.fch_alta else "",
+        "fecha_registro":        tz.localtime(visit.fch_alta).strftime("%d/%m/%Y") if visit.fch_alta else "",
+        "hora_cierre":           _get_hora_cierre(visit),
+        "fecha_cierre":          _get_fecha_cierre(visit),
         "anio":                  str(fecha.year),
         "mes":                   str(fecha.month).zfill(2),
         "dia":                   str(fecha.day).zfill(2),
-        "peso":                  str(vitals.weight_kg)          if vitals else "",
-        "talla":                 str(vitals.height_cm)          if vitals else "",
-        "temperatura":           str(vitals.temperature_c)      if vitals and vitals.temperature_c else "",
-        "t":                     {"a": ta},
-        "frecuencia_cardiaca":   str(vitals.heart_rate_bpm)     if vitals and vitals.heart_rate_bpm else "",
-        "frecuencia_respiratoria": str(vitals.respiratory_rate_bpm) if vitals and vitals.respiratory_rate_bpm else "",
+        "peso":                    str(vitals.weight_kg)                   if vitals else "",
+        "talla":                   str(vitals.height_cm)                   if vitals else "",
+        "temperatura":             str(vitals.temperature_c)               if vitals and vitals.temperature_c          else "",
+        "t":                       {"a": ta},
+        "tension_arterial":        ta,
+        "sistolica":               sistolica,
+        "diastolica":              diastolica,
+        "frecuencia_cardiaca":     str(vitals.heart_rate_bpm)              if vitals and vitals.heart_rate_bpm         else "",
+        "frecuencia_respiratoria": str(vitals.respiratory_rate_bpm)        if vitals and vitals.respiratory_rate_bpm   else "",
+        "saturacion_oxigeno":      str(vitals.oxygen_saturation_pct)       if vitals and vitals.oxygen_saturation_pct  else "",
+        "cintura":                 str(vitals.waist_circumference_cm)      if vitals and vitals.waist_circumference_cm else "",
+        "imc":                     str(vitals.bmi)                         if vitals else "",
+        "glucosa_capilar":         str(vitals.glucosa_capilar_mgdl)        if vitals and vitals.glucosa_capilar_mgdl   else "",
+        "notas_vitales":           vitals.notes or ""                      if vitals else "",
     }
 
 

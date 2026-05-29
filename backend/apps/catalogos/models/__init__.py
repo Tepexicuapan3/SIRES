@@ -14,6 +14,7 @@ from .edo_civil import EdoCivil
 from .enfermedades import Enfermedades
 from .escolaridad import Escolaridad
 from .escuelas import Escuelas
+from .tipo_personal import CatTipoPersonal
 from .especialidades import Especialidades
 from .estudios_medicos import EstudiosMed
 from .grupos_medicamentos import GruposDeMedicamentos
@@ -73,5 +74,6 @@ __all__ = [
     "TiposSanguineo",
     "Turnos",
     "Vacunas",
-    "CatCies"
+    "CatCies",
+    "CatTipoPersonal",
 ]

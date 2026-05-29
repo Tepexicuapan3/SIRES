@@ -10,6 +10,7 @@ import {
   FormMessage,
 } from "@shared/ui/form";
 import { Input } from "@shared/ui/input";
+import { Separator } from "@shared/ui/separator";
 import {
   Select,
   SelectContent,
@@ -17,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@shared/ui/select";
-import { Separator } from "@shared/ui/separator";
 import type { CentroAtencionListItem, UserDetail } from "@api/types";
 import type { UserDetailsFormValues } from "@/domains/auth-access/types/rbac/users.schemas";
 import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
@@ -38,6 +38,7 @@ interface UserDetailsGeneralTabProps {
   areaClinicaOptions?: AreaClinicaOption[];
   escolaridadOptions?: CatalogOption[];
   escuelaOptions?: CatalogOption[];
+  tipoPersonalOptions?: CatalogOption[];
   isClinicsCatalogLoading?: boolean;
   userDetail: UserDetail;
   accountIsActive: boolean;
@@ -66,6 +67,7 @@ export function UserDetailsGeneralTab({
   areaClinicaOptions = [],
   escolaridadOptions = [],
   escuelaOptions = [],
+  tipoPersonalOptions = [],
   isClinicsCatalogLoading = false,
   userDetail,
   accountIsActive,
@@ -106,6 +108,12 @@ export function UserDetailsGeneralTab({
   const currentEscuela = userDetail.escuela;
   if (currentEscuela && !allEscuelaOptions.some((e) => e.id === currentEscuela.id)) {
     allEscuelaOptions.unshift({ id: currentEscuela.id, name: currentEscuela.name, code: currentEscuela.code, isActive: currentEscuela.isActive });
+  }
+
+  const allTipoPersonalOptions = [...tipoPersonalOptions];
+  const currentTipoPersonal = userDetail.tipoPersonal;
+  if (currentTipoPersonal && !allTipoPersonalOptions.some((t) => t.id === currentTipoPersonal.id)) {
+    allTipoPersonalOptions.unshift({ id: currentTipoPersonal.id, name: currentTipoPersonal.name, isActive: currentTipoPersonal.isActive });
   }
 
   const watchedClinicId = form.watch("clinicId");
@@ -447,26 +455,21 @@ export function UserDetailsGeneralTab({
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
-            name="tipoPersonal"
+            name="tipoPersonalId"
             render={({ field }) => (
               <FormItem className="sm:col-span-2">
                 <FormLabel>Tipo de personal</FormLabel>
-                <Select
-                  value={field.value ?? undefined}
-                  onValueChange={(v) => field.onChange(v || null)}
-                  disabled={!isEditable}
-                >
-                  <FormControl>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="No registrado" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="MEDICO">Médico</SelectItem>
-                    <SelectItem value="ENFERMERIA">Enfermería</SelectItem>
-                    <SelectItem value="ADMINISTRATIVO">Administrativo</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CatalogCombobox
+                    value={field.value ?? null}
+                    onChange={field.onChange}
+                    options={allTipoPersonalOptions}
+                    disabled={!isEditable}
+                    placeholder="Selecciona tipo de personal"
+                    emptyLabel="Sin tipo de personal"
+                    searchPlaceholder="Buscar tipo..."
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

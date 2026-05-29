@@ -59,6 +59,7 @@ interface UserCreateDialogProps {
   areaClinicaOptions?: AreaClinicaOption[];
   escolaridadOptions?: CatalogOption[];
   escuelaOptions?: CatalogOption[];
+  tipoPersonalOptions?: CatalogOption[];
 }
 
 const DEFAULT_VALUES: CreateUserFormValues = {
@@ -77,7 +78,7 @@ const DEFAULT_VALUES: CreateUserFormValues = {
   areaClinicaId: null,
   escolaridadId: null,
   escuelaId: null,
-  tipoPersonal: null,
+  tipoPersonalId: null,
   cedulas: [],
 };
 
@@ -91,6 +92,7 @@ export function UserCreateDialog({
   areaClinicaOptions = [],
   escolaridadOptions = [],
   escuelaOptions = [],
+  tipoPersonalOptions = [],
 }: UserCreateDialogProps) {
   const createUser = useCreateUser();
 
@@ -162,7 +164,7 @@ export function UserCreateDialog({
           areaClinicaId: values.areaClinicaId ?? null,
           escolaridadId: values.escolaridadId ?? null,
           escuelaId: values.escuelaId ?? null,
-          tipoPersonal: values.tipoPersonal ?? null,
+          tipoPersonalId: values.tipoPersonalId ?? null,
           cedulas: values.cedulas.length > 0 ? values.cedulas : undefined,
         },
       });
@@ -572,29 +574,24 @@ export function UserCreateDialog({
                         />
                       </div>
 
-                      {/* Tipo personal + Calidad laboral */}
+                      {/* Tipo personal */}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
                           control={form.control}
-                          name="tipoPersonal"
+                          name="tipoPersonalId"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Tipo de personal</FormLabel>
-                              <Select
-                                value={field.value ?? ""}
-                                onValueChange={(v) => field.onChange(v || null)}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="h-11">
-                                    <SelectValue placeholder="Selecciona tipo" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="MEDICO">Médico</SelectItem>
-                                  <SelectItem value="ENFERMERIA">Enfermería</SelectItem>
-                                  <SelectItem value="ADMINISTRATIVO">Administrativo</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <CatalogCombobox
+                                  value={field.value ?? null}
+                                  onChange={field.onChange}
+                                  options={tipoPersonalOptions}
+                                  placeholder="Selecciona tipo de personal"
+                                  emptyLabel="Sin tipo de personal"
+                                  searchPlaceholder="Buscar tipo..."
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}

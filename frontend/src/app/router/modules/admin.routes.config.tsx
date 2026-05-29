@@ -12,6 +12,7 @@ import ConsultoriosPage from "@features/admin/modules/catalogos/consultorios/pag
 import EdoCivilPage from "@features/admin/modules/catalogos/edo-civil/pages/EdoCivilPage";
 import EnfermedadesPage from "@features/admin/modules/catalogos/enfermedades/pages/EnfermedadesPage";
 import EscolaridadPage from "@features/admin/modules/catalogos/escolaridad/pages/EscolaridadPage";
+import TipoPersonalPage from "@features/admin/modules/catalogos/tipo-personal/pages/TipoPersonalPage";
 import EscuelasPage from "@features/admin/modules/catalogos/escuelas/pages/EscuelasPage";
 import EspecialidadesPage from "@features/admin/modules/catalogos/especialidades/pages/EspecialidadesPage";
 import EstudiosMedicosPage from "@features/admin/modules/catalogos/estudios-medicos/pages/EstudiosMedicosPage";
@@ -176,6 +177,14 @@ export const adminRoutes: RouteObject[] = [
             dependencyAware
           >
             <EscolaridadPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "tipo-personal",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:tipo_personal:read">
+            <TipoPersonalPage />
           </ProtectedRoute>
         ),
       },
