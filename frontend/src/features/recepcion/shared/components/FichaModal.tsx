@@ -55,7 +55,10 @@ function formatHora(iso: string): string {
 
 function formatFecha(iso: string | null | undefined): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
+  // Agrega T00:00:00 si es solo fecha (YYYY-MM-DD) para evitar
+  // que JS la interprete como UTC midnight y desfase la zona horaria.
+  const d = iso.includes("T") ? new Date(iso) : new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function StatusLogEntry({ entry }: { entry: VisitStatusLogItem }) {

@@ -10,6 +10,7 @@ import {
   Key,
   LayoutDashboard,
   Pill,
+  ScrollText,
   Shield,
   Stethoscope,
   ShieldUser,
@@ -376,6 +377,16 @@ export const NAV_CONFIG: NavSection[] = [
         icon: Database,
         permissions: ["farmacia:inventario:update"],
         badge: PLACEHOLDER_BADGE,
+      },
+    ],
+  },
+  {
+    title: "Servicios",
+    items: [
+      {
+        title: "Contratos de oxígeno",
+        url: "/servicios/contratos-oxigeno",
+        icon: ScrollText,
       },
     ],
   },

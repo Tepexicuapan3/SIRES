@@ -90,16 +90,23 @@ def _resolve_cie_code_or_error(cie_code):
     return normalized_code
 
 
-def start_consultation(visit_id, roles, permissions=None):
+def start_consultation(visit_id, roles, permissions=None, doctor_id=None):
     ensure_doctor_role(roles, permissions)
     visit = _get_visit_or_error(visit_id)
 
+    previous_status = visit.status
     next_state = transition_visit_state(
         current_state=visit.status,
         target_state="en_consulta",
         actor_role=ROLE_DOCTOR,
     )
     visit = VisitRepository.update_status(visit, next_state)
+    VisitRepository.log_status_change(
+        visit=visit,
+        from_status=previous_status,
+        to_status=next_state,
+        changed_by_id=doctor_id,
+    )
     return VisitRepository.to_contract(visit)
 
 
@@ -243,6 +250,7 @@ def close_consultation(
         final_note=normalized_final_note,
     )
 
+    previous_status = visit.status
     with transaction.atomic():
         consultation, _ = ConsultationRepository.upsert_for_visit(
             visit,
@@ -254,6 +262,12 @@ def close_consultation(
             updated_by_id=doctor_id,
         )
         visit = VisitRepository.update_status(visit, next_state)
+        VisitRepository.log_status_change(
+            visit=visit,
+            from_status=previous_status,
+            to_status=next_state,
+            changed_by_id=doctor_id,
+        )
 
     return {
         "visit": VisitRepository.to_contract(visit),

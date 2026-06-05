@@ -193,7 +193,7 @@ class VisitConsultationStartView(APIView):
         actor_id, roles, permissions = _actor_context(user)
 
         try:
-            payload = start_consultation(visit_id, roles, permissions)
+            payload = start_consultation(visit_id, roles, permissions, doctor_id=actor_id)
         except VisitDomainError as exc:
             return _domain_error_response(request, exc)
 

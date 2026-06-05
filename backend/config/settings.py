@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "apps.realtime",
     "apps.farmacia",
     'apps.recepcion.routers',
+    "apps.contratos_oxigeno",
 ]
 
 MIDDLEWARE = [

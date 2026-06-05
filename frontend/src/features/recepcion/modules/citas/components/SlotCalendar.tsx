@@ -21,7 +21,12 @@ function formatDayDate(dateStr: string): string {
 }
 
 function nowToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 // Un slot es "pasado" si su fecha ya pasó, o si es hoy y la hora ya transcurrió

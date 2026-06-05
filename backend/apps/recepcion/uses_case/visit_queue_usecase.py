@@ -92,21 +92,22 @@ def lookup_patient(no_exp: str, historico: bool = False) -> dict:
 
 # ── Visitas ───────────────────────────────────────────────────────────────────
 
-def _check_and_reserve_slot(doctor_id: int, hora_consulta) -> None:
+def _check_and_reserve_slot(doctor_id: int, hora_consulta, fecha_consulta=None) -> None:
     """
-    Verifica que el médico no tenga ya una ficha activa en ese horario hoy
+    Verifica que el médico no tenga ya una ficha activa en ese horario/fecha
     y marca el slot de HorarioDisponible como ocupado.
     Usa SELECT FOR UPDATE para prevenir race conditions.
+    fecha_consulta: date object o None (usa today como fallback).
     """
     from django.utils import timezone
 
-    hoy = timezone.localtime(timezone.now()).date()
+    fecha = fecha_consulta or timezone.localtime(timezone.now()).date()
 
     with transaction.atomic():
         slot = (
             HorarioDisponible.objects
             .select_for_update()
-            .filter(medico_id=doctor_id, fecha=hoy, hora=hora_consulta)
+            .filter(medico_id=doctor_id, fecha=fecha, hora=hora_consulta)
             .first()
         )
 
@@ -120,6 +121,7 @@ def _check_and_reserve_slot(doctor_id: int, hora_consulta) -> None:
         if Visit.objects.filter(
             doctor_id=doctor_id,
             hora_consulta=hora_consulta,
+            fecha_consulta=fecha,
             fch_baja__isnull=True,
             status__in=_ACTIVE_VISIT_STATUSES,
         ).exists():
@@ -135,7 +137,7 @@ def _check_and_reserve_slot(doctor_id: int, hora_consulta) -> None:
         else:
             HorarioDisponible.objects.create(
                 medico_id=doctor_id,
-                fecha=hoy,
+                fecha=fecha,
                 hora=hora_consulta,
                 disponible=False,
             )
@@ -164,7 +166,7 @@ def create_visit(
 
     # Validar conflicto solo cuando se envió hora explícita
     if doctor_id and hora_consulta:
-        _check_and_reserve_slot(doctor_id, hora_consulta)
+        _check_and_reserve_slot(doctor_id, hora_consulta, fecha_consulta=fecha_consulta)
 
     # Calcular número de ficha y turno al momento del registro
     num_ficha, turno_nombre = _calcular_num_ficha()
@@ -309,12 +311,13 @@ def change_visit_status(
     # Liberar el slot si la visita se cancela o marca como no-show
     if next_state in ("cancelada", "no_show") and visit.doctor_id and visit.hora_consulta:
         from django.utils import timezone
-        hoy = timezone.localtime(timezone.now()).date()
+        fecha_slot = visit.fecha_consulta or timezone.localtime(timezone.now()).date()
         HorarioDisponible.objects.filter(
             medico_id=visit.doctor_id,
-            fecha=hoy,
+            fecha=fecha_slot,
             hora=visit.hora_consulta,
             disponible=False,
+            cita__isnull=True,  # solo libera slots de fichas, no de CitaMedica formal
         ).update(disponible=True)
 
     return VisitRepository.to_contract(visit)

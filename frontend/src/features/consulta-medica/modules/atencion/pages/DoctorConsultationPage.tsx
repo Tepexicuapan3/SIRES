@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
+import { AlarmClock, Clock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -277,6 +277,12 @@ function AppointmentAlertBadge({ minutesUntil }: { minutesUntil: number | null }
   return <Badge variant="alert" className="shrink-0 text-[10px] py-0">{Math.abs(minutesUntil)} min tarde</Badge>;
 }
 
+function ConsultationElapsedBadge({ startedAt, now }: { startedAt: Date | undefined; now: Date }) {
+  const elapsed = startedAt ? Math.floor((now.getTime() - startedAt.getTime()) / 60_000) : null;
+  const label = elapsed !== null && elapsed > 0 ? `${elapsed} min en consulta` : "En consulta";
+  return <Badge variant="stable" className="shrink-0 text-[10px] py-0">{label}</Badge>;
+}
+
 const hasVitalValue = (value: number | null | undefined): boolean => {
   return value !== null && value !== undefined;
 };
@@ -370,6 +376,9 @@ export const DoctorConsultationPage = () => {
     return () => clearInterval(id);
   }, []);
 
+  const [consultationStartedAtByVisitId, setConsultationStartedAtByVisitId] =
+    useState<Record<number, Date>>({});
+
   const diagnosisForm = useForm<
     SaveDiagnosisFormInput,
     unknown,
@@ -393,6 +402,19 @@ export const DoctorConsultationPage = () => {
   const visits = (queueQuery.data?.items ?? []).filter((visit) => {
     return OPEN_VISIT_STATUSES.has(visit.status);
   });
+
+  // Próxima cita: la visita lista_para_doctor con horaConsulta más próxima
+  const nextPendingVisit = (() => {
+    const candidates = visits
+      .filter((v) => v.horaConsulta && v.status === VISIT_STATUS.LISTA_PARA_DOCTOR)
+      .map((v) => ({
+        visit: v,
+        minutesUntil: getMinutesUntilAppointment(v.horaConsulta, now),
+      }))
+      .filter(({ minutesUntil }) => minutesUntil !== null && minutesUntil > -60)
+      .sort((a, b) => (a.minutesUntil ?? 999) - (b.minutesUntil ?? 999));
+    return candidates[0] ?? null;
+  })();
 
   const parsedVisitId = Number.parseInt(params.visitId ?? "", 10);
   const selectedVisitId = Number.isNaN(parsedVisitId) ? null : parsedVisitId;
@@ -549,6 +571,10 @@ export const DoctorConsultationPage = () => {
         visitId: selectedVisit.id,
         status: result.status,
       });
+      setConsultationStartedAtByVisitId((current) => ({
+        ...current,
+        [selectedVisit.id]: new Date(),
+      }));
       toast.success("Consulta iniciada");
     } catch (error) {
       toast.error("No se pudo iniciar la consulta", {
@@ -714,6 +740,11 @@ export const DoctorConsultationPage = () => {
         visitId: selectedVisit.id,
         status: VISIT_STATUS.CERRADA,
       });
+      setConsultationStartedAtByVisitId((current) => {
+        const next = { ...current };
+        delete next[selectedVisit.id];
+        return next;
+      });
       toast.success("Consulta cerrada");
       navigate("/clinico/consultas/doctor");
       diagnosisForm.reset(DEFAULT_DIAGNOSIS_FORM_VALUES);
@@ -812,6 +843,45 @@ export const DoctorConsultationPage = () => {
       !queueQuery.isError &&
       (visits.length > 0 || isDetailRoute) ? (
         <section className="space-y-4">
+          {/* ── Banner próxima cita ────────────────────────────────── */}
+          {nextPendingVisit && nextPendingVisit.minutesUntil !== null && nextPendingVisit.minutesUntil <= 15 ? (
+            <div className={[
+              "flex items-center gap-3 rounded-xl border px-4 py-3",
+              nextPendingVisit.minutesUntil <= 5
+                ? "border-red-300 bg-red-50"
+                : "border-amber-300 bg-amber-50",
+            ].join(" ")}>
+              <AlarmClock className={[
+                "size-5 shrink-0",
+                nextPendingVisit.minutesUntil <= 5 ? "text-red-500 animate-pulse" : "text-amber-600",
+              ].join(" ")} />
+              <div className="flex-1 min-w-0">
+                <p className={[
+                  "text-sm font-bold",
+                  nextPendingVisit.minutesUntil <= 5 ? "text-red-700" : "text-amber-800",
+                ].join(" ")}>
+                  {nextPendingVisit.minutesUntil <= 0
+                    ? `La cita empezó hace ${Math.abs(nextPendingVisit.minutesUntil)} min — pendiente de atención`
+                    : nextPendingVisit.minutesUntil <= 5
+                    ? `¡La siguiente cita empieza en ${nextPendingVisit.minutesUntil} minuto${nextPendingVisit.minutesUntil === 1 ? "" : "s"}!`
+                    : `Próxima cita en ${nextPendingVisit.minutesUntil} minutos`}
+                </p>
+                <p className="text-xs text-txt-muted mt-0.5 truncate">
+                  {nextPendingVisit.visit.nombrePaciente ?? `Exp. ${nextPendingVisit.visit.noExp}`}
+                  {nextPendingVisit.visit.consultorioNombre
+                    ? ` · ${nextPendingVisit.visit.consultorioNombre}`
+                    : null}
+                </p>
+              </div>
+              <span className={[
+                "font-mono text-xl font-bold shrink-0",
+                nextPendingVisit.minutesUntil <= 5 ? "text-red-600" : "text-amber-700",
+              ].join(" ")}>
+                {nextPendingVisit.visit.horaConsulta}
+              </span>
+            </div>
+          ) : null}
+
           {visits.length > 0 ? (
             <article className="rounded-xl border border-line-struct bg-paper p-4">
               <div className="space-y-2">
@@ -856,7 +926,14 @@ export const DoctorConsultationPage = () => {
                           {visit.folio}
                         </p>
                         <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                          <AppointmentAlertBadge minutesUntil={minutesUntil} />
+                          {visit.status === VISIT_STATUS.EN_CONSULTA ? (
+                            <ConsultationElapsedBadge
+                              startedAt={consultationStartedAtByVisitId[visit.id]}
+                              now={now}
+                            />
+                          ) : (
+                            <AppointmentAlertBadge minutesUntil={minutesUntil} />
+                          )}
                           <Badge variant="outline" className="uppercase">
                             {formatStatusLabel(visit.status)}
                           </Badge>
@@ -986,7 +1063,14 @@ export const DoctorConsultationPage = () => {
                             {selectedAppointmentDate ? (
                               <span className="text-xs text-txt-muted">{selectedAppointmentDate}</span>
                             ) : null}
-                            <AppointmentAlertBadge minutesUntil={selectedMinutesUntil} />
+                            {selectedVisitStatus === VISIT_STATUS.EN_CONSULTA ? (
+                              <ConsultationElapsedBadge
+                                startedAt={consultationStartedAtByVisitId[selectedVisit.id]}
+                                now={now}
+                              />
+                            ) : (
+                              <AppointmentAlertBadge minutesUntil={selectedMinutesUntil} />
+                            )}
                           </div>
                         </div>
                       ) : null}

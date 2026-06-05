@@ -485,3 +485,18 @@ export {
   VISIT_STATUS,
   RECEPCION_STATUS_ACTION,
 } from "@api/types/visits.types";
+
+// =============================================================================
+// CONTRATOS OXÍGENO TYPES
+// =============================================================================
+export type {
+  ContratoOxigeno,
+  ContratoStatus,
+  TpDer,
+  ContratosListParams,
+  ContratosListResponse,
+  CreateContratoRequest,
+  UpdateContratoRequest,
+  ContratosStats,
+} from "@api/types/contratos.types";
+export { CONTRATO_STATUS, TP_DER, TP_DER_LABELS, CONTRATO_STATUS_LABELS } from "@api/types/contratos.types";

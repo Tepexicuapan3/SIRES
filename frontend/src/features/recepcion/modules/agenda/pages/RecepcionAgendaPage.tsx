@@ -863,7 +863,7 @@ export const RecepcionAgendaPage = () => {
                   consultorioId: slot.consultorioId ?? undefined,
                   horaConsulta:  slot.hora,
                   fechaConsulta: fecha,
-                  arrivalType:   ARRIVAL_TYPE.APPOINTMENT,
+                  arrivalType:   ARRIVAL_TYPE.WALK_IN,
                 });
               }}
             />
@@ -1173,7 +1173,11 @@ export const RecepcionAgendaPage = () => {
                             <p className="text-sm font-bold font-mono text-primary">{visit.horaConsulta}</p>
                             {(visit.fechaConsulta ?? visit.fechaCita ?? visit.fechaAlta) && (
                               <p className="text-[10px] font-mono text-primary/60">
-                                {new Date(visit.fechaConsulta ?? visit.fechaCita ?? visit.fechaAlta!).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                                {(() => {
+                                  const raw = visit.fechaConsulta ?? visit.fechaCita ?? visit.fechaAlta!;
+                                  const d   = raw.includes("T") ? new Date(raw) : new Date(raw + "T00:00:00");
+                                  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
+                                })()}
                               </p>
                             )}
                           </div>
@@ -1526,7 +1530,7 @@ export const RecepcionAgendaPage = () => {
           }
         }}
       >
-        <AlertDialogContent size="sm">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar accion de recepcion</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1540,6 +1544,7 @@ export const RecepcionAgendaPage = () => {
             <AlertDialogCancel>Volver</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              className="whitespace-nowrap"
               disabled={visitStatusAction.isPending}
               onClick={() => {
                 void handleConfirmStatusAction();
