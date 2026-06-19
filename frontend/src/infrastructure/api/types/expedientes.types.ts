@@ -35,6 +35,21 @@ export interface ExpedienteResponse {
   familiares: FamiliarExpediente[];
 }
 
+export interface EmpleadoResumen {
+  NO_EXP: string | number;
+  DS_PATERNO: string | null;
+  DS_MATERNO: string | null;
+  DS_NOMBRE: string | null;
+  CD_LABORAL: string | null;
+  CVE_CD_LABORAL: string | null;
+  FEC_BAJA: string | null;
+  FEC_VIG: string | null;
+  CLINICA: string | null;
+  ESTATUS: 'ACTIVO' | 'BAJA';
+}
+
+export type BuscarPorNombreResponse = EmpleadoResumen[];
+
 export interface ActualizarExpedienteRequest {
   expediente: string;
 }

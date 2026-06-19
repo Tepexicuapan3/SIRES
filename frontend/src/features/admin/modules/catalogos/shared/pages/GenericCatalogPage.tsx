@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { BookOpen, Download, RotateCcw } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { BookOpen, Download, Plus, RotateCcw } from "lucide-react";
 import { useDebounce } from "@shared/hooks/useDebounce";
 import {
   DataTable,
@@ -16,6 +16,7 @@ import {
   TableOptionsMenu,
   type TableOptionItem,
 } from "@features/admin/shared/components/TableOptionsMenu";
+import { TablePrimaryAction } from "@features/admin/shared/components/TablePrimaryAction";
 import { TableSearch } from "@features/admin/shared/components/TableSearch";
 import { CatalogStatusBadge } from "@features/admin/modules/catalogos/shared/components/CatalogStatusBadge";
 import { CatalogModuleLayout } from "@features/admin/modules/catalogos/shared/components/CatalogModuleLayout";
@@ -45,11 +46,23 @@ type CatalogStatusFilter =
 const normalizeSearchValue = (value: string | number | null | undefined) =>
   String(value ?? "").toLowerCase();
 
-interface GenericCatalogPageProps {
-  catalog: CatalogDefinition;
+interface GenericCatalogPageCreateAction {
+  label: string;
+  permission: string;
+  onClick: () => void;
 }
 
-export function GenericCatalogPage({ catalog }: GenericCatalogPageProps) {
+interface GenericCatalogPageProps {
+  catalog: CatalogDefinition;
+  createAction?: GenericCatalogPageCreateAction;
+  children?: ReactNode;
+}
+
+export function GenericCatalogPage({
+  catalog,
+  createAction,
+  children,
+}: GenericCatalogPageProps) {
   const { hasCapability } = usePermissionDependencies();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -261,6 +274,15 @@ export function GenericCatalogPage({ catalog }: GenericCatalogPageProps) {
             {canReadCatalog ? (
               <TableOptionsMenu options={tableOptions} />
             ) : null}
+            {createAction ? (
+              <TablePrimaryAction
+                permission={createAction.permission}
+                dependencyAware
+                label={createAction.label}
+                icon={<Plus className="size-4" />}
+                onClick={createAction.onClick}
+              />
+            ) : null}
           </>
         }
       />
@@ -292,6 +314,8 @@ export function GenericCatalogPage({ catalog }: GenericCatalogPageProps) {
         emptyTitle={`Sin ${catalog.title.toLowerCase()}`}
         emptyDescription={`Cuando existan registros en ${catalog.title.toLowerCase()} se listaran aqui.`}
       />
+
+      {children}
     </CatalogModuleLayout>
   );
 }

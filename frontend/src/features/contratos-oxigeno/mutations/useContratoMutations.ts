@@ -26,11 +26,3 @@ export const useUpdateContrato = () => {
     onSuccess: invalidate,
   });
 };
-
-export const useDeleteContrato = () => {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: (id: number) => contratosAPI.delete(id),
-    onSuccess:  invalidate,
-  });
-};

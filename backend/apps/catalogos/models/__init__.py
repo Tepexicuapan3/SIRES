@@ -29,6 +29,7 @@ from .permisos import Permisos
 from .roles import Roles as CatRol
 from .permisos import Permisos as CatPermiso
 
+from .sucursales import CatSucursal
 from .tipos_areas import TiposAreas
 from .tipos_autorizacion import TpAutorizacion
 from .tipos_citas import TipoDeCitas
@@ -67,6 +68,7 @@ __all__ = [
     "Permisos",
     "CatRol",
     "CatPermiso",
+    "CatSucursal",
     "TiposAreas",
     "TpAutorizacion",
     "TipoDeCitas",

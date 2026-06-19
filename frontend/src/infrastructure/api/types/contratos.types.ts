@@ -44,10 +44,14 @@ export interface ContratoOxigeno {
   numContrato:   string;
   nombre:        string;
   expediente:    string;
-  tpDer:         TpDer;
+  tpDer:         string;
   tpDerLabel:    string;
   clinica:       string;
   servicio:      string;
+  servicio2:     string | null;
+  servicio3:     string | null;
+  telefono:      string;
+  direccion:     string;
   fechaSoporte:  string | null;   // YYYY-MM-DD
   vigenciaMeses: number | null;
   vigenciaDias:  number | null;
@@ -58,6 +62,9 @@ export interface ContratoOxigeno {
   diagnostico:   string;
   fchAlta:       string;          // ISO 8601
   fchModf:       string;          // ISO 8601
+  vigenciaDh:        "ACTIVO" | "BAJA" | "NO ACTIVO" | null;
+  fechaNacimientoDh: string | null;   // YYYY-MM-DD
+  edadDh:            number | null;
 }
 
 // ── Requests ──────────────────────────────────────────────────────────────────
@@ -67,9 +74,13 @@ export interface CreateContratoRequest {
   numContrato:   string;
   nombre:        string;
   expediente:    string;
-  tpDer:         TpDer;
+  tpDer:         string;
   clinica:       string;
   servicio:      string;
+  servicio2?:    string | null;
+  servicio3?:    string | null;
+  telefono?:     string;
+  direccion?:    string;
   fechaSoporte?:  string | null;
   vigenciaMeses?: number | null;
   vigenciaDias?:  number | null;
@@ -87,7 +98,7 @@ export interface ContratosListParams {
   search?:   string;
   sucursal?: string;
   status?:   ContratoStatus;
-  tpDer?:    TpDer;
+  tpDer?:    string;
   clinica?:  string;
   ordering?: string;
 }
@@ -95,6 +106,44 @@ export interface ContratosListParams {
 export type ContratosListResponse = ListResponse<ContratoOxigeno>;
 
 // ── Estadísticas ──────────────────────────────────────────────────────────────
+
+// ── Notificaciones ───────────────────────────────────────────────────────────
+
+export interface NotificarRequest {
+  destinatarios: string[];
+  asunto:        string;
+  cuerpo?:       string;
+  contratosIds?: number[];
+}
+
+export interface NotificarResponse {
+  enviados: number;
+  fallidos: number;
+}
+
+// ── Búsqueda de derechohabientes (cat_empleados / cat_familiar) ──────────────
+
+export interface DerechohabienteResult {
+  expediente:      string;
+  nombre:          string;
+  tpDer:           string;   // código tal cual viene de cat_familiar.tp_der; no siempre es un TpDer válido
+  tpDerLabel:      string;
+  clinica:         string | null;
+  fechaNacimiento: string | null;   // YYYY-MM-DD
+  edad:            number | null;
+  vigencia:        "ACTIVO" | "BAJA" | "NO ACTIVO";
+  tipo:            "EMPLEADO" | "FAMILIAR";
+  pkNum:           number | null;
+}
+
+export interface BuscarDerechohabienteParams {
+  q:        string;
+  clinica?: string;
+}
+
+export interface BuscarDerechohabienteResponse {
+  results: DerechohabienteResult[];
+}
 
 export interface ContratosStats {
   total:           number;

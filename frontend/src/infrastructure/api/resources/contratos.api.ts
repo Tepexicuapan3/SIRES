@@ -1,10 +1,14 @@
 import apiClient from "@api/client";
 import type {
+  BuscarDerechohabienteParams,
+  BuscarDerechohabienteResponse,
   ContratoOxigeno,
   ContratosListParams,
   ContratosListResponse,
   ContratosStats,
   CreateContratoRequest,
+  NotificarRequest,
+  NotificarResponse,
   UpdateContratoRequest,
 } from "@api/types";
 
@@ -29,12 +33,33 @@ export const contratosAPI = {
     return response.data;
   },
 
-  delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/contratos-oxigeno/${id}/`);
-  },
-
   getStats: async (): Promise<ContratosStats> => {
     const response = await apiClient.get<ContratosStats>("/contratos-oxigeno/estadisticas/");
+    return response.data;
+  },
+
+  buscarDerechohabiente: async (params: BuscarDerechohabienteParams): Promise<BuscarDerechohabienteResponse> => {
+    const response = await apiClient.get<BuscarDerechohabienteResponse>("/contratos-oxigeno/buscar-derechohabiente/", { params });
+    return response.data;
+  },
+
+  notificar: async (
+    payload: NotificarRequest,
+    adjuntos?: File[],
+  ): Promise<NotificarResponse> => {
+    if (adjuntos && adjuntos.length > 0) {
+      const form = new FormData();
+      form.append("destinatarios", JSON.stringify(payload.destinatarios));
+      form.append("asunto", payload.asunto);
+      if (payload.cuerpo)       form.append("cuerpo",       payload.cuerpo);
+      if (payload.contratosIds) form.append("contratosIds", JSON.stringify(payload.contratosIds));
+      adjuntos.forEach((f) => form.append("adjunto", f, f.name));
+      const response = await apiClient.post<NotificarResponse>("/contratos-oxigeno/notificar/", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    }
+    const response = await apiClient.post<NotificarResponse>("/contratos-oxigeno/notificar/", payload);
     return response.data;
   },
 };

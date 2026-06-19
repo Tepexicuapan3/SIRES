@@ -22,7 +22,7 @@ class CatAreaClinica(CatalogBase):
 class CentroAreaClinica(CatalogBase):
     # Django no soporta composite PK nativamente; usamos center como PK a nivel ORM.
     # Las consultas de detalle siempre filtran por (center_id, area_clinica_id).
-    center = models.ForeignKey(
+    center = models.OneToOneField(
         CatCentroAtencion,
         on_delete=models.CASCADE,
         db_column="id_centro_atencion",

@@ -106,6 +106,9 @@ class VisitRepository:
         centro_id: int | None = None,
         service_type: str | None = None,
         no_exp: str | None = None,
+        fecha_desde=None,
+        fecha_hasta=None,
+        folio: str | None = None,
     ) -> tuple[list[Visit], int, int]:
         queryset = (
             Visit.objects
@@ -117,6 +120,10 @@ class VisitRepository:
             queryset = queryset.filter(status=status_filter)
         if date_filter:
             queryset = queryset.filter(fch_alta__date=date_filter)
+        if fecha_desde:
+            queryset = queryset.filter(fch_alta__date__gte=fecha_desde)
+        if fecha_hasta:
+            queryset = queryset.filter(fch_alta__date__lte=fecha_hasta)
         if doctor_id:
             queryset = queryset.filter(doctor_id=doctor_id)
         if consultorio_id:
@@ -127,6 +134,8 @@ class VisitRepository:
             queryset = queryset.filter(service_type=service_type)
         if no_exp:
             queryset = queryset.filter(no_exp=no_exp)
+        if folio:
+            queryset = queryset.filter(folio__icontains=folio)
 
         total       = queryset.count()
         start       = (page - 1) * page_size

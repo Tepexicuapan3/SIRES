@@ -7,16 +7,18 @@ class CatFamiliar(models.Model):
     Tabla replicada desde Oracle.
     """
 
-    pk_num          = models.IntegerField(primary_key=True, db_column='PK_NUM')
-    no_expf         = models.CharField(max_length=20, db_column='NO_EXPF')
-    ds_paterno      = models.CharField(max_length=100, null=True, blank=True, db_column='DS_PATERNO')
-    ds_materno      = models.CharField(max_length=100, null=True, blank=True, db_column='DS_MATERNO')
-    ds_nombre       = models.CharField(max_length=100, null=True, blank=True, db_column='DS_NOMBRE')
-    cd_parentesco   = models.CharField(max_length=50,  null=True, blank=True, db_column='CD_PARENTESCO')
-    fe_nac          = models.DateField(null=True, blank=True, db_column='FE_NAC')
-    fec_vig         = models.DateField(null=True, blank=True, db_column='FEC_VIG')
-    cd_clinica      = models.CharField(max_length=10,  null=True, blank=True, db_column='CD_CLINICA')
-    fec_ult_actualizacion = models.DateTimeField(null=True, blank=True, db_column='FEC_ULT_ACTUALIZACION')
+    pk_num          = models.IntegerField(primary_key=True, db_column='pk_num')
+    no_expf         = models.CharField(max_length=20, db_column='no_expf')
+    ds_paterno      = models.CharField(max_length=100, null=True, blank=True, db_column='ds_paterno')
+    ds_materno      = models.CharField(max_length=100, null=True, blank=True, db_column='ds_materno')
+    ds_nombre       = models.CharField(max_length=100, null=True, blank=True, db_column='ds_nombre')
+    cd_parentesco   = models.CharField(max_length=50,  null=True, blank=True, db_column='cd_parentesco')
+    tp_der          = models.CharField(max_length=2,  null=True, blank=True, db_column='tp_der')
+    fe_nac          = models.DateField(null=True, blank=True, db_column='fe_nac')
+    no_edad         = models.IntegerField(null=True, blank=True, db_column='no_edad')
+    fec_vig         = models.DateField(null=True, blank=True, db_column='fec_vig')
+    cd_clinica      = models.CharField(max_length=10,  null=True, blank=True, db_column='cd_clinica')
+    fec_ult_actualizacion = models.DateTimeField(null=True, blank=True, db_column='fec_ult_actualizacion')
 
     class Meta:
         app_label = 'administracion'

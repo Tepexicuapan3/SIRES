@@ -39,6 +39,9 @@ SQL_EMPLEADO = """
         'TRABAJADOR' AS parentesco,
         c.ds_clinica AS clinica,
         CASE
+            WHEN e.cve_cd_laboral = '16'
+            AND e.cd_laboral = 'HONORARIO SIN SERV. MED'
+            THEN 'BAJA'
             WHEN e.cve_cd_laboral = '16' THEN
                 CASE
                     WHEN e.fec_baja IS NULL THEN 'ACTIVO'
@@ -186,3 +189,85 @@ def buscar_expediente(id_empleado: str) -> dict:
     )
 
     return {'empleados': empleados, 'familiares': familiares}
+
+
+# ──────────────────────────────────────────────────────────────
+# SQL búsqueda por nombre (ILIKE en los tres campos de nombre)
+# ──────────────────────────────────────────────────────────────
+
+SQL_BUSCAR_POR_NOMBRE = """
+    SELECT
+        e.no_exp,
+        e.ds_paterno,
+        e.ds_materno,
+        e.ds_nombre,
+        e.cd_laboral,
+        e.cve_cd_laboral,
+        e.fec_baja,
+        e.fec_vig,
+        c.ds_clinica AS clinica,
+        CASE
+
+            WHEN e.cve_cd_laboral = '16'
+            AND e.cd_laboral = 'HONORARIO SIN SERV. MED'
+            THEN 'BAJA'
+        
+            WHEN e.cve_cd_laboral = '16' THEN
+                CASE
+                    WHEN e.fec_baja IS NULL THEN 'ACTIVO'
+                    WHEN 0 <
+                        CASE
+                            WHEN e.fec_vig IS NOT NULL AND e.fec_baja IS NOT NULL THEN
+                                LEAST(CURRENT_DATE - e.fec_vig, CURRENT_DATE - e.fec_baja)
+                            WHEN e.fec_vig IS NOT NULL THEN
+                                CURRENT_DATE - e.fec_vig
+                            ELSE
+                                CURRENT_DATE - e.fec_baja
+                        END
+                    THEN 'BAJA'
+                    ELSE 'ACTIVO'
+                END
+            WHEN e.cve_cd_laboral IN ('J', 'P') THEN 'ACTIVO'
+            ELSE
+                CASE
+                    WHEN e.fec_baja IS NULL THEN 'ACTIVO'
+                    WHEN 0 <
+                        CASE
+                            WHEN e.fec_vig IS NOT NULL AND e.fec_baja IS NOT NULL THEN
+                                LEAST(CURRENT_DATE - e.fec_vig, CURRENT_DATE - e.fec_baja)
+                            WHEN e.fec_vig IS NOT NULL THEN
+                                CURRENT_DATE - e.fec_vig
+                            ELSE
+                                CURRENT_DATE - e.fec_baja
+                        END
+                    THEN 'BAJA'
+                    ELSE 'ACTIVO'
+                END
+        END AS estatus
+    FROM cat_empleados e
+    LEFT JOIN cat_clinicas c ON e.cd_clinica = c.cd_clinica
+    WHERE
+        e.ds_paterno ILIKE %s
+        OR e.ds_materno ILIKE %s
+        OR e.ds_nombre ILIKE %s
+    ORDER BY e.ds_paterno, e.ds_materno, e.ds_nombre
+    LIMIT 60
+"""
+
+
+def buscar_por_nombre(nombre: str) -> list[dict]:
+    if not nombre or len(nombre.strip()) < 3:
+        return []
+
+    patron = f'%{nombre.strip()}%'
+
+    try:
+        with connections['expedientes'].cursor() as cursor:
+            cursor.execute(SQL_BUSCAR_POR_NOMBRE, [patron, patron, patron])
+            resultados = _dictfetchall(cursor)
+    except Exception as exc:
+        logger.error("Error buscando por nombre '%s': %s", nombre, exc)
+        return []
+
+    logger.info("Búsqueda por nombre '%s' → %d resultado(s)", nombre, len(resultados))
+    return resultados

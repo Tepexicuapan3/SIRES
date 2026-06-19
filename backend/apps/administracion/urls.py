@@ -21,7 +21,7 @@ from .views.rbac_views import (
     UsersNotifyView,
 )
 
-from .views.expediente_view import ExpedienteView, ActualizarExpedienteView
+from .views.expediente_view import ExpedienteView, ActualizarExpedienteView, BuscarPorNombreView
 
 
 urlpatterns = [
@@ -45,6 +45,7 @@ urlpatterns = [
     path("users/<int:user_id>/overrides/<str:code>", UserOverrideRemoveView.as_view(), name="rbac-user-override-remove"),
     path('expedientes/', ExpedienteView.as_view(), name='buscar'),
     path('expedientes/actualizar/', ActualizarExpedienteView.as_view(), name='actualizar'),
+    path('expedientes/buscar-nombre/', BuscarPorNombreView.as_view(), name='buscar-nombre'),
     path('users/empleados-sermed/<str:no_exp>', EmpleadoSermedLookupView.as_view(), name='rbac-empleado-sermed-lookup'),
     path("users/notify", UsersNotifyView.as_view(), name="rbac-users-notify"),
     path("users/export", UserExportView.as_view(), name="rbac-users-export"),

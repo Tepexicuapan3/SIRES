@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input }  from "@shared/ui/input";
 import { Label }  from "@shared/ui/label";
@@ -7,14 +7,17 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@shared/ui/dialog";
 import {
-  CONTRATO_STATUS_LABELS, TP_DER_LABELS,
-  type ContratoOxigeno, type ContratoStatus, type TpDer,
+  CONTRATO_STATUS_LABELS,
+  type ContratoOxigeno, type ContratoStatus, type DerechohabienteResult,
 } from "@api/types";
+import { useBuscarDerechohabiente } from "@features/contratos-oxigeno/queries/useBuscarDerechohabiente";
+import { useSucursalesList } from "@features/admin/modules/catalogos/sucursales/queries/useSucursalesList";
+import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
+import { CatalogCombobox } from "./CatalogCombobox";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const SUCURSALES = ["MATRIZ", "NORTE", "SUR", "ORIENTE", "PONIENTE", "OTRA"];
-const SERVICIOS  = ["CONCENTRADOR", "CPAP", "BIPAP", "NEBULIZADOR", "OTRO EQUIPO"];
+const SERVICIOS = ["CONCENTRADOR", "CPAP", "BIPAP", "NEBULIZADOR", "OTRO EQUIPO"];
 
 // ── Tipos del formulario ──────────────────────────────────────────────────────
 
@@ -23,9 +26,13 @@ interface FormData {
   numContrato:   string;
   nombre:        string;
   expediente:    string;
-  tpDer:         TpDer;
+  tpDer:         string;
   clinica:       string;
   servicio:      string;
+  servicio2:     string;
+  servicio3:     string;
+  telefono:      string;
+  direccion:     string;
   fechaSoporte:  string;
   vigenciaMeses: string;
   vigenciaDias:  string;
@@ -36,6 +43,7 @@ interface FormData {
 const EMPTY_FORM: FormData = {
   sucursal: "", numContrato: "", nombre: "",
   expediente: "", tpDer: "T", clinica: "", servicio: "",
+  servicio2: "", servicio3: "", telefono: "", direccion: "",
   fechaSoporte: "", vigenciaMeses: "", vigenciaDias: "",
   fechaRenovar: "", diagnostico: "",
 };
@@ -49,6 +57,10 @@ function toFormData(c: ContratoOxigeno): FormData {
     tpDer:         c.tpDer,
     clinica:       c.clinica,
     servicio:      c.servicio,
+    servicio2:     c.servicio2 ?? "",
+    servicio3:     c.servicio3 ?? "",
+    telefono:      c.telefono  ?? "",
+    direccion:     c.direccion ?? "",
     fechaSoporte:  c.fechaSoporte  ?? "",
     vigenciaMeses: c.vigenciaMeses != null ? String(c.vigenciaMeses) : "",
     vigenciaDias:  c.vigenciaDias  != null ? String(c.vigenciaDias)  : "",
@@ -70,7 +82,7 @@ function previewDias(fechaRenovar: string): number | null {
 function previewStatus(dias: number | null): ContratoStatus | null {
   if (dias === null) return null;
   if (dias < 0) return "VENCIDO";
-  if (dias <= 30) return "POR_VENCER";
+  if (dias <= 15) return "POR_VENCER";
   return "VIGENTE";
 }
 
@@ -84,14 +96,69 @@ interface Props {
   onSave:       (data: FormData, editing: ContratoOxigeno | null) => void;
 }
 
+// ── Vigencia (cat_empleados / cat_familiar) ───────────────────────────────────
+
+const VIGENCIA_CLS: Record<DerechohabienteResult["vigencia"], string> = {
+  ACTIVO:    "text-green-600",
+  BAJA:      "text-red-600",
+  "NO ACTIVO": "text-amber-600",
+};
+
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: Props) {
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
+  const [dhQuery, setDhQuery]       = useState("");
+  const [dhOpen, setDhOpen]         = useState(false);
+  const [dhSelected, setDhSelected] = useState<DerechohabienteResult | null>(null);
+
+  const { data: dhData, isFetching: dhLoading } = useBuscarDerechohabiente(dhQuery);
+  const dhResults = dhData?.results ?? [];
+
+  // Catálogo de centros de atención (clínicas) para el combobox de "Asignación"
+  const { data: centrosData } = useCentrosAtencionList({ pageSize: 200, isActive: true });
+  const clinicaOptions = (centrosData?.items ?? []).map((c) => ({ id: c.id, name: c.name }));
+
+  // Catálogo de sucursales para el combobox de "Asignación"
+  const { data: sucursalesData } = useSucursalesList({ pageSize: 200, isActive: true });
+  const sucursalOptions = (sucursalesData?.items ?? []).map((s) => ({ id: s.id, name: s.name }));
 
   useEffect(() => {
     setForm(editing ? toFormData(editing) : EMPTY_FORM);
+    setDhQuery("");
+    setDhSelected(null);
+    setDhOpen(false);
   }, [editing, open]);
+
+  const handleSelectDerechohabiente = (resultado: DerechohabienteResult) => {
+    setForm((prev) => ({
+      ...prev,
+      nombre:    resultado.nombre,
+      expediente: resultado.expediente,
+      tpDer:     resultado.tpDer,
+    }));
+    setDhSelected(resultado);
+    setDhOpen(false);
+    setDhQuery("");
+  };
+
+  // Vigencia/nacimiento/edad del derechohabiente: del registro ya guardado al editar,
+  // o del resultado seleccionado en el buscador al dar de alta.
+  const vigenciaInfo = editing
+    ? (editing.vigenciaDh
+        ? {
+            vigencia:        editing.vigenciaDh,
+            fechaNacimiento: editing.fechaNacimientoDh,
+            edad:            editing.edadDh,
+          }
+        : null)
+    : (dhSelected
+        ? {
+            vigencia:        dhSelected.vigencia,
+            fechaNacimiento: dhSelected.fechaNacimiento,
+            edad:            dhSelected.edad,
+          }
+        : null);
 
   const set = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -104,13 +171,43 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
     return base.toISOString().slice(0, 10);
   };
 
+  // Suma meses de calendario; si el día no existe en el mes destino, usa el último día de ese mes
+  const addCalendarMonths = (base: Date, months: number): Date => {
+    const result = new Date(base);
+    result.setDate(1);
+    result.setMonth(result.getMonth() + months);
+    const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+    result.setDate(Math.min(base.getDate(), lastDay));
+    return result;
+  };
+
+  // fechaRenovar = fechaSoporte + vigenciaMeses (calendario) → vigenciaDias se deriva de la diferencia real
+  const calcFromMeses = (fechaSoporte: string, vigenciaMeses: string): { fechaRenovar: string; vigenciaDias: string } => {
+    if (!fechaSoporte || !vigenciaMeses) return { fechaRenovar: "", vigenciaDias: "" };
+    const base    = new Date(fechaSoporte + "T00:00:00");
+    const renovar = addCalendarMonths(base, Number(vigenciaMeses));
+    const dias    = Math.round((renovar.getTime() - base.getTime()) / 86_400_000);
+    return { fechaRenovar: renovar.toISOString().slice(0, 10), vigenciaDias: String(dias) };
+  };
+
   const handleFechaSoporte = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fechaSoporte = e.target.value;
-    setForm((prev) => ({
-      ...prev,
-      fechaSoporte,
-      fechaRenovar: calcFechaRenovar(fechaSoporte, prev.vigenciaDias),
-    }));
+    setForm((prev) => {
+      if (prev.vigenciaMeses) {
+        const { fechaRenovar, vigenciaDias } = calcFromMeses(fechaSoporte, prev.vigenciaMeses);
+        return { ...prev, fechaSoporte, fechaRenovar, vigenciaDias };
+      }
+      return { ...prev, fechaSoporte, fechaRenovar: calcFechaRenovar(fechaSoporte, prev.vigenciaDias) };
+    });
+  };
+
+  const handleVigenciaMeses = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const vigenciaMeses = e.target.value;
+    setForm((prev) => {
+      if (!vigenciaMeses) return { ...prev, vigenciaMeses };
+      const { fechaRenovar, vigenciaDias } = calcFromMeses(prev.fechaSoporte, vigenciaMeses);
+      return { ...prev, vigenciaMeses, vigenciaDias, fechaRenovar };
+    });
   };
 
   const handleVigenciaDias = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,6 +215,7 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
     setForm((prev) => ({
       ...prev,
       vigenciaDias,
+      vigenciaMeses: "",
       fechaRenovar: calcFechaRenovar(prev.fechaSoporte, vigenciaDias),
     }));
   };
@@ -147,6 +245,70 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
             <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
               Identificación
             </p>
+
+            {/* Buscador de derechohabiente (cat_empleados / cat_familiar) — solo en alta */}
+            {!editing && (
+              <div className="relative space-y-1">
+                <Label htmlFor="cf-buscar-dh">Buscar derechohabiente (nombre o expediente)</Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-txt-muted" />
+                  <Input
+                    id="cf-buscar-dh"
+                    className={`${inputCls} pl-8`}
+                    value={dhQuery}
+                    onChange={(e) => { setDhQuery(e.target.value); setDhOpen(true); }}
+                    onFocus={() => setDhOpen(true)}
+                    onBlur={() => setTimeout(() => setDhOpen(false), 150)}
+                    placeholder="Mín. 3 caracteres..."
+                    autoComplete="off"
+                  />
+                </div>
+
+                {dhOpen && dhQuery.trim().length >= 3 && (
+                  <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-line-struct bg-paper shadow-lg">
+                    {dhLoading ? (
+                      <div className="flex items-center gap-2 px-3 py-2 text-sm text-txt-muted">
+                        <Loader2 className="size-4 animate-spin" /> Buscando...
+                      </div>
+                    ) : dhResults.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-txt-muted">Sin coincidencias.</div>
+                    ) : (
+                      dhResults.map((r) => (
+                        <button
+                          key={`${r.tipo}-${r.expediente}-${r.pkNum ?? ""}`}
+                          type="button"
+                          className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-subtle/40"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSelectDerechohabiente(r)}
+                        >
+                          <span className="font-medium">{r.nombre}</span>
+                          <span className="text-xs text-txt-muted">
+                            Exp. {r.expediente} — {r.tpDerLabel}
+                            {" — "}
+                            <span className={VIGENCIA_CLS[r.vigencia]}>{r.vigencia}</span>
+                            {r.edad != null ? ` — ${r.edad} años` : ""}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {vigenciaInfo && (
+              <div className="rounded-lg border border-line-struct/50 bg-subtle/20 px-3 py-2 text-xs">
+                <span className="text-txt-muted">Vigencia: </span>
+                <span className={`font-semibold ${VIGENCIA_CLS[vigenciaInfo.vigencia]}`}>{vigenciaInfo.vigencia}</span>
+                {vigenciaInfo.fechaNacimiento && (
+                  <span className="ml-3 text-txt-muted">Nacimiento: <span className="text-txt-body">{vigenciaInfo.fechaNacimiento}</span></span>
+                )}
+                {vigenciaInfo.edad != null && (
+                  <span className="ml-3 text-txt-muted">Edad: <span className="text-txt-body">{vigenciaInfo.edad} años</span></span>
+                )}
+              </div>
+            )}
+
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="cf-numContrato">N° Contrato *</Label>
@@ -162,11 +324,7 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-tpDer">Tipo derechohabiente *</Label>
-                <select id="cf-tpDer" className={selectCls} value={form.tpDer} onChange={set("tpDer")}>
-                  {(Object.entries(TP_DER_LABELS) as [TpDer, string][]).map(([k, v]) => (
-                    <option key={k} value={k}>{k} — {v}</option>
-                  ))}
-                </select>
+                <Input id="cf-tpDer" className={inputCls} value={form.tpDer} onChange={set("tpDer")} maxLength={100} placeholder="Ej. T, E, H1, ESPOSO..." />
               </div>
             </div>
           </section>
@@ -179,20 +337,26 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="cf-sucursal">Sucursal *</Label>
-                <select id="cf-sucursal" className={selectCls} value={form.sucursal} onChange={set("sucursal")}>
-                  <option value="">Seleccionar...</option>
-                  {SUCURSALES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  {form.sucursal && !SUCURSALES.includes(form.sucursal) && (
-                    <option value={form.sucursal}>{form.sucursal}</option>
-                  )}
-                </select>
+                <CatalogCombobox
+                  value={form.sucursal}
+                  onChange={(name) => setForm((prev) => ({ ...prev, sucursal: name }))}
+                  options={sucursalOptions}
+                  placeholder="Selecciona una sucursal..."
+                  searchPlaceholder="Buscar sucursal..."
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-clinica">Clínica *</Label>
-                <Input id="cf-clinica" className={inputCls} value={form.clinica} onChange={set("clinica")} />
+                <CatalogCombobox
+                  value={form.clinica}
+                  onChange={(name) => setForm((prev) => ({ ...prev, clinica: name }))}
+                  options={clinicaOptions}
+                  placeholder="Selecciona una clínica..."
+                  searchPlaceholder="Buscar centro de atención..."
+                />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="cf-servicio">Servicio / Equipo *</Label>
+                <Label htmlFor="cf-servicio">Servicio / Equipo 1 *</Label>
                 <select id="cf-servicio" className={selectCls} value={form.servicio} onChange={set("servicio")}>
                   <option value="">Seleccionar...</option>
                   {SERVICIOS.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -200,6 +364,43 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
                     <option value={form.servicio}>{form.servicio}</option>
                   )}
                 </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-servicio2">Servicio / Equipo 2</Label>
+                <select id="cf-servicio2" className={selectCls} value={form.servicio2} onChange={set("servicio2")}>
+                  <option value="">Sin asignar</option>
+                  {SERVICIOS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {form.servicio2 && !SERVICIOS.includes(form.servicio2) && (
+                    <option value={form.servicio2}>{form.servicio2}</option>
+                  )}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-servicio3">Servicio / Equipo 3</Label>
+                <select id="cf-servicio3" className={selectCls} value={form.servicio3} onChange={set("servicio3")}>
+                  <option value="">Sin asignar</option>
+                  {SERVICIOS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {form.servicio3 && !SERVICIOS.includes(form.servicio3) && (
+                    <option value={form.servicio3}>{form.servicio3}</option>
+                  )}
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Contacto */}
+          <section className="space-y-3 border-t border-line-struct/50 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
+              Contacto
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="cf-telefono">Teléfono</Label>
+                <Input id="cf-telefono" className={inputCls} value={form.telefono} onChange={set("telefono")} placeholder="Ej. 5512345678" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-direccion">Dirección</Label>
+                <Input id="cf-direccion" className={inputCls} value={form.direccion} onChange={set("direccion")} placeholder="Calle, número, colonia..." />
               </div>
             </div>
           </section>
@@ -216,7 +417,7 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-vigenciaMeses">Vigencia (meses)</Label>
-                <Input id="cf-vigenciaMeses" className={inputCls} type="number" min={0} value={form.vigenciaMeses} onChange={set("vigenciaMeses")} />
+                <Input id="cf-vigenciaMeses" className={inputCls} type="number" min={0} value={form.vigenciaMeses} onChange={handleVigenciaMeses} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-vigenciaDias">Vigencia (días)</Label>

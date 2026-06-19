@@ -227,6 +227,32 @@ function formatCitaFechaHora(iso: string): string {
   });
 }
 
+function getBandejaPeriodRange(period: string, customDesde: string, customHasta: string) {
+  const today = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const todayStr = fmt(today);
+  switch (period) {
+    case "week": {
+      const d = new Date(today);
+      const day = d.getDay();
+      d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+      return { fechaDesde: fmt(d), fechaHasta: todayStr };
+    }
+    case "month":  return { fechaDesde: fmt(new Date(today.getFullYear(), today.getMonth(), 1)), fechaHasta: todayStr };
+    case "year":   return { fechaDesde: `${today.getFullYear()}-01-01`, fechaHasta: todayStr };
+    case "custom": return { fechaDesde: customDesde, fechaHasta: customHasta };
+    default:       return { fechaDesde: todayStr, fechaHasta: todayStr };
+  }
+}
+
+const BANDEJA_PERIOD_LABEL: Record<string, string> = {
+  today:  "Hoy (tiempo real)",
+  week:   "Esta semana",
+  month:  "Este mes",
+  year:   "Este año",
+  custom: "Personalizado",
+};
+
 function getMonday(date: Date): string {
   const d = new Date(date);
   const day = d.getDay();
@@ -544,6 +570,44 @@ export const RecepcionAgendaPage = () => {
   const [fichaOpen, setFichaOpen] = useState(false);
   const [fichaVisit, setFichaVisit] = useState<VisitQueueItem | null>(null);
 
+  // ── Período histórico de la bandeja ────────────────────────────────────────
+  const [bandejaPeriod, setBandejaPeriod] = useState("today");
+  const [bandejaCustomDesde, setBandejaCustomDesde] = useState("");
+  const [bandejaCustomHasta, setBandejaCustomHasta] = useState("");
+  const [bandejaPage, setBandejaPage] = useState(1);
+
+  const bandejaIsHistorical = bandejaPeriod !== "today";
+  const { fechaDesde: bFechaDesde, fechaHasta: bFechaHasta } =
+    getBandejaPeriodRange(bandejaPeriod, bandejaCustomDesde, bandejaCustomHasta);
+  const bandejaCanQuery = bandejaIsHistorical && Boolean(bFechaDesde) && Boolean(bFechaHasta);
+
+  const {
+    data: historicalData,
+    isLoading: historicalLoading,
+    isFetching: historicalFetching,
+    isError: historicalIsError,
+    refetch: historicalRefetch,
+  } = useQuery({
+    queryKey: ["bandeja-historica", bFechaDesde, bFechaHasta, bandejaPage, statusFilter, serviceFilter],
+    queryFn: () =>
+      visitsAPI.getAll({
+        page: bandejaPage,
+        pageSize: 50,
+        fechaDesde: bFechaDesde || undefined,
+        fechaHasta: bFechaHasta || undefined,
+        status:
+          statusFilter !== STATUS_FILTER.ALL && statusFilter !== STATUS_FILTER.OPEN
+            ? (statusFilter as VisitStatus)
+            : undefined,
+        serviceType:
+          serviceFilter !== SERVICE_FILTER.ALL
+            ? (serviceFilter as "medicina_general" | "especialidad" | "urgencias")
+            : undefined,
+      }),
+    enabled: bandejaCanQuery,
+    staleTime: 60_000,
+  });
+
   const [quickCheckinOpen, setQuickCheckinOpen] = useState(
     () => shouldFocusCheckin,
   );
@@ -553,7 +617,9 @@ export const RecepcionAgendaPage = () => {
   const [pendingStatusAction, setPendingStatusAction] =
     useState<PendingStatusAction | null>(null);
 
-  const visits = queueQuery.data?.items ?? [];
+  const visits = bandejaIsHistorical
+    ? (historicalData?.items ?? [])
+    : (queueQuery.data?.items ?? []);
   const openVisits = visits.filter((visit) => isOpenVisitStatus(visit.status));
   const waitingCount = visits.filter(
     (visit) => visit.status === VISIT_STATUS.EN_ESPERA,
@@ -761,7 +827,7 @@ export const RecepcionAgendaPage = () => {
           >
             <Settings2 className="size-4" />
           </Button>
-          {view === "bandeja" ? (
+          {view === "bandeja" && !bandejaIsHistorical ? (
             <span className="rounded-full border border-line-hairline bg-subtle px-3 py-1 text-xs font-medium text-txt-muted">
               Sync: {queueQuery.connectionStatus ?? "idle"}
             </span>
@@ -778,7 +844,7 @@ export const RecepcionAgendaPage = () => {
               type="button"
               variant="ghost"
               className="gap-2"
-              onClick={() => void queueQuery.refetch?.()}
+              onClick={() => bandejaIsHistorical ? void historicalRefetch() : void queueQuery.refetch?.()}
             >
               <RefreshCcw className="size-4" />
               Actualizar
@@ -815,7 +881,7 @@ export const RecepcionAgendaPage = () => {
             ) : null}
 
             {/* Filtro médico (filtrado por centro si está seleccionado) */}
-            <div className="space-y-1 w-64">
+            <div className="space-y-1 w-96">
               <p className="text-xs font-medium text-txt-muted">Médico</p>
               <select
                 className="h-9 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
@@ -889,13 +955,55 @@ export const RecepcionAgendaPage = () => {
         </p>
       ) : null}
 
-      {view === "bandeja" && canReadAgenda && queueQuery.isLoading ? (
+      {/* ── Selector de período ───────────────────────────────────────── */}
+      {view === "bandeja" && canReadAgenda ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line-struct bg-paper px-4 py-3">
+          {Object.keys(BANDEJA_PERIOD_LABEL).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => { setBandejaPeriod(p); setBandejaPage(1); }}
+              className={[
+                "rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors",
+                bandejaPeriod === p
+                  ? "border-primary bg-primary text-white"
+                  : "border-line-struct bg-subtle/30 text-txt-muted hover:text-txt-body hover:bg-subtle",
+              ].join(" ")}
+            >
+              {BANDEJA_PERIOD_LABEL[p]}
+            </button>
+          ))}
+          {bandejaPeriod === "custom" && (
+            <div className="flex items-center gap-2 ml-2">
+              <input
+                type="date"
+                value={bandejaCustomDesde}
+                onChange={(e) => { setBandejaCustomDesde(e.target.value); setBandejaPage(1); }}
+                className="h-8 rounded-md border border-line-struct bg-paper px-2 text-xs"
+              />
+              <span className="text-xs text-txt-muted">→</span>
+              <input
+                type="date"
+                value={bandejaCustomHasta}
+                min={bandejaCustomDesde}
+                onChange={(e) => { setBandejaCustomHasta(e.target.value); setBandejaPage(1); }}
+                className="h-8 rounded-md border border-line-struct bg-paper px-2 text-xs"
+              />
+            </div>
+          )}
+          {bandejaIsHistorical && (historicalFetching) && (
+            <span className="ml-auto text-xs text-txt-muted">Cargando...</span>
+          )}
+        </div>
+      ) : null}
+
+      {view === "bandeja" && canReadAgenda && (bandejaIsHistorical ? historicalLoading : queueQuery.isLoading) ? (
         <p className="text-sm text-txt-muted">
           Cargando agenda de recepcion...
         </p>
       ) : null}
 
-      {view === "bandeja" && canReadAgenda && queueQuery.isError ? (
+      {view === "bandeja" && canReadAgenda && (bandejaIsHistorical ? historicalIsError : queueQuery.isError) ? (
         <Alert variant="warning">
           <AlertTitle>Error al cargar</AlertTitle>
           <AlertDescription>
@@ -906,8 +1014,8 @@ export const RecepcionAgendaPage = () => {
 
       {view === "bandeja" &&
       canReadAgenda &&
-      !queueQuery.isLoading &&
-      !queueQuery.isError &&
+      !(bandejaIsHistorical ? historicalLoading : queueQuery.isLoading) &&
+      !(bandejaIsHistorical ? historicalIsError : queueQuery.isError) &&
       visits.length > 0 ? (
         <>
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1288,15 +1396,47 @@ export const RecepcionAgendaPage = () => {
               </div>
             )}
           </section>
+
+          {/* ── Paginación histórica ─────────────────────────────────── */}
+          {bandejaIsHistorical && historicalData && historicalData.totalPages > 1 ? (
+            <div className="flex items-center justify-between rounded-xl border border-line-struct bg-paper px-4 py-2">
+              <p className="text-xs text-txt-muted">
+                {historicalData.total} ficha(s) · página {bandejaPage} de {historicalData.totalPages}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={bandejaPage <= 1}
+                  onClick={() => setBandejaPage((p) => p - 1)}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={bandejaPage >= historicalData.totalPages}
+                  onClick={() => setBandejaPage((p) => p + 1)}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </>
       ) : null}
 
-      {canReadAgenda &&
-      !queueQuery.isLoading &&
-      !queueQuery.isError &&
+      {view === "bandeja" &&
+      canReadAgenda &&
+      !(bandejaIsHistorical ? historicalLoading : queueQuery.isLoading) &&
+      !(bandejaIsHistorical ? historicalIsError : queueQuery.isError) &&
       visits.length === 0 ? (
         <p className="text-sm text-txt-muted">
-          No hay visitas para mostrar en agenda.
+          {bandejaIsHistorical
+            ? `Sin fichas para el período seleccionado (${bFechaDesde} → ${bFechaHasta}).`
+            : "No hay visitas para mostrar en agenda."}
         </p>
       ) : null}
 

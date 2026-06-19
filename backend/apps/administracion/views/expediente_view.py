@@ -4,7 +4,7 @@ from rest_framework import status
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.session_service import authenticate_request
 
-from ..use_cases.expedientes.buscar_expediente import buscar_expediente
+from ..use_cases.expedientes.buscar_expediente import buscar_expediente, buscar_por_nombre
 from ..use_cases.expedientes.actualizar_expediente import actualizar_expediente
 
 
@@ -61,3 +61,27 @@ class ActualizarExpedienteView(APIView):
 
         resultado = actualizar_expediente(expediente)
         return Response(resultado, status=status.HTTP_200_OK)
+
+
+class BuscarPorNombreView(APIView):
+    """GET /api/administracion/expedientes/buscar-nombre/?nombre=<texto>"""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        try:
+            authenticate_request(request)
+        except AuthServiceError as exc:
+            return Response({"code": exc.code, "message": exc.message}, status=exc.status_code)
+
+        nombre = request.query_params.get("nombre", "").strip()
+
+        if len(nombre) < 3:
+            return Response(
+                {"error": "El parámetro nombre debe tener al menos 3 caracteres."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        resultados = buscar_por_nombre(nombre)
+        return Response(resultados, status=status.HTTP_200_OK)

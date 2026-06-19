@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "apps.farmacia",
     'apps.recepcion.routers',
     "apps.contratos_oxigeno",
+    "apps.almacen_insumos",
 ]
 
 MIDDLEWARE = [

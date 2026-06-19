@@ -239,7 +239,7 @@ export function DataTable<T>({
                     key={rowKey}
                     onClick={() => onRowClick?.(row)}
                     className={cn(
-                      hasRowClick && "cursor-default hover:bg-subtle/50",
+                      hasRowClick && "cursor-pointer hover:bg-subtle/50",
                     )}
                   >
                     {columns.map((column) => {

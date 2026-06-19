@@ -18,7 +18,7 @@ from .models import (
     CatCentroAtencionHorario, CatCentroAtencionExcepcion, CentroAreaClinica, Consultorios,
     EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, EstudiosMed,
     GruposDeMedicamentos, Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
-    Roles, TipoDeCitas, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
+    Roles, CatSucursal, TipoDeCitas, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
     Vacunas, CatTipoPersonal,
 )
 from .permissions import CatalogPermissionMixin, HasAnyOfPermissions
@@ -52,6 +52,7 @@ from .serializers import (
     PasesDetailSerializer, PasesListSerializer, PasesWriteSerializer,
     PermisosDetailSerializer, PermisosListSerializer, PermisosWriteSerializer,
     RolesDetailSerializer, RolesListSerializer, RolesWriteSerializer,
+    SucursalDetailSerializer, SucursalListSerializer, SucursalWriteSerializer,
     TipoDeCitasDetailSerializer, TipoDeCitasListSerializer, TipoDeCitasWriteSerializer,
     TiposAreasDetailSerializer, TiposAreasListSerializer, TiposAreasWriteSerializer,
     TiposSanguineoDetailSerializer, TiposSanguineoListSerializer, TiposSanguineoWriteSerializer,
@@ -824,6 +825,22 @@ class EdoCivilDetailView(CatalogBaseDetailView):
     write_serializer = EdoCivilWriteSerializer
     wrapper_key = "civilStatus"
     error_codes = MappingProxyType({"not_found": "CIVIL_STATUS_NOT_FOUND", "exists": "CIVIL_STATUS_EXISTS"})
+
+
+class SucursalesListCreateView(CatalogBaseListCreateView):
+    catalog = "sucursales"
+    model = CatSucursal
+    list_serializer = SucursalListSerializer
+    write_serializer = SucursalWriteSerializer
+    error_codes = MappingProxyType({"exists": "BRANCH_EXISTS"})
+
+class SucursalDetailView(CatalogBaseDetailView):
+    catalog = "sucursales"
+    model = CatSucursal
+    detail_serializer = SucursalDetailSerializer
+    write_serializer = SucursalWriteSerializer
+    wrapper_key = "branch"
+    error_codes = MappingProxyType({"not_found": "BRANCH_NOT_FOUND", "exists": "BRANCH_EXISTS"})
 
 
 class EnfermedadesListCreateView(CatalogBaseListCreateView):

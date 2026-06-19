@@ -22,9 +22,13 @@ class ContratoOxigeno(models.Model):
     num_contrato  = models.CharField(max_length=50, unique=True)
     nombre        = models.CharField(max_length=200)
     expediente    = models.CharField(max_length=50)
-    tp_der        = models.CharField(max_length=1, choices=TpDer.choices, default=TpDer.TITULAR)
+    tp_der        = models.CharField(max_length=100, default=TpDer.TITULAR, blank=True)
     clinica       = models.CharField(max_length=100)
     servicio      = models.CharField(max_length=100)
+    servicio_2    = models.CharField(max_length=100, blank=True, null=True)
+    servicio_3    = models.CharField(max_length=100, blank=True, null=True)
+    telefono      = models.CharField(max_length=20, blank=True)
+    direccion     = models.CharField(max_length=255, blank=True)
     fecha_soporte  = models.DateField(null=True, blank=True)
     vigencia_meses = models.IntegerField(null=True, blank=True)
     vigencia_dias  = models.IntegerField(null=True, blank=True)
@@ -48,7 +52,7 @@ class ContratoOxigeno(models.Model):
             self.dias_faltan = (self.fecha_renovar - date.today()).days
             if self.dias_faltan < 0:
                 self.status = self.Status.VENCIDO
-            elif self.dias_faltan <= 30:
+            elif self.dias_faltan <= 15:
                 self.status = self.Status.POR_VENCER
             else:
                 self.status = self.Status.VIGENTE
@@ -59,6 +63,31 @@ class ContratoOxigeno(models.Model):
     def save(self, *args, **kwargs):
         self._recalculate_status()
         super().save(*args, **kwargs)
+
+    @classmethod
+    def refresh_estados(cls) -> None:
+        """Recalcula dias_faltan/status de todos los contratos contra la fecha de hoy.
+
+        dias_faltan y status dependen de date.today(), por lo que un valor
+        guardado queda obsoleto con el paso de los días. Se refresca con
+        bulk_update (sin pasar por save()) para no pisar fch_modf."""
+        today      = date.today()
+        contratos  = list(cls.objects.exclude(fecha_renovar__isnull=True))
+        a_actualizar = []
+        for c in contratos:
+            dias = (c.fecha_renovar - today).days
+            if dias < 0:
+                estado = cls.Status.VENCIDO
+            elif dias <= 15:
+                estado = cls.Status.POR_VENCER
+            else:
+                estado = cls.Status.VIGENTE
+            if c.dias_faltan != dias or c.status != estado:
+                c.dias_faltan = dias
+                c.status      = estado
+                a_actualizar.append(c)
+        if a_actualizar:
+            cls.objects.bulk_update(a_actualizar, ["dias_faltan", "status"])
 
     def __str__(self) -> str:
         return f"{self.num_contrato} — {self.nombre}"

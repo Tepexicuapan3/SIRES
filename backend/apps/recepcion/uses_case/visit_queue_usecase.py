@@ -266,6 +266,9 @@ def list_visits(
     centro_id: int | None = None,
     service_type: str | None = None,
     no_exp: str | None = None,
+    fecha_desde=None,
+    fecha_hasta=None,
+    folio: str | None = None,
 ) -> dict:
     visits, total, total_pages, doctor_nombres, cita_fechas = VisitRepository.list_paginated(
         page=page,
@@ -277,6 +280,9 @@ def list_visits(
         centro_id=centro_id,
         service_type=service_type,
         no_exp=no_exp,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        folio=folio,
     )
     return {
         "items":      [VisitRepository.to_contract(v, doctor_nombres, cita_fechas) for v in visits],

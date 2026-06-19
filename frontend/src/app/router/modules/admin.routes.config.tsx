@@ -30,6 +30,7 @@ import TurnosPage from "@features/admin/modules/catalogos/turnos/pages/TurnosPag
 import VacunasPage from "@features/admin/modules/catalogos/vacunas/pages/VacunasPage";
 import AreasClinicasPage from "@features/admin/modules/catalogos/areas-clinicas/pages/AreasClinicasPage";
 import CentrosAreasClinicasPage from "@features/admin/modules/catalogos/centro-area-clinica/pages/CentrosAreasClinicasPage";
+import SucursalesPage from "@features/admin/modules/catalogos/sucursales/pages/SucursalesPage";
 import PlaceholderPage from "@shared/components/PlaceholderPage";
 import MedicosPage from "@features/admin/modules/medicos/pages/MedicosPage";
 import { lazy, Suspense } from "react";
@@ -157,6 +158,14 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:edo_civil:read">
             <EdoCivilPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "sucursales",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:sucursales:read">
+            <SucursalesPage />
           </ProtectedRoute>
         ),
       },

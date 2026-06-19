@@ -69,6 +69,9 @@ class ListVisitsQuerySerializer(serializers.Serializer):
         required=False,
     )
     noExp       = serializers.CharField(max_length=20, required=False)
+    fechaDesde  = serializers.DateField(required=False, input_formats=["%Y-%m-%d"])
+    fechaHasta  = serializers.DateField(required=False, input_formats=["%Y-%m-%d"])
+    folio       = serializers.CharField(max_length=64, required=False)
 
 
 class UpdateVisitStatusSerializer(serializers.Serializer):

@@ -1,19 +1,23 @@
 import {
   Activity,
   Ambulance,
+  Archive,
   BookOpen,
   CalendarClock,
   Clock,
+  ClipboardList,
   Database,
   FileText,
   FolderOpen,
   Key,
   LayoutDashboard,
+  Package,
   Pill,
   ScrollText,
   Shield,
   Stethoscope,
   ShieldUser,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 
@@ -112,6 +116,11 @@ export const NAV_CONFIG: NavSection[] = [
             title: "Estado civil",
             url: "/admin/catalogos/edo-civil",
             permissions: ["admin:catalogos:edo_civil:read"],
+          },
+          {
+            title: "Sucursales",
+            url: "/admin/catalogos/sucursales",
+            permissions: ["admin:catalogos:sucursales:read"],
           },
           {
             title: "Enfermedades",
@@ -344,6 +353,18 @@ export const NAV_CONFIG: NavSection[] = [
         ],
       },
       {
+        title: "Archivo de fichas",
+        url: "/recepcion/fichas",
+        icon: Archive,
+        permissions: [
+          "recepcion:fichas:medicina_general:create",
+          "recepcion:fichas:especialidad:create",
+          "recepcion:fichas:urgencias:create",
+          "clinico:consultas:read",
+          "clinico:somatometria:read",
+        ],
+      },
+      {
         title: "Turnos de fichas",
         url: "/recepcion/turnos",
         icon: Clock,
@@ -377,6 +398,45 @@ export const NAV_CONFIG: NavSection[] = [
         icon: Database,
         permissions: ["farmacia:inventario:update"],
         badge: PLACEHOLDER_BADGE,
+      },
+    ],
+  },
+  {
+    title: "Almacén",
+    items: [
+      {
+        title: "Dashboard",
+        url: "/almacen/dashboard",
+        icon: Warehouse,
+      },
+      {
+        title: "Catálogos",
+        icon: BookOpen,
+        items: [
+          { title: "Insumos",          url: "/almacen/insumos" },
+          { title: "Categorías",       url: "/almacen/categorias" },
+          { title: "Proveedores",      url: "/almacen/proveedores" },
+          { title: "Unidades de medida", url: "/almacen/unidades-medida" },
+          { title: "Almacenes",        url: "/almacen/almacenes" },
+        ],
+      },
+      {
+        title: "Movimientos",
+        icon: Package,
+        items: [
+          { title: "Entradas",              url: "/almacen/entradas" },
+          { title: "Salidas / Mermas",      url: "/almacen/salidas" },
+          { title: "Consumos por consulta", url: "/almacen/consumos" },
+        ],
+      },
+      {
+        title: "Inventario",
+        icon: ClipboardList,
+        items: [
+          { title: "Existencias",     url: "/almacen/existencias" },
+          { title: "Kardex",          url: "/almacen/kardex" },
+          { title: "Conteos físicos", url: "/almacen/conteos" },
+        ],
       },
     ],
   },

@@ -27,6 +27,7 @@ from apps.catalogos.models import (
     Pases,
     Permisos,
     Roles,
+    CatSucursal,
     TipoDeCitas,
     TiposAreas,
     TiposSanguineo,
@@ -388,6 +389,19 @@ class EdoCivilDetailSerializer(CatalogDetailSerializer):
 class EdoCivilWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = EdoCivil
+
+
+class SucursalListSerializer(CatalogListSerializer):
+    class Meta(CatalogListSerializer.Meta):
+        model = CatSucursal
+
+class SucursalDetailSerializer(CatalogDetailSerializer):
+    class Meta(CatalogDetailSerializer.Meta):
+        model = CatSucursal
+
+class SucursalWriteSerializer(CatalogWriteSerializer):
+    class Meta(CatalogWriteSerializer.Meta):
+        model = CatSucursal
 
 
 class EnfermedadesListSerializer(CatalogListSerializer):

@@ -96,6 +96,9 @@ export interface VisitsListParams {
   consultorioId?: number;
   centroId?:      number;
   noExp?:         string;
+  fechaDesde?:    string;  // YYYY-MM-DD rango inicio
+  fechaHasta?:    string;  // YYYY-MM-DD rango fin
+  folio?:         string;
 }
 
 // ── Lookup de paciente por expediente ────────────────────────────────────────

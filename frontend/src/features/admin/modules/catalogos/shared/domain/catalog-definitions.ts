@@ -180,6 +180,13 @@ export const catalogDefinitions = {
     endpoint: "clinical-areas",
     permissionRead: "admin:catalogos:areas_clinicas:read",
   },
+  sucursales: {
+    slug: "sucursales",
+    title: "Sucursales",
+    description: "Catalogo de sucursales para asignacion de contratos.",
+    endpoint: "branches",
+    permissionRead: "admin:catalogos:sucursales:read",
+  },
   centroAreaClinica: {
     slug: "centro-area-clinica",
     title: "Áreas clínicas por centro",

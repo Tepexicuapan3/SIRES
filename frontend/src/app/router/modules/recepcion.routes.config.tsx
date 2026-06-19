@@ -3,6 +3,7 @@ import { ProtectedRoute } from "@routes/guards/ProtectedRoute";
 import PlaceholderPage        from "@shared/components/PlaceholderPage";
 import RecepcionAgendaPage    from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
 import RecepcionCheckinPage   from "@features/recepcion/modules/checkin/pages/RecepcionCheckinPage";
+import RecepcionFichasPage    from "@features/recepcion/modules/fichas/pages/RecepcionFichasPage";
 import TurnosConfigPage       from "@features/recepcion/modules/turnos/pages/TurnosConfigPage";
 import {
   RECEPCION_QUEUE_READ_PERMISSIONS,
@@ -35,8 +36,15 @@ export const recepcionRoutes: RouteObject[] = [
     element: <RecepcionCheckinPage />,
   },
   {
-    path: "fichas/*",
-    element: <RecepcionCheckinPage />,
+    path: "fichas",
+    element: (
+      <ProtectedRoute
+        requiredAnyPermissions={[...RECEPCION_QUEUE_READ_PERMISSIONS]}
+        dependencyAware
+      >
+        <RecepcionFichasPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "turnos",

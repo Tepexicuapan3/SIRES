@@ -1,4 +1,4 @@
-MODELOS_EXPEDIENTES = {'catempLeado', 'catfamiliar', 'dntfotoscredenciales'}
+MODELOS_EXPEDIENTES = {'catempleado', 'catfamiliar', 'dntfotoscredenciales', 'catclinica'}
 
 
 class ExpedientesRouter:

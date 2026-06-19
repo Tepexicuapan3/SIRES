@@ -211,6 +211,9 @@ class VisitsView(APIView):
             consultorio_id=serializer.validated_data.get("consultorioId"),
             service_type=serializer.validated_data.get("serviceType"),
             no_exp=serializer.validated_data.get("noExp"),
+            fecha_desde=serializer.validated_data.get("fechaDesde"),
+            fecha_hasta=serializer.validated_data.get("fechaHasta"),
+            folio=serializer.validated_data.get("folio"),
         )
         return Response(payload, status=status.HTTP_200_OK)
 

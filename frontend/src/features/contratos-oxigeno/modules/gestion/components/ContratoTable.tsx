@@ -1,7 +1,7 @@
-import { ChevronDown, ChevronUp, ChevronsUpDown, Edit2, Loader2, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Badge }  from "@shared/ui/badge";
-import { CONTRATO_STATUS, TP_DER_LABELS, type ContratoOxigeno, type ContratoStatus } from "@api/types";
+import { CONTRATO_STATUS, type ContratoOxigeno, type ContratoStatus } from "@api/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -19,9 +19,15 @@ function DiasCell({ dias }: { dias: number | null }) {
         Vencido hace {Math.abs(dias)} días
       </span>
     );
-  if (dias <= 30)
+  if (dias <= 15)
     return <span className="font-semibold text-amber-600">{dias} días</span>;
   return <span className="text-txt-body">{dias} días</span>;
+}
+
+function VigenciaDhBadge({ vigencia }: { vigencia: ContratoOxigeno["vigenciaDh"] }) {
+  if (!vigencia) return null;
+  const variant = vigencia === "ACTIVO" ? "stable" : "critical";
+  return <Badge variant={variant}>{vigencia}</Badge>;
 }
 
 function StatusBadge({ status }: { status: ContratoStatus }) {
@@ -123,14 +129,13 @@ interface Props {
   onSort:      (field: string) => void;
   onPage:      (page: number) => void;
   onEdit:      (contrato: ContratoOxigeno) => void;
-  onDelete:    (contrato: ContratoOxigeno) => void;
 }
 
 export function ContratoTable({
   contratos, isLoading,
   page, totalPages, total, pageSize,
   sortField, sortDir,
-  onSort, onPage, onEdit, onDelete,
+  onSort, onPage, onEdit,
 }: Props) {
   const sortProps = (field: string) => ({
     field, current: sortField, dir: sortDir, onSort,
@@ -164,14 +169,13 @@ export function ContratoTable({
               <th className="px-4 py-3 text-left">
                 <SortableHeader label="Status" {...sortProps("status")} />
               </th>
-              <th className="px-4 py-3 text-right">Acciones</th>
             </tr>
           </thead>
 
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={11} className="py-12 text-center">
+                <td colSpan={10} className="py-12 text-center">
                   <div className="flex items-center justify-center gap-2 text-txt-muted">
                     <Loader2 className="size-4 animate-spin" /> Cargando contratos...
                   </div>
@@ -179,7 +183,7 @@ export function ContratoTable({
               </tr>
             ) : contratos.length === 0 ? (
               <tr>
-                <td colSpan={11} className="py-12 text-center text-txt-muted">
+                <td colSpan={10} className="py-12 text-center text-txt-muted">
                   No hay contratos que coincidan con los filtros.
                 </td>
               </tr>
@@ -187,7 +191,8 @@ export function ContratoTable({
               contratos.map((c) => (
                 <tr
                   key={c.id}
-                  className="border-b border-line-struct/50 last:border-0 hover:bg-subtle/20 transition-colors"
+                  className="border-b border-line-struct/50 last:border-0 hover:bg-subtle/20 transition-colors cursor-pointer"
+                  onClick={() => onEdit(c)}
                 >
                   <td className="px-4 py-3 font-mono font-semibold text-primary">
                     {c.numContrato}
@@ -197,11 +202,18 @@ export function ContratoTable({
                   </td>
                   <td className="px-4 py-3 font-mono text-txt-muted">{c.expediente}</td>
                   <td className="px-4 py-3">
-                    <span className="text-xs">
-                      <span className="font-semibold">{c.tpDer}</span>
-                      {" — "}
-                      {TP_DER_LABELS[c.tpDer] ?? c.tpDer}
-                    </span>
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span>
+                        <span className="font-semibold">{c.tpDer}</span>
+                        {" — "}
+                        {c.tpDerLabel}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-txt-muted">
+                        <VigenciaDhBadge vigencia={c.vigenciaDh} />
+                        {c.fechaNacimientoDh && <span>Nac: {formatDate(c.fechaNacimientoDh)}</span>}
+                        {c.edadDh != null && <span>{c.edadDh} años</span>}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-txt-muted">
                     {c.sucursal}
@@ -209,37 +221,15 @@ export function ContratoTable({
                   <td className="px-4 py-3 text-xs text-txt-body max-w-[140px] truncate">
                     {c.clinica}
                   </td>
-                  <td className="px-4 py-3 text-xs text-txt-body">{c.servicio}</td>
+                  <td className="px-4 py-3 text-xs text-txt-body max-w-[160px]">
+                    {[c.servicio, c.servicio2, c.servicio3].filter(Boolean).join(", ")}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs">{formatDate(c.fechaRenovar)}</td>
                   <td className="px-4 py-3">
                     <DiasCell dias={c.diasFaltan} />
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={c.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        title="Editar"
-                        onClick={() => onEdit(c)}
-                      >
-                        <Edit2 className="size-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        title="Eliminar"
-                        onClick={() => onDelete(c)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
                   </td>
                 </tr>
               ))

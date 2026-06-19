@@ -30,6 +30,7 @@ const AdminRoutes = lazy(() => import("@routes/modules/admin.routes"));
 const ClinicoRoutes = lazy(() => import("@routes/modules/clinico.routes"));
 const RecepcionRoutes = lazy(() => import("@routes/modules/recepcion.routes"));
 const FarmaciaRoutes = lazy(() => import("@routes/modules/farmacia.routes"));
+const AlmacenRoutes = lazy(() => import("@routes/modules/almacen.routes"));
 const ServiciosRoutes = lazy(() => import("@routes/modules/servicios.routes"));
 const UrgenciasRoutes = lazy(() =>
   import("@routes/modules/placeholders.routes").then((m) => ({
@@ -124,6 +125,14 @@ export const router = createBrowserRouter([
             element: (
               <SuspenseWrapper className="min-h-[calc(100dvh-4rem)]">
                 <ServiciosRoutes />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: "/almacen/*",
+            element: (
+              <SuspenseWrapper className="min-h-[calc(100dvh-4rem)]">
+                <AlmacenRoutes />
               </SuspenseWrapper>
             ),
           },

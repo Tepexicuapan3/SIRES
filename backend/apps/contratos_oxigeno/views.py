@@ -2,11 +2,15 @@ import math
 from datetime import date, timedelta
 
 from django.db.models import Count
-from rest_framework import filters, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.authentication.services.cookie_auth import CookieJWTAuthentication
+from .derechohabiente_service import buscar_derechohabientes, info_vigencia_por_expedientes
+from .email_service import build_vencimiento_html, enviar_notificacion
 from .models import ContratoOxigeno
 from .serializers import ContratoOxigenoSerializer
 
@@ -35,9 +39,11 @@ class StandardListPagination(PageNumberPagination):
 # ── ViewSet ───────────────────────────────────────────────────────────────────
 
 class ContratoOxigenoViewSet(viewsets.ModelViewSet):
-    serializer_class = ContratoOxigenoSerializer
-    pagination_class = StandardListPagination
-    filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes     = [IsAuthenticated]
+    serializer_class       = ContratoOxigenoSerializer
+    pagination_class       = StandardListPagination
+    filter_backends        = [filters.SearchFilter, filters.OrderingFilter]
     search_fields    = ["nombre", "num_contrato", "expediente", "diagnostico"]
     ordering_fields  = [
         "num_contrato", "nombre", "fecha_renovar",
@@ -46,6 +52,7 @@ class ContratoOxigenoViewSet(viewsets.ModelViewSet):
     ordering = ["num_contrato"]
 
     def get_queryset(self):
+        ContratoOxigeno.refresh_estados()
         qs     = ContratoOxigeno.objects.all()
         params = self.request.query_params
 
@@ -63,10 +70,29 @@ class ContratoOxigenoViewSet(viewsets.ModelViewSet):
 
         return qs
 
+    # ── GET /contratos-oxigeno/ ── lista, enriquecida con vigencia/edad/nacimiento ─
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        items = page if page is not None else queryset
+
+        dh_info = info_vigencia_por_expedientes([c.expediente for c in items])
+        context = {**self.get_serializer_context(), "dh_info": dh_info}
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True, context=context)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True, context=context)
+        return Response(serializer.data)
+
     # ── GET /contratos-oxigeno/estadisticas/ ──────────────────────────────────
 
     @action(detail=False, methods=["get"], url_path="estadisticas")
     def estadisticas(self, request):
+        ContratoOxigeno.refresh_estados()
         qs      = ContratoOxigeno.objects.all()
         today   = date.today()
         prox_30 = today + timedelta(days=30)
@@ -92,3 +118,59 @@ class ContratoOxigenoViewSet(viewsets.ModelViewSet):
                 fecha_renovar__lte=prox_30,
             ).count(),
         })
+
+    # ── GET /contratos-oxigeno/buscar-derechohabiente/ ────────────────────────
+
+    @action(detail=False, methods=["get"], url_path="buscar-derechohabiente")
+    def buscar_derechohabiente(self, request):
+        q       = request.query_params.get("q", "").strip()
+        clinica = request.query_params.get("clinica")
+
+        if len(q) < 3:
+            return Response({"results": []})
+
+        return Response({"results": buscar_derechohabientes(q, clinica)})
+
+    # ── POST /contratos-oxigeno/notificar/ ────────────────────────────────────
+
+    @action(detail=False, methods=["post"], url_path="notificar")
+    def notificar(self, request):
+        destinatarios = request.data.get("destinatarios", [])
+        asunto        = request.data.get("asunto", "").strip()
+        cuerpo        = request.data.get("cuerpo",  "").strip()
+        contratos_ids = request.data.get("contratosIds", [])
+
+        if not destinatarios:
+            return Response(
+                {"error": "Se requiere al menos un destinatario."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not asunto:
+            return Response(
+                {"error": "El asunto es requerido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Si vienen IDs → generar HTML de vencimiento automáticamente
+        if contratos_ids:
+            contratos = ContratoOxigeno.objects.filter(id__in=contratos_ids)
+            cuerpo_html = build_vencimiento_html(contratos, cuerpo_intro=cuerpo)
+        else:
+            # Redacción libre — envolver el texto en HTML mínimo
+            cuerpo_escaped = cuerpo.replace("\n", "<br>")
+            cuerpo_html = f"<div style='font-family:sans-serif;color:#374151'>{cuerpo_escaped}</div>"
+
+        # Archivos adjuntos (multipart/form-data)
+        adjuntos = [
+            (f.name, f.read(), f.content_type)
+            for f in request.FILES.values()
+        ]
+
+        try:
+            resultado = enviar_notificacion(destinatarios, asunto, cuerpo_html, adjuntos or None)
+            return Response(resultado)
+        except Exception as exc:
+            return Response(
+                {"error": f"No se pudo enviar el correo: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )

@@ -1,32 +1,23 @@
 import { useState } from "react";
-import { ClipboardList, Plus, RefreshCcw } from "lucide-react";
+import { Bell, ClipboardList, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@shared/ui/button";
 import { Input }  from "@shared/ui/input";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@shared/ui/alert-dialog";
 import {
   CONTRATO_STATUS, TP_DER_LABELS,
   type ContratoOxigeno, type ContratoStatus, type TpDer, type ContratosListParams,
 } from "@api/types";
 import { useContratosList }  from "@features/contratos-oxigeno/queries/useContratosList";
 import { useContratosStats } from "@features/contratos-oxigeno/queries/useContratosStats";
+import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import {
   useCreateContrato,
-  useDeleteContrato,
   useUpdateContrato,
 } from "@features/contratos-oxigeno/mutations/useContratoMutations";
-import { ContratoStatsCards } from "../components/ContratoStatsCards";
-import { ContratoTable }      from "../components/ContratoTable";
+import { ContratoStatsCards }     from "../components/ContratoStatsCards";
+import { ContratoTable }           from "../components/ContratoTable";
 import { ContratoForm, type ContratoFormData } from "../components/ContratoForm";
+import { NotificacionesDrawer }    from "../components/NotificacionesDrawer";
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
 
@@ -45,9 +36,13 @@ function formDataToPayload(data: ContratoFormData) {
     numContrato:   data.numContrato,
     nombre:        data.nombre,
     expediente:    data.expediente,
-    tpDer:         data.tpDer as TpDer,
+    tpDer:         data.tpDer,
     clinica:       data.clinica,
     servicio:      data.servicio,
+    servicio2:     data.servicio2 || null,
+    servicio3:     data.servicio3 || null,
+    telefono:      data.telefono  || "",
+    direccion:     data.direccion || "",
     fechaSoporte:  data.fechaSoporte  || null,
     vigenciaMeses: data.vigenciaMeses ? Number(data.vigenciaMeses) : null,
     vigenciaDias:  data.vigenciaDias  ? Number(data.vigenciaDias)  : null,
@@ -62,6 +57,7 @@ export function ContratosPage() {
   // ── Estado de filtros y paginación ─────────────────────────────────────────
   const [search,    setSearch]    = useState("");
   const [sucursal,  setSucursal]  = useState("");
+  const [clinica,   setClinica]   = useState("");
   const [status,    setStatus]    = useState<ContratoStatus | "">("");
   const [tpDer,     setTpDer]     = useState<TpDer | "">("");
   const [page,      setPage]      = useState(1);
@@ -72,8 +68,9 @@ export function ContratosPage() {
   const [formOpen,  setFormOpen]  = useState(false);
   const [editing,   setEditing]   = useState<ContratoOxigeno | null>(null);
 
-  // ── Estado confirmación eliminación ───────────────────────────────────────
-  const [deleting,  setDeleting]  = useState<ContratoOxigeno | null>(null);
+  // ── Estado drawer notificaciones ──────────────────────────────────────────
+  const [notiOpen,       setNotiOpen]       = useState(false);
+  const [notiPreselected, setNotiPreselected] = useState<ContratoOxigeno | null>(null);
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const queryParams: ContratosListParams = {
@@ -81,6 +78,7 @@ export function ContratosPage() {
     pageSize: 20,
     search:   search   || undefined,
     sucursal: sucursal || undefined,
+    clinica:  clinica  || undefined,
     status:   (status  || undefined) as ContratoStatus | undefined,
     tpDer:    (tpDer   || undefined) as TpDer | undefined,
     ordering: buildOrdering(sortField, sortDir),
@@ -89,6 +87,9 @@ export function ContratosPage() {
   const listQuery  = useContratosList(queryParams);
   const statsQuery = useContratosStats();
 
+  const { data: centrosData } = useCentrosAtencionList({ pageSize: 200, isActive: true });
+  const clinicaOptions = centrosData?.items ?? [];
+
   const contratos   = listQuery.data?.items      ?? [];
   const total       = listQuery.data?.total      ?? 0;
   const totalPages  = listQuery.data?.totalPages ?? 1;
@@ -96,10 +97,8 @@ export function ContratosPage() {
   // ── Mutations ──────────────────────────────────────────────────────────────
   const createMutation = useCreateContrato();
   const updateMutation = useUpdateContrato();
-  const deleteMutation = useDeleteContrato();
 
   const isSaving  = createMutation.isPending || updateMutation.isPending;
-  const isDeleting = deleteMutation.isPending;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -139,18 +138,6 @@ export function ContratosPage() {
     }
   };
 
-  const handleConfirmDelete = async () => {
-    if (!deleting) return;
-    try {
-      await deleteMutation.mutateAsync(deleting.id);
-      toast.success(`Contrato ${deleting.numContrato} eliminado.`);
-    } catch {
-      toast.error("No se pudo eliminar el contrato.");
-    } finally {
-      setDeleting(null);
-    }
-  };
-
   const handleFilterChange = () => setPage(1);
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -179,6 +166,14 @@ export function ContratosPage() {
             onClick={() => { void listQuery.refetch(); void statsQuery.refetch(); }}
           >
             <RefreshCcw className="size-4" /> Actualizar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            onClick={() => { setNotiPreselected(null); setNotiOpen(true); }}
+          >
+            <Bell className="size-4" /> Notificaciones
           </Button>
           <Button type="button" className="gap-2" onClick={handleOpenCreate}>
             <Plus className="size-4" /> Nuevo contrato
@@ -228,6 +223,17 @@ export function ContratosPage() {
             value={sucursal}
             onChange={(e) => { setSucursal(e.target.value); handleFilterChange(); }}
           />
+
+          <select
+            className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+            value={clinica}
+            onChange={(e) => { setClinica(e.target.value); handleFilterChange(); }}
+          >
+            <option value="">Todas las clínicas</option>
+            {clinicaOptions.map((c) => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -244,7 +250,13 @@ export function ContratosPage() {
         onSort={handleSort}
         onPage={setPage}
         onEdit={handleOpenEdit}
-        onDelete={setDeleting}
+      />
+
+      {/* ── Drawer notificaciones ────────────────────────────────────── */}
+      <NotificacionesDrawer
+        open={notiOpen}
+        onOpenChange={setNotiOpen}
+        preselected={notiPreselected}
       />
 
       {/* ── Modal formulario ──────────────────────────────────────────── */}
@@ -256,29 +268,6 @@ export function ContratosPage() {
         onSave={handleSave}
       />
 
-      {/* ── Diálogo confirmación eliminación ──────────────────────────── */}
-      <AlertDialog open={deleting !== null} onOpenChange={(o) => { if (!o) setDeleting(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar contrato</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleting
-                ? `¿Confirmás que querés eliminar el contrato ${deleting.numContrato} de ${deleting.nombre}? Esta acción no se puede deshacer.`
-                : "Confirma la eliminación del contrato."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={isDeleting}
-              onClick={() => void handleConfirmDelete()}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </section>
   );
 }

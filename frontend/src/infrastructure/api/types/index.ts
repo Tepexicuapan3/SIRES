@@ -337,6 +337,17 @@ export type {
 } from "@api/types/catalogos/escuelas.types";
 
 // =============================================================================
+// CATÁLOGO SUCURSALES
+// =============================================================================
+export type {
+  SucursalListItem,
+  SucursalesListParams,
+  SucursalesListResponse,
+  CreateSucursalRequest,
+  CreateSucursalResponse,
+} from "@api/types/catalogos/sucursales.types";
+
+// =============================================================================
 // ESPECIALIDADES TYPES (CRUD)
 // =============================================================================
 export type {
@@ -498,5 +509,86 @@ export type {
   CreateContratoRequest,
   UpdateContratoRequest,
   ContratosStats,
+  NotificarRequest,
+  NotificarResponse,
+  DerechohabienteResult,
+  BuscarDerechohabienteParams,
+  BuscarDerechohabienteResponse,
 } from "@api/types/contratos.types";
 export { CONTRATO_STATUS, TP_DER, TP_DER_LABELS, CONTRATO_STATUS_LABELS } from "@api/types/contratos.types";
+
+// =============================================================================
+// ALMACÉN — INVENTARIO DE INSUMOS TYPES
+// =============================================================================
+export type {
+  CatUnidadMedida,
+  CatCategoriaInsumo,
+  CatProveedor,
+  CatInsumo,
+  Almacen,
+  AlmacenTipo,
+  CatalogosBaseListParams,
+  InsumosListParams,
+  AlmacenesListParams,
+  CreateUnidadMedidaRequest,
+  CreateCategoriaInsumoRequest,
+  CreateProveedorRequest,
+  CreateInsumoRequest,
+  CreateAlmacenRequest,
+  UpdateUnidadMedidaRequest,
+  UpdateCategoriaInsumoRequest,
+  UpdateProveedorRequest,
+  UpdateInsumoRequest,
+  UpdateAlmacenRequest,
+  UnidadesMedidaListResponse,
+  CategoriasInsumoListResponse,
+  ProveedoresListResponse,
+  InsumosListResponse,
+  AlmacenesListResponse,
+} from "@api/types/almacen/catalogos.types";
+export { ALMACEN_TIPO, ALMACEN_TIPO_LABELS } from "@api/types/almacen/catalogos.types";
+
+// ─── ALMACÉN — KARDEX / EXISTENCIAS / ENTRADAS ────────────────────────────────
+export type {
+  LoteInsumo,
+  EntradaDetalle,
+  EntradaInventario,
+  KardexMovimiento,
+  ExistenciaAlmacen,
+  TipoMovimiento,
+  LoteDatosInline,
+  CreateEntradaDetalleRequest,
+  CreateEntradaRequest,
+  LotesListParams,
+  EntradasListParams,
+  KardexListParams,
+  ExistenciasListParams,
+  LotesListResponse,
+  EntradasListResponse,
+  KardexListResponse,
+  ExistenciasListResponse,
+} from "@api/types/almacen/kardex.types";
+export { TIPO_MOVIMIENTO, TIPO_MOVIMIENTO_LABELS } from "@api/types/almacen/kardex.types";
+export type {
+  TipoSalida,
+  SalidaDetalle,
+  SalidaInventario,
+  CreateSalidaDetalleRequest,
+  CreateSalidaRequest,
+  SalidasListParams,
+  SalidasListResponse,
+  ConteoFisicoDetalle,
+  ConteoFisico,
+  CreateConteoRequest,
+  CerrarConteoRequest,
+  ConteosListParams,
+  ConteosListResponse,
+  DashboardStats,
+  ConsumoConsultaDetalle,
+  ConsumoConsulta,
+  CreateConsumoDetalleRequest,
+  CreateConsumoRequest,
+  ConsumosListParams,
+  ConsumosListResponse,
+} from "@api/types/almacen/kardex.types";
+export { TIPO_SALIDA, TIPO_SALIDA_LABELS } from "@api/types/almacen/kardex.types";

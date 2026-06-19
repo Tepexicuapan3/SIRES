@@ -51,7 +51,7 @@ export function ContratoStatsCards({ stats, isLoading }: Props) {
         colorBorder="border-green-200"
       />
       <StatCard
-        label="Por vencer (≤ 30 días)"
+        label="Por vencer (≤ 15 días)"
         value={stats.porVencer}
         colorBg="bg-amber-50"
         colorText="text-amber-700"
