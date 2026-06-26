@@ -2,6 +2,7 @@ import math
 from datetime import date, timedelta
 
 from django.db.models import Count
+from django.http import HttpResponse
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -10,6 +11,7 @@ from rest_framework.response import Response
 
 from apps.authentication.services.cookie_auth import CookieJWTAuthentication
 from .derechohabiente_service import buscar_derechohabientes, info_vigencia_por_expedientes
+from .document_service import generar_formato_oxigeno
 from .email_service import build_vencimiento_html, enviar_notificacion
 from .models import ContratoOxigeno
 from .serializers import ContratoOxigenoSerializer
@@ -78,7 +80,7 @@ class ContratoOxigenoViewSet(viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         items = page if page is not None else queryset
 
-        dh_info = info_vigencia_por_expedientes([c.expediente for c in items])
+        dh_info = info_vigencia_por_expedientes([(c.expediente, c.pk_num) for c in items])
         context = {**self.get_serializer_context(), "dh_info": dh_info}
 
         if page is not None:
@@ -130,6 +132,21 @@ class ContratoOxigenoViewSet(viewsets.ModelViewSet):
             return Response({"results": []})
 
         return Response({"results": buscar_derechohabientes(q, clinica)})
+
+    # ── GET /contratos-oxigeno/{id}/formato/ ── descarga el .docx llenado ─────
+
+    @action(detail=True, methods=["get"], url_path="formato")
+    def formato(self, request, pk=None):
+        contrato  = self.get_object()
+        docx_bytes = generar_formato_oxigeno(contrato)
+
+        response = HttpResponse(
+            docx_bytes,
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        nombre_archivo = f"formato_oxigeno_{contrato.num_contrato}.docx"
+        response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
+        return response
 
     # ── POST /contratos-oxigeno/notificar/ ────────────────────────────────────
 

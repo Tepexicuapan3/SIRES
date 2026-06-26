@@ -14,6 +14,7 @@ import {
   useCreateContrato,
   useUpdateContrato,
 } from "@features/contratos-oxigeno/mutations/useContratoMutations";
+import { useDescargarFormatoOxigeno } from "@features/contratos-oxigeno/mutations/useDescargarFormatoOxigeno";
 import { ContratoStatsCards }     from "../components/ContratoStatsCards";
 import { ContratoTable }           from "../components/ContratoTable";
 import { ContratoForm, type ContratoFormData } from "../components/ContratoForm";
@@ -36,6 +37,8 @@ function formDataToPayload(data: ContratoFormData) {
     numContrato:   data.numContrato,
     nombre:        data.nombre,
     expediente:    data.expediente,
+    pkNum:         data.pkNum,
+    fechaNacimiento: data.fechaNacimiento || null,
     tpDer:         data.tpDer,
     clinica:       data.clinica,
     servicio:      data.servicio,
@@ -48,6 +51,24 @@ function formDataToPayload(data: ContratoFormData) {
     vigenciaDias:  data.vigenciaDias  ? Number(data.vigenciaDias)  : null,
     fechaRenovar:  data.fechaRenovar  || null,
     diagnostico:   data.diagnostico  || "",
+    calle:         data.calle         || "",
+    numExt:        data.numExt        || "",
+    numInt:        data.numInt        || "",
+    colonia:       data.colonia       || "",
+    alcaldia:      data.alcaldia      || "",
+    cp:            data.cp            || "",
+    entreCalle1:   data.entreCalle1   || "",
+    entreCalle2:   data.entreCalle2   || "",
+    telOficina:    data.telOficina    || "",
+    celular:       data.celular       || "",
+    extTel:        data.extTel        || "",
+    hospitalAzura: data.hospitalAzura,
+    medicoTratante: data.medicoTratante || "",
+    especialidad:   data.especialidad   || "",
+    tercerNivel:    data.tercerNivel,
+    institucionReferencia:    data.institucionReferencia    || "",
+    medicoTratanteReferencia: data.medicoTratanteReferencia || "",
+    tramiteSubsecuente:       data.tramiteSubsecuente,
   };
 }
 
@@ -97,6 +118,8 @@ export function ContratosPage() {
   // ── Mutations ──────────────────────────────────────────────────────────────
   const createMutation = useCreateContrato();
   const updateMutation = useUpdateContrato();
+  const { descargar } = useDescargarFormatoOxigeno();
+  const [descargandoId, setDescargandoId] = useState<number | null>(null);
 
   const isSaving  = createMutation.isPending || updateMutation.isPending;
 
@@ -139,6 +162,17 @@ export function ContratosPage() {
   };
 
   const handleFilterChange = () => setPage(1);
+
+  const handleDescargarFormato = async (contrato: ContratoOxigeno) => {
+    setDescargandoId(contrato.id);
+    try {
+      await descargar(contrato);
+    } catch {
+      toast.error("No se pudo generar el formato. Intenta nuevamente.");
+    } finally {
+      setDescargandoId(null);
+    }
+  };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -250,6 +284,8 @@ export function ContratosPage() {
         onSort={handleSort}
         onPage={setPage}
         onEdit={handleOpenEdit}
+        onDescargarFormato={handleDescargarFormato}
+        descargandoId={descargandoId}
       />
 
       {/* ── Drawer notificaciones ────────────────────────────────────── */}

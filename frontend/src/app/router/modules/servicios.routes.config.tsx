@@ -14,7 +14,7 @@ export const serviciosRoutes: RouteObject[] = [
   {
     path: "contratos-oxigeno",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiredPermission="servicios:contratos_oxigeno:read">
         <Suspense fallback={<div className="p-6 text-sm text-txt-muted">Cargando...</div>}>
           <ContratosPage />
         </Suspense>

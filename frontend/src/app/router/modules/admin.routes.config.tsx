@@ -354,7 +354,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: "expedientes",
     element: (
-      <ProtectedRoute requiredPermission="admin:expedientes:read">
+      <ProtectedRoute requiredPermission="admin:gestion:expedientes:read">
         <Suspense fallback={<div>Cargando...</div>}>
           <ExpedientesAdminPage />
         </Suspense>

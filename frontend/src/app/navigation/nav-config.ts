@@ -447,6 +447,7 @@ export const NAV_CONFIG: NavSection[] = [
         title: "Contratos de oxígeno",
         url: "/servicios/contratos-oxigeno",
         icon: ScrollText,
+        permissions: ["servicios:contratos_oxigeno:read"],
       },
     ],
   },

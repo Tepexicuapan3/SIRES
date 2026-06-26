@@ -26,6 +26,8 @@ interface FormData {
   numContrato:   string;
   nombre:        string;
   expediente:    string;
+  pkNum:         number;
+  fechaNacimiento: string;
   tpDer:         string;
   clinica:       string;
   servicio:      string;
@@ -38,14 +40,37 @@ interface FormData {
   vigenciaDias:  string;
   fechaRenovar:  string;
   diagnostico:   string;
+  // ── Formato de oxígeno: domicilio desglosado / teléfonos / datos médicos ──
+  calle:                     string;
+  numExt:                    string;
+  numInt:                    string;
+  colonia:                   string;
+  alcaldia:                  string;
+  cp:                        string;
+  entreCalle1:               string;
+  entreCalle2:               string;
+  telOficina:                string;
+  celular:                   string;
+  extTel:                    string;
+  hospitalAzura:             "" | "CENTRO" | "VALLE";
+  medicoTratante:            string;
+  especialidad:              string;
+  tercerNivel:               boolean;
+  institucionReferencia:     string;
+  medicoTratanteReferencia:  string;
+  tramiteSubsecuente:        boolean;
 }
 
 const EMPTY_FORM: FormData = {
   sucursal: "", numContrato: "", nombre: "",
-  expediente: "", tpDer: "T", clinica: "", servicio: "",
+  expediente: "", pkNum: 0, fechaNacimiento: "", tpDer: "T", clinica: "", servicio: "",
   servicio2: "", servicio3: "", telefono: "", direccion: "",
   fechaSoporte: "", vigenciaMeses: "", vigenciaDias: "",
   fechaRenovar: "", diagnostico: "",
+  calle: "", numExt: "", numInt: "", colonia: "", alcaldia: "", cp: "",
+  entreCalle1: "", entreCalle2: "", telOficina: "", celular: "", extTel: "",
+  hospitalAzura: "", medicoTratante: "", especialidad: "", tercerNivel: false,
+  institucionReferencia: "", medicoTratanteReferencia: "", tramiteSubsecuente: false,
 };
 
 function toFormData(c: ContratoOxigeno): FormData {
@@ -54,6 +79,8 @@ function toFormData(c: ContratoOxigeno): FormData {
     numContrato:   c.numContrato,
     nombre:        c.nombre,
     expediente:    c.expediente,
+    pkNum:         c.pkNum,
+    fechaNacimiento: c.fechaNacimiento ?? "",
     tpDer:         c.tpDer,
     clinica:       c.clinica,
     servicio:      c.servicio,
@@ -66,6 +93,24 @@ function toFormData(c: ContratoOxigeno): FormData {
     vigenciaDias:  c.vigenciaDias  != null ? String(c.vigenciaDias)  : "",
     fechaRenovar:  c.fechaRenovar  ?? "",
     diagnostico:   c.diagnostico,
+    calle:         c.calle       ?? "",
+    numExt:        c.numExt      ?? "",
+    numInt:        c.numInt      ?? "",
+    colonia:       c.colonia     ?? "",
+    alcaldia:      c.alcaldia    ?? "",
+    cp:            c.cp          ?? "",
+    entreCalle1:   c.entreCalle1 ?? "",
+    entreCalle2:   c.entreCalle2 ?? "",
+    telOficina:    c.telOficina  ?? "",
+    celular:       c.celular     ?? "",
+    extTel:        c.extTel      ?? "",
+    hospitalAzura: c.hospitalAzura ?? "",
+    medicoTratante: c.medicoTratante ?? "",
+    especialidad:   c.especialidad   ?? "",
+    tercerNivel:    c.tercerNivel    ?? false,
+    institucionReferencia:    c.institucionReferencia    ?? "",
+    medicoTratanteReferencia: c.medicoTratanteReferencia ?? "",
+    tramiteSubsecuente:       c.tramiteSubsecuente       ?? false,
   };
 }
 
@@ -135,6 +180,8 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
       ...prev,
       nombre:    resultado.nombre,
       expediente: resultado.expediente,
+      pkNum:     resultado.pkNum ?? 0,
+      fechaNacimiento: resultado.fechaNacimiento ?? "",
       tpDer:     resultado.tpDer,
     }));
     setDhSelected(resultado);
@@ -148,7 +195,7 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
     ? (editing.vigenciaDh
         ? {
             vigencia:        editing.vigenciaDh,
-            fechaNacimiento: editing.fechaNacimientoDh,
+            fechaNacimiento: editing.fechaNacimiento,
             edad:            editing.edadDh,
           }
         : null)
@@ -162,6 +209,9 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
 
   const set = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const setChecked = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.checked }));
 
   // fechaRenovar = fechaSoporte + vigenciaDias (fórmula Excel)
   const calcFechaRenovar = (fechaSoporte: string, vigenciaDias: string): string => {
@@ -326,6 +376,16 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
                 <Label htmlFor="cf-tpDer">Tipo derechohabiente *</Label>
                 <Input id="cf-tpDer" className={inputCls} value={form.tpDer} onChange={set("tpDer")} maxLength={100} placeholder="Ej. T, E, H1, ESPOSO..." />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-fechaNacimiento">Fecha de nacimiento</Label>
+                <Input
+                  id="cf-fechaNacimiento"
+                  type="date"
+                  className={inputCls}
+                  value={form.fechaNacimiento}
+                  onChange={set("fechaNacimiento")}
+                />
+              </div>
             </div>
           </section>
 
@@ -401,6 +461,100 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
               <div className="space-y-1">
                 <Label htmlFor="cf-direccion">Dirección</Label>
                 <Input id="cf-direccion" className={inputCls} value={form.direccion} onChange={set("direccion")} placeholder="Calle, número, colonia..." />
+              </div>
+            </div>
+          </section>
+
+          {/* Domicilio desglosado y teléfonos — formato de oxígeno */}
+          <section className="space-y-3 border-t border-line-struct/50 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
+              Domicilio y teléfonos (formato de oxígeno)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="cf-calle">Calle</Label>
+                <Input id="cf-calle" className={inputCls} value={form.calle} onChange={set("calle")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-numExt">N° Ext</Label>
+                <Input id="cf-numExt" className={inputCls} value={form.numExt} onChange={set("numExt")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-numInt">N° Int</Label>
+                <Input id="cf-numInt" className={inputCls} value={form.numInt} onChange={set("numInt")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-colonia">Colonia</Label>
+                <Input id="cf-colonia" className={inputCls} value={form.colonia} onChange={set("colonia")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-alcaldia">Alcaldía/Municipio</Label>
+                <Input id="cf-alcaldia" className={inputCls} value={form.alcaldia} onChange={set("alcaldia")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-cp">C.P.</Label>
+                <Input id="cf-cp" className={inputCls} value={form.cp} onChange={set("cp")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-entreCalle1">Entre calle</Label>
+                <Input id="cf-entreCalle1" className={inputCls} value={form.entreCalle1} onChange={set("entreCalle1")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-entreCalle2">Y calle</Label>
+                <Input id="cf-entreCalle2" className={inputCls} value={form.entreCalle2} onChange={set("entreCalle2")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-telOficina">Tel. oficina</Label>
+                <Input id="cf-telOficina" className={inputCls} value={form.telOficina} onChange={set("telOficina")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-celular">Celular</Label>
+                <Input id="cf-celular" className={inputCls} value={form.celular} onChange={set("celular")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-extTel">Ext.</Label>
+                <Input id="cf-extTel" className={inputCls} value={form.extTel} onChange={set("extTel")} />
+              </div>
+            </div>
+          </section>
+
+          {/* Datos médicos — formato de oxígeno */}
+          <section className="space-y-3 border-t border-line-struct/50 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
+              Datos médicos (formato de oxígeno)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="cf-hospitalAzura">Hospital Azura</Label>
+                <select id="cf-hospitalAzura" className={selectCls} value={form.hospitalAzura} onChange={set("hospitalAzura")}>
+                  <option value="">Sin asignar</option>
+                  <option value="CENTRO">Centro</option>
+                  <option value="VALLE">Valle</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-medicoTratante">Médico tratante</Label>
+                <Input id="cf-medicoTratante" className={inputCls} value={form.medicoTratante} onChange={set("medicoTratante")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-especialidad">Especialidad</Label>
+                <Input id="cf-especialidad" className={inputCls} value={form.especialidad} onChange={set("especialidad")} />
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <input id="cf-tercerNivel" type="checkbox" className="size-4" checked={form.tercerNivel} onChange={setChecked("tercerNivel")} />
+                <Label htmlFor="cf-tercerNivel" className="cursor-pointer">Tercer nivel de atención</Label>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-institucionReferencia">Institución de referencia</Label>
+                <Input id="cf-institucionReferencia" className={inputCls} value={form.institucionReferencia} onChange={set("institucionReferencia")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-medicoTratanteReferencia">Médico tratante (institución de referencia)</Label>
+                <Input id="cf-medicoTratanteReferencia" className={inputCls} value={form.medicoTratanteReferencia} onChange={set("medicoTratanteReferencia")} />
+              </div>
+              <div className="flex items-center gap-2">
+                <input id="cf-tramiteSubsecuente" type="checkbox" className="size-4" checked={form.tramiteSubsecuente} onChange={setChecked("tramiteSubsecuente")} />
+                <Label htmlFor="cf-tramiteSubsecuente" className="cursor-pointer">Trámite subsecuente (desmarcado = primera vez)</Label>
               </div>
             </div>
           </section>

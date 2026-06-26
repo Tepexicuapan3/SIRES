@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, ChevronsUpDown, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, FileDown, Loader2 } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Badge }  from "@shared/ui/badge";
 import { CONTRATO_STATUS, type ContratoOxigeno, type ContratoStatus } from "@api/types";
@@ -129,6 +129,8 @@ interface Props {
   onSort:      (field: string) => void;
   onPage:      (page: number) => void;
   onEdit:      (contrato: ContratoOxigeno) => void;
+  onDescargarFormato:  (contrato: ContratoOxigeno) => void;
+  descargandoId?:      number | null;
 }
 
 export function ContratoTable({
@@ -136,6 +138,7 @@ export function ContratoTable({
   page, totalPages, total, pageSize,
   sortField, sortDir,
   onSort, onPage, onEdit,
+  onDescargarFormato, descargandoId,
 }: Props) {
   const sortProps = (field: string) => ({
     field, current: sortField, dir: sortDir, onSort,
@@ -169,13 +172,14 @@ export function ContratoTable({
               <th className="px-4 py-3 text-left">
                 <SortableHeader label="Status" {...sortProps("status")} />
               </th>
+              <th className="px-4 py-3 text-left">Formato</th>
             </tr>
           </thead>
 
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={10} className="py-12 text-center">
+                <td colSpan={11} className="py-12 text-center">
                   <div className="flex items-center justify-center gap-2 text-txt-muted">
                     <Loader2 className="size-4 animate-spin" /> Cargando contratos...
                   </div>
@@ -183,7 +187,7 @@ export function ContratoTable({
               </tr>
             ) : contratos.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-12 text-center text-txt-muted">
+                <td colSpan={11} className="py-12 text-center text-txt-muted">
                   No hay contratos que coincidan con los filtros.
                 </td>
               </tr>
@@ -210,7 +214,7 @@ export function ContratoTable({
                       </span>
                       <div className="flex items-center gap-1.5 text-txt-muted">
                         <VigenciaDhBadge vigencia={c.vigenciaDh} />
-                        {c.fechaNacimientoDh && <span>Nac: {formatDate(c.fechaNacimientoDh)}</span>}
+                        {c.fechaNacimiento && <span>Nac: {formatDate(c.fechaNacimiento)}</span>}
                         {c.edadDh != null && <span>{c.edadDh} años</span>}
                       </div>
                     </div>
@@ -230,6 +234,21 @@ export function ContratoTable({
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={c.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1.5"
+                      disabled={descargandoId === c.id}
+                      onClick={(e) => { e.stopPropagation(); onDescargarFormato(c); }}
+                    >
+                      {descargandoId === c.id
+                        ? <Loader2 className="size-3.5 animate-spin" />
+                        : <FileDown className="size-3.5" />}
+                      Descargar
+                    </Button>
                   </td>
                 </tr>
               ))

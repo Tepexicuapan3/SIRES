@@ -99,29 +99,40 @@ def _q_nombre_o_expediente(q: str, campo_no_exp: str) -> Q:
 
 # ── Info de vigencia para el listado (batch, evita N+1) ───────────────────────
 
-def info_vigencia_por_expedientes(expedientes: list[str]) -> dict[str, dict]:
-    """Mapa expediente -> {vigencia, fechaNacimiento, edad} para los expedientes dados,
-    consultando cat_empleados/cat_familiar en lote (una sola query por tabla)."""
-    expedientes = [e for e in set(expedientes) if e]
-    if not expedientes:
+def info_vigencia_por_expedientes(combos: list[tuple[str, int]]) -> dict[tuple[str, int], dict]:
+    """Mapa (expediente, pk_num) -> {vigencia}.
+
+    pk_num = 0 → trabajador (cat_empleados.no_exp).
+    pk_num > 0 → derechohabiente (cat_familiar.pk_num); el expediente solo
+    no alcanza para identificarlo porque se repite entre los familiares de
+    un mismo trabajador, por eso el combo (expediente, pk_num) es la llave.
+
+    Solo resuelve vigencia (ACTIVO/BAJA/NO ACTIVO) — la edad y fecha de
+    nacimiento se calculan desde ContratoOxigeno.fecha_nacimiento, persistida
+    al seleccionar el derechohabiente, no desde el catálogo en vivo."""
+    combos = list({(exp, pk) for exp, pk in combos if exp})
+    if not combos:
         return {}
 
-    info: dict[str, dict] = {}
+    info: dict[tuple[str, int], dict] = {}
 
-    for emp in CatEmpleado.objects.filter(no_exp__in=expedientes):
-        info[emp.no_exp] = {
-            "vigencia":        _estatus_empleado(emp),
-            "fechaNacimiento": emp.fe_nac,
-            "edad":            emp.no_edad,
-        }
+    exps_empleado = [exp for exp, pk in combos if pk == 0]
+    if exps_empleado:
+        for emp in CatEmpleado.objects.filter(no_exp__in=exps_empleado):
+            # no_exp es CharField en el modelo pero la columna real es numérica;
+            # el driver devuelve int, por eso se normaliza antes de usarlo como llave.
+            info[(str(emp.no_exp), 0)] = {"vigencia": _estatus_empleado(emp)}
 
-    for fam in CatFamiliar.objects.filter(no_expf__in=expedientes):
-        if fam.no_expf not in info:
-            info[fam.no_expf] = {
-                "vigencia":        _estatus_familiar(fam),
-                "fechaNacimiento": fam.fe_nac,
-                "edad":            fam.no_edad,
-            }
+    combos_familiar = {(exp, pk) for exp, pk in combos if pk != 0}
+    if combos_familiar:
+        exps_familiar = {exp for exp, _ in combos_familiar}
+        pks_familiar  = {pk for _, pk in combos_familiar}
+        for fam in CatFamiliar.objects.filter(no_expf__in=exps_familiar, pk_num__in=pks_familiar):
+            # no_expf es IntegerField en cat_familiar; el expediente del contrato es
+            # string, por eso se normaliza antes de comparar/usar como llave.
+            key = (str(fam.no_expf), fam.pk_num)
+            if key in combos_familiar:
+                info[key] = {"vigencia": _estatus_familiar(fam)}
 
     return info
 

@@ -22,6 +22,15 @@ class ContratoOxigeno(models.Model):
     num_contrato  = models.CharField(max_length=50, unique=True)
     nombre        = models.CharField(max_length=200)
     expediente    = models.CharField(max_length=50)
+    # pk_num = 0 → el propio trabajador (cat_empleados.no_exp).
+    # pk_num > 0 → derechohabiente (cat_familiar.pk_num), ya que el mismo
+    # expediente se repite entre varios familiares de un mismo trabajador.
+    pk_num        = models.IntegerField(default=0)
+    # Capturada al seleccionar el derechohabiente/trabajador en el buscador.
+    # Se persiste porque cat_empleados/cat_familiar.no_edad puede quedar
+    # desactualizado; la fecha de nacimiento nunca cambia, así que la edad
+    # se recalcula siempre a partir de ella (ver fecha_service.calcular_edad).
+    fecha_nacimiento = models.DateField(null=True, blank=True)
     tp_der        = models.CharField(max_length=100, default=TpDer.TITULAR, blank=True)
     clinica       = models.CharField(max_length=100)
     servicio      = models.CharField(max_length=100)
@@ -36,6 +45,35 @@ class ContratoOxigeno(models.Model):
     dias_faltan    = models.IntegerField(null=True, blank=True)
     status         = models.CharField(max_length=20, choices=Status.choices, default=Status.VIGENTE)
     diagnostico    = models.CharField(max_length=200, blank=True)
+
+    # ── Domicilio desglosado (formato de oxígeno) ─────────────────────────────
+    calle         = models.CharField(max_length=150, blank=True)
+    num_ext       = models.CharField(max_length=20,  blank=True)
+    num_int       = models.CharField(max_length=20,  blank=True)
+    colonia       = models.CharField(max_length=100, blank=True)
+    alcaldia      = models.CharField(max_length=100, blank=True)
+    cp            = models.CharField(max_length=10,  blank=True)
+    entre_calle_1 = models.CharField(max_length=150, blank=True)
+    entre_calle_2 = models.CharField(max_length=150, blank=True)
+
+    # ── Teléfonos adicionales (formato de oxígeno) ────────────────────────────
+    tel_oficina = models.CharField(max_length=20, blank=True)
+    celular     = models.CharField(max_length=20, blank=True)
+    ext_tel     = models.CharField(max_length=10, blank=True)
+
+    # ── Datos médicos del formato de oxígeno ──────────────────────────────────
+    class HospitalAzura(models.TextChoices):
+        CENTRO = "CENTRO", "Centro"
+        VALLE  = "VALLE",  "Valle"
+
+    hospital_azura             = models.CharField(max_length=10, choices=HospitalAzura.choices, blank=True)
+    medico_tratante            = models.CharField(max_length=150, blank=True)
+    especialidad                = models.CharField(max_length=100, blank=True)
+    tercer_nivel                = models.BooleanField(default=False)
+    institucion_referencia      = models.CharField(max_length=150, blank=True)
+    medico_tratante_referencia  = models.CharField(max_length=150, blank=True)
+    tramite_subsecuente         = models.BooleanField(default=False)
+
     fch_alta       = models.DateTimeField(auto_now_add=True)
     fch_modf       = models.DateTimeField(auto_now=True)
 

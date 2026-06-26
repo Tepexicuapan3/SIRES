@@ -44,6 +44,8 @@ export interface ContratoOxigeno {
   numContrato:   string;
   nombre:        string;
   expediente:    string;
+  pkNum:         number;          // 0 = trabajador, >0 = derechohabiente (cat_familiar.pk_num)
+  fechaNacimiento: string | null;  // YYYY-MM-DD — fuente para calcular edadDh
   tpDer:         string;
   tpDerLabel:    string;
   clinica:       string;
@@ -63,8 +65,27 @@ export interface ContratoOxigeno {
   fchAlta:       string;          // ISO 8601
   fchModf:       string;          // ISO 8601
   vigenciaDh:        "ACTIVO" | "BAJA" | "NO ACTIVO" | null;
-  fechaNacimientoDh: string | null;   // YYYY-MM-DD
-  edadDh:            number | null;
+  edadDh:            number | null;   // calculado desde fechaNacimiento
+
+  // ── Domicilio desglosado / teléfonos / datos médicos (formato de oxígeno) ──
+  calle:                     string;
+  numExt:                    string;
+  numInt:                    string;
+  colonia:                   string;
+  alcaldia:                  string;
+  cp:                        string;
+  entreCalle1:               string;
+  entreCalle2:               string;
+  telOficina:                string;
+  celular:                   string;
+  extTel:                    string;
+  hospitalAzura:             "CENTRO" | "VALLE" | "";
+  medicoTratante:            string;
+  especialidad:              string;
+  tercerNivel:               boolean;
+  institucionReferencia:     string;
+  medicoTratanteReferencia:  string;
+  tramiteSubsecuente:        boolean;
 }
 
 // ── Requests ──────────────────────────────────────────────────────────────────
@@ -74,6 +95,8 @@ export interface CreateContratoRequest {
   numContrato:   string;
   nombre:        string;
   expediente:    string;
+  pkNum?:        number;          // 0 = trabajador, >0 = derechohabiente (cat_familiar.pk_num)
+  fechaNacimiento?: string | null;
   tpDer:         string;
   clinica:       string;
   servicio:      string;
@@ -86,6 +109,25 @@ export interface CreateContratoRequest {
   vigenciaDias?:  number | null;
   fechaRenovar?:  string | null;
   diagnostico?:   string;
+
+  calle?:                     string;
+  numExt?:                    string;
+  numInt?:                    string;
+  colonia?:                   string;
+  alcaldia?:                  string;
+  cp?:                        string;
+  entreCalle1?:                string;
+  entreCalle2?:                string;
+  telOficina?:                 string;
+  celular?:                    string;
+  extTel?:                     string;
+  hospitalAzura?:              "CENTRO" | "VALLE" | "";
+  medicoTratante?:             string;
+  especialidad?:               string;
+  tercerNivel?:                boolean;
+  institucionReferencia?:      string;
+  medicoTratanteReferencia?:   string;
+  tramiteSubsecuente?:         boolean;
 }
 
 export type UpdateContratoRequest = Partial<CreateContratoRequest>;

@@ -38,6 +38,13 @@ export const contratosAPI = {
     return response.data;
   },
 
+  descargarFormato: async (id: number): Promise<Blob> => {
+    const response = await apiClient.get(`/contratos-oxigeno/${id}/formato/`, {
+      responseType: "blob",
+    });
+    return response.data as Blob;
+  },
+
   buscarDerechohabiente: async (params: BuscarDerechohabienteParams): Promise<BuscarDerechohabienteResponse> => {
     const response = await apiClient.get<BuscarDerechohabienteResponse>("/contratos-oxigeno/buscar-derechohabiente/", { params });
     return response.data;
