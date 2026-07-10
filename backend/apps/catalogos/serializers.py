@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -763,6 +765,17 @@ class PermisosWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permisos
         fields = ("name", "code", "isActive", "isSystem")
+
+    def validate_code(self, value):
+        value = value.strip().lower()
+        if not re.fullmatch(r"[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*){1,4}", value):
+            raise serializers.ValidationError(
+                "El codigo debe seguir el formato modulo:submodulo:accion "
+                "(minusculas, numeros y guion bajo, separados por ':')."
+            )
+        if Permisos.objects.filter(codigo=value).exists():
+            raise serializers.ValidationError("Ya existe un permiso con ese codigo.")
+        return value
 
 
 # ---------------------------------------------------------------------------

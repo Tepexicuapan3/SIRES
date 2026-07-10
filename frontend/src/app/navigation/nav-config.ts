@@ -403,6 +403,7 @@ export const NAV_CONFIG: NavSection[] = [
   },
   {
     title: "Almacén",
+    permissions: ["almacen:inventario:read"],
     items: [
       {
         title: "Dashboard",

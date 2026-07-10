@@ -30,6 +30,7 @@ routes = [
     ("vaccines", VacunasListCreateView, VacunasDetailView, "int"),
     ("clinical-areas", CatAreaClinicaListCreateView, CatAreaClinicaDetailView, "int"),
     ("branches", SucursalesListCreateView, SucursalDetailView, "int"),
+    ("permisos", PermisosListCreateView, PermisosDetailView, "int"),
 ]
 
 urlpatterns = []

@@ -48,3 +48,20 @@ export interface PermissionCatalogResponse {
   items: Permission[];
   total: number;
 }
+
+/**
+ * Payload para crear un permiso nuevo.
+ * POST /api/v1/permisos
+ *
+ * code debe seguir el formato "modulo:submodulo:accion" (minusculas,
+ * numeros y guion bajo, separados por ":") — el backend lo valida igual.
+ */
+export interface CreatePermissionRequest {
+  code: string;
+  name: string;
+}
+
+export interface CreatePermissionResponse {
+  id: number;
+  name: string;
+}

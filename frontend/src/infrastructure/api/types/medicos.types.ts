@@ -59,6 +59,15 @@ export interface MedicoEscuelaItem {
   name: string;
 }
 
+export interface MedicoConsultorioActivoItem {
+  id: number;
+  consultorioId: number;
+  consultorioNumero: number;
+  consultorioNombre: string;
+  centroId: number;
+  centroNombre: string;
+}
+
 export interface MedicoListItem {
   id: number;
   username: string;
@@ -79,6 +88,7 @@ export interface MedicoListItem {
   cedulas: MedicoCedulaItem[];
   especialidades: MedicoEspecialidadItem[];
   centros: MedicoCentroItem[];
+  consultoriosActivos: MedicoConsultorioActivoItem[];
   createdAt: string | null;
 }
 

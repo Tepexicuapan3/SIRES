@@ -35,6 +35,9 @@ def _serialize_medico(medico: CatMedico) -> dict:
     cedulas = list(medico.id_usuario.cedulas.all().order_by("orden"))
     especialidades = list(medico.especialidades.select_related("especialidad").all())
     centros = list(medico.centros.select_related("centro").filter(is_active=True))
+    consultorios_activos = list(
+        medico.consultorios.select_related("consultorio", "consultorio__id_center").filter(is_active=True)
+    )
 
     escuela = getattr(det, "id_escuela", None) if det else None
 
@@ -77,6 +80,17 @@ def _serialize_medico(medico: CatMedico) -> dict:
             }
             for c in centros
         ],
+        "consultoriosActivos": [
+            {
+                "id": c.id,
+                "consultorioId": c.consultorio_id,
+                "consultorioNumero": c.consultorio.numero,
+                "consultorioNombre": c.consultorio.name,
+                "centroId": c.consultorio.id_center_id,
+                "centroNombre": c.consultorio.id_center.name,
+            }
+            for c in consultorios_activos
+        ],
         "createdAt": medico.created_at.isoformat() if medico.created_at else None,
     }
 
@@ -117,7 +131,12 @@ class MedicosListCreateView(APIView):
 
         qs = CatMedico.objects.select_related(
             "id_usuario", "id_usuario__detalle", "id_usuario__detalle__id_escuela"
-        ).prefetch_related("id_usuario__cedulas", "especialidades__especialidad", "centros__centro")
+        ).prefetch_related(
+            "id_usuario__cedulas",
+            "especialidades__especialidad",
+            "centros__centro",
+            "consultorios__consultorio__id_center",
+        )
 
         tipo = request.query_params.get("tipoMedico")
         if tipo:
@@ -187,6 +206,7 @@ class MedicoDetailView(APIView):
             "id_usuario__cedulas",
             "especialidades__especialidad",
             "centros__centro",
+            "consultorios__consultorio__id_center",
         ).filter(id_usuario_id=user_id).first()
 
     def get(self, request, user_id):

@@ -19,7 +19,7 @@ const ConteosPage        = lazy(() => import("@features/almacen-insumos/modules/
 const DashboardAlmacenPage = lazy(() => import("@features/almacen-insumos/modules/dashboard/pages/DashboardAlmacenPage"));
 
 const wrap = (Page: React.ComponentType) => (
-  <ProtectedRoute>
+  <ProtectedRoute requiredPermission="almacen:inventario:read">
     <Suspense fallback={<div>Cargando...</div>}>
       <Page />
     </Suspense>

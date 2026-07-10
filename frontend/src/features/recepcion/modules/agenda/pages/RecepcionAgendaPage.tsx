@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, FileText, List, Loader2, Printer, RefreshCcw, Search, Settings2 } from "lucide-react";
+import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, FileText, List, Loader2, Printer, RefreshCcw, Search, Settings2, Stethoscope } from "lucide-react";
 import { SlotCalendar, addDays } from "@features/recepcion/modules/citas/components/SlotCalendar";
 import { useDebounce }           from "@shared/hooks/useDebounce";
 import { useCitasList }          from "@features/recepcion/modules/citas/queries/useCitasList";
@@ -196,6 +196,83 @@ function HistVisitCard({ visit }: { visit: VisitQueueItem }) {
         ) : null}
       </div>
     </article>
+  );
+}
+
+// ─── Tarjeta de médico — vista Disponibilidad ────────────────────────────────
+
+interface DisponibilidadMedicoCardMedico {
+  id: number;
+  nombreCompleto: string;
+  servicio: string | null;
+  especialidades: { name: string }[];
+  centros: { centroId: number; centroNombre: string }[];
+  consultoriosActivos: { centroId: number; centroNombre: string; consultorioNumero: number; consultorioNombre: string }[];
+}
+
+function DisponibilidadMedicoCard({
+  medico,
+  centroFiltroId,
+  selected,
+  onSelect,
+}: {
+  medico:         DisponibilidadMedicoCardMedico;
+  centroFiltroId: number | null;
+  selected:       boolean;
+  onSelect:       () => void;
+}) {
+  const especialidad = medico.especialidades[0]?.name ?? medico.servicio;
+
+  // Si hay centro filtrado, mostrar solo lo relativo a ese centro; si no, todos.
+  const centros = centroFiltroId
+    ? medico.centros.filter((c) => c.centroId === centroFiltroId)
+    : medico.centros;
+  const consultorios = centroFiltroId
+    ? medico.consultoriosActivos.filter((c) => c.centroId === centroFiltroId)
+    : medico.consultoriosActivos;
+
+  const centroLabel = centros.map((c) => c.centroNombre).join(", ");
+  const consultorioLabel = consultorios.map((c) => `#${c.consultorioNumero}`).join(", ");
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={[
+        "flex w-full items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors",
+        selected
+          ? "border-primary bg-primary/5"
+          : "border-line-struct hover:bg-subtle/40",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
+          selected ? "bg-primary text-white" : "bg-subtle text-txt-muted",
+        ].join(" ")}
+      >
+        <Stethoscope className="size-3.5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className={[
+          "truncate text-sm font-semibold",
+          selected ? "text-primary" : "text-txt-body",
+        ].join(" ")}>
+          {medico.nombreCompleto}
+        </p>
+        {especialidad ? (
+          <p className="truncate text-xs text-txt-muted">{especialidad}</p>
+        ) : null}
+        {centroLabel ? (
+          <p className="truncate text-[11px] text-txt-muted/80 mt-0.5">{centroLabel}</p>
+        ) : null}
+        {consultorioLabel ? (
+          <p className="truncate text-[11px] font-medium text-primary/70">
+            Consultorio {consultorioLabel}
+          </p>
+        ) : null}
+      </div>
+    </button>
   );
 }
 
@@ -514,6 +591,7 @@ export const RecepcionAgendaPage = () => {
   const [calCentroId,  setCalCentroId]  = useState<number | null>(null);
   const [calMedicoId,  setCalMedicoId]  = useState<number | null>(null);
   const [calWeekStart, setCalWeekStart] = useState(() => getMonday(new Date()));
+  const [medicoSearch, setMedicoSearch] = useState("");
 
   // ── Historial NOM-024 ───────────────────────────────────────────────────────
   const [histNoExp,         setHistNoExp]         = useState("");
@@ -686,6 +764,14 @@ export const RecepcionAgendaPage = () => {
       : allMedicos
   ).map((m) => ({ id: m.id, nombre: m.nombreCompleto }));
 
+  // ── Listado visual de médicos — vista Disponibilidad ──────────────────────
+  const disponibilidadMedicos = (calCentroId
+    ? allMedicos.filter((m) => m.centros.some((c) => c.centroId === calCentroId))
+    : allMedicos
+  ).filter((m) =>
+    m.nombreCompleto.toLowerCase().includes(medicoSearch.trim().toLowerCase()),
+  );
+
   const filteredVisits = visits
     .filter((visit) => matchesStatus(visit, statusFilter))
     .filter((visit) => matchesArrivalType(visit, arrivalTypeFilter))
@@ -857,7 +943,7 @@ export const RecepcionAgendaPage = () => {
       {view === "disponibilidad" ? (
         <div className="space-y-4 rounded-xl border border-line-struct/60 bg-subtle/10 p-4">
 
-          {/* Controles: centro + médico + navegación semana */}
+          {/* Controles: centro + navegación semana */}
           <div className="flex flex-wrap items-end gap-3">
 
             {/* Filtro centro */}
@@ -880,24 +966,6 @@ export const RecepcionAgendaPage = () => {
               </div>
             ) : null}
 
-            {/* Filtro médico (filtrado por centro si está seleccionado) */}
-            <div className="space-y-1 w-96">
-              <p className="text-xs font-medium text-txt-muted">Médico</p>
-              <select
-                className="h-9 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-                value={calMedicoId ?? ""}
-                onChange={(e) => setCalMedicoId(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">Seleccionar médico...</option>
-                {(calCentroId
-                  ? allMedicos.filter((m) => m.centros.some((c) => c.centroId === calCentroId))
-                  : allMedicos
-                ).map((m) => (
-                  <option key={m.id} value={m.id}>{m.nombreCompleto}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Navegación de semana */}
             <div className="ml-auto flex items-center gap-1">
               <Button variant="ghost" size="icon" className="size-8"
@@ -917,33 +985,75 @@ export const RecepcionAgendaPage = () => {
             </div>
           </div>
 
-          {/* Grilla de slots */}
-          {calMedicoId ? (
-            <SlotCalendar
-              medicoId={calMedicoId}
-              medicoNombre={allMedicos.find((m) => m.id === calMedicoId)?.nombreCompleto}
-              weekStart={calWeekStart}
-              onSlotClick={(fecha, slot) => {
-                handleOpenQuickCheckin({
-                  doctorId:      calMedicoId,
-                  consultorioId: slot.consultorioId ?? undefined,
-                  horaConsulta:  slot.hora,
-                  fechaConsulta: fecha,
-                  arrivalType:   ARRIVAL_TYPE.WALK_IN,
-                });
-              }}
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-3 py-14 text-center">
-              <CalendarDays className="size-12 text-txt-muted/30" />
-              <p className="text-sm text-txt-muted">
-                Selecciona un médico para ver su disponibilidad semanal.
-              </p>
-              <p className="text-xs text-txt-muted/70">
-                Los slots en verde están disponibles — hacé clic para generar una ficha.
-              </p>
+          {/* Maestro-detalle: listado de médicos + grilla de slots */}
+          <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+
+            {/* Lista de médicos */}
+            <div className="space-y-3 rounded-xl border border-line-struct bg-paper p-3 lg:max-h-[640px] lg:overflow-y-auto">
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
+                  Médicos {disponibilidadMedicos.length > 0 ? `(${disponibilidadMedicos.length})` : ""}
+                </p>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-txt-muted pointer-events-none" />
+                  <Input
+                    placeholder="Buscar médico..."
+                    value={medicoSearch}
+                    onChange={(e) => setMedicoSearch(e.target.value)}
+                    className="h-8 pl-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              {disponibilidadMedicos.length === 0 ? (
+                <p className="py-6 text-center text-xs text-txt-muted">
+                  Sin médicos para los filtros aplicados.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {disponibilidadMedicos.map((m) => (
+                    <DisponibilidadMedicoCard
+                      key={m.id}
+                      medico={m}
+                      centroFiltroId={calCentroId}
+                      selected={calMedicoId === m.id}
+                      onSelect={() => setCalMedicoId(m.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Grilla de slots */}
+            <div>
+              {calMedicoId ? (
+                <SlotCalendar
+                  medicoId={calMedicoId}
+                  medicoNombre={allMedicos.find((m) => m.id === calMedicoId)?.nombreCompleto}
+                  weekStart={calWeekStart}
+                  onSlotClick={(fecha, slot) => {
+                    handleOpenQuickCheckin({
+                      doctorId:      calMedicoId,
+                      consultorioId: slot.consultorioId ?? undefined,
+                      horaConsulta:  slot.hora,
+                      fechaConsulta: fecha,
+                      arrivalType:   ARRIVAL_TYPE.WALK_IN,
+                    });
+                  }}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-3 py-14 text-center">
+                  <CalendarDays className="size-12 text-txt-muted/30" />
+                  <p className="text-sm text-txt-muted">
+                    Selecciona un médico de la lista para ver su disponibilidad semanal.
+                  </p>
+                  <p className="text-xs text-txt-muted/70">
+                    Los slots en verde están disponibles — hacé clic para generar una ficha.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       ) : null}
 

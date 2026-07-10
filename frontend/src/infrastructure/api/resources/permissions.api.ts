@@ -5,7 +5,11 @@
  */
 
 import apiClient from "@api/client";
-import type { PermissionCatalogResponse } from "@api/types/permissions.types";
+import type {
+  CreatePermissionRequest,
+  CreatePermissionResponse,
+  PermissionCatalogResponse,
+} from "@api/types/permissions.types";
 
 export const permissionsAPI = {
   /**
@@ -26,6 +30,21 @@ export const permissionsAPI = {
   getPermissions: async (): Promise<PermissionCatalogResponse> => {
     const response =
       await apiClient.get<PermissionCatalogResponse>("/permissions");
+    return response.data;
+  },
+
+  /**
+   * Crea un permiso nuevo en el catalogo (modulo:submodulo:accion).
+   * @endpoint POST /api/v1/permisos
+   * @permission admin:catalogos:permisos:create
+   */
+  create: async (
+    data: CreatePermissionRequest,
+  ): Promise<CreatePermissionResponse> => {
+    const response = await apiClient.post<CreatePermissionResponse>(
+      "/permisos/",
+      data,
+    );
     return response.data;
   },
 };

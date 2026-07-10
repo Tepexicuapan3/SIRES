@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { CalendarDays, Plus, UserRound, X } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { formatDateTime } from "@/domains/auth-access/adapters/rbac/roles/roles.format";
 import { PermissionsHierarchyExplorer } from "@/domains/auth-access/components/admin/rbac/shared/PermissionHierarchyExplorer";
+import { PermissionCreateDialog } from "@/domains/auth-access/components/admin/rbac/permissions/PermissionCreateDialog";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import type { Permission, RolePermission } from "@api/types";
 
@@ -32,6 +34,8 @@ export function RoleDetailsPermissionsTab({
   onAddPermission,
   onRemovePermission,
 }: RoleDetailsPermissionsTabProps) {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
   const assignedIds = new Set(permissions.map((permission) => permission.id));
   const availablePermissions = permissionCatalog.filter(
     (permission) => !assignedIds.has(permission.id),
@@ -42,6 +46,7 @@ export function RoleDetailsPermissionsTab({
 
   return (
     <div className="space-y-6">
+      <PermissionCreateDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
       {!isEditable ? <AdminReadOnlyNotice message={readOnlyMessage} /> : null}
       {showCatalogAccessNotice ? (
         <AdminReadOnlyNotice message={catalogAccessMessage} />
@@ -64,9 +69,28 @@ export function RoleDetailsPermissionsTab({
         </div>
       ) : null}
 
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-txt-body">Catalogo de permisos</p>
+          <p className="text-xs text-txt-muted">
+            Busca y agrega permisos organizados por Grupo -&gt; Modulo -&gt; Submodulo -&gt; Accion.
+          </p>
+        </div>
+        {isEditable ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus className="size-4" />
+            Nuevo permiso
+          </Button>
+        ) : null}
+      </div>
+
       <PermissionsHierarchyExplorer
-        title="Catalogo de permisos"
-        description="Busca y agrega permisos organizados por Grupo -> Modulo -> Submodulo -> Accion."
         permissions={availablePermissions}
         isLoading={isLoadingPermissions}
         emptyMessage="No hay permisos disponibles para agregar."

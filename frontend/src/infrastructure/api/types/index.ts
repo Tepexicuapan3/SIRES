@@ -123,7 +123,7 @@ export type {
 } from "@api/types/roles.types";
 
 // =============================================================================
-// PERMISSIONS TYPES (catalog only - read-only)
+// PERMISSIONS TYPES (catalogo: lectura + creacion)
 // =============================================================================
 export type {
   // Tipos comunes
@@ -132,6 +132,8 @@ export type {
   Permission,
   // Responses
   PermissionCatalogResponse,
+  CreatePermissionRequest,
+  CreatePermissionResponse,
 } from "@api/types/permissions.types";
 
 // =============================================================================
