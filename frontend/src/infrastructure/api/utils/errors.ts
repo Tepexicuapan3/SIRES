@@ -31,6 +31,7 @@ export const ERROR_CODES = {
   ACCOUNT_LOCKED: "ACCOUNT_LOCKED",
   USER_INACTIVE: "USER_INACTIVE",
   ACCOUNT_EXPIRED: "ACCOUNT_EXPIRED",
+  SESSION_ALREADY_ACTIVE: "SESSION_ALREADY_ACTIVE",
 
   // Validación (400)
   VALIDATION_ERROR: "VALIDATION_ERROR",
@@ -92,6 +93,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.ACCOUNT_LOCKED]: "Cuenta bloqueada por intentos fallidos",
   [ERROR_CODES.USER_INACTIVE]: "Cuenta desactivada por un administrador",
   [ERROR_CODES.ACCOUNT_EXPIRED]: "Tu cuenta ha expirado. Contacta a soporte",
+  [ERROR_CODES.SESSION_ALREADY_ACTIVE]:  "Tienes una sesión activa en otro equipo. Cerrar la sesión para continuar",
   [ERROR_CODES.VALIDATION_ERROR]: "Hay errores en el formulario",
   [ERROR_CODES.FIELD_REQUIRED]: "Faltan campos requeridos",
   [ERROR_CODES.INVALID_FORMAT]: "Formato inválido",

@@ -21,6 +21,11 @@ REFRESH_MAX_AGE = 60 * 60 * 24 * 7
 CSRF_MAX_AGE = REFRESH_MAX_AGE
 RESET_MAX_AGE = 60 * 10
 
+# TTL de la sesion activa en Redis (control de sesion unica).
+# Se renueva (sliding expiration) en cada request autenticado; si nadie la
+# toca en este lapso (pestaña cerrada, PC apagada) se libera sola.
+ACTIVE_SESSION_TTL_SECONDS = 120
+
 
 def _cookie_secure() -> bool:
     # En local (http) los navegadores ignoran cookies `Secure`.
@@ -33,20 +38,25 @@ def generate_csrf_token():
     return secrets.token_urlsafe(32)
 
 
-def create_access_refresh_tokens(user):
+def create_access_refresh_tokens(user, session_id=None):
     # Genera access y refresh para el usuario.
+    # session_id: si se pasa (rotacion de refresh), se reusa el mismo sid
+    # para no invalidar la sesion activa que ya esta registrada.
     auth_user = UserRepository.build_auth_user(user)
     roles = auth_user.get("roles", [])
     permissions = auth_user.get("permissions", [])
+    sid = session_id or secrets.token_urlsafe(16)
 
     refresh = RefreshToken.for_user(user)
     refresh["roles"] = roles
     refresh["permissions"] = permissions
+    refresh["sid"] = sid
 
     access = refresh.access_token
     access["roles"] = roles
     access["permissions"] = permissions
-    return str(access), str(refresh)
+    access["sid"] = sid
+    return str(access), str(refresh), sid
 
 
 def validate_refresh_token(raw_token):

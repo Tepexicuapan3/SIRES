@@ -1,12 +1,12 @@
 from apps.authentication.application.auth_policy_service import AuthPolicyService
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.errors import AuthServiceError
-from apps.authentication.services.token_service import create_access_refresh_tokens
+from apps.authentication.services.session_registry import start_session
 
 policy_service = AuthPolicyService()
 
 
-def login_user(username, password, ip_address):
+def login_user(username, password, ip_address, user_agent=None):
     # Autentica usuario y genera tokens.
     policy_service.check_login(username, ip_address)
     user = UserRepository.get_by_username(username)
@@ -52,7 +52,9 @@ def login_user(username, password, ip_address):
     policy_service.record_login_success(username, ip_address)
     UserRepository.mark_last_access(user, ip_address)
 
-    access_token, refresh_token = create_access_refresh_tokens(user)
+    access_token, refresh_token, _sid = start_session(
+        user, ip_address, user_agent, block_if_active=True
+    )
     requires_onboarding = user.cambiar_clave or not user.terminos_acept
 
     return {

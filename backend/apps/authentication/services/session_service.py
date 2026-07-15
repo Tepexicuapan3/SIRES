@@ -1,10 +1,13 @@
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.settings import api_settings
 
+from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.repositories.user_repository import UserRepository
 
-from .errors import AuthServiceError
-from .token_service import ACCESS_COOKIE, decode_access_token
+from .errors import AuthServiceError, PolicyStoreUnavailableError
+from .token_service import ACCESS_COOKIE, ACTIVE_SESSION_TTL_SECONDS, decode_access_token
+
+policy_store = PolicyStore()
 
 
 def authenticate_request(request):
@@ -41,5 +44,21 @@ def authenticate_request(request):
     if user.est_bloqueado or user.fch_baja:
         raise AuthServiceError("SESSION_EXPIRED", "Tu sesión ha expirado", 401)
 
+    sid = payload.get("sid")
+    try:
+        active_sid = policy_store.get_active_session(user.id_usuario)
+        if not sid or sid != active_sid:
+            # La sesion fue cerrada (logout), expiro por inactividad (TTL) o
+            # fue reemplazada por un login mas reciente en otro equipo.
+            raise AuthServiceError("SESSION_EXPIRED", "Tu sesión ha expirado", 401)
+        # Sliding expiration: cada request autenticado mantiene viva la sesion.
+        policy_store.touch_active_session(user.id_usuario, ACTIVE_SESSION_TTL_SECONDS)
+    except PolicyStoreUnavailableError:
+        # Redis caido: no podemos verificar sesion unica. Fail-open a
+        # proposito -- degradar el control de sesion es preferible a tirar
+        # abajo el acceso de todo el sistema por un blip de infraestructura.
+        pass
+
     request.user = user
+    request.session_id = sid
     return user

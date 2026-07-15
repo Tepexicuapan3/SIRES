@@ -16,7 +16,10 @@ from apps.authentication.services.audit_service import (
     mask_username,
 )
 from apps.authentication.services.csrf_service import validate_csrf
-from apps.authentication.services.errors import AuthServiceError
+from apps.authentication.services.errors import (
+    AuthServiceError,
+    PolicyStoreUnavailableError,
+)
 from apps.authentication.services.observability_service import (
     build_observability_snapshot,
     observe_latency_ms,
@@ -24,6 +27,7 @@ from apps.authentication.services.observability_service import (
     record_policy_deny,
 )
 from apps.authentication.services.response_service import error_response, get_request_id
+from apps.authentication.services.session_registry import close_session
 from apps.authentication.services.session_service import authenticate_request
 from apps.authentication.services.token_service import (
     REFRESH_COOKIE,
@@ -34,6 +38,7 @@ from apps.authentication.services.token_service import (
     set_csrf_cookie,
     set_reset_cookie,
 )
+from apps.authentication.uses_case.list_sessions_usecase import list_sessions
 from apps.authentication.uses_case.login_usecase import login_user
 from apps.authentication.uses_case.me_usecase import (
     build_capabilities_response,
@@ -119,6 +124,7 @@ class LoginView(APIView):
                     serializer.validated_data["username"],
                     serializer.validated_data["password"],
                     request.META.get("REMOTE_ADDR"),
+                    request.META.get("HTTP_USER_AGENT"),
                 )
             except AuthServiceError as exc:
                 record_login_result("FAIL", error_code=exc.code)
@@ -238,8 +244,15 @@ class LogoutView(APIView):
             {"success": True},
             status=status.HTTP_200_OK,
         )
-        # Limpia cookies para cerrar la sesion.
+        # Limpia cookies para cerrar la sesion (esto SIEMPRE debe pasar).
         clear_auth_cookies(response)
+        try:
+            # Libera la sesion activa (Redis) y cierra el historial (Postgres).
+            close_session(user, getattr(request, "session_id", None))
+        except PolicyStoreUnavailableError:
+            # Redis caido: el logout del lado del cliente ya es efectivo
+            # (cookies limpias). La sesion se liberara sola cuando venza el TTL.
+            pass
         log_event(
             request,
             "LOGOUT",
@@ -398,6 +411,87 @@ class AuthAccessObservabilityView(APIView):
             meta={"endpoint": "/auth/ops/observability"},
         )
         return Response(snapshot, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class UserSessionsView(APIView):
+    # Vista admin: historial + conexiones activas (IP, inicio, fin, duracion).
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        try:
+            user = authenticate_request(request)
+        except AuthServiceError as exc:
+            log_event(
+                request,
+                "SESSIONS_READ",
+                "FAIL",
+                error_code=exc.code,
+                meta={"endpoint": "/auth/ops/sessions"},
+            )
+            return error_response(
+                exc.code,
+                exc.message,
+                exc.status_code,
+                details=exc.details,
+                request_id=get_request_id(request),
+            )
+
+        permissions = RBACResolver.get_effective_permissions(user)
+        has_access = "*" in permissions or "admin:usuarios:sesiones:read" in permissions
+        if not has_access:
+            log_event(
+                request,
+                "SESSIONS_READ",
+                "FAIL",
+                actor_user=user,
+                target_user=user,
+                error_code="PERMISSION_DENIED",
+                meta={"endpoint": "/auth/ops/sessions"},
+            )
+            return error_response(
+                "PERMISSION_DENIED",
+                "No tienes permiso para esta acción",
+                status.HTTP_403_FORBIDDEN,
+                request_id=get_request_id(request),
+            )
+
+        try:
+            page = int(request.query_params.get("page", "1"))
+            page_size = int(request.query_params.get("pageSize", "20"))
+        except (TypeError, ValueError):
+            return error_response(
+                "INVALID_FORMAT",
+                "Parámetros de paginación inválidos",
+                status.HTTP_400_BAD_REQUEST,
+                request_id=get_request_id(request),
+            )
+
+        if page < 1 or page_size < 1 or page_size > 100:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Parámetros de paginación fuera de rango",
+                status.HTTP_400_BAD_REQUEST,
+                request_id=get_request_id(request),
+            )
+
+        solo_activas = request.query_params.get("soloActivas") == "true"
+        payload = list_sessions(
+            page,
+            page_size,
+            usuario=request.query_params.get("usuario"),
+            solo_activas=solo_activas,
+        )
+        log_event(
+            request,
+            "SESSIONS_READ",
+            "SUCCESS",
+            actor_user=user,
+            target_user=user,
+            meta={"endpoint": "/auth/ops/sessions"},
+        )
+        return Response(payload, status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -564,6 +658,7 @@ class CompleteOnboardingView(APIView):
                 serializer.validated_data["newPassword"],
                 serializer.validated_data["termsAccepted"],
                 request.META.get("REMOTE_ADDR"),
+                getattr(request, "session_id", None),
             )
         except AuthServiceError as exc:
             log_event(
@@ -969,6 +1064,7 @@ class ResetPasswordView(APIView):
                 reset_token,
                 serializer.validated_data["newPassword"],
                 request.META.get("REMOTE_ADDR"),
+                request.META.get("HTTP_USER_AGENT"),
             )
         except AuthServiceError as exc:
             log_event(

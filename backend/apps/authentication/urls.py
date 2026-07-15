@@ -13,6 +13,7 @@ from .views import (
     RefreshView,
     RequestResetCodeView,
     ResetPasswordView,
+    UserSessionsView,
     VerifyResetCodeView,
     VerifyView,
 )
@@ -26,6 +27,11 @@ urlpatterns = [
         "auth/ops/observability",
         AuthAccessObservabilityView.as_view(),
         name="auth-ops-observability",
+    ),
+    path(
+        "auth/ops/sessions",
+        UserSessionsView.as_view(),
+        name="auth-ops-sessions",
     ),
     path("auth/verify", VerifyView.as_view(), name="auth-verify"),
     path("auth/refresh", RefreshView.as_view(), name="auth-refresh"),

@@ -5,13 +5,11 @@ from rest_framework_simplejwt.settings import api_settings
 
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.errors import AuthServiceError
-from apps.authentication.services.token_service import (
-    create_access_refresh_tokens,
-    decode_reset_token,
-)
+from apps.authentication.services.session_registry import start_session
+from apps.authentication.services.token_service import decode_reset_token
 
 
-def reset_password(raw_reset_token, new_password, ip_address):
+def reset_password(raw_reset_token, new_password, ip_address, user_agent=None):
     # Valida token reset y cambia password.
     try:
         payload = decode_reset_token(raw_reset_token)
@@ -39,7 +37,9 @@ def reset_password(raw_reset_token, new_password, ip_address):
     UserRepository.mark_password_reset(user)
 
     UserRepository.mark_last_access(user, ip_address)
-    access_token, refresh_token = create_access_refresh_tokens(user)
+    # Nueva sesion "fuerte": el reset via OTP reemplaza cualquier sesion
+    # anterior (no bloquea -- probaste identidad, tenes prioridad).
+    access_token, refresh_token, _sid = start_session(user, ip_address, user_agent)
 
     return {
         "user": UserRepository.build_auth_user(user),

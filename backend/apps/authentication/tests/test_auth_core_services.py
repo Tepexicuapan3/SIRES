@@ -85,7 +85,7 @@ class AuthCoreServicesTests(TestCase):
         self.assertFalse(validate_csrf(request_bad))
 
     def test_token_roundtrip_for_access_refresh_and_reset(self):
-        access, refresh = create_access_refresh_tokens(self.user)
+        access, refresh, _sid = create_access_refresh_tokens(self.user)
 
         access_payload = decode_access_token(access)
         refresh_token = validate_refresh_token(refresh)
@@ -97,7 +97,7 @@ class AuthCoreServicesTests(TestCase):
         self.assertEqual(reset_payload[api_settings.TOKEN_TYPE_CLAIM], "reset")
 
     def test_token_type_validation_errors(self):
-        access, refresh = create_access_refresh_tokens(self.user)
+        access, refresh, _sid = create_access_refresh_tokens(self.user)
 
         with self.assertRaises(TokenError):
             validate_refresh_token(access)

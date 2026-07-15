@@ -76,6 +76,11 @@ export const NAV_CONFIG: NavSection[] = [
             url: "/admin/roles",
             permissions: ["admin:gestion:roles:read"],
           },
+          {
+            title: "Conexiones",
+            url: "/admin/conexiones",
+            permissions: ["admin:usuarios:sesiones:read"],
+          },
         ],
       },
       {

@@ -96,6 +96,18 @@ export type {
 } from "@api/types/users.types";
 
 // =============================================================================
+// SESSIONS TYPES (control de sesion unica, historial de conexiones)
+// =============================================================================
+export type {
+  SessionListItem,
+  SessionsListParams,
+  SessionsListResponse,
+  SessionEstado,
+  SessionCerradaPor,
+} from "@api/types/sessions.types";
+export { SESSION_ESTADO, SESSION_CERRADA_POR } from "@api/types/sessions.types";
+
+// =============================================================================
 // ROLES TYPES (CRUD, permissions assignment)
 // =============================================================================
 export type {

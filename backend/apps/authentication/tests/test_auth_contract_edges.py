@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth.hashers import make_password
+from django.core.cache import cache
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -23,6 +24,7 @@ from apps.catalogos.models import Roles
 )
 class AuthContractEdgeTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = SyUsuario.objects.create(
             usuario="edge_user",
             correo="edge.user@example.com",

@@ -164,3 +164,35 @@ class DetUsuarioCedula(models.Model):
 
     def __str__(self):
         return f"{self.tipo}: {self.numero}"
+
+
+class SesionUsuario(models.Model):
+    # Historial de conexiones (control de sesion unica + auditoria de accesos).
+    class CierrePor(models.TextChoices):
+        LOGOUT = "LOGOUT", "Logout"
+        EXPIRACION = "EXPIRACION", "Expiración"
+
+    id_sesion = models.BigAutoField(primary_key=True, db_column="id_sesion")
+    usuario = models.ForeignKey(
+        SyUsuario,
+        db_column="id_usuario",
+        on_delete=models.CASCADE,
+        related_name="sesiones",
+    )
+    session_id = models.CharField(max_length=64, db_index=True)
+    ip_origen = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, null=True, blank=True)
+    fch_inicio = models.DateTimeField(auto_now_add=True, db_index=True)
+    fch_fin = models.DateTimeField(null=True, blank=True, db_index=True)
+    cerrada_por = models.CharField(
+        max_length=10, choices=CierrePor.choices, null=True, blank=True
+    )
+
+    class Meta:
+        db_table = "sy_sesiones_usuario"
+        ordering = ["-fch_inicio"]
+        verbose_name = "Sesión de Usuario"
+        verbose_name_plural = "Sesiones de Usuario"
+
+    def __str__(self):
+        return f"{self.usuario_id} @ {self.fch_inicio}"

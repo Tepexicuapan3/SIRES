@@ -3,10 +3,10 @@ from django.core.exceptions import ValidationError
 
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.errors import AuthServiceError
-from apps.authentication.services.token_service import create_access_refresh_tokens
+from apps.authentication.services.session_registry import start_session
 
 
-def complete_onboarding(user, new_password, terms_accepted, ip_address):
+def complete_onboarding(user, new_password, terms_accepted, ip_address, session_id=None):
     # Completa onboarding y emite tokens nuevos.
     if not terms_accepted:
         raise AuthServiceError(
@@ -27,7 +27,9 @@ def complete_onboarding(user, new_password, terms_accepted, ip_address):
 
     if not user.cambiar_clave and user.terminos_acept:
         UserRepository.mark_last_access(user, ip_address)
-        access_token, refresh_token = create_access_refresh_tokens(user)
+        access_token, refresh_token, _sid = start_session(
+            user, ip_address, None, session_id=session_id
+        )
         return {
             "user": UserRepository.build_auth_user(user),
             "access_token": access_token,
@@ -38,7 +40,9 @@ def complete_onboarding(user, new_password, terms_accepted, ip_address):
     UserRepository.mark_onboarding_completed(user)
 
     UserRepository.mark_last_access(user, ip_address)
-    access_token, refresh_token = create_access_refresh_tokens(user)
+    access_token, refresh_token, _sid = start_session(
+        user, ip_address, None, session_id=session_id
+    )
 
     return {
         "user": UserRepository.build_auth_user(user),

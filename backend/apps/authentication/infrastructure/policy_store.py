@@ -86,6 +86,37 @@ class PolicyStore:
         except Exception as exc:
             raise PolicyStoreUnavailableError("Policy store unavailable") from exc
 
+    def set_active_session(self, user_id, session_id: str, ttl_seconds: int) -> None:
+        try:
+            cache.set(self._active_session_key(user_id), session_id, ttl_seconds)
+        except Exception as exc:
+            raise PolicyStoreUnavailableError("Policy store unavailable") from exc
+
+    def get_active_session(self, user_id) -> str | None:
+        try:
+            return cache.get(self._active_session_key(user_id))
+        except Exception as exc:
+            raise PolicyStoreUnavailableError("Policy store unavailable") from exc
+
+    def touch_active_session(self, user_id, ttl_seconds: int) -> None:
+        # Sliding expiration: solo renueva si el valor actual sigue ahi.
+        try:
+            current = cache.get(self._active_session_key(user_id))
+            if current is not None:
+                cache.set(self._active_session_key(user_id), current, ttl_seconds)
+        except Exception as exc:
+            raise PolicyStoreUnavailableError("Policy store unavailable") from exc
+
+    def clear_active_session(self, user_id) -> None:
+        try:
+            cache.delete(self._active_session_key(user_id))
+        except Exception as exc:
+            raise PolicyStoreUnavailableError("Policy store unavailable") from exc
+
+    @staticmethod
+    def _active_session_key(user_id) -> str:
+        return f"session:active:{user_id}"
+
     @staticmethod
     def _otp_key(email: str) -> str:
         return f"otp:{email.lower()}"

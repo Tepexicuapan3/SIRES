@@ -182,7 +182,7 @@ class AuthUseCasesTests(TestCase):
             create_access_refresh_tokens,
         )
 
-        _, refresh = create_access_refresh_tokens(self.user)
+        _, refresh, _sid = create_access_refresh_tokens(self.user)
         self.user.est_activo = False
         self.user.save(update_fields=["est_activo"])
 

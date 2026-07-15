@@ -183,6 +183,29 @@ else:
         }
     }
 
+# ── Cache (Redis) ────────────────────────────────────────────────────────────
+# DB distinta a la de Celery (db=1) para no mezclar keyspaces.
+CACHE_REDIS_URL = config("CACHE_REDIS_URL", default="redis://127.0.0.1:6379/2")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": CACHE_REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+
+if "test" in sys.argv:
+    # LocMemCache en tests: evita ensuciar el Redis real con sesiones
+    # activas que Django no rollbackea entre tests (a diferencia de la DB).
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
+
 # ── Celery ────────────────────────────────────────────────────────────────────
 CELERY_BROKER_URL      = config("CELERY_BROKER_URL",     default="redis://127.0.0.1:6379/1")
 CELERY_RESULT_BACKEND  = config("CELERY_RESULT_BACKEND",  default="redis://127.0.0.1:6379/1")
@@ -202,6 +225,10 @@ CELERY_BEAT_SCHEDULE = {
     "citas-marcar-no-asistio": {
         "task": "apps.recepcion.tasks.marcar_no_asistio",
         "schedule": crontab(minute=0),
+    },
+    "auth-cerrar-sesiones-abandonadas": {
+        "task": "apps.authentication.tasks.cerrar_sesiones_abandonadas",
+        "schedule": 90.0,  # segundos
     },
 }
 
