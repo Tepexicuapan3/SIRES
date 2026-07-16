@@ -1,20 +1,22 @@
-#frontend/Dockerfile
-FROM oven/bun:1.3.8
-
-## Nota
-# Vite 7 + React plugin (SWC) corre ok con Bun >= 1.3.x.
-
-# Playwright CLI depende de runtime Node para discovery/runner.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends nodejs npm \
-  && rm -rf /var/lib/apt/lists/*
-
+# --- Etapa 1: build de estáticos con Vite ---
+FROM oven/bun:1.3.8 AS build
 WORKDIR /app
 
-COPY package.json ./
-COPY bun.lock ./
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
-EXPOSE 5173
+COPY . .
 
-# Deps se instalan al arrancar (docker-compose command) para que queden en el volumen /app/node_modules.
-CMD ["bun", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+ARG VITE_API_URL
+ARG VITE_APP_NAME=SISEM
+ENV VITE_API_URL=${VITE_API_URL} \
+    VITE_APP_NAME=${VITE_APP_NAME}
+
+RUN bun run build
+
+# --- Etapa 2: nginx solo sirviendo los estáticos ---
+FROM nginx:1.27-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.frontend.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
