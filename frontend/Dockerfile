@@ -1,3 +1,4 @@
+#frontend/Dockerfile
 FROM oven/bun:1.3.8
 
 ## Nota

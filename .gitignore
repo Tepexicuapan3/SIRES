@@ -17,6 +17,7 @@ envdevelopment/
 # Ignorar archivos .env activos
 .env
 .env.local
+.env.prod
 .env.*.local
 backend/.env
 frontend/.env

@@ -1,25 +1,48 @@
+#backend/Dockerfile
 FROM python:3.12-slim
 
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    ORACLE_INSTANT_CLIENT=/opt/oracle/instantclient
 
-# Dependencias del sistema para drivers de BD
+# Dependencias de sistema para drivers de BD
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libpq-dev \
     default-libmysqlclient-dev \
+    libaio1 \
+    unzip \
   && rm -rf /var/lib/apt/lists/*
+
+# Oracle Instant Client (modo thick, lo pide sync_service.py con init_oracle_client).
+# Oracle no permite descargarlo por URL directa sin aceptar la licencia en su sitio:
+# 1) Bajate manualmente "instantclient-basiclite-linux.x64-<version>.zip" desde
+#    https://www.oracle.com/database/technologies/instant-client/linux-x86-64-downloads.html
+# 2) Guardalo en backend/vendor/instantclient-linux.zip (ese path está en .dockerignore
+#    exceptuado más abajo, agregalo si hace falta)
+COPY vendor/instantclient-linux.zip /tmp/instantclient.zip
+RUN unzip -q /tmp/instantclient.zip -d /opt/oracle \
+  && mv /opt/oracle/instantclient_* /opt/oracle/instantclient \
+  && rm /tmp/instantclient.zip
 
 COPY requirements.txt ./requirements.txt
 
-RUN pip install --no-cache-dir -r requirements.txt
+# pywin32 es Windows-only (COM/Word automation) — no instala en Linux.
+# La conversión docx2pdf de ficha_service.py debe migrarse a LibreOffice headless
+# antes de habilitar esa feature en este contenedor.
+RUN sed -i '/^pywin32==/d' requirements.txt \
+  && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN useradd --create-home --shell /bin/sh appuser \
+  && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 5000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:5000"]
+CMD ["sh", "/app/start-docker.sh"]

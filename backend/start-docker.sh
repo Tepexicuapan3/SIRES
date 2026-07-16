@@ -1,4 +1,5 @@
 #!/bin/sh
+#start-docker.sh
 set -eu
 
 python -m scripts.wait_for_db

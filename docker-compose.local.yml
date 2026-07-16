@@ -1,0 +1,122 @@
+services:
+  auth-db:
+    image: postgres:16-alpine
+    container_name: sisem-auth-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:-sisem_auth}
+      POSTGRES_USER: ${AUTH_DB_USER:-sisem_auth}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-sisem_auth_dev_password}
+    ports:
+      - "${AUTH_DB_HOST_PORT:-${AUTH_DB_PORT:-5432}}:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-sisem_auth} -d ${AUTH_DB_NAME:-sisem_auth}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: sisem-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_HOST_PORT:-${REDIS_PORT:-6379}}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sisem-backend
+    restart: unless-stopped
+    command: sh /app/start-docker.sh
+    ports:
+      - "${BACKEND_HOST_PORT:-${BACKEND_PORT:-5000}}:5000"
+    volumes:
+      - ./backend:/app
+    environment:
+      TZ: America/Mexico_City
+      DEBUG: ${DEBUG:-true}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-dev-only}
+      ALLOW_ALL_HOSTS: ${ALLOW_ALL_HOSTS:-true}
+      ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+      CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      WS_ALLOW_ALL_ORIGINS: ${WS_ALLOW_ALL_ORIGINS:-false}
+      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-}
+      DB_HOST: ${AUTH_DB_HOST:-auth-db}
+      DB_PORT: ${AUTH_DB_PORT:-5432}
+      DB_NAME: ${AUTH_DB_NAME:-sisem_auth}
+      DB_USER: ${AUTH_DB_USER:-sisem_auth}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-sisem_auth_dev_password}
+      CHANNEL_REDIS_URL: redis://redis:6379/1
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-no-reply@sisem.local}
+      EMAIL_TIMEOUT: ${EMAIL_TIMEOUT:-10}
+      # Branding SISEM.
+      SISEM_LOGIN_URL: ${SISEM_LOGIN_URL:-http://localhost:5173/login}
+      SISEM_SUPPORT_EMAIL: ${SISEM_SUPPORT_EMAIL:-soporte@sisem.local}
+      ALLOW_USER_CREATE_WITHOUT_EMAIL: ${ALLOW_USER_CREATE_WITHOUT_EMAIL:-true}
+      RUN_SEED_ON_BOOT: ${RUN_SEED_ON_BOOT:-true}
+      RUN_E2E_SEED_ON_BOOT: ${RUN_E2E_SEED_ON_BOOT:-false}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sisem-frontend
+    restart: unless-stopped
+    command: sh -lc "bun install && bun run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "${FRONTEND_HOST_PORT:-${FRONTEND_PORT:-5173}}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      VITE_API_URL: ${VITE_API_URL:-}
+      VITE_DEV_PROXY_TARGET: ${VITE_DEV_PROXY_TARGET:-http://backend:5000}
+      VITE_BACKEND_PORT: ${VITE_BACKEND_PORT:-5000}
+      VITE_VISITS_STREAM_PATH: ${VITE_VISITS_STREAM_PATH:-/ws/v1/visits/stream}
+      VITE_VISITS_STREAM_URL: ${VITE_VISITS_STREAM_URL:-}
+      VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS: ${VITE_VISITS_STREAM_HEARTBEAT_INTERVAL_MS:-30000}
+      VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS: ${VITE_VISITS_STREAM_HEARTBEAT_TIMEOUT_MS:-10000}
+      VITE_VISITS_STREAM_BACKOFF_BASE_MS: ${VITE_VISITS_STREAM_BACKOFF_BASE_MS:-1000}
+      VITE_VISITS_STREAM_BACKOFF_MAX_MS: ${VITE_VISITS_STREAM_BACKOFF_MAX_MS:-30000}
+      VITE_VISITS_STREAM_JITTER_RATIO: ${VITE_VISITS_STREAM_JITTER_RATIO:-0.1}
+      VITE_VISITS_STREAM_DISCONNECT_GRACE_MS: ${VITE_VISITS_STREAM_DISCONNECT_GRACE_MS:-1500}
+      # Prefer SISEM in runtime branding while keeping the same VITE key.
+      VITE_APP_NAME: ${VITE_APP_NAME:-SISEM}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
+      VITE_API_TIMEOUT: ${VITE_API_TIMEOUT:-30000}
+      VITE_USE_MSW: ${VITE_USE_MSW:-false}
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  auth_db_data:
