@@ -19,4 +19,4 @@ class Consultorios(CatalogBase):
 
     class Meta:
         db_table = "cat_consultorios"
-        managed = False
+        managed = True

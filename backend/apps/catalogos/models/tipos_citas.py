@@ -8,4 +8,4 @@ class TipoDeCitas(CatalogBase):
  
     class Meta:
         db_table = "cat_tpcitas"
-        managed = False   
+        managed = True   

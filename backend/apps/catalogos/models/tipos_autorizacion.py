@@ -10,4 +10,4 @@ class TpAutorizacion(CatalogBase):
     
     class Meta:
         db_table = "cat_tpautorizacion"
-        managed = False
+        managed = True

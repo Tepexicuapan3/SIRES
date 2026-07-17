@@ -37,6 +37,7 @@ class CitaMedica(models.Model):
     consultorio  = models.ForeignKey(
         "catalogos.Consultorios",
         db_column="consultorio_id",
+        db_constraint=False,
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -76,7 +77,7 @@ class CitaMedica(models.Model):
     created_by_id   = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
-        db_table = '"sires"."citas_medicas"'
+        db_table = "citas_medicas"
         indexes  = [
             models.Index(fields=["medico", "fecha_hora"],            name="citas_medico_fechahora_idx"),
             models.Index(fields=["no_exp", "pk_num"],                name="citas_noexp_pknum_idx"),
@@ -106,6 +107,7 @@ class HorarioDisponible(models.Model):
     )
     consultorio = models.ForeignKey(
         "catalogos.Consultorios",
+        db_constraint=False,
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -194,6 +196,7 @@ class Visit(models.Model):
     consultorio = models.ForeignKey(
         "catalogos.Consultorios",
         db_column="consultorio_id",
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -294,7 +297,7 @@ class VisitStatusLog(models.Model):
     notes         = models.CharField(max_length=255, null=True, blank=True, db_column="notes")
 
     class Meta:
-        db_table = '"sires"."rcp_visit_status_log"'
+        db_table = "rcp_visit_status_log"
         ordering = ["changed_at"]
 
     def __str__(self) -> str:

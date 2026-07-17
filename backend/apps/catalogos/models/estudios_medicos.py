@@ -16,4 +16,4 @@ class EstudiosMed(CatalogBase):
     
     class Meta:
         db_table = "cat_estudiosmed"
-        managed = False
+        managed = True

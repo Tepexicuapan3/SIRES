@@ -8,4 +8,4 @@ class Licencias(CatalogBase):
  
     class Meta:
         db_table = "cat_tplicencia"
-        managed = False
+        managed = True

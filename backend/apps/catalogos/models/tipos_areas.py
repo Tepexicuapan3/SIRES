@@ -9,4 +9,4 @@ class TiposAreas(CatalogBase):
 
     class Meta:
         db_table = "cat_tpareas"
-        managed = False
+        managed = True

@@ -8,4 +8,4 @@ class Bajas(CatalogBase):
      
     class Meta:
         db_table = "cat_bajas"
-        managed = False
+        managed = True

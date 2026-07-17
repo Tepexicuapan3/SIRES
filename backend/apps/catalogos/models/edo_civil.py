@@ -9,4 +9,4 @@ class EdoCivil(CatalogBase):
 
     class Meta:
         db_table = "cat_edocivil"
-        managed = False
+        managed = True

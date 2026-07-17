@@ -8,7 +8,7 @@ class Vacunas(CatalogBase):
 
     class Meta:
         db_table = "cat_vacunas"
-        managed = False
+        managed = True
 
     def __str__(self):
         return self.name

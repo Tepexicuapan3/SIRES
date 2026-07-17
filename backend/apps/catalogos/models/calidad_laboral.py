@@ -9,4 +9,4 @@ class CalidadLaboral(CatalogBase):
 
     class Meta:
         db_table = "cat_calidadlab"
-        managed = False
+        managed = True

@@ -17,6 +17,7 @@ class DetUsuarioMedico(models.Model):
     id_especialidad = models.ForeignKey(
         "catalogos.Especialidades",
         db_column="id_especialidad",
+        db_constraint=False,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -73,6 +74,7 @@ class DetUsuarioEnfermeria(models.Model):
     id_area_clinica = models.ForeignKey(
         "catalogos.CatAreaClinica",
         db_column="id_area_clinica",
+        db_constraint=False,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

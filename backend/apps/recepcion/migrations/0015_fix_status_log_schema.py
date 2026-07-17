@@ -12,6 +12,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterModelTable(
             name='visitstatuslog',
-            table='"sires"."rcp_visit_status_log"',
+            table='rcp_visit_status_log',
         ),
     ]

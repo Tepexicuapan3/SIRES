@@ -9,4 +9,4 @@ class Pases(CatalogBase):
  
     class Meta:
         db_table = "cat_pases"
-        managed = False
+        managed = True

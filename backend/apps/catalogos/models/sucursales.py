@@ -8,7 +8,7 @@ class CatSucursal(CatalogBase):
 
     class Meta:
         db_table = "cat_sucursales"
-        managed  = False
+        managed  = True
         ordering = ["name"]
         verbose_name = "Sucursal"
         verbose_name_plural = "Sucursales"

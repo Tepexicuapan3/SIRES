@@ -8,4 +8,4 @@ class Escolaridad(CatalogBase):
 
     class Meta:
         db_table = "cat_escolaridad"
-        managed = False
+        managed = True

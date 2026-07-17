@@ -9,4 +9,4 @@ class Especialidades(CatalogBase):
     
     class Meta:
         db_table = "cat_especialidades"
-        managed = False
+        managed = True

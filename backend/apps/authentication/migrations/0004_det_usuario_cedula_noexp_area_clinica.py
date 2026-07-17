@@ -26,6 +26,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 blank=True,
                 db_column="id_area_clinica",
+                db_constraint=False,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 to="catalogos.catareaClinica",

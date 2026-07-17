@@ -9,4 +9,4 @@ class Ocupaciones(CatalogBase):
 
     class Meta:
         db_table = "cat_ocupaciones"
-        managed = False
+        managed = True

@@ -43,7 +43,7 @@ class CatCentroAtencionHorario(CatalogBase):
 
     class Meta:
         db_table    = "cat_centros_atencion_horarios"
-        managed     = False
+        managed     = True
         ordering    = ["center", "week_day", "shift"]
         unique_together = (("center", "shift", "week_day"),)
         verbose_name        = "Horario de Centro de Atención"

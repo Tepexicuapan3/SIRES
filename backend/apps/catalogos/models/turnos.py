@@ -9,7 +9,7 @@ class Turnos(CatalogBase):
 
     class Meta:
         db_table = "cat_turnos"
-        managed = False
+        managed = True
 
     def __str__(self):
         return self.name

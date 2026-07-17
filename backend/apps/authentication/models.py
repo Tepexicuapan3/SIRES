@@ -85,6 +85,7 @@ class DetUsuario(models.Model):
     id_area_clinica = models.ForeignKey(
         "catalogos.CatAreaClinica",
         db_column="id_area_clinica",
+        db_constraint=False,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -98,6 +99,7 @@ class DetUsuario(models.Model):
     id_escolaridad = models.ForeignKey(
         "catalogos.Escolaridad",
         db_column="id_escolaridad",
+        db_constraint=False,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -105,6 +107,7 @@ class DetUsuario(models.Model):
     id_escuela = models.ForeignKey(
         "catalogos.Escuelas",
         db_column="id_escuela",
+        db_constraint=False,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

@@ -9,4 +9,4 @@ class Parentesco(CatalogBase):
 
     class Meta:
         db_table = "cat_parentescos"
-        managed = False
+        managed = True

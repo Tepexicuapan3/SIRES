@@ -10,4 +10,4 @@ class Escuelas(CatalogBase):
 
     class Meta:
         db_table = "cat_escuelas"
-        managed = False
+        managed = True

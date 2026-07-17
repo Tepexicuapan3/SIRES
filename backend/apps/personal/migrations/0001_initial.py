@@ -26,6 +26,7 @@ class Migration(migrations.Migration):
                 ("cedula_especialidad", models.CharField(max_length=30, null=True, blank=True)),
                 ("id_especialidad", models.ForeignKey(
                     db_column="id_especialidad",
+                    db_constraint=False,
                     null=True, blank=True,
                     on_delete=django.db.models.deletion.SET_NULL,
                     to="catalogos.especialidades",
@@ -58,6 +59,7 @@ class Migration(migrations.Migration):
                 )),
                 ("id_area_clinica", models.ForeignKey(
                     db_column="id_area_clinica",
+                    db_constraint=False,
                     null=True, blank=True,
                     on_delete=django.db.models.deletion.SET_NULL,
                     to="catalogos.catareaclinica",

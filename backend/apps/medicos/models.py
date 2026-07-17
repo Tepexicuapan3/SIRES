@@ -90,7 +90,7 @@ class CatMedico(models.Model):
 
 class RelMedicoEspecialidad(models.Model):
     medico          = models.ForeignKey(CatMedico, on_delete=models.CASCADE, related_name="especialidades")
-    especialidad    = models.ForeignKey("catalogos.Especialidades", on_delete=models.PROTECT)
+    especialidad    = models.ForeignKey("catalogos.Especialidades", on_delete=models.PROTECT, db_constraint=False)
     es_principal    = models.BooleanField(default=False)
 
     class Meta:
@@ -125,7 +125,7 @@ class RelMedicoCentro(models.Model):
 
 class RelMedicoConsultorio(models.Model):
     medico           = models.ForeignKey(CatMedico, on_delete=models.CASCADE, related_name="consultorios")
-    consultorio      = models.ForeignKey("catalogos.Consultorios", on_delete=models.PROTECT)
+    consultorio      = models.ForeignKey("catalogos.Consultorios", on_delete=models.PROTECT, db_constraint=False)
     tipo_asignacion  = models.CharField(max_length=10, choices=TIPO_ASIGNACION, default="PERMANENTE")
     fecha_inicio     = models.DateField()
     fecha_fin        = models.DateField(null=True, blank=True)
@@ -170,7 +170,7 @@ class RelMedicoExcepcion(models.Model):
     fecha_fin       = models.DateField()
     hora_inicio     = models.TimeField(null=True, blank=True)  # NULL = día completo
     hora_fin        = models.TimeField(null=True, blank=True)
-    consultorio     = models.ForeignKey("catalogos.Consultorios", on_delete=models.SET_NULL, null=True, blank=True)
+    consultorio     = models.ForeignKey("catalogos.Consultorios", on_delete=models.SET_NULL, null=True, blank=True, db_constraint=False)
     motivo          = models.CharField(max_length=255, null=True, blank=True)
     is_active       = models.BooleanField(default=True)
     created_at      = models.DateTimeField(auto_now_add=True)
@@ -191,7 +191,7 @@ class RelMedicoExcepcion(models.Model):
 class RelMedicoCobertura(models.Model):
     medico_suplente = models.ForeignKey(CatMedico, on_delete=models.CASCADE, related_name="coberturas_como_suplente")
     medico_titular  = models.ForeignKey(CatMedico, on_delete=models.CASCADE, related_name="coberturas_como_titular")
-    consultorio     = models.ForeignKey("catalogos.Consultorios", on_delete=models.PROTECT)
+    consultorio     = models.ForeignKey("catalogos.Consultorios", on_delete=models.PROTECT, db_constraint=False)
     centro          = models.ForeignKey("catalogos.CatCentroAtencion", on_delete=models.PROTECT)
     fecha_inicio    = models.DateField(db_index=True)
     fecha_fin       = models.DateField()

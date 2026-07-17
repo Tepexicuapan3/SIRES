@@ -15,4 +15,4 @@ class Autorizadores(CatalogBase):
 
     class Meta:
         db_table = "cat_autorizadores"
-        managed = False
+        managed = True

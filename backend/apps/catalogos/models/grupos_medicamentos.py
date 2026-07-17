@@ -9,4 +9,4 @@ class GruposDeMedicamentos(CatalogBase):
  
     class Meta:
         db_table = "cat_gpomedic"
-        managed = False
+        managed = True

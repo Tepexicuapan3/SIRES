@@ -10,7 +10,7 @@ class CatAreaClinica(CatalogBase):
 
     class Meta:
         db_table = "cat_areas_clinicas"
-        managed = False
+        managed = True
         ordering = ["name"]
         verbose_name = "Área Clínica"
         verbose_name_plural = "Áreas Clínicas"
@@ -38,7 +38,7 @@ class CentroAreaClinica(CatalogBase):
 
     class Meta:
         db_table = "centro_area_clinica"
-        managed = False
+        managed = True
         unique_together = (("center", "area_clinica"),)
         verbose_name = "Área Clínica por Centro"
         verbose_name_plural = "Áreas Clínicas por Centro"

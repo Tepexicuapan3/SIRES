@@ -8,4 +8,4 @@ class TiposSanguineo(CatalogBase):
 
     class Meta:
         db_table = "cat_tpsanguineo"
-        managed = False
+        managed = True

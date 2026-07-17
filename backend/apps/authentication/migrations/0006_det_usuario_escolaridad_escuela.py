@@ -15,6 +15,7 @@ class Migration(migrations.Migration):
             name="id_escolaridad",
             field=models.ForeignKey(
                 db_column="id_escolaridad",
+                db_constraint=False,
                 null=True,
                 blank=True,
                 on_delete=django.db.models.deletion.SET_NULL,
@@ -26,6 +27,7 @@ class Migration(migrations.Migration):
             name="id_escuela",
             field=models.ForeignKey(
                 db_column="id_escuela",
+                db_constraint=False,
                 null=True,
                 blank=True,
                 on_delete=django.db.models.deletion.SET_NULL,

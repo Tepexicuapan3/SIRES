@@ -34,6 +34,7 @@ class Migration(migrations.Migration):
                 )),
                 ("consultorio", models.ForeignKey(
                     db_column="consultorio_id",
+                    db_constraint=False,
                     null=True, blank=True,
                     on_delete=django.db.models.deletion.PROTECT,
                     related_name="citas",
@@ -91,6 +92,7 @@ class Migration(migrations.Migration):
                     to="medicos.catmedico",
                 )),
                 ("consultorio",  models.ForeignKey(
+                    db_constraint=False,
                     null=True, blank=True,
                     on_delete=django.db.models.deletion.PROTECT,
                     to="catalogos.consultorios",

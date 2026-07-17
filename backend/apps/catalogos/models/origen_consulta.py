@@ -9,4 +9,4 @@ class OrigenCons(CatalogBase):
 
     class Meta:
         db_table = "cat_origencons"
-        managed = False
+        managed = True

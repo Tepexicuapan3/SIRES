@@ -16,4 +16,4 @@ class Areas(CatalogBase):
 
     class Meta:
         db_table = "cat_areas"
-        managed = False
+        managed = True

@@ -15,6 +15,7 @@ class Migration(migrations.Migration):
             name="consultorio",
             field=models.ForeignKey(
                 db_column="consultorio_id",
+                db_constraint=False,
                 null=True,
                 blank=True,
                 on_delete=django.db.models.deletion.SET_NULL,

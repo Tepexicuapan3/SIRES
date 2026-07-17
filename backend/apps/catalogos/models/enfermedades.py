@@ -10,4 +10,4 @@ class Enfermedades(CatalogBase):
 
     class Meta:
         db_table = "cat_enfermedades"
-        managed = False
+        managed = True
