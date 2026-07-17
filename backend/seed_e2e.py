@@ -826,7 +826,6 @@ def _seed_centers(admin_user):
                 "name": center_def["name"],
                 "is_external": center_def["is_external"],
                 "address": center_def["address"],
-                "schedule": center_def["schedule"],
                 "is_active": center_def.get("is_active", True),
                 "created_by_id": admin_user.id_usuario,
                 "updated_by_id": admin_user.id_usuario,
@@ -887,6 +886,7 @@ def _seed_areas(admin_user, area_types):
             name=area_def["name"],
             defaults={
                 "code": area_type_id,
+                "tipo_area_id": area_type_id,
                 "is_active": area_def.get("is_active", True),
                 "created_by_id": admin_user.id_usuario,
                 "updated_by_id": admin_user.id_usuario,
