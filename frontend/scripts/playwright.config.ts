@@ -105,7 +105,7 @@ export default defineConfig({
 
   /* Run local dev server before starting the tests */
   webServer: {
-    command: "bun run dev -- --host 0.0.0.0 --port 5173",
+    command: "pnpm run dev -- --host 0.0.0.0 --port 5173",
     url: baseURL,
     reuseExistingServer: true,
     timeout: 120000,

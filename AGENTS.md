@@ -449,11 +449,11 @@ This is the minimum required Engram protocol at repository level and applies eve
 
 ## Development Commands
 
-### Frontend (Bun)
+### Frontend (pnpm)
 ```bash
-bun dev
-bun lint
-bun test
+pnpm dev
+pnpm lint
+pnpm test
 ```
 
 ### Backend (Django)

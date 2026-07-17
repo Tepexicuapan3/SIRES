@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -33,7 +33,7 @@ const schema = z.object({
   isActive:          z.boolean(),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 interface Props {
   open:         boolean;
@@ -47,7 +47,7 @@ export function InsumoEditDialog({ open, onOpenChange, item }: Props) {
   const { data: units } = useUnidadesMedidaList({ pageSize: 200 });
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } =
-    useForm<FormValues>({ resolver: zodResolver(schema) });
+    useForm<z.input<typeof schema>, unknown, FormValues>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
     if (open && item) {
@@ -66,7 +66,7 @@ export function InsumoEditDialog({ open, onOpenChange, item }: Props) {
     }
   }, [open, item, reset]);
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit: SubmitHandler<FormValues> = async (values) => {
     if (!item) return;
     try {
       await updateInsumo.mutateAsync({ id: item.id, data: values });

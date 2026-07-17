@@ -20,7 +20,7 @@ consultoriosDB.unshift(
   createMockConsultorioListItem({
     id: 1,
     name: "Consultorio General A1",
-    code: 101,
+    numero: 101,
     isActive: true,
   }),
 );
@@ -123,18 +123,18 @@ export const consultoriosHandlers = [
 
     const body = (await request.json()) as {
       name?: string;
-      code?: number;
+      numero?: number;
       idTurn?: number;
       idCenter?: number;
       isActive?: boolean;
     };
 
     const name = body.name?.trim();
-    const code = Number(body.code);
+    const numero = Number(body.numero);
     const idTurn = Number(body.idTurn);
     const idCenter = Number(body.idCenter);
 
-    if (!name || !Number.isFinite(code) || !idTurn || !idCenter) {
+    if (!name || !Number.isFinite(numero) || !idTurn || !idCenter) {
       return HttpResponse.json(
         {
           code: "VALIDATION_ERROR",
@@ -146,7 +146,8 @@ export const consultoriosHandlers = [
 
     const duplicate = consultoriosDB.some(
       (item) =>
-        item.name.toLowerCase() === name.toLowerCase() || item.code === code,
+        item.name.toLowerCase() === name.toLowerCase() ||
+        item.numero === numero,
     );
 
     if (duplicate) {
@@ -159,12 +160,13 @@ export const consultoriosHandlers = [
       );
     }
 
-    const createdItem = {
+    const createdItem = createMockConsultorioListItem({
       id: nextConsultorioId,
       name,
-      code,
+      numero,
+      centerId: idCenter,
       isActive: body.isActive ?? true,
-    };
+    });
 
     nextConsultorioId += 1;
     consultoriosDB.unshift(createdItem);
@@ -196,16 +198,16 @@ export const consultoriosHandlers = [
 
     const body = (await request.json()) as {
       name?: string;
-      code?: number;
+      numero?: number;
       idTurn?: number;
       idCenter?: number;
       isActive?: boolean;
     };
 
     const normalizedName = body.name?.trim();
-    const normalizedCode =
-      typeof body.code === "number" && Number.isFinite(body.code)
-        ? body.code
+    const normalizedNumero =
+      typeof body.numero === "number" && Number.isFinite(body.numero)
+        ? body.numero
         : undefined;
 
     const duplicate = consultoriosDB.some((item) => {
@@ -213,9 +215,9 @@ export const consultoriosHandlers = [
       const sameName =
         normalizedName &&
         item.name.toLowerCase() === normalizedName.toLowerCase();
-      const sameCode =
-        typeof normalizedCode === "number" && item.code === normalizedCode;
-      return Boolean(sameName || sameCode);
+      const sameNumero =
+        typeof normalizedNumero === "number" && item.numero === normalizedNumero;
+      return Boolean(sameName || sameNumero);
     });
 
     if (duplicate) {
@@ -232,7 +234,7 @@ export const consultoriosHandlers = [
     const updatedItem = {
       ...currentItem,
       name: normalizedName ?? currentItem.name,
-      code: normalizedCode ?? currentItem.code,
+      numero: normalizedNumero ?? currentItem.numero,
       isActive:
         typeof body.isActive === "boolean"
           ? body.isActive

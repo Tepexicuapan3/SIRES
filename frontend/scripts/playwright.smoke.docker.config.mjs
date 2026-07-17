@@ -44,7 +44,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `VITE_USE_MSW=true bun run dev -- --host 0.0.0.0 --port ${smokePort} --strictPort`,
+    command: `VITE_USE_MSW=true pnpm run dev -- --host 0.0.0.0 --port ${smokePort} --strictPort`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 120_000,

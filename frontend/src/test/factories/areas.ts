@@ -28,6 +28,7 @@ export const createMockAreaDetail = (
 
   return {
     ...base,
+    tipoArea: null,
     createdAt: faker.date.past().toISOString(),
     createdBy: createMockUserRef(),
     updatedAt: null,

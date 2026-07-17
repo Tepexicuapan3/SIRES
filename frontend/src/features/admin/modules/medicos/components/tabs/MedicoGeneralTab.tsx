@@ -57,16 +57,16 @@ export function MedicoGeneralTab({ medico, isEditable }: Props) {
         <div className="rounded-2xl border border-line-struct/60 bg-subtle/20 p-4">
           <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             {([
-              { label: "Nombre(s)",       val: medico.nombre  || "—" },
-              { label: "Apellido paterno", val: medico.paterno || "—" },
-              { label: "Apellido materno", val: medico.materno || "—" },
+              { label: "Nombre(s)",       val: medico.nombre  || "—", mono: false },
+              { label: "Apellido paterno", val: medico.paterno || "—", mono: false },
+              { label: "Apellido materno", val: medico.materno || "—", mono: false },
               { label: "Usuario",          val: medico.username, mono: true },
-              { label: "Correo",           val: medico.email },
-              { label: "Sexo",             val: sexoLabel ?? "No registrado" },
+              { label: "Correo",           val: medico.email, mono: false },
+              { label: "Sexo",             val: sexoLabel ?? "No registrado", mono: false },
             ] as const).map(({ label, val, mono }) => (
               <div key={label} className="space-y-0.5">
                 <p className="text-[10px] font-medium uppercase tracking-wider text-txt-muted">{label}</p>
-                <p className={`text-sm ${(mono as boolean | undefined) ? "font-mono text-txt-muted" : "font-medium text-txt-body"}`}>{val}</p>
+                <p className={`text-sm ${mono ? "font-mono text-txt-muted" : "font-medium text-txt-body"}`}>{val}</p>
               </div>
             ))}
             {medico.telefono ? (

@@ -299,8 +299,8 @@ test.describe("Flujo clinico excepciones", () => {
 
       const qualityReleaseScript =
         packageJson.scripts?.["quality:kan4:release"] ?? "";
-      expect(qualityReleaseScript).toContain("bun run test:run");
-      expect(qualityReleaseScript).toContain("bun run test:e2e:kan4");
+      expect(qualityReleaseScript).toContain("pnpm run test:run");
+      expect(qualityReleaseScript).toContain("pnpm run test:e2e:kan4");
       expect(qualityReleaseScript).toContain("&&");
     },
   );

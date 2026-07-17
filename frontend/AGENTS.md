@@ -188,9 +188,9 @@ Types shared? -> frontend/src/infrastructure/api/types/
 ## Commands
 
 ```bash
-bun dev
-bun lint
-bun test
+pnpm dev
+pnpm lint
+pnpm test
 ```
 
 ---

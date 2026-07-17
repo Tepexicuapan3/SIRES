@@ -1,20 +1,19 @@
-#frontend/Dockerfile
-FROM oven/bun:1.3.8
+#frontend/Dockerfile.local
+FROM node:22
 
 ## Nota
-# Vite 7 + React plugin (SWC) corre ok con Bun >= 1.3.x.
+# Vite 7 + React plugin (SWC) corre ok con Node >= 20.19 / >= 22.12.
+# Imagen Debian (no alpine): Playwright --with-deps instala sus libs de sistema
+# via apt y sus browsers no corren de forma confiable sobre musl (alpine).
 
-# Playwright CLI depende de runtime Node para discovery/runner.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends nodejs npm \
-  && rm -rf /var/lib/apt/lists/*
+RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
 
 WORKDIR /app
 
 COPY package.json ./
-COPY bun.lock ./
+COPY pnpm-lock.yaml ./
 
 EXPOSE 5173
 
 # Deps se instalan al arrancar (docker-compose command) para que queden en el volumen /app/node_modules.
-CMD ["bun", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["pnpm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

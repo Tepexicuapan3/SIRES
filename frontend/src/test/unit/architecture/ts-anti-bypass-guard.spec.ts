@@ -7,7 +7,6 @@ const FRONTEND_SRC_ROOT = path.resolve(process.cwd(), "src");
 const GUARDED_DIRECTORIES = [
   "test/e2e",
   "test/integration/contracts",
-  "test/bun",
 ] as const;
 const IGNORED_FILES = new Set([
   "test/unit/architecture/ts-anti-bypass-guard.spec.ts",

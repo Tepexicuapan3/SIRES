@@ -1,9 +1,11 @@
 # --- Etapa 1: build de estáticos con Vite ---
-FROM oven/bun:1.3.8 AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
@@ -12,7 +14,7 @@ ARG VITE_APP_NAME=SISEM
 ENV VITE_API_URL=${VITE_API_URL} \
     VITE_APP_NAME=${VITE_APP_NAME}
 
-RUN bun run build
+RUN pnpm run build
 
 # --- Etapa 2: nginx solo sirviendo los estáticos ---
 FROM nginx:1.27-alpine

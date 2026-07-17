@@ -235,22 +235,22 @@ test.describe("Flujo clinico smoke", () => {
       const e2eSmokePreflightScript =
         packageJson.scripts?.["test:e2e:smoke:preflight"] ?? "";
       expect(e2eSmokePreflightScript).toContain(
-        "bun install --frozen-lockfile",
+        "pnpm install --frozen-lockfile",
       );
       expect(e2eSmokePreflightScript).toContain(
-        "bunx playwright install --with-deps chromium",
+        "pnpm exec playwright install --with-deps chromium",
       );
 
       const e2eSmokeScript = packageJson.scripts?.["test:e2e:smoke"] ?? "";
-      expect(e2eSmokeScript).toContain("bun run test:e2e:smoke:preflight");
+      expect(e2eSmokeScript).toContain("pnpm run test:e2e:smoke:preflight");
       expect(e2eSmokeScript).toContain(
-        "bunx playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=scripts/playwright.smoke.docker.config.cjs --project=chromium",
+        "pnpm exec playwright test src/test/e2e/flujo-clinico/flujo-clinico-smoke.e2e.ts --config=scripts/playwright.smoke.docker.config.cjs --project=chromium",
       );
 
       const qualityGateScript =
         packageJson.scripts?.["quality:kan4:smoke"] ?? "";
-      expect(qualityGateScript).toContain("bun run test:run");
-      expect(qualityGateScript).toContain("bun run test:e2e:smoke");
+      expect(qualityGateScript).toContain("pnpm run test:run");
+      expect(qualityGateScript).toContain("pnpm run test:e2e:smoke");
       expect(qualityGateScript).toContain("&&");
     },
   );

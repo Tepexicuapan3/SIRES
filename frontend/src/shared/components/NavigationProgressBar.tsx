@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useNavigation } from "react-router-dom";
 import { useIsFetching } from "@tanstack/react-query";
 import NProgress from "nprogress";
-import "@shared/styles/nprogress.css";
 
 /**
  * Barra de progreso global en el borde superior.

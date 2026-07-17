@@ -48,7 +48,7 @@ export type CedulaTipo = "PROFESIONAL" | "ESPECIALIDAD" | "SUBESPECIALIDAD";
 export interface CedulaItem {
   id?: number;
   numero: string;
-  tipo: CedulaTipo;
+  tipo: string;
   esPrincipal: boolean;
   orden: number;
 }

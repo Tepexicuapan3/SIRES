@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -30,7 +30,7 @@ const schema = z.object({
   requiereCaducidad: z.boolean().optional(),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 interface Props {
   open:         boolean;
@@ -43,9 +43,9 @@ export function InsumoCreateDialog({ open, onOpenChange }: Props) {
   const { data: units } = useUnidadesMedidaList({ pageSize: 200 });
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } =
-    useForm<FormValues>({ resolver: zodResolver(schema) });
+    useForm<z.input<typeof schema>, unknown, FormValues>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit: SubmitHandler<FormValues> = async (values) => {
     try {
       await createInsumo.mutateAsync(values);
       toast.success("Insumo creado correctamente");

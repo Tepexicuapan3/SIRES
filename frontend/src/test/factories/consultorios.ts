@@ -25,8 +25,11 @@ export const createMockConsultorioListItem = (
 ): ConsultorioListItem => ({
   id: faker.number.int({ min: 1, max: 1000 }),
   name: `Consultorio ${faker.number.int({ min: 1, max: 40 })}`,
-  code: faker.number.int({ min: 1, max: 9999 }),
+  numero: faker.number.int({ min: 1, max: 9999 }),
   isActive: faker.datatype.boolean(),
+  centerId: faker.number.int({ min: 1, max: 1000 }),
+  centerName: "Centro Norte",
+  turnName: "Matutino",
   ...overrides,
 });
 

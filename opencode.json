@@ -45,7 +45,7 @@
   },
   "formatter": {
     "prettier": {
-      "command": ["bun", "x", "prettier", "--write", "$FILE"],
+      "command": ["pnpm", "dlx", "prettier", "--write", "$FILE"],
       "extensions": [".js", ".ts", ".jsx", ".tsx", ".json", ".css"]
     },
     "black": {

@@ -61,12 +61,14 @@ export function NotificacionesDrawer({ open, onOpenChange, preselected }: Props)
   // ── Reset al abrir ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
-    setTab(preselected ? "vencer" : "vencer");
-    setSelectedIds(preselected ? new Set([preselected.id]) : new Set());
-    setDestVencer("");
-    setDestLibre("");
-    setAdjuntos([]);
-    setCuerpoLibre("");
+    void Promise.resolve().then(() => {
+      setTab(preselected ? "vencer" : "vencer");
+      setSelectedIds(preselected ? new Set([preselected.id]) : new Set());
+      setDestVencer("");
+      setDestLibre("");
+      setAdjuntos([]);
+      setCuerpoLibre("");
+    });
   }, [open, preselected]);
 
   // ── Contratos por vencer ───────────────────────────────────────────────────
@@ -79,7 +81,11 @@ export function NotificacionesDrawer({ open, onOpenChange, preselected }: Props)
   const toggleSelect = (id: number) =>
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
 

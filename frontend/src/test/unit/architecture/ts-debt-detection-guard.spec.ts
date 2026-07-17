@@ -20,19 +20,15 @@ const NEGATIVE_GATES: ReadonlyArray<NegativeGate> = [
     project: "tsconfig.e2e.negative.json",
     fixture: "src/test/quality-gates/fixtures/negative-e2e.fixture.ts",
   },
-  {
-    gate: "typecheck:bun",
-    project: "tsconfig.bun.negative.json",
-    fixture: "src/test/quality-gates/fixtures/negative-bun.fixture.ts",
-  },
 ] as const;
 
 const FRONTEND_ROOT = process.cwd();
 
 const runNegativeTypecheck = (projectPath: string) => {
-  return spawnSync("bunx", ["tsc", "-p", projectPath, "--noEmit"], {
+  return spawnSync("pnpm", ["exec", "tsc", "-p", projectPath, "--noEmit"], {
     cwd: FRONTEND_ROOT,
     encoding: "utf-8",
+    shell: process.platform === "win32",
   });
 };
 

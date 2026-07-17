@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 import { toast } from "sonner";
-import { VISIT_STATUS, type VisitVitalsPayload } from "@api/types";
+import { VISIT_STATUS } from "@api/types";
 import { canCaptureVitals } from "@features/operativo/shared/domain/visit-flow.constants";
 import {
   captureVitalsFormSchema,

@@ -27,8 +27,12 @@ export function PdfPreviewModal({
 
   const load = useCallback(() => {
     let cancelled = false;
-    setLoadState("loading");
-    setBlobUrl(null);
+
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setLoadState("loading");
+      setBlobUrl(null);
+    });
 
     fetchPdf()
       .then((blob) => {
@@ -52,8 +56,10 @@ export function PdfPreviewModal({
   useEffect(() => {
     if (!open && blobUrl) {
       const url = blobUrl;
-      setBlobUrl(null);
-      setLoadState("idle");
+      void Promise.resolve().then(() => {
+        setBlobUrl(null);
+        setLoadState("idle");
+      });
       setTimeout(() => URL.revokeObjectURL(url), 300);
     }
   }, [open, blobUrl]);

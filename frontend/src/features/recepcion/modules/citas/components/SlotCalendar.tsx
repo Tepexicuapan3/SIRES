@@ -2,17 +2,12 @@ import { useEffect, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import type { AgendaSlot } from "@api/types/agenda.types";
 import { useAgendaSemanal } from "@features/recepcion/modules/citas/queries/useAgendaSemanal";
+import { addDays } from "@features/recepcion/modules/citas/utils/dates";
 import { cn } from "@shared/utils/styling/cn";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-
-export function addDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 function formatDayDate(dateStr: string): string {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("es-MX", {

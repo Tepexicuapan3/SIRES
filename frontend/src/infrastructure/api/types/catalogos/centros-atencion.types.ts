@@ -41,8 +41,8 @@ export interface CatalogRef {
   name: string;
 }
 
-export interface CentroAtencionRef extends CatalogRef {}
-export interface TurnoRef extends CatalogRef {}
+export type CentroAtencionRef = CatalogRef;
+export type TurnoRef = CatalogRef;
 
 // =============================================================================
 // ENUMS / LITERALS

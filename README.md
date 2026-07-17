@@ -5,7 +5,7 @@
 ![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5+-0C4B33?logo=django&logoColor=white)
 ![DRF](https://img.shields.io/badge/DRF-API-red)
-![Bun](https://img.shields.io/badge/Bun-runtime-black?logo=bun&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-package--manager-F69220?logo=pnpm&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-auth--db-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-cache-DC382D?logo=redis&logoColor=white)
@@ -252,7 +252,7 @@ No recomendada. El contrato operativo de desarrollo en SISEM es docker-first.
 
 1. Levanta entorno (`docker compose up --build`).
 2. Implementa siguiendo el AGENTS mas especifico del area.
-3. Corre checks minimos: `bun lint`, `bun test`, `python manage.py test`.
+3. Corre checks minimos: `pnpm lint`, `pnpm test`, `python manage.py test`.
 4. Guarda decisiones/fixes relevantes en Engram (`SISEM_SHARED`).
 5. Commitea: verifica hooks activos y sincronizacion de Engram.
 
@@ -274,8 +274,8 @@ docker compose down
 docker compose down -v
 
 # Frontend
-cd frontend && bun lint
-cd frontend && bun test
+cd frontend && pnpm lint
+cd frontend && pnpm test
 
 # Backend
 cd backend && python manage.py test

@@ -90,7 +90,7 @@ services:
       dockerfile: Dockerfile
     container_name: sisem-frontend
     restart: unless-stopped
-    command: sh -lc "bun install && bun run dev -- --host 0.0.0.0 --port 5173"
+    command: sh -lc "pnpm install && pnpm run dev -- --host 0.0.0.0 --port 5173"
     ports:
       - "${FRONTEND_HOST_PORT:-${FRONTEND_PORT:-5173}}:5173"
     volumes:

@@ -48,7 +48,7 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: `PLAYWRIGHT_AUTH_HARNESS_MODE=${harnessMode} PLAYWRIGHT_API_BASE_URL=${apiBaseUrl} VITE_USE_MSW=${useMsw} bun run dev -- --host 0.0.0.0 --port ${authPort} --strictPort`,
+    command: `PLAYWRIGHT_AUTH_HARNESS_MODE=${harnessMode} PLAYWRIGHT_API_BASE_URL=${apiBaseUrl} VITE_USE_MSW=${useMsw} pnpm run dev -- --host 0.0.0.0 --port ${authPort} --strictPort`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 120_000,

@@ -169,10 +169,12 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
   const sucursalOptions = (sucursalesData?.items ?? []).map((s) => ({ id: s.id, name: s.name }));
 
   useEffect(() => {
-    setForm(editing ? toFormData(editing) : EMPTY_FORM);
-    setDhQuery("");
-    setDhSelected(null);
-    setDhOpen(false);
+    void Promise.resolve().then(() => {
+      setForm(editing ? toFormData(editing) : EMPTY_FORM);
+      setDhQuery("");
+      setDhSelected(null);
+      setDhOpen(false);
+    });
   }, [editing, open]);
 
   const handleSelectDerechohabiente = (resultado: DerechohabienteResult) => {

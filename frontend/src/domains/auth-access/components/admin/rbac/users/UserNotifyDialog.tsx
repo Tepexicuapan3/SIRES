@@ -89,12 +89,14 @@ export function UserNotifyDialog({
 
   useEffect(() => {
     if (!open) {
-      setSubject(""); setCategory(""); setMessage("");
-      setFilters(EMPTY_FILTERS);
-      setSelectedUser(null); setUserSearch("");
-      setPreviewPayload(null);
-      setSendResult(null);
-      setFiles([]);
+      void Promise.resolve().then(() => {
+        setSubject(""); setCategory(""); setMessage("");
+        setFilters(EMPTY_FILTERS);
+        setSelectedUser(null); setUserSearch("");
+        setPreviewPayload(null);
+        setSendResult(null);
+        setFiles([]);
+      });
     }
   }, [open]);
 

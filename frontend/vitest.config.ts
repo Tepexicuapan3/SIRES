@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     environment: "happy-dom",
     setupFiles: ["./src/test/setup.ts"],
-    exclude: [...configDefaults.exclude, "src/test/e2e/**", "src/test/bun/**"],
+    exclude: [...configDefaults.exclude, "src/test/e2e/**"],
     css: true,
     coverage: {
       provider: "v8",
