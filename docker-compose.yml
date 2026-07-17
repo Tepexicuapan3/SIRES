@@ -28,6 +28,7 @@ services:
       retries: 10
 
   backend:
+    image: sisem-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -53,6 +54,7 @@ services:
   # si no las tareas programadas (recordatorios, slots, cierre de sesiones)
   # nunca se ejecutan en prod.
   celery-worker:
+    image: sisem-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -64,6 +66,7 @@ services:
       - backend
 
   celery-beat:
+    image: sisem-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile

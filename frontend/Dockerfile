@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # --- Etapa 1: build de estáticos con Vite ---
 FROM node:22-alpine AS build
 WORKDIR /app
@@ -5,7 +6,8 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
 
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 COPY . .
 

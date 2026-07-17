@@ -4,7 +4,9 @@ set -eu
 
 python -m scripts.wait_for_db
 
-python manage.py migrate
+if [ "${RUN_MIGRATE_ON_BOOT:-true}" = "true" ]; then
+  python manage.py migrate
+fi
 
 if [ "${RUN_SEED_ON_BOOT:-true}" = "true" ]; then
   python manage.py seed_auth_access --base --quiet
