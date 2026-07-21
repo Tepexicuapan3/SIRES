@@ -25,9 +25,18 @@ RUN apt-get update \
 # 2) Guardalo en backend/vendor/instantclient-linux.zip (ese path está en .dockerignore
 #    exceptuado más abajo, agregalo si hace falta)
 COPY vendor/instantclient-linux.zip /tmp/instantclient.zip
+
 RUN unzip -q /tmp/instantclient.zip -d /opt/oracle \
   && mv /opt/oracle/instantclient_* /opt/oracle/instantclient \
   && rm /tmp/instantclient.zip
+
+# Variables de Oracle
+ENV ORACLE_INSTANT_CLIENT=/opt/oracle/instantclient
+ENV LD_LIBRARY_PATH=/opt/oracle/instantclient
+
+# Registrar las librerías en Linux
+RUN echo "/opt/oracle/instantclient" > /etc/ld.so.conf.d/oracle-instantclient.conf \
+    && ldconfig
 
 COPY requirements.txt ./requirements.txt
 
