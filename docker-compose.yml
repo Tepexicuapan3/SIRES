@@ -1,4 +1,3 @@
-#docker-compose.yml
 services:
   auth-db:
     image: postgres:16-alpine
@@ -18,9 +17,31 @@ services:
       start_period: 15s
     # Sin "ports:" -> no se expone al host, solo a la red interna.
 
+  expedientes-db:
+    image: postgres:16-alpine
+    container_name: sisem_postgres_expedientes
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EXPEDIENTES_NAME}
+      POSTGRES_USER: ${EXPEDIENTES_USER}
+      POSTGRES_PASSWORD: ${EXPEDIENTES_PASSWORD}
+    volumes:
+      - expedientes_db_data:/var/lib/postgresql/data
+      - ./backend/storage/expedientes-ddl:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${EXPEDIENTES_USER} -d ${EXPEDIENTES_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # NUEVO: persistimos redis para no perder resultados/colas de Celery
+    # ante un reinicio del contenedor.
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -41,8 +62,14 @@ services:
       ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,backend,sires-backend,host.docker.internal}
       CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-}
       CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+    # NUEVO: si el servidor Oracle está fuera de Docker (on-prem/otra VM)
+    # y solo lo resuelves por IP fija en el host, descomenta y ajusta:
+    # extra_hosts:
+    #   - "oracle-host:10.0.0.5"
     depends_on:
       auth-db:
+        condition: service_healthy
+      expedientes-db:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -53,15 +80,12 @@ services:
       retries: 5
       start_period: 30s
 
-  # TODO: confirmar si estas tareas de CELERY_BEAT_SCHEDULE (settings.py) ya
-  # corren de otra forma. Si no, sumar estos dos servicios es obligatorio,
-  # si no las tareas programadas (recordatorios, slots, cierre de sesiones)
-  # nunca se ejecutan en prod.
   celery-worker:
     image: sisem-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: sisem_celery_worker
     restart: unless-stopped
     command: celery -A config worker -l info
     env_file:
@@ -70,24 +94,47 @@ services:
       ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,backend,sires-backend,host.docker.internal}
       CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-}
       CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+    # extra_hosts:
+    #   - "oracle-host:10.0.0.5"
     depends_on:
-      - backend
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    # NUEVO: healthcheck real de Celery en vez de solo "depends_on".
+    # Sin esto, docker no sabe si el worker se cayó silenciosamente.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   celery-beat:
     image: sisem-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: sisem_celery_beat
     restart: unless-stopped
-    command: celery -A config beat -l info
+    # NUEVO: --schedule apunta a un archivo dentro de un volumen persistente.
+    # Si no persistes esto, cada vez que el contenedor se recrea, beat
+    # "olvida" cuándo corrió la tarea por última vez y puede saltarse
+    # o re-disparar ejecuciones de forma inconsistente.
+    command: celery -A config beat -l info --schedule=/data/celerybeat-schedule
     env_file:
       - .env
     environment:
       ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,backend,sires-backend,host.docker.internal}
       CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-}
       CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+    volumes:
+      - celery_beat_data:/data
     depends_on:
-      - backend
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
 
   frontend:
     build:
@@ -115,6 +162,9 @@ services:
 
 volumes:
   auth_db_data:
+  expedientes_db_data:
+  redis_data:            # ← NUEVO
+  celery_beat_data:      # ← NUEVO
 
 networks:
   default: {}
