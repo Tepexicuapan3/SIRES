@@ -58,6 +58,9 @@ services:
     stop_grace_period: 30s
     env_file:
       - .env
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,backend,sires-backend,host.docker.internal}
       CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-}
