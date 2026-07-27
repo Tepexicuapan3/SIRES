@@ -108,7 +108,7 @@ export function UserDetailsRolesTab({
                 }}
                 disabled={roles.length === 0 || isBusy || !isEditable}
               >
-                <SelectTrigger className="h-10 w-full sm:w-44">
+                <SelectTrigger className="h-10 w-full sm:w-64">
                   <div className="flex min-w-0 items-center gap-2">
                     <ShieldCheck className="size-4 shrink-0 text-txt-muted" />
                     <SelectValue placeholder="Selecciona rol" />
