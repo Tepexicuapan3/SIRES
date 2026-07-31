@@ -3,6 +3,7 @@ import { ProtectedRoute } from "@routes/guards/ProtectedRoute";
 import PlaceholderPage        from "@shared/components/PlaceholderPage";
 import RecepcionAgendaPage    from "@features/recepcion/modules/agenda/pages/RecepcionAgendaPage";
 import RecepcionCheckinPage   from "@features/recepcion/modules/checkin/pages/RecepcionCheckinPage";
+import QrCheckinPage          from "@features/recepcion/modules/checkin/pages/QrCheckinPage";
 import RecepcionFichasPage    from "@features/recepcion/modules/fichas/pages/RecepcionFichasPage";
 import TurnosConfigPage       from "@features/recepcion/modules/turnos/pages/TurnosConfigPage";
 import {
@@ -34,6 +35,17 @@ export const recepcionRoutes: RouteObject[] = [
   {
     path: "checkin",
     element: <RecepcionCheckinPage />,
+  },
+  {
+    path: "checkin/qr",
+    element: (
+      <ProtectedRoute
+        requiredAnyPermissions={[...RECEPCION_QUEUE_READ_PERMISSIONS]}
+        dependencyAware
+      >
+        <QrCheckinPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "fichas",

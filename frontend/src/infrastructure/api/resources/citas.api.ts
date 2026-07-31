@@ -3,7 +3,9 @@ import type {
   CitaListItem,
   CitasListParams,
   CitasListResponse,
+  ConfirmarQRCheckinResponse,
   CreateCitaRequest,
+  FichaQRResponse,
   SlotsParams,
   SlotsResponse,
   UpdateEstatusCitaRequest,
@@ -33,6 +35,24 @@ export const citasAPI = {
 
   getSlots: async (params: SlotsParams): Promise<SlotsResponse> => {
     const r = await apiClient.get<SlotsResponse>("/citas/slots", { params });
+    return r.data;
+  },
+
+  // ── Check-in por QR (Fase 7 "Citas en Línea") ────────────────────────────
+  // `payload` es el string crudo leído del QR ("{folio}:{firma}"); se
+  // reenvía tal cual en ambos pasos, el backend re-valida la firma HMAC
+  // en cada llamada (nunca se confía en un folio suelto del cliente).
+
+  verificarQR: async (payload: string): Promise<FichaQRResponse> => {
+    const r = await apiClient.post<FichaQRResponse>("/citas/verificar-qr", { payload });
+    return r.data;
+  },
+
+  confirmarVerificacionQR: async (payload: string): Promise<ConfirmarQRCheckinResponse> => {
+    const r = await apiClient.post<ConfirmarQRCheckinResponse>(
+      "/citas/verificar-qr/confirmar",
+      { payload },
+    );
     return r.data;
   },
 };

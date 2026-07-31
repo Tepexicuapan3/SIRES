@@ -19,7 +19,7 @@ import {
   useRemoveConsultorio,
   useSaveHorario,
 } from "@features/admin/modules/medicos/hooks/useMedicos";
-import type { MedicoDetail, MedicoConsultorioItem, DiaSemana } from "@api/types/medicos.types";
+import type { MedicoDetail, MedicoConsultorioItem, DiaSemana, CanalAtencion } from "@api/types/medicos.types";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -33,7 +33,13 @@ const DIAS: { key: DiaSemana; label: string; grupo: "semana" | "finde" }[] = [
   { key: "DOMINGO",   label: "Dom", grupo: "finde" },
 ];
 
-interface HorarioRow { dia: DiaSemana; horaInicio: string; horaFin: string; intervalo: number }
+interface HorarioRow { dia: DiaSemana; horaInicio: string; horaFin: string; intervalo: number; canal: CanalAtencion }
+
+const CANALES: { key: CanalAtencion; label: string }[] = [
+  { key: "PRESENCIAL", label: "Presencial" },
+  { key: "LINEA",      label: "En línea" },
+  { key: "AMBOS",      label: "Ambos" },
+];
 
 // ─── Editor de un consultorio (acordeón) ─────────────────────────────────────
 
@@ -57,6 +63,7 @@ function ConsultorioEditor({ rmc, medicoId, isEditable, onRefresh }: Consultorio
     rmc.horarios.map((h) => ({
       dia: h.diaSemana as DiaSemana, horaInicio: h.horaInicio,
       horaFin: h.horaFin, intervalo: h.intervaloCitaMin,
+      canal: h.canal ?? "PRESENCIAL",
     })),
   );
 
@@ -74,7 +81,7 @@ function ConsultorioEditor({ rmc, medicoId, isEditable, onRefresh }: Consultorio
 
   // ── Handlers horarios ─────────────────────────────────────────────────────
   const addRow    = (dia: DiaSemana) =>
-    setRows((p) => [...p, { dia, horaInicio: "08:00", horaFin: "14:00", intervalo: 20 }]);
+    setRows((p) => [...p, { dia, horaInicio: "08:00", horaFin: "14:00", intervalo: 20, canal: "PRESENCIAL" }]);
   const removeRow = (i: number) => setRows((p) => p.filter((_, x) => x !== i));
   const updateRow = (i: number, patch: Partial<HorarioRow>) =>
     setRows((p) => p.map((r, x) => (x === i ? { ...r, ...patch } : r)));
@@ -83,7 +90,8 @@ function ConsultorioEditor({ rmc, medicoId, isEditable, onRefresh }: Consultorio
     try {
       await saveHorario.mutateAsync({
         horarios: rows.map((r) => ({
-          diaSemana: r.dia, horaInicio: r.horaInicio, horaFin: r.horaFin, intervaloCitaMin: r.intervalo,
+          diaSemana: r.dia, horaInicio: r.horaInicio, horaFin: r.horaFin,
+          intervaloCitaMin: r.intervalo, canal: r.canal,
         })),
       });
       toast.success("Horario guardado.");
@@ -254,6 +262,18 @@ function ConsultorioEditor({ rmc, medicoId, isEditable, onRefresh }: Consultorio
                         className="h-8 w-14 text-xs" />
                       <span className="text-txt-muted">min</span>
                     </div>
+                    <Select
+                      value={row.canal}
+                      disabled={!isEditable}
+                      onValueChange={(v) => updateRow(i, { canal: v as CanalAtencion })}
+                    >
+                      <SelectTrigger className="h-8 w-[112px] text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CANALES.map((c) => (
+                          <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {isEditable ? (
                       <Button type="button" variant="ghost" size="icon"
                         className="ml-auto size-7 shrink-0 text-txt-muted hover:text-status-critical"

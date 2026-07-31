@@ -6,6 +6,8 @@ export interface AgendaSlot {
   consultorioId:     number | null;
   consultorioNumero: number | null;
   consultorioNombre: string | null;
+  /** Canal habilitado para el slot: "PRESENCIAL" | "LINEA" | "AMBOS". */
+  canal:             string;
   cita: {
     id:           number;
     folio:        string;

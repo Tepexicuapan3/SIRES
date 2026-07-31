@@ -501,6 +501,9 @@ export type {
   SlotsParams,
   CitasListResponse,
   SlotsResponse,
+  VerificarQRRequest,
+  FichaQRResponse,
+  ConfirmarQRCheckinResponse,
 } from "@api/types/citas.types";
 export { ESTATUS_CITA } from "@api/types/citas.types";
 

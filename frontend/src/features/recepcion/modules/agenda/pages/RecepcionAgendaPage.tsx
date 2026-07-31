@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, FileText, List, Loader2, Printer, RefreshCcw, Search, Settings2, Stethoscope } from "lucide-react";
+import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, FileText, List, Loader2, Printer, QrCode, RefreshCcw, Search, Settings2, Stethoscope } from "lucide-react";
 import { SlotCalendar } from "@features/recepcion/modules/citas/components/SlotCalendar";
 import { addDays } from "@features/recepcion/modules/citas/utils/dates";
 import { useDebounce }           from "@shared/hooks/useDebounce";
@@ -925,6 +925,15 @@ export const RecepcionAgendaPage = () => {
             disabled={!canWriteRecepcion}
           >
             Generar ficha de consulta
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            onClick={() => navigate("/recepcion/checkin/qr")}
+          >
+            <QrCode className="size-4" />
+            Check-in por QR
           </Button>
           {view === "bandeja" ? (
             <Button

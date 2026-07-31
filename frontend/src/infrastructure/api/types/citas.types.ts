@@ -1,5 +1,5 @@
 import type { ListResponse } from "@api/types/common.types";
-import type { VisitService } from "@api/types/visits.types";
+import type { VisitQueueItem, VisitService } from "@api/types/visits.types";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -84,4 +84,37 @@ export type CitasListResponse = ListResponse<CitaListItem>;
 
 export interface SlotsResponse {
   slots: SlotDisponible[];
+}
+
+// ─── Check-in por QR (Fase 7 "Citas en Línea") ─────────────────────────────────
+
+/**
+ * Payload crudo leído del código QR del comprobante de cita (formato
+ * ``"{folio}:{firma}"``, opaco para el frontend). Se re-envía TAL CUAL en
+ * ambos pasos (verificar y confirmar) — nunca se extrae/reenvía un folio
+ * suelto, porque el backend re-valida la firma HMAC en cada llamada.
+ */
+export interface VerificarQRRequest {
+  payload: string;
+}
+
+/** Ficha resuelta por `POST /citas/verificar-qr` — solo lectura, sin efectos secundarios. */
+export interface FichaQRResponse {
+  folio:        string;
+  paciente:     string;
+  medico:       string;
+  consultorio:  string | null;
+  fechaHora:    string;   // ISO 8601
+  servicioTipo: VisitService;
+  motivo:       string | null;
+  estatus:      EstatusCita;
+  yaVerificada: boolean;
+}
+
+/** Resultado de `POST /citas/verificar-qr/confirmar` — crea el Visit y sella la cita como verificada. */
+export interface ConfirmarQRCheckinResponse {
+  folio:        string;
+  paciente:     string;
+  verificadoEn: string;   // ISO 8601
+  visit:        VisitQueueItem;
 }

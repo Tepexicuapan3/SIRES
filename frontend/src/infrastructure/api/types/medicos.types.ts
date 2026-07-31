@@ -2,6 +2,7 @@ export type TipoMedico      = "CLINICA" | "HOSPITAL" | "AMBOS";
 export type EstatusMedico   = "ACTIVO" | "VACACIONES" | "INCAPACIDAD" | "SUSPENDIDO" | "BAJA";
 export type TipoAdscripcion = "DEFINITIVA" | "TEMPORAL";
 export type TipoAsignacion  = "PERMANENTE" | "TEMPORAL";
+export type CanalAtencion   = "PRESENCIAL" | "LINEA" | "AMBOS";
 export type DiaSemana       = "LUNES" | "MARTES" | "MIERCOLES" | "JUEVES" | "VIERNES" | "SABADO" | "DOMINGO";
 export type TipoExcepcion   = "VACACIONES" | "INCAPACIDAD" | "PERMISO" | "HORA_COMIDA" |
                               "CAPACITACION" | "AUSENCIA" | "SUSPENSION" | "CAMBIO_HORARIO";
@@ -39,6 +40,7 @@ export interface MedicoHorarioItem {
   horaInicio: string;
   horaFin: string;
   intervaloCitaMin: number;
+  canal: CanalAtencion;
 }
 
 export interface MedicoConsultorioItem {
@@ -186,6 +188,7 @@ export interface AddConsultorioRequest {
     horaInicio: string;
     horaFin: string;
     intervaloCitaMin?: number;
+    canal?: CanalAtencion;
   }[];
 }
 
@@ -195,6 +198,7 @@ export interface SaveHorarioRequest {
     horaInicio: string;
     horaFin: string;
     intervaloCitaMin?: number;
+    canal?: CanalAtencion;
   }[];
 }
 

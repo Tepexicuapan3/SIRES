@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Globe, Loader2, Plus } from "lucide-react";
 import type { AgendaSlot } from "@api/types/agenda.types";
 import { useAgendaSemanal } from "@features/recepcion/modules/citas/queries/useAgendaSemanal";
 import { addDays } from "@features/recepcion/modules/citas/utils/dates";
@@ -72,9 +72,12 @@ function SlotCell({ dateStr, hora, slot, today, now, isToday, onClick }: SlotCel
     );
   }
 
-  const esPasado  = isPastSlot(dateStr, slot.hora, today, now);
-  const esOcupado = !slot.disponible && !esPasado;
-  const label     = consultorioLabel(slot);
+  const esPasado     = isPastSlot(dateStr, slot.hora, today, now);
+  const esOcupado    = !slot.disponible && !esPasado;
+  // Slot disponible pero reservado exclusivamente para el portal de citas en
+  // línea — no se puede agendar desde recepción.
+  const esSoloPortal = slot.disponible && !esPasado && slot.canal === "LINEA";
+  const label        = consultorioLabel(slot);
 
   if (esPasado) {
     return (
@@ -109,6 +112,26 @@ function SlotCell({ dateStr, hora, slot, today, now, isToday, onClick }: SlotCel
         )}
         {label && (
           <p className="text-[10px] text-amber-500/70 text-center truncate">{label}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (esSoloPortal) {
+    return (
+      <div
+        className={cn(
+          "h-16 rounded-lg border border-sky-200 bg-sky-50/60 px-2 py-2 flex flex-col justify-center gap-0.5",
+          isToday && "border-sky-300 bg-sky-50",
+        )}
+        title={`${hora} — Reservado para citas en línea, no agendable desde recepción`}
+      >
+        <div className="flex items-center justify-center gap-1">
+          <Globe className="size-3 text-sky-500 shrink-0" />
+          <p className="text-[11px] font-semibold text-sky-700">Solo portal</p>
+        </div>
+        {label && (
+          <p className="text-[10px] text-sky-500/70 text-center truncate">{label}</p>
         )}
       </div>
     );
@@ -161,10 +184,18 @@ export function SlotCalendar({ medicoId, medicoNombre, weekStart, onSlotClick }:
   ).sort();
 
   // Conteos para el resumen
+  // "Libres" excluye los slots exclusivos de portal (canal="LINEA"): están
+  // disponibles pero no son agendables desde recepción.
   const totalLibres  = days.reduce((acc, d) =>
-    acc + (data?.agenda[d] ?? []).filter((s) => s.disponible && !isPastSlot(d, s.hora, today, now)).length, 0);
+    acc + (data?.agenda[d] ?? []).filter((s) =>
+      s.disponible && s.canal !== "LINEA" && !isPastSlot(d, s.hora, today, now)
+    ).length, 0);
   const totalOcupados = days.reduce((acc, d) =>
     acc + (data?.agenda[d] ?? []).filter((s) => !s.disponible && !isPastSlot(d, s.hora, today, now)).length, 0);
+  const totalSoloPortal = days.reduce((acc, d) =>
+    acc + (data?.agenda[d] ?? []).filter((s) =>
+      s.disponible && s.canal === "LINEA" && !isPastSlot(d, s.hora, today, now)
+    ).length, 0);
 
   if (isError) {
     return (
@@ -194,6 +225,11 @@ export function SlotCalendar({ medicoId, medicoNombre, weekStart, onSlotClick }:
               <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
                 {totalOcupados} ocupados
               </span>
+              {totalSoloPortal > 0 && (
+                <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
+                  {totalSoloPortal} solo portal
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -206,6 +242,10 @@ export function SlotCalendar({ medicoId, medicoNombre, weekStart, onSlotClick }:
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded border border-amber-200 bg-amber-50" />
             <span className="font-medium text-amber-600">Agendado</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block size-3 rounded border border-sky-200 bg-sky-50" />
+            <span className="font-medium text-sky-600">Solo portal — no agendable aquí</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded border border-dashed border-line-struct/30 bg-subtle/20" />
