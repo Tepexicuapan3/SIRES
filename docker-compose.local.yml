@@ -18,6 +18,34 @@ services:
       retries: 10
       start_period: 15s
 
+  # NUEVO: réplica local de la BD "expedientes" (cat_empleados/cat_familiar),
+  # remota en producción (50.192.43.35). Puerto de host distinto al de
+  # auth-db (5433 en vez de 5432) para poder tener ambos publicados a la vez.
+  # El volumen ./backend/storage/expedientes-ddl se monta como
+  # /docker-entrypoint-initdb.d -> la imagen oficial de postgres ejecuta
+  # SOLO la primera vez (volumen nuevo) todos los .sql/.sh ahi, en orden
+  # alfabetico: 001_schema.sql (DDL real) y 999_seed_dev.sql (datos de
+  # prueba para el login OTP del portal de citas).
+  expedientes-db:
+    image: postgres:16-alpine
+    container_name: sisem-expedientes-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EXPEDIENTES_NAME:-sermed}
+      POSTGRES_USER: ${EXPEDIENTES_USER:-sermed}
+      POSTGRES_PASSWORD: ${EXPEDIENTES_PASSWORD:-sermed_dev_password}
+    ports:
+      - "${EXPEDIENTES_DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - expedientes_db_data:/var/lib/postgresql/data
+      - ./backend/storage/expedientes-ddl:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${EXPEDIENTES_USER:-sermed} -d ${EXPEDIENTES_NAME:-sermed}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
   redis:
     image: redis:7-alpine
     container_name: sisem-redis
@@ -56,6 +84,26 @@ services:
       DB_NAME: ${AUTH_DB_NAME:-sisem_auth}
       DB_USER: ${AUTH_DB_USER:-sisem_auth}
       DB_PASSWORD: ${AUTH_DB_PASSWORD:-sisem_auth_dev_password}
+      # IMPORTANTE (bug preexistente que corrijo aca): settings.py NO lee
+      # DB_HOST/DB_NAME/etc para la conexion Django real (esas 5 de arriba
+      # solo las usa scripts/wait_for_db.py como chequeo de readiness antes
+      # de migrar). La conexion ORM de la BD "default" (schema sires) usa
+      # POSTGRES_HOST/POSTGRES_NAME/POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_PORT,
+      # cuyo default en settings.py es el HOST REMOTO DE PRODUCCION
+      # (50.192.41.223). Sin esto, migrate/runserver se conectarian a
+      # produccion aunque auth-db este sano.
+      POSTGRES_HOST: ${POSTGRES_HOST:-auth-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_NAME: ${POSTGRES_NAME:-${AUTH_DB_NAME:-sisem_auth}}
+      POSTGRES_USER: ${POSTGRES_USER:-${AUTH_DB_USER:-sisem_auth}}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${AUTH_DB_PASSWORD:-sisem_auth_dev_password}}
+      # BD "expedientes" (cat_empleados/cat_familiar) para el login OTP del
+      # portal de citas -> apunta al nuevo servicio expedientes-db local.
+      EXPEDIENTES_HOST: ${EXPEDIENTES_HOST:-expedientes-db}
+      EXPEDIENTES_PORT: ${EXPEDIENTES_PORT:-5432}
+      EXPEDIENTES_NAME: ${EXPEDIENTES_NAME:-sermed}
+      EXPEDIENTES_USER: ${EXPEDIENTES_USER:-sermed}
+      EXPEDIENTES_PASSWORD: ${EXPEDIENTES_PASSWORD:-sermed_dev_password}
       CHANNEL_REDIS_URL: redis://redis:6379/1
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
       EMAIL_HOST: ${EMAIL_HOST:-}
@@ -76,6 +124,8 @@ services:
     depends_on:
       auth-db:
         condition: service_healthy
+      expedientes-db:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -84,6 +134,56 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  # NUEVO: worker de Celery para las tareas async del portal de citas
+  # (envio de comprobante QR/PDF por correo, etc.) — mismo patron que
+  # producción (docker-compose.yml: "celery -A config worker -l info"),
+  # pero con bind-mount del codigo (igual que "backend" arriba) para que
+  # los cambios se reflejen sin rebuildear la imagen.
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sisem-celery-worker
+    restart: unless-stopped
+    command: celery -A config worker -l info
+    volumes:
+      - ./backend:/app
+    environment:
+      TZ: America/Mexico_City
+      DEBUG: ${DEBUG:-true}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-dev-only}
+      ALLOW_ALL_HOSTS: ${ALLOW_ALL_HOSTS:-true}
+      ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+      POSTGRES_HOST: ${POSTGRES_HOST:-auth-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_NAME: ${POSTGRES_NAME:-${AUTH_DB_NAME:-sisem_auth}}
+      POSTGRES_USER: ${POSTGRES_USER:-${AUTH_DB_USER:-sisem_auth}}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${AUTH_DB_PASSWORD:-sisem_auth_dev_password}}
+      EXPEDIENTES_HOST: ${EXPEDIENTES_HOST:-expedientes-db}
+      EXPEDIENTES_PORT: ${EXPEDIENTES_PORT:-5432}
+      EXPEDIENTES_NAME: ${EXPEDIENTES_NAME:-sermed}
+      EXPEDIENTES_USER: ${EXPEDIENTES_USER:-sermed}
+      EXPEDIENTES_PASSWORD: ${EXPEDIENTES_PASSWORD:-sermed_dev_password}
+      CHANNEL_REDIS_URL: redis://redis:6379/1
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-no-reply@sisem.local}
+      EMAIL_TIMEOUT: ${EMAIL_TIMEOUT:-10}
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-db:
+        condition: service_healthy
+      expedientes-db:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
 
   frontend:
     build:
@@ -121,3 +221,4 @@ services:
 
 volumes:
   auth_db_data:
+  expedientes_db_data:

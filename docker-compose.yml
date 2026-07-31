@@ -150,6 +150,21 @@ services:
     depends_on:
       - backend
 
+  # Portal de autoservicio "Citas en Línea" (Fase F5). Proyecto frontend
+  # separado (./portal-citas-frontend) que se sirve desde un dominio propio
+  # (ver nginx/proxy.conf), pero consume el MISMO backend Django que el
+  # sistema interno -> no tiene su propio servicio de API.
+  # Sin "ports:" -> no se expone al host, solo es alcanzable a través de "proxy".
+  portal-frontend:
+    build:
+      context: ./portal-citas-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${PORTAL_VITE_API_URL:-/api/v1}
+    restart: unless-stopped
+    depends_on:
+      - backend
+
   proxy:
     image: nginx:1.27-alpine
     container_name: sisem_proxy
@@ -162,6 +177,7 @@ services:
     depends_on:
       - backend
       - frontend
+      - portal-frontend
 
 volumes:
   auth_db_data:
