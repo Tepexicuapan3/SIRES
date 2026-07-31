@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'apps.recepcion.routers',
     "apps.contratos_oxigeno",
     "apps.almacen_insumos",
+    "apps.portal_citas",
 ]
 
 MIDDLEWARE = [
@@ -349,4 +350,13 @@ RBAC_ROLE_MUTATION_S2_ENABLED = config(
 )
 RBAC_ROLE_PERMISSION_S3_ENABLED = config(
     "RBAC_ROLE_PERMISSION_S3_ENABLED", default=False, cast=bool
+)
+
+# ── Portal Citas en Línea (Fase 6 — cancelación) ──────────────────────────────
+# Ventana mínima (en horas) antes de la fecha/hora de la cita para permitir
+# que el paciente la cancele por su cuenta desde el portal. Ajustable según
+# política institucional (ej. si el hospital decide requerir más o menos
+# anticipación para poder reasignar el horario liberado).
+PORTAL_CANCELACION_VENTANA_HORAS = config(
+    "PORTAL_CANCELACION_VENTANA_HORAS", default=2, cast=int
 )

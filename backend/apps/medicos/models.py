@@ -43,6 +43,12 @@ TIPO_ADSCRIPCION = [
     ("TEMPORAL",   "Temporal"),
 ]
 
+CANAL_ATENCION = [
+    ("PRESENCIAL", "Presencial"),
+    ("LINEA",      "En línea"),
+    ("AMBOS",      "Ambos"),
+]
+
 TIPO_ASIGNACION = [
     ("PERMANENTE", "Permanente"),
     ("TEMPORAL",   "Temporal"),
@@ -152,6 +158,10 @@ class RelMedicoConsultorioHorario(models.Model):
     hora_inicio         = models.TimeField()
     hora_fin            = models.TimeField()
     intervalo_cita_min  = models.SmallIntegerField(default=20)
+    # Canal por el que esta franja está habilitada. Default "PRESENCIAL" preserva
+    # el comportamiento actual: ninguna franja existente queda expuesta al portal
+    # hasta que alguien la marque explícitamente como LINEA/AMBOS.
+    canal               = models.CharField(max_length=10, choices=CANAL_ATENCION, default="PRESENCIAL")
 
     class Meta:
         db_table = "rel_medico_consultorio_horario"

@@ -13,5 +13,6 @@ urlpatterns = [
     path('api/v1/', include('apps.medicos.urls')),
     path('api/v1/', include('apps.contratos_oxigeno.urls')),
     path('api/v1/', include('apps.almacen_insumos.urls')),
+    path('api/v1/', include('apps.portal_citas.urls')),
     #path('recetas/', include('apps.recetas.urls')),
 ]

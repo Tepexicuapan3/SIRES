@@ -128,6 +128,7 @@ class AgendaSemanalView(APIView):
                 "consultorioId":   slot.consultorio_id,
                 "consultorioNumero": slot.consultorio.numero if slot.consultorio else None,
                 "consultorioNombre": slot.consultorio.name   if slot.consultorio else None,
+                "canal":           slot.canal,
                 "cita":            cita_data,
             })
 

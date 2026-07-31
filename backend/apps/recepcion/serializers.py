@@ -86,3 +86,14 @@ class PatientLookupQuerySerializer(serializers.Serializer):
     """Parámetro de búsqueda para lookup de paciente por expediente."""
 
     noExp = serializers.CharField(max_length=20)
+
+
+class VerificarQRSerializer(serializers.Serializer):
+    """
+    Payload crudo leído del código QR del comprobante de cita (o tipeado a
+    mano si el lector falla). Formato exacto ``"{folio}:{firma}"`` -- se
+    valida en ``apps.recepcion.uses_case.qr_checkin_usecase`` reusando
+    ``apps.portal_citas.services.comprobante_service.verificar_payload_qr``.
+    """
+
+    payload = serializers.CharField(max_length=200)

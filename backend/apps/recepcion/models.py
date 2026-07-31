@@ -5,6 +5,22 @@ from django.db import models
 
 # ─── Citas ────────────────────────────────────────────────────────────────────
 
+# Canal por el que una franja/cita está habilitada u origina. Mismos valores
+# que apps.medicos.models.CANAL_ATENCION (no se importa entre apps para no
+# acoplarlas; cada modelo define su propia copia, como ya hacen los demás
+# choices de este archivo).
+CANAL_CHOICES = [
+    ("PRESENCIAL", "Presencial"),
+    ("LINEA",      "En línea"),
+    ("AMBOS",      "Ambos"),
+]
+
+
+class OrigenCanalCita(models.TextChoices):
+    RECEPCION = "RECEPCION", "Recepción"
+    PORTAL    = "PORTAL",    "Portal"
+
+
 class EstatusCita(models.TextChoices):
     AGENDADA   = "agendada",   "Agendada"
     CONFIRMADA = "confirmada", "Confirmada"
@@ -71,6 +87,20 @@ class CitaMedica(models.Model):
     motivo     = models.CharField(max_length=255, null=True, blank=True)
     notas      = models.TextField(null=True, blank=True)
 
+    # Portal en línea
+    origen_canal = models.CharField(
+        max_length=20,
+        choices=OrigenCanalCita.choices,
+        default=OrigenCanalCita.RECEPCION,
+    )
+    verificado_en       = models.DateTimeField(null=True, blank=True)
+    # Igual que created_by_id: id plano de usuario, sin FK real (mismo patrón
+    # de auditoría ya usado en este modelo y en el resto del proyecto).
+    verificado_por_id   = models.BigIntegerField(null=True, blank=True)
+    cancelado_en        = models.DateTimeField(null=True, blank=True)
+    cancelado_por_id    = models.BigIntegerField(null=True, blank=True)
+    motivo_cancelacion  = models.TextField(null=True, blank=True)
+
     # Auditoría
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)
@@ -116,6 +146,10 @@ class HorarioDisponible(models.Model):
     hora         = models.TimeField()
     duracion_min = models.SmallIntegerField(default=20)
     disponible   = models.BooleanField(default=True, db_index=True)
+    # Se copia desde RelMedicoConsultorioHorario.canal al generar el slot
+    # (la lógica de copia es de una fase posterior). Default "PRESENCIAL"
+    # preserva el comportamiento actual.
+    canal        = models.CharField(max_length=10, choices=CANAL_CHOICES, default="PRESENCIAL")
     cita         = models.OneToOneField(
         CitaMedica,
         on_delete=models.SET_NULL,
@@ -135,6 +169,8 @@ class CitaNotificacion(models.Model):
     TIPO_CHOICES = [
         ("confirmacion", "Confirmación"),
         ("recordatorio", "Recordatorio"),
+        ("comprobante_portal", "Comprobante portal"),
+        ("cancelacion", "Cancelación"),
     ]
 
     cita          = models.ForeignKey(CitaMedica, on_delete=models.CASCADE, related_name="notificaciones")

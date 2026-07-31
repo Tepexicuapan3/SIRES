@@ -24,8 +24,11 @@ from apps.medicos.models import (
     RelMedicoExcepcion,
     RelMedicoCobertura,
     RelMedicoCoberturaHorario,
+    CANAL_ATENCION,
 )
 from apps.medicos.disponibilidad import get_medicos_disponibles, get_disponibilidad_medico
+
+CANALES_VALIDOS = {c[0] for c in CANAL_ATENCION}
 
 
 # ─── HELPERS ────────────────────────────────────────────────────────────────
@@ -112,10 +115,24 @@ def _serialize_consultorio_asignacion(rmc: RelMedicoConsultorio) -> dict:
                 "horaInicio": str(h.hora_inicio),
                 "horaFin": str(h.hora_fin),
                 "intervaloCitaMin": h.intervalo_cita_min,
+                "canal": h.canal,
             }
             for h in rmc.horarios.all().order_by("dia_semana", "hora_inicio")
         ],
     }
+
+
+def _validar_canal_horarios(horarios: list) -> str | None:
+    """Valida que el canal de cada horario (si viene) sea uno de los choices válidos.
+    Retorna el mensaje de error si alguno es inválido, o None si todos son válidos."""
+    for h in horarios:
+        canal = h.get("canal")
+        if canal is not None and canal not in CANALES_VALIDOS:
+            return (
+                f"canal inválido: '{canal}'. Valores permitidos: "
+                f"{', '.join(sorted(CANALES_VALIDOS))}."
+            )
+    return None
 
 
 # ─── CRUD MÉDICOS ────────────────────────────────────────────────────────────
@@ -417,6 +434,12 @@ class MedicoConsultoriosView(APIView):
             return error_response("CONSULTORIO_NOT_FOUND", "Consultorio no encontrado.",
                                   status.HTTP_404_NOT_FOUND, request_id=_request_id(request))
 
+        horarios_payload = request.data.get("horarios", [])
+        error_canal = _validar_canal_horarios(horarios_payload)
+        if error_canal:
+            return error_response("VALIDATION_ERROR", error_canal,
+                                  status.HTTP_400_BAD_REQUEST, request_id=_request_id(request))
+
         rmc = RelMedicoConsultorio.objects.create(
             medico=medico,
             consultorio=consultorio,
@@ -427,13 +450,14 @@ class MedicoConsultoriosView(APIView):
         )
 
         # Crear horarios si vienen en el payload
-        for h in request.data.get("horarios", []):
+        for h in horarios_payload:
             RelMedicoConsultorioHorario.objects.create(
                 rel_medico_consultorio=rmc,
                 dia_semana=h["diaSemana"],
                 hora_inicio=h["horaInicio"],
                 hora_fin=h["horaFin"],
                 intervalo_cita_min=h.get("intervaloCitaMin", 20),
+                canal=h.get("canal", "PRESENCIAL"),
             )
 
         return Response(_serialize_consultorio_asignacion(
@@ -456,15 +480,22 @@ class MedicoConsultorioHorarioView(APIView):
             return error_response("NOT_FOUND", "Asignación no encontrada.",
                                   status.HTTP_404_NOT_FOUND, request_id=_request_id(request))
 
+        horarios_payload = request.data.get("horarios", [])
+        error_canal = _validar_canal_horarios(horarios_payload)
+        if error_canal:
+            return error_response("VALIDATION_ERROR", error_canal,
+                                  status.HTTP_400_BAD_REQUEST, request_id=_request_id(request))
+
         # Reemplaza todos los horarios de esta asignación
         rmc.horarios.all().delete()
-        for h in request.data.get("horarios", []):
+        for h in horarios_payload:
             RelMedicoConsultorioHorario.objects.create(
                 rel_medico_consultorio=rmc,
                 dia_semana=h["diaSemana"],
                 hora_inicio=h["horaInicio"],
                 hora_fin=h["horaFin"],
                 intervalo_cita_min=h.get("intervaloCitaMin", 20),
+                canal=h.get("canal", "PRESENCIAL"),
             )
 
         # Regenerar slots: elimina futuros disponibles y vuelve a generar

@@ -160,6 +160,15 @@ class CitasRepository:
             if not slot:
                 raise ValueError("El horario seleccionado no está disponible.")
 
+            # 1.1 Slots con canal="LINEA" son exclusivos del portal de citas en
+            #     línea — no se pueden agendar desde recepción, aunque sigan
+            #     marcados disponible=True.
+            if slot.canal == "LINEA":
+                raise ValueError(
+                    "Este horario está reservado exclusivamente para citas en "
+                    "línea, no se puede agendar desde recepción."
+                )
+
             # 2. El médico no debe tener otra cita activa en ese momento
             if CitaMedica.objects.filter(
                 medico_id=medico_id,
@@ -272,6 +281,7 @@ class CitasRepository:
                                 "consultorio_id": rmc.consultorio_id,
                                 "duracion_min":   intervalo,
                                 "disponible":     True,
+                                "canal":          horario.canal,
                             },
                         )
                         if created:
