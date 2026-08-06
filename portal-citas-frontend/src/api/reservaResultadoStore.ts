@@ -29,7 +29,6 @@ export interface ReservaResultado {
   /** ISO 8601, tal como lo devuelve `POST /portal/citas`. */
   fechaHora: string;
   consultorioNombre: string | null;
-  medicoNombre: string;
   servicioTipo: "especialidad" | "medicina_general";
 }
 

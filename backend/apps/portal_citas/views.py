@@ -38,9 +38,13 @@ from apps.portal_citas.serializers import (
     ReservarCitaSerializer,
     VerificarCodigoSerializer,
 )
+from apps.portal_citas.services.consultorios_service import (
+    listar_centros_en_linea,
+    listar_consultorios_en_linea,
+)
 from apps.portal_citas.services.especialidades_service import listar_especialidades
 from apps.portal_citas.services.nucleo_service import obtener_nucleo
-from apps.portal_citas.services.slots_service import get_slots_portal
+from apps.portal_citas.services.slots_service import get_disponibilidad_mensual, get_slots_portal
 from apps.portal_citas.throttling import PortalAuthRateThrottle
 from apps.portal_citas.uses_case.cancelar_cita_usecase import cancelar_cita
 from apps.portal_citas.uses_case.capturar_correo_usecase import capturar_correo
@@ -64,6 +68,30 @@ def _portal_error_response(
     )
 
 
+def _validar_input(serializer_cls, data, mensaje: str, request):
+    """
+    Valida ``data`` con ``serializer_cls`` y colapsa el patrón repetido
+    ``if not serializer.is_valid(): return error_response(...)`` que se
+    repite en todas las vistas del portal (tanto para query params de los
+    endpoints GET como para el body de los POST/PATCH).
+
+    Retorna ``(validated_data, None)`` si la validación pasa, o
+    ``(None, Response)`` con el mismo error 422 estándar (``VALIDATION_ERROR``,
+    mismos ``details``/``request_id``) que ya devolvía cada call-site. NO
+    cambia comportamiento: cada call-site sigue pasando su propio mensaje.
+    """
+    serializer = serializer_cls(data=data)
+    if not serializer.is_valid():
+        return None, error_response(
+            "VALIDATION_ERROR",
+            mensaje,
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            details=serializer.errors,
+            request_id=get_request_id(request),
+        )
+    return serializer.validated_data, None
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class IniciarSesionView(APIView):
     """POST /portal/auth/iniciar-sesion"""
@@ -73,21 +101,17 @@ class IniciarSesionView(APIView):
     throttle_classes = [PortalAuthRateThrottle]
 
     def post(self, request):
-        serializer = IniciarSesionSerializer(data=request.data)
-        if not serializer.is_valid():
-            return error_response(
-                "VALIDATION_ERROR",
-                "Hay errores en el formulario",
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-                details=serializer.errors,
-                request_id=get_request_id(request),
-            )
+        validated_data, err = _validar_input(
+            IniciarSesionSerializer, request.data, "Hay errores en el formulario", request
+        )
+        if err:
+            return err
 
         try:
             result = iniciar_sesion(
-                serializer.validated_data["noExp"],
-                serializer.validated_data["nombreCompleto"],
-                serializer.validated_data["fechaNacimiento"],
+                validated_data["noExp"],
+                validated_data["nombreCompleto"],
+                validated_data["fechaNacimiento"],
             )
         except PortalAuthError as exc:
             return _portal_error_response(request, exc)
@@ -112,22 +136,18 @@ class CapturarCorreoView(APIView):
     throttle_classes = [PortalAuthRateThrottle]
 
     def post(self, request):
-        serializer = CapturarCorreoSerializer(data=request.data)
-        if not serializer.is_valid():
-            return error_response(
-                "VALIDATION_ERROR",
-                "Hay errores en el formulario",
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-                details=serializer.errors,
-                request_id=get_request_id(request),
-            )
+        validated_data, err = _validar_input(
+            CapturarCorreoSerializer, request.data, "Hay errores en el formulario", request
+        )
+        if err:
+            return err
 
         try:
             result = capturar_correo(
-                serializer.validated_data["noExp"],
-                serializer.validated_data["nombreCompleto"],
-                serializer.validated_data["fechaNacimiento"],
-                serializer.validated_data["correo"],
+                validated_data["noExp"],
+                validated_data["nombreCompleto"],
+                validated_data["fechaNacimiento"],
+                validated_data["correo"],
             )
         except PortalAuthError as exc:
             return _portal_error_response(request, exc)
@@ -152,22 +172,18 @@ class VerificarCodigoView(APIView):
     throttle_classes = [PortalAuthRateThrottle]
 
     def post(self, request):
-        serializer = VerificarCodigoSerializer(data=request.data)
-        if not serializer.is_valid():
-            return error_response(
-                "VALIDATION_ERROR",
-                "Hay errores en el formulario",
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-                details=serializer.errors,
-                request_id=get_request_id(request),
-            )
+        validated_data, err = _validar_input(
+            VerificarCodigoSerializer, request.data, "Hay errores en el formulario", request
+        )
+        if err:
+            return err
 
         try:
             result = verificar_codigo(
-                serializer.validated_data["noExp"],
-                serializer.validated_data["nombreCompleto"],
-                serializer.validated_data["fechaNacimiento"],
-                serializer.validated_data["codigo"],
+                validated_data["noExp"],
+                validated_data["nombreCompleto"],
+                validated_data["fechaNacimiento"],
+                validated_data["codigo"],
                 ip_origen=request.META.get("REMOTE_ADDR"),
             )
         except PortalAuthError as exc:
@@ -198,9 +214,14 @@ class SlotsPortalQuerySerializer(serializers.Serializer):
     fecha = serializers.DateField(input_formats=["%Y-%m-%d"])
     # camelCase para seguir la convención de query params del resto del
     # proyecto (medicoId, fechaDesde, pageSize en CreateCitaSerializer de
-    # apps.recepcion). ``especialidadId`` es opcional: sin filtro se listan
-    # slots de todos los médicos (mismo comportamiento previo del eco de
-    # servicioTipo, que nunca filtraba nada).
+    # apps.recepcion). ``consultorioId`` es el eje de filtro efectivo del
+    # portal nuevo (Disponibilidad por Consultorio); opcional para no
+    # romper llamadas sin filtro.
+    consultorioId = serializers.IntegerField(required=False, min_value=1)
+    # DEPRECATED: se mantiene funcional durante una release de transición
+    # para el cliente legado que aún manda solo especialidadId (ver
+    # slots_service.get_slots_portal). Remover una release después de
+    # desplegar el portal nuevo.
     especialidadId = serializers.IntegerField(required=False, min_value=1)
 
 
@@ -232,28 +253,128 @@ class EspecialidadesPortalView(APIView):
         return Response({"especialidades": listar_especialidades()})
 
 
-class SlotsPortalView(APIView):
-    """GET /portal/slots?fecha=YYYY-MM-DD&especialidadId=..."""
+class CentrosPortalView(APIView):
+    """
+    GET /portal/centros — catálogo de centros de atención (rotulados
+    "Clínica" en la UI) con AL MENOS UN consultorio habilitado para canal
+    en línea (ver ``services.consultorios_service.listar_centros_en_linea``),
+    usado para armar el selector de clínica del frontend. Solo lectura, no
+    expone nada sensible.
+
+    El nombre en el wire es ``centroId`` (no ``clinicaId``): el dominio
+    real es ``CatCentroAtencion``, y el payload de ``/portal/consultorios``
+    ya expone ``centroNombre`` -- el wire sigue el nombre del dominio, la
+    UI rotula "Clínica" (ver design doc de
+    ``portal-citas-filtro-clinica``).
+    """
 
     authentication_classes = [PortalTokenAuthentication]
     permission_classes = [IsPortalUser]
 
     def get(self, request):
-        serializer = SlotsPortalQuerySerializer(data=request.query_params)
-        if not serializer.is_valid():
-            return error_response(
-                "VALIDATION_ERROR",
-                "Parámetros inválidos.",
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-                details=serializer.errors,
-                request_id=get_request_id(request),
-            )
+        return Response({"centros": listar_centros_en_linea()})
+
+
+class ConsultoriosPortalQuerySerializer(serializers.Serializer):
+    # Mismo criterio que ``centroId`` inexistente/valor inválido de
+    # ``SlotsPortalQuerySerializer.consultorioId``: entero >= 1, opcional.
+    centroId = serializers.IntegerField(required=False, min_value=1)
+
+
+class ConsultoriosPortalView(APIView):
+    """
+    GET /portal/consultorios?centroId= — catálogo de consultorios
+    habilitados para canal en línea (ver ``services.consultorios_service``),
+    usado para armar el selector del frontend y como eje de búsqueda de
+    ``GET /portal/slots`` / disponibilidad mensual. Solo lectura, no
+    expone nada sensible.
+
+    ``centroId`` (opcional, entero >= 1) filtra por centro de atención --
+    valor inválido responde 422; centro inexistente o sin consultorios
+    online responde 200 con ``consultorios: []`` (mismo criterio
+    anti-enumeración que ``DisponibilidadMensualView``, NUNCA 404).
+    """
+
+    authentication_classes = [PortalTokenAuthentication]
+    permission_classes = [IsPortalUser]
+
+    def get(self, request):
+        validated_data, err = _validar_input(
+            ConsultoriosPortalQuerySerializer, request.query_params, "Parámetros inválidos.", request
+        )
+        if err:
+            return err
+
+        consultorios = listar_consultorios_en_linea(
+            centro_id=validated_data.get("centroId")
+        )
+        return Response({"consultorios": consultorios})
+
+
+class SlotsPortalView(APIView):
+    """GET /portal/slots?fecha=YYYY-MM-DD&consultorioId=&especialidadId="""
+
+    authentication_classes = [PortalTokenAuthentication]
+    permission_classes = [IsPortalUser]
+
+    def get(self, request):
+        validated_data, err = _validar_input(
+            SlotsPortalQuerySerializer, request.query_params, "Parámetros inválidos.", request
+        )
+        if err:
+            return err
 
         slots = get_slots_portal(
-            fecha=serializer.validated_data["fecha"],
-            especialidad_id=serializer.validated_data.get("especialidadId"),
+            fecha=validated_data["fecha"],
+            consultorio_id=validated_data.get("consultorioId"),
+            especialidad_id=validated_data.get("especialidadId"),
         )
         return Response({"slots": slots})
+
+
+class DisponibilidadMensualQuerySerializer(serializers.Serializer):
+    # Rango amplio y deliberadamente permisivo (no atado a "hoy"): la
+    # validación de negocio (mes ya pasado, fuera de la ventana de
+    # generación de slots) simplemente no devuelve fechas, no es un error
+    # de request. Los límites solo evitan valores absurdos (año 0, mes 99).
+    anio = serializers.IntegerField(min_value=2020, max_value=2100)
+    mes = serializers.IntegerField(min_value=1, max_value=12)
+
+
+class DisponibilidadMensualView(APIView):
+    """
+    GET /portal/consultorios/{id}/disponibilidad-mensual?anio=&mes=
+
+    Conteo agregado de slots disponibles por fecha para un consultorio y
+    mes/año (ver ``services.slots_service.get_disponibilidad_mensual``).
+
+    Un ``id`` de consultorio inexistente o no habilitado para canal en
+    línea responde 200 con ``dias: []`` — NUNCA 404: un 404 permitiría
+    enumerar qué IDs de consultorio existen en el sistema, y esa
+    información no aporta nada al frontend (que solo necesita saber si
+    hay o no cupo).
+    """
+
+    authentication_classes = [PortalTokenAuthentication]
+    permission_classes = [IsPortalUser]
+
+    def get(self, request, consultorio_id):
+        validated_data, err = _validar_input(
+            DisponibilidadMensualQuerySerializer, request.query_params, "Parámetros inválidos.", request
+        )
+        if err:
+            return err
+
+        anio = validated_data["anio"]
+        mes = validated_data["mes"]
+        dias = get_disponibilidad_mensual(consultorio_id, anio, mes)
+
+        return Response({
+            "consultorioId": consultorio_id,
+            "anio": anio,
+            "mes": mes,
+            "dias": dias,
+        })
 
 
 # ── Fase 4: reserva de cita / Fase 8: listado de citas ──────────────────────
@@ -298,22 +419,18 @@ class ReservarCitaView(APIView):
         return Response({"citas": citas})
 
     def post(self, request):
-        serializer = ReservarCitaSerializer(data=request.data)
-        if not serializer.is_valid():
-            return error_response(
-                "VALIDATION_ERROR",
-                "Datos inválidos.",
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-                details=serializer.errors,
-                request_id=get_request_id(request),
-            )
+        validated_data, err = _validar_input(
+            ReservarCitaSerializer, request.data, "Datos inválidos.", request
+        )
+        if err:
+            return err
 
         try:
             result = reservar_cita(
                 request.portal_miembro,
-                serializer.validated_data["miembroId"],
-                serializer.validated_data["slotId"],
-                motivo=serializer.validated_data.get("motivo") or None,
+                validated_data["miembroId"],
+                validated_data["slotId"],
+                motivo=validated_data.get("motivo") or None,
             )
         except PortalReservaError as exc:
             return _portal_error_response(request, exc)
@@ -347,21 +464,17 @@ class CancelarCitaView(APIView):
     permission_classes = [IsPortalUser]
 
     def patch(self, request, folio):
-        serializer = CancelarCitaSerializer(data=request.data)
-        if not serializer.is_valid():
-            return error_response(
-                "VALIDATION_ERROR",
-                "Datos inválidos.",
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-                details=serializer.errors,
-                request_id=get_request_id(request),
-            )
+        validated_data, err = _validar_input(
+            CancelarCitaSerializer, request.data, "Datos inválidos.", request
+        )
+        if err:
+            return err
 
         try:
             result = cancelar_cita(
                 request.portal_miembro,
                 folio,
-                motivo=serializer.validated_data.get("motivo") or None,
+                motivo=validated_data.get("motivo") or None,
             )
         except PortalCancelacionError as exc:
             return _portal_error_response(request, exc)

@@ -35,11 +35,11 @@ export default function ConfirmarReservaPage() {
 
   if (!draft) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">
-        <h1 className="text-2xl font-semibold text-slate-800">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-app p-6 text-center">
+        <h1 className="text-2xl font-display font-semibold text-txt-body">
           No hay ninguna reserva en curso
         </h1>
-        <p className="max-w-md text-slate-600">
+        <p className="max-w-md text-txt-muted">
           Volvé a elegir un paciente y un horario para continuar.
         </p>
         <Button type="button" onClick={() => navigate("/", { replace: true })}>
@@ -88,47 +88,41 @@ export default function ConfirmarReservaPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-50 p-6">
-      <div className="flex w-full max-w-md flex-col gap-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-app p-6">
+      <div className="flex w-full max-w-md flex-col gap-6 rounded-lg border border-line-hairline bg-paper p-6 shadow-sm">
         <div className="flex flex-col gap-1 text-center">
-          <h1 className="text-xl font-semibold text-slate-800">
+          <h1 className="text-xl font-display font-semibold text-txt-body">
             Confirmar cita
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-txt-muted">
             Revisá los datos antes de confirmar.
           </p>
         </div>
 
-        <dl className="flex flex-col gap-2 rounded-md bg-slate-50 p-4 text-sm">
+        <dl className="flex flex-col gap-2 rounded-md bg-subtle p-4 text-sm">
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-500">Paciente</dt>
-            <dd className="font-medium text-slate-800">
+            <dt className="text-txt-muted">Paciente</dt>
+            <dd className="font-medium text-txt-body">
               {draft.nombreVisibleMiembro}
             </dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-500">Fecha</dt>
-            <dd className="font-medium text-slate-800">{draft.slot.fecha}</dd>
+            <dt className="text-txt-muted">Fecha</dt>
+            <dd className="font-medium text-txt-body">{draft.slot.fecha}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-500">Hora</dt>
-            <dd className="font-medium text-slate-800">{draft.slot.hora}</dd>
+            <dt className="text-txt-muted">Hora</dt>
+            <dd className="font-medium text-txt-body">{draft.slot.hora}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-500">Especialidad</dt>
-            <dd className="font-medium text-slate-800">
+            <dt className="text-txt-muted">Especialidad</dt>
+            <dd className="font-medium text-txt-body">
               {draft.slot.especialidadPrincipal}
             </dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-500">Médico</dt>
-            <dd className="font-medium text-slate-800">
-              {draft.slot.medicoNombre}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-slate-500">Consultorio</dt>
-            <dd className="font-medium text-slate-800">
+            <dt className="text-txt-muted">Consultorio</dt>
+            <dd className="font-medium text-txt-body">
               {draft.slot.consultorioNombre ?? "Sin asignar"}
             </dd>
           </div>
@@ -137,7 +131,7 @@ export default function ConfirmarReservaPage() {
         <div className="flex flex-col gap-1 text-left">
           <label
             htmlFor="motivo"
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium text-txt-body"
           >
             Motivo de la consulta (opcional)
           </label>
@@ -150,7 +144,7 @@ export default function ConfirmarReservaPage() {
             onChange={(e) => setMotivo(e.target.value)}
             disabled={enviando}
             placeholder="Ej. dolor de cabeza, revisión de rutina…"
-            className="resize-none rounded-md border border-slate-300 px-3 py-2 text-base focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-100"
+            className="resize-none rounded-md border border-line-struct px-3 py-2 text-base focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-subtle"
           />
         </div>
 

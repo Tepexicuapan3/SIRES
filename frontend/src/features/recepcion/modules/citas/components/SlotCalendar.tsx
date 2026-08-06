@@ -93,17 +93,24 @@ function SlotCell({ dateStr, hora, slot, today, now, isToday, onClick }: SlotCel
   }
 
   if (esOcupado) {
+    // La cita ya reservada puede venir del portal de citas en línea
+    // ("origenCanal" = "PORTAL") o haberse agendado directo en recepción —
+    // se distingue con el mismo ícono/color que usa "Solo portal" arriba
+    // para el slot todavía libre, así el vocabulario visual es consistente
+    // antes y después de reservarse.
+    const esPortal = slot.cita?.origenCanal === "PORTAL";
     return (
       <div
         className={cn(
           "h-16 rounded-lg border border-amber-200 bg-amber-50/60 px-2 py-2 flex flex-col justify-center gap-0.5",
           isToday && "border-amber-300 bg-amber-50",
         )}
-        title={`${hora} — Ocupado${slot.cita ? ` · Exp. ${slot.cita.noExp}` : ""}`}
+        title={`${hora} — Ocupado${slot.cita ? ` · Exp. ${slot.cita.noExp}` : ""}${esPortal ? " · Reservada en línea" : ""}`}
       >
         <div className="flex items-center justify-center gap-1">
           <span className="size-1.5 rounded-full bg-amber-400 shrink-0" />
           <p className="text-[11px] font-semibold text-amber-700">Agendado</p>
+          {esPortal && <Globe className="size-3 text-sky-500 shrink-0" />}
         </div>
         {slot.cita?.noExp && (
           <p className="font-mono text-[10px] text-amber-600/80 text-center truncate">

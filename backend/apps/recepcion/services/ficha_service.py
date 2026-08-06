@@ -90,18 +90,11 @@ def _get_fecha_cierre(visit) -> str:
 
 def _get_hora_consulta(visit) -> str:
     from django.utils import timezone as tz
+    from apps.recepcion.services.hora_consulta_resolver import resolve_hora_consulta
 
-    # 1. Horario seleccionado explícitamente al check-in
-    if visit.hora_consulta:
-        return visit.hora_consulta.strftime("%H:%M")
-    # 2. Cita médica vinculada
     cita_dt = _get_cita_datetime(visit)
-    if cita_dt:
-        return cita_dt.strftime("%H:%M")
-    # 3. Fallback: hora del check-in en hora local
-    if visit.fch_alta:
-        return tz.localtime(visit.fch_alta).strftime("%H:%M")
-    return ""
+    fch_alta_local = tz.localtime(visit.fch_alta) if visit.fch_alta else None
+    return resolve_hora_consulta(visit.hora_consulta, cita_dt, fch_alta_local)
 
 
 def _get_fecha_consulta(visit) -> str:

@@ -35,6 +35,10 @@ def _serialize_cita(cita: CitaMedica) -> dict:
         "motivo":         cita.motivo,
         "notas":          cita.notas,
         "createdAt":      cita.created_at.isoformat(),
+        # Origen de la cita ("RECEPCION" | "PORTAL") — permite distinguir en
+        # el sistema interno las citas agendadas por el paciente desde el
+        # portal de citas en línea de las agendadas directamente en recepción.
+        "origenCanal":    cita.origen_canal,
     }
 
 

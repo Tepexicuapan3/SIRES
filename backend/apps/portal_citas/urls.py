@@ -3,6 +3,9 @@ from django.urls import path
 from apps.portal_citas.views import (
     CancelarCitaView,
     CapturarCorreoView,
+    CentrosPortalView,
+    ConsultoriosPortalView,
+    DisponibilidadMensualView,
     EspecialidadesPortalView,
     IniciarSesionView,
     NucleoView,
@@ -32,6 +35,13 @@ urlpatterns = [
     # ── Núcleo familiar y disponibilidad (Fase 3) ───────────────────────────────
     path("portal/nucleo", NucleoView.as_view(), name="portal-nucleo"),
     path("portal/especialidades", EspecialidadesPortalView.as_view(), name="portal-especialidades"),
+    path("portal/centros", CentrosPortalView.as_view(), name="portal-centros"),
+    path("portal/consultorios", ConsultoriosPortalView.as_view(), name="portal-consultorios"),
+    path(
+        "portal/consultorios/<int:consultorio_id>/disponibilidad-mensual",
+        DisponibilidadMensualView.as_view(),
+        name="portal-consultorios-disponibilidad-mensual",
+    ),
     path("portal/slots", SlotsPortalView.as_view(), name="portal-slots"),
 
     # ── Reserva de cita (Fase 4) ─────────────────────────────────────────────

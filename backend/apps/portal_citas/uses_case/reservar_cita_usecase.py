@@ -30,7 +30,12 @@ Flujo:
 6. Se vincula el slot a la cita y se marca ``disponible=False`` dentro de
    la misma transacción que lo bloqueó.
 7. Se devuelven solo datos no sensibles (nunca ``no_exp``/``pk_num`` ni
-   datos de otros pacientes).
+   datos de otros pacientes). Tampoco se devuelve ``medicoNombre``: el
+   portal público de pacientes no muestra el nombre del médico en NINGÚN
+   punto del flujo (ni antes ni después de reservar) -- esa información
+   solo la ve el personal de recepción en la ficha del check-in por QR
+   (``apps.recepcion.uses_case.qr_checkin_usecase``), que es un módulo
+   independiente del sistema interno.
 8. (Fase 5) Ya confirmada la transacción anterior, se encola
    ``tasks.enviar_comprobante_portal_task`` con ``.delay(...)`` para que
    genere el PDF+QR y mande el comprobante por correo en background --
@@ -57,11 +62,6 @@ logger = logging.getLogger(__name__)
 
 def _servicio_tipo_de(medico) -> str:
     return "especialidad" if medico.especialidades.exists() else "medicina_general"
-
-
-def _nombre_medico(medico) -> str:
-    det = getattr(medico.id_usuario, "detalle", None)
-    return det.nombre_completo if det else medico.id_usuario.usuario
 
 
 def _combinar_fecha_hora(fecha, hora):
@@ -97,9 +97,20 @@ def reservar_cita(
         # solo una lectura suelta susceptible de condición de carrera.
         PortalMiembro.objects.select_for_update().get(id=miembro_objetivo.id)
 
+        # of=("self",): restringe el FOR UPDATE a la tabla de
+        # citas_horarios_disponibles. Sin esto, Postgres rechaza el lock
+        # porque select_related() de abajo arma LEFT OUTER JOIN hacia
+        # det_usuarios (reverse OneToOne CatMedico.id_usuario -> detalle,
+        # Django siempre lo trata como nullable en el JOIN aunque en la
+        # práctica todo médico tenga detalle) y hacia cat_consultorios
+        # (consultorio es FK nullable en HorarioDisponible) -- Postgres no
+        # permite "FOR UPDATE" del lado nulable de un outer join. Restringir
+        # el lock a "self" sigue bloqueando la fila del slot (que es lo que
+        # importa para evitar doble reserva concurrente); no bloquea las
+        # filas joineadas, pero esas no se modifican en esta transacción.
         slot = (
             HorarioDisponible.objects
-            .select_for_update()
+            .select_for_update(of=("self",))
             .filter(id=slot_id, disponible=True, canal__in=["LINEA", "AMBOS"])
             .select_related("medico__id_usuario__detalle", "consultorio")
             .first()
@@ -175,6 +186,5 @@ def reservar_cita(
         "folio": cita.folio,
         "fechaHora": cita.fecha_hora.isoformat(),
         "consultorioNombre": slot.consultorio.name if slot.consultorio else None,
-        "medicoNombre": _nombre_medico(slot.medico),
         "servicioTipo": cita.servicio_tipo,
     }

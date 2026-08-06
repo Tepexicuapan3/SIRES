@@ -9,7 +9,12 @@ from apps.recepcion.views.citas_views import (
 )
 from apps.recepcion.views.agenda_views import AgendaSemanalView
 from apps.recepcion.views.ficha_views import FichaVisitView
-from apps.recepcion.views.qr_checkin_views import ConfirmarQRCheckinView, VerificarQRView
+from apps.recepcion.views.qr_checkin_views import (
+    CheckinCandidatosView,
+    ConfirmarCheckinPorFolioView,
+    ConfirmarQRCheckinView,
+    VerificarQRView,
+)
 from apps.recepcion.views.turno_views import (
     TurnoFichaListCreateView, TurnoFichaDetailView, TurnoActualView,
 )
@@ -37,4 +42,8 @@ urlpatterns = [
     # ── Check-in por QR (comprobante del portal) ─────────────────────────────
     path("citas/verificar-qr",              VerificarQRView.as_view(),        name="citas-verificar-qr"),
     path("citas/verificar-qr/confirmar",    ConfirmarQRCheckinView.as_view(), name="citas-verificar-qr-confirmar"),
+
+    # ── Check-in manual (sin QR): por nombre de paciente o folio ─────────────
+    path("citas/checkin/candidatos",        CheckinCandidatosView.as_view(),      name="citas-checkin-candidatos"),
+    path("citas/checkin/confirmar-folio",   ConfirmarCheckinPorFolioView.as_view(), name="citas-checkin-confirmar-folio"),
 ]

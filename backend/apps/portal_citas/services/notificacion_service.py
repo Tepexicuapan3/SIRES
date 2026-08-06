@@ -64,7 +64,7 @@ def enviar_comprobante_portal(cita: CitaMedica, miembro_objetivo, miembro_sesion
             f"Hola {miembro_sesion.nombre_visible},\n\n"
             f"La cita para {miembro_objetivo.nombre_visible} se reservó con éxito.\n\n"
             f"Folio: {cita.folio}\n"
-            f"Fecha: {cita.fecha_hora.strftime('%d/%m/%Y %H:%M')}\n\n"
+            f"Fecha: {timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y %H:%M')}\n\n"
             "Adjuntamos tu comprobante en PDF. Preséntalo (impreso o desde "
             "tu teléfono) el día de la cita para el check-in en recepción."
         )
@@ -126,7 +126,7 @@ def enviar_cancelacion_portal(cita: CitaMedica, miembro_sesion) -> CitaNotificac
         body = (
             f"Hola {miembro_sesion.nombre_visible},\n\n"
             f"La cita con folio {cita.folio}, programada para el "
-            f"{cita.fecha_hora.strftime('%d/%m/%Y %H:%M')}, fue cancelada.\n\n"
+            f"{timezone.localtime(cita.fecha_hora).strftime('%d/%m/%Y %H:%M')}, fue cancelada.\n\n"
             "Si fue un error o necesitas otra fecha, puedes agendar una "
             "nueva cita desde el portal."
         )

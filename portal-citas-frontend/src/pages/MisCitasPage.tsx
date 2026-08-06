@@ -29,11 +29,11 @@ function messageFor(error: unknown): string {
 }
 
 const ESTATUS_ESTILO: Record<EstatusCitaPortal, { etiqueta: string; className: string }> = {
-  agendada: { etiqueta: "Agendada", className: "bg-blue-100 text-blue-800" },
-  confirmada: { etiqueta: "Confirmada", className: "bg-emerald-100 text-emerald-800" },
-  atendida: { etiqueta: "Atendida", className: "bg-slate-200 text-slate-700" },
-  cancelada: { etiqueta: "Cancelada", className: "bg-red-100 text-red-700" },
-  no_asistio: { etiqueta: "No asistió", className: "bg-amber-100 text-amber-800" },
+  agendada: { etiqueta: "Agendada", className: "bg-status-info/15 text-status-info" },
+  confirmada: { etiqueta: "Confirmada", className: "bg-status-stable/15 text-status-stable" },
+  atendida: { etiqueta: "Atendida", className: "bg-subtle text-txt-muted" },
+  cancelada: { etiqueta: "Cancelada", className: "bg-status-critical/15 text-status-critical" },
+  no_asistio: { etiqueta: "No asistió", className: "bg-status-alert/15 text-status-alert" },
 };
 
 function EstatusBadge({ estatus }: { estatus: EstatusCitaPortal }) {
@@ -152,21 +152,21 @@ export default function MisCitasPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-app p-4 sm:p-6">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <header className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-slate-800">Mis citas</h1>
+          <h1 className="text-xl font-display font-semibold text-txt-body">Mis citas</h1>
           <div className="flex items-center gap-2">
             <Link
               to="/"
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              className="rounded-md border border-line-struct px-3 py-1.5 text-sm font-medium text-txt-body hover:bg-subtle"
             >
               Sacar cita
             </Link>
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              className="rounded-md border border-line-struct px-3 py-1.5 text-sm font-medium text-txt-body hover:bg-subtle"
             >
               Cerrar sesión
             </button>
@@ -176,26 +176,26 @@ export default function MisCitasPage() {
         {successMessage && (
           <div
             role="status"
-            className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+            className="rounded-md border border-status-stable/30 bg-status-stable/10 px-3 py-2 text-sm text-status-stable"
           >
             {successMessage}
           </div>
         )}
 
         {citasLoading && (
-          <p className="text-sm text-slate-500">Cargando tus citas…</p>
+          <p className="text-sm text-txt-muted">Cargando tus citas…</p>
         )}
 
         {citasError && <ErrorAlert message={citasError} />}
 
         {!citasLoading && !citasError && citas !== null && citas.length === 0 && (
-          <div className="flex flex-col items-center gap-4 rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-slate-600">
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-line-hairline bg-paper p-8 text-center shadow-sm">
+            <p className="text-txt-muted">
               Todavía no tenés citas agendadas.
             </p>
             <Link
               to="/"
-              className="rounded-md bg-slate-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-700"
+              className="rounded-md bg-brand px-4 py-2.5 text-sm font-medium text-txt-inverse hover:bg-brand-hover"
             >
               Sacar una cita
             </Link>
@@ -207,14 +207,14 @@ export default function MisCitasPage() {
             {citas.map((cita) => (
               <li
                 key={cita.folio}
-                className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+                className="flex flex-col gap-3 rounded-lg border border-line-hairline bg-paper p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <span className="text-xs font-medium uppercase tracking-wide text-txt-muted">
                       Folio {cita.folio}
                     </span>
-                    <span className="font-medium capitalize text-slate-800">
+                    <span className="font-medium capitalize text-txt-body">
                       {FORMATO_FECHA_HORA.format(new Date(cita.fechaHora))}
                     </span>
                   </div>
@@ -223,28 +223,22 @@ export default function MisCitasPage() {
 
                 <dl className="flex flex-col gap-1 text-sm">
                   <div className="flex justify-between gap-3">
-                    <dt className="text-slate-500">Para</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-txt-muted">Para</dt>
+                    <dd className="font-medium text-txt-body">
                       {cita.paraQuien ?? "—"}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <dt className="text-slate-500">Especialidad</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-txt-muted">Especialidad</dt>
+                    <dd className="font-medium text-txt-body">
                       {cita.servicioTipo === "medicina_general"
                         ? "Medicina general"
                         : cita.servicioTipo}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <dt className="text-slate-500">Médico</dt>
-                    <dd className="font-medium text-slate-800">
-                      {cita.medicoNombre}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-slate-500">Consultorio</dt>
-                    <dd className="font-medium text-slate-800">
+                    <dt className="text-txt-muted">Consultorio</dt>
+                    <dd className="font-medium text-txt-body">
                       {cita.consultorioNombre ?? "Sin asignar"}
                     </dd>
                   </div>
@@ -255,7 +249,7 @@ export default function MisCitasPage() {
                     type="button"
                     onClick={() => handleAbrirCancelacion(cita)}
                     disabled={folioEnVuelo === cita.folio}
-                    className="self-start rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="self-start rounded-md border border-status-critical/40 px-3 py-1.5 text-sm font-medium text-status-critical transition-colors hover:bg-status-critical/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {folioEnVuelo === cita.folio ? "Cancelando…" : "Cancelar"}
                   </button>
@@ -272,12 +266,12 @@ export default function MisCitasPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="flex w-full max-w-md flex-col gap-4 rounded-lg bg-white p-6 shadow-lg">
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-lg bg-paper p-6 shadow-lg">
             <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-semibold text-slate-800">
+              <h2 className="text-lg font-display font-semibold text-txt-body">
                 ¿Cancelar esta cita?
               </h2>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-txt-muted">
                 Folio {citaACancelar.folio} ·{" "}
                 {FORMATO_FECHA_HORA.format(new Date(citaACancelar.fechaHora))}
               </p>
@@ -286,7 +280,7 @@ export default function MisCitasPage() {
             <div className="flex flex-col gap-1 text-left">
               <label
                 htmlFor="motivoCancelacion"
-                className="text-sm font-medium text-slate-700"
+                className="text-sm font-medium text-txt-body"
               >
                 Motivo de la cancelación (opcional)
               </label>
@@ -298,7 +292,7 @@ export default function MisCitasPage() {
                 onChange={(e) => setMotivoCancelacion(e.target.value)}
                 disabled={folioEnVuelo !== null}
                 placeholder="Ej. ya no puedo asistir, se resolvió por otro medio…"
-                className="resize-none rounded-md border border-slate-300 px-3 py-2 text-base focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-100"
+                className="resize-none rounded-md border border-line-struct px-3 py-2 text-base focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-subtle"
               />
             </div>
 
@@ -309,7 +303,7 @@ export default function MisCitasPage() {
                 type="button"
                 onClick={handleCerrarModal}
                 disabled={folioEnVuelo !== null}
-                className="flex-1 rounded-md border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded-md border border-line-struct px-4 py-2.5 text-sm font-medium text-txt-body hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Volver
               </button>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, FileText, List, Loader2, Printer, QrCode, RefreshCcw, Search, Settings2, Stethoscope } from "lucide-react";
+import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, FileText, Globe, List, Loader2, Printer, QrCode, RefreshCcw, Search, Settings2, Stethoscope } from "lucide-react";
 import { SlotCalendar } from "@features/recepcion/modules/citas/components/SlotCalendar";
 import { addDays } from "@features/recepcion/modules/citas/utils/dates";
 import { useDebounce }           from "@shared/hooks/useDebounce";
@@ -26,6 +26,13 @@ import { Badge }  from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { Input }  from "@shared/ui/input";
 import { Label }  from "@shared/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@shared/ui/select";
 import {
   ARRIVAL_TYPE,
   ESTATUS_CITA,
@@ -1217,22 +1224,25 @@ export const RecepcionAgendaPage = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="agenda-arrival-filter">Tipo de llegada</Label>
-                <select
-                  id="agenda-arrival-filter"
-                  className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                <Select
                   value={arrivalTypeFilter}
-                  onChange={(event) => {
-                    setArrivalTypeFilter(
-                      event.target.value as ArrivalTypeFilter,
-                    );
+                  onValueChange={(value) => {
+                    setArrivalTypeFilter(value as ArrivalTypeFilter);
                   }}
                 >
-                  <option value={ARRIVAL_TYPE_FILTER.ALL}>Todos</option>
-                  <option value={ARRIVAL_TYPE_FILTER.APPOINTMENT}>
-                    Con cita
-                  </option>
-                  <option value={ARRIVAL_TYPE_FILTER.WALK_IN}>Sin cita</option>
-                </select>
+                  <SelectTrigger id="agenda-arrival-filter" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ARRIVAL_TYPE_FILTER.ALL}>Todos</SelectItem>
+                    <SelectItem value={ARRIVAL_TYPE_FILTER.APPOINTMENT}>
+                      Con cita
+                    </SelectItem>
+                    <SelectItem value={ARRIVAL_TYPE_FILTER.WALK_IN}>
+                      Sin cita
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -1700,9 +1710,16 @@ export const RecepcionAgendaPage = () => {
                                 <p className="font-mono text-sm font-bold text-txt-body tracking-widest">{cita.folio}</p>
                                 <p className="text-[10px] text-txt-muted mt-0.5">Identificador único de encuentro clínico</p>
                               </div>
-                              <Badge variant={ESTATUS_VARIANT[cita.estatus]} className="text-xs shrink-0">
-                                {ESTATUS_LABEL[cita.estatus]}
-                              </Badge>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {cita.origenCanal === "PORTAL" ? (
+                                  <Badge variant="info" className="text-xs gap-1">
+                                    <Globe className="size-3" /> En línea
+                                  </Badge>
+                                ) : null}
+                                <Badge variant={ESTATUS_VARIANT[cita.estatus]} className="text-xs">
+                                  {ESTATUS_LABEL[cita.estatus]}
+                                </Badge>
+                              </div>
                             </div>
                             <div className="px-5 py-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                               <div>

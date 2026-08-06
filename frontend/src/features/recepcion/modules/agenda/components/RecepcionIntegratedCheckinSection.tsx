@@ -21,6 +21,13 @@ import {
 } from "@shared/ui/collapsible";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@shared/ui/select";
 import { Textarea } from "@shared/ui/textarea";
 import {
   ARRIVAL_TYPE,
@@ -35,6 +42,7 @@ import { useVisitStatusAction } from "@features/recepcion/modules/checkin/mutati
 import { mapCheckinFormToCreateVisitRequest } from "@features/recepcion/modules/checkin/domain/checkin.mappers";
 import { usePatientLookup } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
 import { useDebounce } from "@shared/hooks/useDebounce";
+import { useTiposCitasList } from "@features/admin/modules/catalogos/tipos-citas/queries/useTiposCitasList";
 import {
   createCheckinFormSchema,
   DEFAULT_CHECKIN_FORM_VALUES,
@@ -245,13 +253,19 @@ export const RecepcionIntegratedCheckinSection = ({
     defaultValues: DEFAULT_CHECKIN_FORM_VALUES,
   });
 
-  const [serviceType, arrivalType, noExpWatch, pkNumWatch] = useWatch({
+  const [serviceType, noExpWatch, pkNumWatch] = useWatch({
     control: form.control,
-    name: ["serviceType", "arrivalType", "noExp", "pkNum"],
+    name: ["serviceType", "noExp", "pkNum"],
   });
   const isWalkInOnlyService = isServiceForcedToWalkIn(serviceType);
   const serviceTypeField = form.register("serviceType");
-  const arrivalTypeField = form.register("arrivalType");
+  const appointmentIdField = form.register("appointmentId");
+  const [tipoCitaId, setTipoCitaId] = useState<string>("");
+  const { data: tiposCitasData } = useTiposCitasList({
+    pageSize: 100,
+    isActive: true,
+  });
+  const tiposCitas = tiposCitasData?.items ?? [];
 
   const debouncedNoExp = useDebounce(noExpWatch ?? "", 400);
   const { data: patientData, isFetching: isSearchingPatient, isError: lookupFailed } =
@@ -446,26 +460,27 @@ export const RecepcionIntegratedCheckinSection = ({
 
                 <div className="space-y-2">
                   <Label htmlFor="queue-arrival-filter">Tipo de llegada</Label>
-                  <select
-                    id="queue-arrival-filter"
-                    className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
+                  <Select
                     value={arrivalTypeFilter}
-                    onChange={(event) => {
-                      setArrivalTypeFilter(
-                        event.target.value as ArrivalTypeFilterOption,
-                      );
+                    onValueChange={(value) => {
+                      setArrivalTypeFilter(value as ArrivalTypeFilterOption);
                     }}
                   >
-                    <option value={ARRIVAL_TYPE_FILTER_OPTION.ALL}>
-                      Todos
-                    </option>
-                    <option value={ARRIVAL_TYPE_FILTER_OPTION.APPOINTMENT}>
-                      Con cita
-                    </option>
-                    <option value={ARRIVAL_TYPE_FILTER_OPTION.WALK_IN}>
-                      Sin cita
-                    </option>
-                  </select>
+                    <SelectTrigger id="queue-arrival-filter" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ARRIVAL_TYPE_FILTER_OPTION.ALL}>
+                        Todos
+                      </SelectItem>
+                      <SelectItem value={ARRIVAL_TYPE_FILTER_OPTION.APPOINTMENT}>
+                        Con cita
+                      </SelectItem>
+                      <SelectItem value={ARRIVAL_TYPE_FILTER_OPTION.WALK_IN}>
+                        Sin cita
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -745,37 +760,43 @@ export const RecepcionIntegratedCheckinSection = ({
                 </div>
               ) : null}
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>{/* placeholder para mantener el grid */}</div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="arrivalType">Tipo de llegada</Label>
-                  <select
-                    id="arrivalType"
-                    className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-                    disabled={
-                      !canWrite || createVisit.isPending || isWalkInOnlyService
-                    }
-                    {...arrivalTypeField}
-                  >
-                    <option value={ARRIVAL_TYPE.APPOINTMENT}>Con cita</option>
-                    <option value={ARRIVAL_TYPE.WALK_IN}>Sin cita</option>
-                  </select>
-                  {form.formState.errors.arrivalType?.message ? (
-                    <p className="text-sm text-status-critical" role="alert">
-                      {form.formState.errors.arrivalType.message}
-                    </p>
-                  ) : null}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="tipoCita">Tipo de cita</Label>
+                <Select
+                  value={tipoCitaId}
+                  onValueChange={setTipoCitaId}
+                  disabled={!canWrite || createVisit.isPending}
+                >
+                  <SelectTrigger id="tipoCita" className="w-full">
+                    <SelectValue placeholder="Selecciona un tipo de cita" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposCitas.map((tipoCita) => (
+                      <SelectItem key={tipoCita.id} value={String(tipoCita.id)}>
+                        {tipoCita.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {arrivalType === ARRIVAL_TYPE.APPOINTMENT ? (
+              {!isWalkInOnlyService ? (
                 <div className="space-y-2">
                   <Label htmlFor="appointmentId">ID de cita</Label>
                   <Input
                     id="appointmentId"
                     disabled={!canWrite || createVisit.isPending}
-                    {...form.register("appointmentId")}
+                    placeholder="Opcional: folio de la cita agendada"
+                    {...appointmentIdField}
+                    onChange={(event) => {
+                      appointmentIdField.onChange(event);
+                      const hasFolio = event.target.value.trim().length > 0;
+                      form.setValue(
+                        "arrivalType",
+                        hasFolio ? ARRIVAL_TYPE.APPOINTMENT : ARRIVAL_TYPE.WALK_IN,
+                        { shouldDirty: true, shouldValidate: true },
+                      );
+                    }}
                   />
                   {form.formState.errors.appointmentId?.message ? (
                     <p className="text-sm text-status-critical" role="alert">

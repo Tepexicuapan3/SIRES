@@ -128,7 +128,14 @@ def _dictfetchall(cursor) -> list[dict]:
 # Caso de uso principal
 # ──────────────────────────────────────────────────────────────
 
-def buscar_expediente(id_empleado: str) -> dict:
+def buscar_expediente(id_empleado: str, incluir_fotos: bool = True) -> dict:
+    """
+    ``incluir_fotos=False`` salta la query ``SQL_FOTOS`` y el procesamiento
+    de imágenes (``optimizar_imagen``) cuando el llamador no va a usar el
+    campo ``FOTO`` (p. ej. ``qr_checkin_usecase._resolver_nombre_paciente``,
+    que solo necesita el nombre). Default ``True`` para no romper a nadie
+    que ya use la función sin este parámetro.
+    """
     empleados: list[dict] = []
     familiares: list[dict] = []
 
@@ -143,8 +150,10 @@ def buscar_expediente(id_empleado: str) -> dict:
             cursor.execute(SQL_FAMILIAR, [id_empleado])
             familiares = _dictfetchall(cursor)
 
-            cursor.execute(SQL_FOTOS, [id_empleado])
-            fotos = _dictfetchall(cursor)
+            fotos = []
+            if incluir_fotos:
+                cursor.execute(SQL_FOTOS, [id_empleado])
+                fotos = _dictfetchall(cursor)
 
     except Exception as exc:
         logger.error("Error consultando expediente %s: %s", id_empleado, exc)

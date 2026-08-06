@@ -1,0 +1,121 @@
+/**
+ * ============================================
+ * VARIABLES DE TEMA — Portal de Citas (Metro CDMX)
+ * Mismos tokens que SISEM (frontend/src/shared/styles/theme.css),
+ * recortado a lo que este portal necesita (sin bridge shadcn/sidebar/dark).
+ * ============================================
+ */
+
+@layer base {
+  :root {
+    /* --- Identidad Corporativa STC Metro --- */
+    --metro-orange-500: #fe5000; /* Color Institucional Principal */
+    --metro-orange-600: #d94300; /* Hover / Active */
+    --metro-orange-100: #fff1e6; /* Fondos sutiles */
+
+    /* --- Semántica Clínica (Feedback del Sistema) --- */
+    --clinical-critical: #ef4444; /* Rojo: Error, cancelación */
+    --clinical-alert: #f59e0b; /* Ámbar: Pendiente, precaución */
+    --clinical-stable: #10b981; /* Esmeralda: Éxito, disponible */
+    --clinical-info: #3b82f6; /* Azul: Información */
+
+    /* --- Superficies --- */
+    --bg-app: #f3f4f6;
+    --bg-paper: #ffffff;
+    --bg-subtle: #f1f5f9;
+
+    /* --- Texto --- */
+    --text-body: #111827;
+    --text-muted: #64748b;
+    --text-hint: #94a3b8;
+    --text-on-brand: #ffffff;
+
+    /* --- Bordes --- */
+    --border-hairline: #e2e8f0;
+    --border-struct: #cbd5e1;
+    --border-focus: var(--metro-orange-500);
+
+    /* --- Interacción --- */
+    --action-main: var(--metro-orange-500);
+    --action-main-hover: var(--metro-orange-600);
+
+    /* --- Sombras --- */
+    --shadow-card:
+      0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-float:
+      0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+}
+
+/* ============================================
+   CONFIGURACIÓN DEL TEMA TAILWIND
+   ============================================ */
+@theme {
+  --color-app: var(--bg-app);
+  --color-paper: var(--bg-paper);
+  --color-subtle: var(--bg-subtle);
+
+  --color-txt-body: var(--text-body);
+  --color-txt-muted: var(--text-muted);
+  --color-txt-hint: var(--text-hint);
+  --color-txt-inverse: var(--text-on-brand);
+
+  --color-line-hairline: var(--border-hairline);
+  --color-line-struct: var(--border-struct);
+
+  --color-brand: var(--action-main);
+  --color-brand-hover: var(--action-main-hover);
+  --color-brand-light: var(--metro-orange-100);
+
+  --color-status-critical: var(--clinical-critical);
+  --color-status-alert: var(--clinical-alert);
+  --color-status-stable: var(--clinical-stable);
+  --color-status-info: var(--clinical-info);
+
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  --shadow-soft: var(--shadow-card);
+  --shadow-modal: var(--shadow-float);
+
+  /* --- ANIMACIONES --- */
+  --animate-network-pulse: network-pulse 2.2s ease-in-out infinite;
+  /* Variante para lugares donde el pulso NO debe repetirse para siempre
+     (ej. el header de HomePage, montado en toda pantalla mientras el
+     paciente trabaja): corre unas vueltas al entrar y se detiene quieta
+     (el 100% del keyframe ya termina en opacity:0, así que al cortar la
+     iteración no queda ningún "salto" visual). */
+  --animate-network-pulse-once: network-pulse 1.6s ease-in-out 3 forwards;
+}
+
+/* ============================================
+   KEYFRAMES — pulso que "viaja" por la línea que conecta
+   los dos logos del login, simulando tráfico de red entre
+   los dos sistemas (SISEM <-> Portal de Citas).
+   ============================================ */
+@keyframes network-pulse {
+  0% {
+    left: 0%;
+    opacity: 0;
+    transform: translateY(-50%) scale(0.5);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+    transform: translateY(-50%) scale(0.5);
+  }
+}

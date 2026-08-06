@@ -1,6 +1,8 @@
 """
 Verificación de QR del comprobante de cita y confirmación de check-in — Fase 7
-del módulo "Citas en Línea".
+del módulo "Citas en Línea". También expone el check-in manual (sin QR) por
+nombre de paciente o folio de la cita — mismo flujo de negocio
+(``checkin_por_folio``), solo cambia cómo se resuelve el folio.
 
 POST /citas/verificar-qr           → valida el payload firmado del QR y
                                        devuelve los datos de la ficha para
@@ -8,6 +10,12 @@ POST /citas/verificar-qr           → valida el payload firmado del QR y
 POST /citas/verificar-qr/confirmar → confirma el check-in: crea el Visit
                                        (reusando create_visit) y marca la
                                        cita como verificada.
+GET  /citas/checkin/candidatos     → busca citas de HOY elegibles para
+                                       check-in por nombre (substring) o por
+                                       folio exacto — exactamente uno de los
+                                       dos parámetros.
+POST /citas/checkin/confirmar-folio → confirma el check-in a partir de un
+                                       folio ya resuelto (sin payload QR).
 
 Sigue el mismo patrón de autenticación/autorización que el resto de
 ``apps/recepcion`` (autenticación interna de staff vía cookie/JWT,
@@ -32,11 +40,17 @@ from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
 from apps.realtime.events import publish_visit_created, publish_visit_status_changed
-from apps.recepcion.serializers import VerificarQRSerializer
+from apps.recepcion.serializers import (
+    CandidatosCheckinQuerySerializer,
+    ConfirmarCheckinFolioSerializer,
+    VerificarQRSerializer,
+)
 from apps.recepcion.services.errors import VisitDomainError
 from apps.recepcion.uses_case.qr_checkin_usecase import (
     CITAS_READ_CAPABILITY,
     RECEPCION_WRITE_CAPABILITY,
+    buscar_candidatos_checkin,
+    checkin_por_folio,
     confirmar_checkin,
     verificar_qr,
 )
@@ -76,15 +90,25 @@ def _domain_error(request, exc):
     )
 
 
-def _validate_body(request):
-    s = VerificarQRSerializer(data=request.data)
+def _validate_body(request, serializer_cls, data=None):
+    """
+    Valida ``data`` (por defecto ``request.data``) con ``serializer_cls``.
+    Colapsa el patrón de validación repetido en las 4 vistas de este módulo
+    (``VerificarQRView``, ``ConfirmarQRCheckinView``, ``CheckinCandidatosView``,
+    ``ConfirmarCheckinPorFolioView``). Retorna ``(validated_data, None)`` si
+    es válido, o ``(None, Response)`` con el mismo error 422 estándar que
+    devolvía cada call-site (mismo código, status y formato).
+    """
+    if data is None:
+        data = request.data
+    s = serializer_cls(data=data)
     if not s.is_valid():
         return None, error_response(
             "VALIDATION_ERROR", "Datos inválidos.",
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             details=s.errors, request_id=get_request_id(request),
         )
-    return s.validated_data["payload"], None
+    return s.validated_data, None
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -103,9 +127,10 @@ class VerificarQRView(APIView):
         except VisitDomainError as exc:
             return _domain_error(request, exc)
 
-        payload, err = _validate_body(request)
+        validated_data, err = _validate_body(request, VerificarQRSerializer)
         if err:
             return err
+        payload = validated_data["payload"]
 
         try:
             ficha = verificar_qr(payload)
@@ -113,6 +138,38 @@ class VerificarQRView(APIView):
             return _domain_error(request, exc)
 
         return Response(ficha, status=status.HTTP_200_OK)
+
+
+def _log_y_notificar_checkin(request, user, resultado: dict, origen: str) -> None:
+    """
+    Auditoría + evento realtime compartidos por los dos endpoints que
+    terminan en un check-in efectivo (``checkin_por_folio`` bajo el capó):
+    confirmación por QR y confirmación por folio directo. Solo cambia
+    ``origen`` para que la auditoría distinga de dónde vino el check-in.
+    """
+    visit = resultado["visit"]
+    log_event(
+        request, "VisitCreated", "SUCCESS", actor_user=user,
+        meta={
+            "module": "recepcion", "endpoint": request.path,
+            "visitId": visit.get("id"), "origen": origen,
+            "folio": resultado.get("folio"),
+        },
+    )
+    try:
+        publish_visit_status_changed(
+            visit_id=visit.get("id"), status=visit.get("status"),
+            request_id=get_request_id(request), correlation_id=get_request_id(request),
+        )
+        publish_visit_created(
+            visit_id=visit.get("id"), status=visit.get("status"),
+            request_id=get_request_id(request), correlation_id=get_request_id(request),
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo publicar evento realtime de check-in (%s)", origen,
+            extra={"visitId": visit.get("id")},
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -134,9 +191,10 @@ class ConfirmarQRCheckinView(APIView):
         except VisitDomainError as exc:
             return _domain_error(request, exc)
 
-        payload, err = _validate_body(request)
+        validated_data, err = _validate_body(request, VerificarQRSerializer)
         if err:
             return err
+        payload = validated_data["payload"]
 
         try:
             resultado = confirmar_checkin(
@@ -146,28 +204,80 @@ class ConfirmarQRCheckinView(APIView):
         except VisitDomainError as exc:
             return _domain_error(request, exc)
 
-        visit = resultado["visit"]
-        log_event(
-            request, "VisitCreated", "SUCCESS", actor_user=user,
-            meta={
-                "module": "recepcion", "endpoint": request.path,
-                "visitId": visit.get("id"), "origen": "qr_checkin",
-                "folio": resultado.get("folio"),
-            },
-        )
-        try:
-            publish_visit_status_changed(
-                visit_id=visit.get("id"), status=visit.get("status"),
-                request_id=get_request_id(request), correlation_id=get_request_id(request),
-            )
-            publish_visit_created(
-                visit_id=visit.get("id"), status=visit.get("status"),
-                request_id=get_request_id(request), correlation_id=get_request_id(request),
-            )
-        except Exception:
-            logger.exception(
-                "No se pudo publicar evento realtime de check-in por QR",
-                extra={"visitId": visit.get("id")},
-            )
+        _log_y_notificar_checkin(request, user, resultado, origen="qr_checkin")
+        return Response(resultado, status=status.HTTP_201_CREATED)
 
+
+class CheckinCandidatosView(APIView):
+    """
+    GET /citas/checkin/candidatos?nombre=<texto>
+    GET /citas/checkin/candidatos?folio=<folio>
+
+    Busca citas de HOY elegibles para check-in manual (sin QR) por nombre
+    del paciente (substring, case-insensitive) o por folio exacto —
+    exactamente uno de los dos parámetros. Solo lectura, misma capability
+    que ``VerificarQRView``.
+    """
+
+    authentication_classes = []
+    permission_classes     = []
+
+    def get(self, request):
+        user, err = _auth(request)
+        if err:
+            return err
+        try:
+            _check_cap(user, CITAS_READ_CAPABILITY)
+        except VisitDomainError as exc:
+            return _domain_error(request, exc)
+
+        validated_data, err = _validate_body(
+            request, CandidatosCheckinQuerySerializer, data=request.query_params
+        )
+        if err:
+            return err
+
+        candidatos = buscar_candidatos_checkin(
+            nombre=validated_data["nombre"],
+            folio=validated_data["folio"],
+        )
+        return Response({"candidatos": candidatos}, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ConfirmarCheckinPorFolioView(APIView):
+    """
+    POST /citas/checkin/confirmar-folio — confirma el check-in a partir de un
+    folio ya resuelto (búsqueda por nombre o folio tipeado directo), sin
+    payload QR. Mismo response shape que ``ConfirmarQRCheckinView``.
+    """
+
+    authentication_classes = []
+    permission_classes     = []
+
+    def post(self, request):
+        user, err = _auth(request)
+        if err:
+            return err
+        csrf_err = _csrf(request)
+        if csrf_err:
+            return csrf_err
+        try:
+            _check_cap(user, RECEPCION_WRITE_CAPABILITY)
+        except VisitDomainError as exc:
+            return _domain_error(request, exc)
+
+        validated_data, err = _validate_body(request, ConfirmarCheckinFolioSerializer)
+        if err:
+            return err
+
+        try:
+            resultado = checkin_por_folio(
+                validated_data["folio"],
+                verificado_por_id=getattr(user, "id_usuario", None),
+            )
+        except VisitDomainError as exc:
+            return _domain_error(request, exc)
+
+        _log_y_notificar_checkin(request, user, resultado, origen="folio_directo")
         return Response(resultado, status=status.HTTP_201_CREATED)

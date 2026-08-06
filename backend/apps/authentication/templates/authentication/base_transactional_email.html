@@ -353,7 +353,7 @@
                           <td style="padding:0;">
                             <img
                               src="{{ logo_url }}"
-                              alt="Logo SISEM"
+                              alt="{% block logo_alt %}Logo SISEM{% endblock %}"
                               style="display:block;height:48px;width:auto;border:0;"
                             />
                           </td>
@@ -375,7 +375,7 @@
                     <td class="header-metro" align="right" valign="middle" style="padding-left:12px;">
                       <img
                         src="{{ metro_logo_url }}"
-                        alt="Logo STC Metro"
+                        alt="{% block metro_logo_alt %}Logo STC Metro{% endblock %}"
                         style="display:block;height:34px;width:auto;border:0;opacity:0.95;"
                       />
                     </td>

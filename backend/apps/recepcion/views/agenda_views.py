@@ -118,6 +118,11 @@ class AgendaSemanalView(APIView):
                     "estatus":        cita.estatus,
                     "servicioTipo":   cita.servicio_tipo,
                     "motivo":         cita.motivo,
+                    # Origen de la cita ("RECEPCION" | "PORTAL") — el slot ya
+                    # trae su propio "canal" (habilitación PRESENCIAL/LINEA/
+                    # AMBOS antes de reservarse); esto es el origen de la CITA
+                    # ya reservada, para distinguirla visualmente en la grilla.
+                    "origenCanal":    cita.origen_canal,
                 }
 
             agenda[fecha_key].append({

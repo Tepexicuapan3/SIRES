@@ -97,3 +97,32 @@ class VerificarQRSerializer(serializers.Serializer):
     """
 
     payload = serializers.CharField(max_length=200)
+
+
+class CandidatosCheckinQuerySerializer(serializers.Serializer):
+    """
+    Parámetros de búsqueda de candidatos para check-in manual (sin QR):
+    exactamente uno de ``nombre`` u ``folio`` -- nunca ambos, nunca ninguno.
+    """
+
+    nombre = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    folio  = serializers.CharField(max_length=32, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        nombre = (attrs.get("nombre") or "").strip()
+        folio  = (attrs.get("folio") or "").strip()
+
+        if bool(nombre) == bool(folio):
+            raise serializers.ValidationError(
+                "Debes enviar exactamente uno de los dos parámetros: nombre o folio."
+            )
+
+        attrs["nombre"] = nombre or None
+        attrs["folio"]  = folio or None
+        return attrs
+
+
+class ConfirmarCheckinFolioSerializer(serializers.Serializer):
+    """Folio de cita ya resuelto (búsqueda por nombre o tipeado directo) para confirmar check-in sin QR."""
+
+    folio = serializers.CharField(max_length=32)

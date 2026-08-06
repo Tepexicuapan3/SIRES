@@ -288,6 +288,22 @@ export type {
 } from "@api/types/catalogos/tipos-areas.types";
 
 // =============================================================================
+// TIPOS DE CITAS TYPES (CRUD)
+// =============================================================================
+export type {
+  TipoCitaListItem,
+  TipoCitaDetail,
+  CreateTipoCitaRequest,
+  UpdateTipoCitaRequest,
+  CreateTipoCitaResponse,
+  UpdateTipoCitaResponse,
+  DeleteTipoCitaResponse,
+  TiposCitasListParams,
+  TiposCitasListResponse,
+  TipoCitaDetailResponse,
+} from "@api/types/catalogos/tipos-citas.types";
+
+// =============================================================================
 // TIPO PERSONAL TYPES (CRUD)
 // =============================================================================
 export type {
@@ -493,6 +509,7 @@ export type {
 // =============================================================================
 export type {
   EstatusCita,
+  OrigenCanalCita,
   CitaListItem,
   SlotDisponible,
   CreateCitaRequest,
@@ -505,7 +522,17 @@ export type {
   FichaQRResponse,
   ConfirmarQRCheckinResponse,
 } from "@api/types/citas.types";
-export { ESTATUS_CITA } from "@api/types/citas.types";
+export { ESTATUS_CITA, ORIGEN_CANAL_CITA } from "@api/types/citas.types";
+
+// =============================================================================
+// CHECK-IN MANUAL (sin QR) — buscador por nombre o folio
+// =============================================================================
+export type {
+  CheckinCandidato,
+  CheckinCandidatosParams,
+  CheckinCandidatosResponse,
+  ConfirmarCheckinFolioRequest,
+} from "@api/types/checkin.types";
 
 export {
   ARRIVAL_TYPE,

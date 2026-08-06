@@ -10,10 +10,12 @@
  *     (`ReservarCitaSerializer`) — `{miembroId: UUID, slotId: int (>=1),
  *     motivo?: string (<=255, blanco permitido)}`.
  *   - Éxito: 201 Created. Shape devuelto por
- *     backend/apps/portal_citas/uses_case/reservar_cita_usecase.py:174-180
- *     — `{folio, fechaHora (ISO 8601), consultorioNombre, medicoNombre,
- *     servicioTipo}`. Nunca incluye no_exp/pk_num ni datos de otros
- *     pacientes (ver docstring del usecase).
+ *     backend/apps/portal_citas/uses_case/reservar_cita_usecase.py
+ *     — `{folio, fechaHora (ISO 8601), consultorioNombre, servicioTipo}`.
+ *     Nunca incluye no_exp/pk_num ni datos de otros pacientes (ver
+ *     docstring del usecase). Tampoco incluye `medicoNombre`: el portal
+ *     público de pacientes no muestra el nombre del médico en ningún
+ *     punto del flujo — eso solo lo ve recepción en el check-in por QR.
  *
  * Errores de dominio posibles (backend/apps/portal_citas/errors.py,
  * `PortalReservaError` con el mismo contrato `code`/`message`/`status_code`
@@ -46,7 +48,6 @@ export interface ReservaCitaResult {
   /** ISO 8601 (`cita.fecha_hora.isoformat()`). */
   fechaHora: string;
   consultorioNombre: string | null;
-  medicoNombre: string;
   servicioTipo: "especialidad" | "medicina_general";
 }
 
@@ -73,9 +74,10 @@ export function reservarCita({
  *     no hay una ruta nueva en `urls.py`, ver el docstring de
  *     `ReservarCitaView` en views.py:262-281.
  *   - Vista: backend/apps/portal_citas/views.py:286-287 (`ReservarCitaView.get`).
- *   - Shape: backend/apps/portal_citas/uses_case/listar_citas_usecase.py:85-97
+ *   - Shape: backend/apps/portal_citas/uses_case/listar_citas_usecase.py
  *     — `{citas: [{folio, fechaHora (ISO 8601), consultorioNombre,
- *     medicoNombre, servicioTipo, estatus, paraQuien, cancelable}]}`.
+ *     servicioTipo, estatus, paraQuien, cancelable}]}`. Sin `medicoNombre`:
+ *     el portal público no muestra el nombre del médico en ningún punto.
  *     `estatus` es uno de los valores de `EstatusCita`
  *     (backend/apps/recepcion/models.py:24-29): `agendada` | `confirmada` |
  *     `atendida` | `cancelada` | `no_asistio`. `cancelable` ya viene
@@ -97,7 +99,6 @@ export interface CitaPortal {
   /** ISO 8601 (`cita.fecha_hora.isoformat()`). */
   fechaHora: string;
   consultorioNombre: string | null;
-  medicoNombre: string;
   servicioTipo: "especialidad" | "medicina_general";
   estatus: EstatusCitaPortal;
   paraQuien: string | null;

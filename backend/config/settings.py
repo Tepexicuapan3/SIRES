@@ -234,7 +234,36 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 # ── Citas ─────────────────────────────────────────────────────────────────────
-CITAS_LOGO_PATH = BASE_DIR / "frontend" / "public" / "icons" / "Logobueno.png"
+# ``frontend/`` vive en la raíz del repo, como hermano de ``backend/`` (donde
+# está este settings.py). BASE_DIR ya es ``backend/`` (ver arriba), así que
+# hay que subir un nivel más con ``.parent`` para llegar a la raíz del repo
+# antes de bajar a ``frontend/...`` -- si no, la ruta resuelve a
+# ``backend/frontend/...`` (inexistente) y el logo nunca se dibuja en el PDF.
+CITAS_LOGO_PATH = (
+    BASE_DIR.parent
+    / "frontend"
+    / "public"
+    / "assets"
+    / "brand"
+    / "logos"
+    / "primary"
+    / "sisem.webp"
+)
+# Marca de agua del comprobante del portal (Fase 5): los dos logos "unidos"
+# (SISEM + Citas en Línea, conectados) -- mismo compuesto que usa el header
+# del correo OTP del portal (ver apps/portal_citas/services/email_service.py).
+# Vive DENTRO de backend/ (a diferencia de CITAS_LOGO_PATH) porque no
+# necesita hostearse en ningún lado: el PDF lo lee directo del disco, no es
+# una imagen embebida en un correo.
+CITAS_COMPROBANTE_WATERMARK_PATH = (
+    BASE_DIR
+    / "apps"
+    / "portal_citas"
+    / "static"
+    / "portal_citas"
+    / "email"
+    / "logos-unidos-sisem-portal.png"
+)
 CITAS_BASE_URL = config("CITAS_BASE_URL", default="https://sires.metro.cdmx.gob.mx")
 
 AUTH_PASSWORD_VALIDATORS = [

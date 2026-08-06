@@ -26,6 +26,13 @@ misma regla que ``cancelar_cita_usecase`` (estatus en
 para que el frontend solo tenga que leer un booleano y decidir si muestra
 el botón de cancelar, sin duplicar la lógica de negocio ni adivinar.
 
+No se devuelve ``medicoNombre``: el portal público de pacientes no
+muestra el nombre del médico en NINGÚN punto del flujo, tampoco en el
+historial de "Mis citas" ya reservadas. Esa información solo la ve el
+personal de recepción en la ficha del check-in por QR
+(``apps.recepcion.uses_case.qr_checkin_usecase``), que es un módulo
+independiente del sistema interno.
+
 ``ESTATUS_CANCELABLES`` se importa de ``cancelar_cita_usecase`` (no se
 redefine acá) para que exista una única fuente de verdad: dos tuplas
 idénticas mantenidas a mano en dos módulos inevitablemente terminan
@@ -44,11 +51,6 @@ from apps.portal_citas.models import PortalMiembro
 from apps.portal_citas.services.nucleo_service import _pk_nums_gestionables, obtener_nucleo
 from apps.portal_citas.uses_case.cancelar_cita_usecase import ESTATUS_CANCELABLES
 from apps.recepcion.models import CitaMedica
-
-
-def _nombre_medico(medico) -> str:
-    det = getattr(medico.id_usuario, "detalle", None)
-    return det.nombre_completo if det else medico.id_usuario.usuario
 
 
 def _es_cancelable(cita: CitaMedica, ahora, ventana: timedelta) -> bool:
@@ -88,7 +90,6 @@ def listar_citas(miembro_sesion: PortalMiembro) -> list[dict]:
             "folio": cita.folio,
             "fechaHora": cita.fecha_hora.isoformat(),
             "consultorioNombre": cita.consultorio.name if cita.consultorio else None,
-            "medicoNombre": _nombre_medico(cita.medico),
             "servicioTipo": cita.servicio_tipo,
             "estatus": cita.estatus,
             "paraQuien": nombres_por_pk.get(cita.pk_num),

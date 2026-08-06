@@ -15,6 +15,14 @@ export type EstatusCita = (typeof ESTATUS_CITA)[keyof typeof ESTATUS_CITA];
 
 // ─── Entidades ────────────────────────────────────────────────────────────────
 
+export const ORIGEN_CANAL_CITA = {
+  RECEPCION: "RECEPCION",
+  PORTAL:    "PORTAL",
+} as const;
+
+/** Origen de la cita: agendada en recepción vs reservada por el paciente desde el portal de citas en línea. */
+export type OrigenCanalCita = (typeof ORIGEN_CANAL_CITA)[keyof typeof ORIGEN_CANAL_CITA];
+
 export interface CitaListItem {
   id:                 number;
   folio:              string;
@@ -31,6 +39,8 @@ export interface CitaListItem {
   motivo:             string | null;
   notas:              string | null;
   createdAt:          string;
+  /** "RECEPCION" | "PORTAL" — distingue las citas reservadas desde el portal en línea. */
+  origenCanal:        OrigenCanalCita;
 }
 
 export interface SlotDisponible {
@@ -109,6 +119,8 @@ export interface FichaQRResponse {
   motivo:       string | null;
   estatus:      EstatusCita;
   yaVerificada: boolean;
+  /** "RECEPCION" | "PORTAL" — distingue las citas reservadas desde el portal en línea. */
+  origenCanal:  OrigenCanalCita;
 }
 
 /** Resultado de `POST /citas/verificar-qr/confirmar` — crea el Visit y sella la cita como verificada. */

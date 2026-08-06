@@ -161,6 +161,14 @@ class HorarioDisponible(models.Model):
     class Meta:
         db_table      = "citas_horarios_disponibles"
         unique_together = [("medico", "fecha", "hora")]
+        indexes = [
+            # Soporta el filtro de slots por consultorio (Fase 3) y la
+            # agregación mensual de disponibilidad (Fase 4): consultorio
+            # (igualdad) -> fecha (rango, vía fecha__range) -> canal
+            # (igualdad). El orden importa: el rango va último entre las
+            # columnas usadas para seek.
+            models.Index(fields=["consultorio", "fecha", "canal"], name="hd_consult_fecha_canal_idx"),
+        ]
 
 
 class CitaNotificacion(models.Model):

@@ -1,0 +1,36 @@
+/**
+ * ============================================
+ * FUENTES CORPORATIVAS — Portal de Citas
+ * Mismas fuentes que SISEM (frontend/src/shared/styles/fonts.css)
+ * ============================================
+ */
+
+@layer base {
+  @font-face {
+    font-family: "Metro-DF";
+    src: url("/assets/fonts/brand/metro-df.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "Manrope";
+    src: url("/assets/fonts/ui/manrope-variable.woff2")
+      format("woff2-variations");
+    font-weight: 200 800;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "Inter";
+    src: url("/assets/fonts/ui/inter-variable.woff2") format("woff2-variations");
+    font-weight: 100 900;
+    font-style: normal;
+  }
+}
+
+@theme {
+  --font-display: "Metro-DF", system-ui, sans-serif;
+  --font-body: "Manrope", -apple-system, system-ui, sans-serif;
+  --font-mono: "Inter", -apple-system, system-ui, sans-serif;
+}

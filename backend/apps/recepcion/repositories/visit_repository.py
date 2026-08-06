@@ -1,5 +1,6 @@
 import math
 import uuid
+from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -220,7 +221,7 @@ class VisitRepository:
             "centroId":          centro_id,
             "centroNombre":      centro_nombre,
             "notes":             visit.notes,
-            "horaConsulta":      visit.hora_consulta.strftime("%H:%M") if visit.hora_consulta else None,
+            "horaConsulta":      VisitRepository._resolve_hora_consulta(visit, fecha_cita),
             "fechaConsulta":     visit.fecha_consulta.isoformat() if visit.fecha_consulta else None,
             "fechaCita":         fecha_cita,
             "numFicha":          visit.num_ficha,
@@ -251,6 +252,30 @@ class VisitRepository:
         }
 
     # ── Helpers ───────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _resolve_hora_consulta(visit: Visit, fecha_cita: str | None) -> str | None:
+        """
+        Hora a mostrar en "HORA CITA" (frontend) / ficha impresa.
+
+        Para check-in manual/walk-in, `visit.hora_consulta` se captura de forma
+        explícita. Para citas agendadas desde el portal en línea (check-in QR,
+        ver `qr_checkin_usecase.py`), ese campo se deja `None` a propósito
+        (el slot ya fue reservado por `CitasRepository.create`), así que hay
+        que resolver la hora a partir de la cita vinculada (`fecha_cita`).
+
+        Reusa la misma cascada de 3 niveles (hora explícita → cita vinculada
+        → `fch_alta`) que `ficha_service._get_hora_consulta`, vía el helper
+        compartido `hora_consulta_resolver`. `fecha_cita` ya viene resuelto
+        en batch por `list_paginated` (evita N+1), por eso se parsea el ISO
+        en vez de volver a consultar `CitaMedica`.
+        """
+        from django.utils import timezone as tz
+        from apps.recepcion.services.hora_consulta_resolver import resolve_hora_consulta
+
+        cita_dt = datetime.fromisoformat(fecha_cita) if fecha_cita else None
+        fch_alta_local = tz.localtime(visit.fch_alta) if visit.fch_alta else None
+        return resolve_hora_consulta(visit.hora_consulta, cita_dt, fch_alta_local) or None
 
     @staticmethod
     def _build_folio() -> str:

@@ -11,5 +11,5 @@ ALTER TABLE sires.det_usuarios
 SELECT column_name, data_type, is_nullable
 FROM information_schema.columns
 WHERE table_schema = 'sires'
-  AND table_name = 'det_usuarios'
-  AND column_name = 'cd_laboral';
+    AND table_name = 'det_usuarios'
+    AND column_name = 'cd_laboral';

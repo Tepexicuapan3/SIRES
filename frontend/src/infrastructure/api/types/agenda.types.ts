@@ -15,6 +15,8 @@ export interface AgendaSlot {
     estatus:      string;
     servicioTipo: string;
     motivo:       string | null;
+    /** Origen de la cita ya reservada: "RECEPCION" | "PORTAL". */
+    origenCanal:  string;
   } | null;
 }
 
