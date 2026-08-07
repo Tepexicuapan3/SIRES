@@ -69,7 +69,9 @@ COPY . .
 
 # Usuario no privilegiado
 RUN useradd --create-home --shell /bin/sh appuser \
-    && chown -R appuser:appuser /app
+    && chown -R appuser:appuser /app \
+    && mkdir -p /data \
+    && chown -R appuser:appuser /data
 
 USER appuser
 
