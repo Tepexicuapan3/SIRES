@@ -169,6 +169,9 @@ services:
     image: nginx:1.27-alpine
     container_name: sisem_proxy
     restart: unless-stopped
+    # Sin "ports:" -> no se publica al host. El único punto de entrada
+    # al servidor es el gateway externo (repo ngnix-gateway), que llega
+    # hasta acá por nombre de contenedor a través de "proxy_network".
     volumes:
       - ./nginx/proxy.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
