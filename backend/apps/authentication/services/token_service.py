@@ -24,7 +24,8 @@ RESET_MAX_AGE = 60 * 10
 # TTL de la sesion activa en Redis (control de sesion unica).
 # Se renueva (sliding expiration) en cada request autenticado; si nadie la
 # toca en este lapso (pestaña cerrada, PC apagada) se libera sola.
-ACTIVE_SESSION_TTL_SECONDS = 120
+# Configurable via ACTIVE_SESSION_TTL_SECONDS en .env (default: 30 min).
+ACTIVE_SESSION_TTL_SECONDS = settings.ACTIVE_SESSION_TTL_SECONDS
 
 
 def _cookie_secure() -> bool:

@@ -299,6 +299,12 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id_usuario",
 }
 
+# TTL de la sesion activa en Redis (control de sesion unica, sliding
+# expiration). Si nadie hace un request autenticado en este lapso, la
+# sesion se libera sola y "auth-cerrar-sesiones-abandonadas" cierra su
+# fila de historial en el siguiente barrido.
+ACTIVE_SESSION_TTL_SECONDS = config("ACTIVE_SESSION_TTL_SECONDS", default=60 * 30, cast=int)
+
 # ── CORS / CSRF ───────────────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
