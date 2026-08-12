@@ -27,7 +27,7 @@ class VacInventario(models.Model):
 
     class Meta:
         db_table = "vac_inventario"
-        managed = False
+        managed = True
 
     def __str__(self):
         return f"{self.vaccine_id} @ {self.center_id}"
