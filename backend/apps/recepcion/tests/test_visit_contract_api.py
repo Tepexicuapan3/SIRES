@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
+from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Permisos, Roles
 from apps.somatometria.repositories.vitals_repository import VitalsRepository
@@ -32,6 +33,9 @@ class VisitContractsApiTests(APITestCase):
             password=self.medico_password,
             role_code="MEDICO",
         )
+        # doctorId ahora es FK real a SyUsuario (ver migracion
+        # 0019_doctor_fk_integrity) -- ya no acepta cualquier entero suelto.
+        self.medico_user_id = SyUsuario.objects.get(usuario="medico_user").id_usuario
         self._create_user_with_role(
             username="clinico_user",
             email="clinico@example.com",
@@ -103,6 +107,12 @@ class VisitContractsApiTests(APITestCase):
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
+        # Redis (sesion unica) no se limpia entre tests como la DB -- un
+        # user_id reciclado puede arrastrar una sesion "activa" de una
+        # corrida anterior y el login choca con SESSION_ALREADY_ACTIVE (409).
+        user = SyUsuario.objects.filter(usuario=username).first()
+        if user is not None:
+            PolicyStore().clear_active_session(user.id_usuario)
         response = self.client.post(
             "/api/v1/auth/login",
             {"username": username, "password": password},
@@ -118,8 +128,13 @@ class VisitContractsApiTests(APITestCase):
         return {"HTTP_X_CSRF_TOKEN": csrf_token}
 
     def _create_visit(self, patient_id=1001, arrival_type="appointment", **kwargs):
+        # patient_id es solo un identificador arbitrario para distinguir
+        # visitas en el test -- la API real pide noExp/pkNum (ver
+        # CreateVisitSerializer), no patientId (campo eliminado del modelo
+        # Visit hace tiempo, migracion 0008_remove_visit_patient_id).
         payload = {
-            "patientId": patient_id,
+            "noExp": f"EXP{patient_id}",
+            "pkNum": 0,
             "arrivalType": arrival_type,
             "serviceType": kwargs.get("serviceType", "medicina_general"),
         }
@@ -150,11 +165,12 @@ class VisitContractsApiTests(APITestCase):
         response = self.client.post(
             "/api/v1/visits",
             {
-                "patientId": 1234,
+                "noExp": "EXP1234",
+                "pkNum": 0,
                 "arrivalType": "appointment",
                 "serviceType": "especialidad",
                 "appointmentId": "APP-456",
-                "doctorId": 120,
+                "doctorId": self.medico_user_id,
                 "notes": "Paciente puntual",
             },
             format="json",
@@ -165,11 +181,12 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("id", response.data)
         self.assertIn("folio", response.data)
-        self.assertEqual(response.data["patientId"], 1234)
+        self.assertEqual(response.data["noExp"], "EXP1234")
+        self.assertEqual(response.data["pkNum"], 0)
         self.assertEqual(response.data["arrivalType"], "appointment")
         self.assertEqual(response.data["serviceType"], "especialidad")
         self.assertEqual(response.data["appointmentId"], "APP-456")
-        self.assertEqual(response.data["doctorId"], 120)
+        self.assertEqual(response.data["doctorId"], self.medico_user_id)
         self.assertEqual(response.data["notes"], "Paciente puntual")
         self.assertEqual(response.data["status"], "en_espera")
 
@@ -189,7 +206,7 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.data["status"], 422)
         self.assertEqual(response.data["requestId"], self.request_id)
         self.assertIn("details", response.data)
-        self.assertIn("patientId", response.data["details"])
+        self.assertIn("noExp", response.data["details"])
 
     def test_create_visit_role_not_allowed(self):
         self._login_as("medico_user", self.medico_password)
@@ -197,7 +214,7 @@ class VisitContractsApiTests(APITestCase):
         response = self.client.post(
             "/api/v1/visits",
             {
-                "patientId": 1234,
+                "noExp": "EXP1234",
                 "arrivalType": "appointment",
                 "appointmentId": "APP-789",
             },
@@ -217,7 +234,7 @@ class VisitContractsApiTests(APITestCase):
         response = self.client.post(
             "/api/v1/visits",
             {
-                "patientId": 1235,
+                "noExp": "EXP1235",
                 "arrivalType": "appointment",
                 "appointmentId": "APP-ADMIN-001",
             },
@@ -227,7 +244,7 @@ class VisitContractsApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["patientId"], 1235)
+        self.assertEqual(response.data["noExp"], "EXP1235")
         self.assertEqual(response.data["status"], "en_espera")
 
     def test_list_visits_happy_path_contract(self):
@@ -269,7 +286,7 @@ class VisitContractsApiTests(APITestCase):
         first_item = response.data["items"][0]
         self.assertIn("id", first_item)
         self.assertIn("folio", first_item)
-        self.assertIn("patientId", first_item)
+        self.assertIn("noExp", first_item)
         self.assertIn("arrivalType", first_item)
         self.assertIn("serviceType", first_item)
         self.assertIn("appointmentId", first_item)
@@ -278,10 +295,10 @@ class VisitContractsApiTests(APITestCase):
         self.assertIn("status", first_item)
         self.assertIn("vitals", first_item)
 
-        items_by_patient = {item["patientId"]: item for item in response.data["items"]}
-        self.assertIsNone(items_by_patient[visit_without_vitals["patientId"]]["vitals"])
+        items_by_patient = {item["noExp"]: item for item in response.data["items"]}
+        self.assertIsNone(items_by_patient[visit_without_vitals["noExp"]]["vitals"])
         self.assertEqual(
-            items_by_patient[visit_with_vitals["patientId"]]["vitals"]["weightKg"],
+            items_by_patient[visit_with_vitals["noExp"]]["vitals"]["weightKg"],
             70.0,
         )
 
@@ -310,7 +327,7 @@ class VisitContractsApiTests(APITestCase):
         response = self.client.post(
             "/api/v1/visits",
             {
-                "patientId": 2233,
+                "noExp": "EXP2233",
                 "arrivalType": "appointment",
                 "serviceType": "urgencias",
                 "appointmentId": "APP-URG-01",
@@ -340,11 +357,12 @@ class VisitContractsApiTests(APITestCase):
 
     def test_list_visits_filters_by_status_and_doctor(self):
         self._login_as("recepcion_user", self.recepcion_password)
-        self._create_visit(patient_id=2101, doctorId=101)
-        self._create_visit(patient_id=2102, doctorId=202)
+        other_doctor_id = SyUsuario.objects.get(usuario="admin_user").id_usuario
+        self._create_visit(patient_id=2101, doctorId=self.medico_user_id)
+        self._create_visit(patient_id=2102, doctorId=other_doctor_id)
 
         response = self.client.get(
-            "/api/v1/visits?page=1&pageSize=20&status=en_espera&doctorId=101",
+            f"/api/v1/visits?page=1&pageSize=20&status=en_espera&doctorId={self.medico_user_id}",
             HTTP_X_REQUEST_ID=self.request_id,
         )
 
@@ -352,7 +370,7 @@ class VisitContractsApiTests(APITestCase):
         self.assertGreaterEqual(response.data["total"], 1)
         for item in response.data["items"]:
             self.assertEqual(item["status"], "en_espera")
-            self.assertEqual(item["doctorId"], 101)
+            self.assertEqual(item["doctorId"], self.medico_user_id)
 
     def test_list_visits_filters_by_date(self):
         self._login_as("recepcion_user", self.recepcion_password)
@@ -530,7 +548,7 @@ class VisitContractsApiTests(APITestCase):
         response = self.client.post(
             "/api/v1/visits",
             {
-                "patientId": 4444,
+                "noExp": "EXP4444",
                 "arrivalType": "appointment",
                 "appointmentId": "APP-CSRF",
             },
@@ -547,7 +565,7 @@ class VisitContractsApiTests(APITestCase):
         first = self.client.post(
             "/api/v1/visits",
             {
-                "patientId": 5555,
+                "noExp": "EXP5555",
                 "arrivalType": "appointment",
                 "appointmentId": "APP-DUP-1",
             },
@@ -560,7 +578,7 @@ class VisitContractsApiTests(APITestCase):
         second = self.client.post(
             "/api/v1/visits",
             {
-                "patientId": 5555,
+                "noExp": "EXP5555",
                 "arrivalType": "appointment",
                 "appointmentId": "APP-DUP-2",
             },

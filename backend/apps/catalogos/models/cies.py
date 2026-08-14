@@ -20,3 +20,6 @@ class CatCies(CatalogBase):
     class Meta:
         db_table = "cat_cies"
         managed = True   # IMPORTANTE
+        constraints = [
+            models.UniqueConstraint(fields=["code"], name="cat_cies_codigo_uniq"),
+        ]

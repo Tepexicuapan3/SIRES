@@ -1,4 +1,4 @@
-import { useForm, type SubmitHandler } from "react-hook-form";
+import { useForm, Controller, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Switch } from "@shared/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Textarea } from "@shared/ui/textarea";
 import { useCreateInsumo } from "../mutations/useCatalogosMutations";
 import { useCategoriasInsumoList, useUnidadesMedidaList } from "../queries/useCatalogosQueries";
@@ -42,7 +43,7 @@ export function InsumoCreateDialog({ open, onOpenChange }: Props) {
   const { data: cats }  = useCategoriasInsumoList({ pageSize: 200 });
   const { data: units } = useUnidadesMedidaList({ pageSize: 200 });
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } =
+  const { register, handleSubmit, reset, setValue, watch, control, formState: { errors } } =
     useForm<z.input<typeof schema>, unknown, FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
@@ -86,23 +87,43 @@ export function InsumoCreateDialog({ open, onOpenChange }: Props) {
 
             <div className="space-y-1">
               <Label>Categoría *</Label>
-              <select {...register("idCategoria")} className="w-full border rounded-md px-3 py-2 text-sm">
-                <option value="">Selecciona...</option>
-                {cats?.items.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-              </select>
+              <Controller
+                control={control}
+                name="idCategoria"
+                render={({ field }) => (
+                  <Select value={field.value ? String(field.value) : ""} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cats?.items.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.idCategoria && <p className="text-xs text-destructive">{errors.idCategoria.message}</p>}
             </div>
 
             <div className="space-y-1">
               <Label>Unidad de medida *</Label>
-              <select {...register("idUnidad")} className="w-full border rounded-md px-3 py-2 text-sm">
-                <option value="">Selecciona...</option>
-                {units?.items.map((u) => (
-                  <option key={u.id} value={u.id}>{u.nombre} ({u.abreviacion})</option>
-                ))}
-              </select>
+              <Controller
+                control={control}
+                name="idUnidad"
+                render={({ field }) => (
+                  <Select value={field.value ? String(field.value) : ""} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units?.items.map((u) => (
+                        <SelectItem key={u.id} value={String(u.id)}>{u.nombre} ({u.abreviacion})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.idUnidad && <p className="text-xs text-destructive">{errors.idUnidad.message}</p>}
             </div>
 

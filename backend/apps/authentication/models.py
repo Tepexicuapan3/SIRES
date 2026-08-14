@@ -117,17 +117,6 @@ class DetUsuario(models.Model):
     sexo      = models.CharField(max_length=1,   null=True, blank=True, db_column="sexo",
                                   choices=[("M","Masculino"),("F","Femenino")])
     fecha_nac = models.DateField(null=True, blank=True, db_column="fecha_nac")
-    tipo_personal = models.CharField(
-        max_length=20,
-        null=True,
-        blank=True,
-        db_column="tipo_personal",
-        choices=[
-            ("MEDICO", "Médico"),
-            ("ENFERMERIA", "Enfermería"),
-            ("ADMINISTRATIVO", "Administrativo"),
-        ],
-    )
     id_tipo_personal = models.ForeignKey(
         "catalogos.CatTipoPersonal",
         db_column="id_tipo_personal",

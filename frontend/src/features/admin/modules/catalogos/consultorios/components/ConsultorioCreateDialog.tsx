@@ -24,7 +24,7 @@ import { Input } from "@shared/ui/input";
 import { ScrollArea } from "@shared/ui/ScrollArea";
 import { ConsultorioDialogHeader } from "@features/admin/modules/catalogos/consultorios/components/ConsultorioDialogHeader";
 import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/shared/components/CatalogCreateResultCard";
-import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
+import { CatalogFkCombobox } from "@shared/ui/catalog-fk-combobox";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useTurnosList } from "@features/admin/modules/catalogos/turnos/queries/useTurnosList";
 import {

@@ -1,12 +1,8 @@
 import type { SucursalesListParams } from "@api/types";
+import { createCatalogKeys } from "@features/admin/modules/catalogos/shared/queries/createCatalogKeys";
 
-const BASE_KEY = ["admin", "catalogos", "sucursales"] as const;
-
-export const sucursalesKeys = {
-  all: BASE_KEY,
-
-  list: (params?: SucursalesListParams) =>
-    params
-      ? ([...BASE_KEY, "list", params] as const)
-      : ([...BASE_KEY, "list"] as const),
-};
+export const sucursalesKeys = createCatalogKeys<SucursalesListParams>([
+  "admin",
+  "catalogos",
+  "sucursales",
+]);

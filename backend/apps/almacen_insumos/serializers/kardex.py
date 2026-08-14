@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.medicos.models import CatMedico
 from apps.almacen_insumos.models.kardex import (
     ConteoFisico,
     ConteoFisicoDetalle,
@@ -190,6 +191,39 @@ class ConteoFisicoSerializer(serializers.ModelSerializer):
 
 # ─── Phase 6: Consumos por Consulta ─────────────────────────────────────────
 
+class MedicoNombreField(serializers.RelatedField):
+    """Lee/escribe el médico por nombre completo (no por id) -- mismo patrón
+    que Sucursal/EspecialidadNombreField en contratos_oxigeno. A diferencia
+    de esos catálogos, el nombre de un médico no está garantizado único en
+    la base: si hay colisión, se rechaza con un error explícito en vez de
+    elegir uno al azar."""
+
+    default_error_messages = {
+        "does_not_exist": "No existe un médico con nombre '{value}'.",
+        "multiple": "Hay más de un médico con el nombre '{value}' -- no se puede resolver de forma única.",
+    }
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("queryset", CatMedico.objects.select_related("id_usuario__detalle"))
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("allow_null", True)
+        super().__init__(**kwargs)
+
+    def to_representation(self, obj):
+        detalle = getattr(obj.id_usuario, "detalle", None)
+        return detalle.nombre_completo if detalle else None
+
+    def to_internal_value(self, data):
+        if not data:
+            return None
+        matches = list(self.get_queryset().filter(id_usuario__detalle__nombre_completo=data)[:2])
+        if not matches:
+            self.fail("does_not_exist", value=data)
+        if len(matches) > 1:
+            self.fail("multiple", value=data)
+        return matches[0]
+
+
 class ConsumoDetalleSerializer(serializers.ModelSerializer):
     id           = serializers.IntegerField(source="pk", read_only=True)
     idInsumo     = serializers.PrimaryKeyRelatedField(source="id_insumo", read_only=True)
@@ -207,6 +241,7 @@ class ConsumoConsultaSerializer(serializers.ModelSerializer):
     idAlmacen     = serializers.PrimaryKeyRelatedField(source="id_almacen", read_only=True)
     almacenNombre = serializers.CharField(source="id_almacen.nombre",       read_only=True)
     idCita        = serializers.IntegerField(source="id_cita",               allow_null=True)
+    medico        = MedicoNombreField()
     fchConsumo    = serializers.DateField(source="fch_consumo")
     detalles      = ConsumoDetalleSerializer(many=True, read_only=True)
     isActive      = serializers.BooleanField(source="is_active",  read_only=True)

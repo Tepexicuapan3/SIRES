@@ -230,11 +230,13 @@ class Visit(models.Model):
         blank=True,
     )
     # correcto para filtro doctorId
-    doctor_id = models.BigIntegerField(
+    doctor = models.ForeignKey(
+        "authentication.SyUsuario",
         db_column="doctor_id",
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        db_index=True,
+        related_name="visitas_atendidas",
     )
     # Consultorio asignado en el check-in (FK a cat_consultorios.id_consult).
     consultorio = models.ForeignKey(
@@ -277,7 +279,7 @@ class Visit(models.Model):
     class Meta:
         db_table = "rcp_visits"
         indexes = [
-            models.Index(fields=["doctor_id", "status"], name="rcp_visits_doc_status_idx"),
+            models.Index(fields=["doctor", "status"], name="rcp_visits_doc_status_idx"),
             models.Index(fields=["fch_alta"], name="rcp_visits_fch_alta_idx"),
         ]
         constraints = [

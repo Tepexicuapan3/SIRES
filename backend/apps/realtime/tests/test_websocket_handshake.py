@@ -76,11 +76,11 @@ class RealtimeHandshakeSecurityTests(TestCase):
             is_primary=True,
         )
 
-        access_token, _ = create_access_refresh_tokens(self.user)
+        access_token, _, _ = create_access_refresh_tokens(self.user)
         self.cookie_header = f"{ACCESS_COOKIE}={access_token}".encode()
-        blocked_token, _ = create_access_refresh_tokens(self.user_without_stream_role)
+        blocked_token, _, _ = create_access_refresh_tokens(self.user_without_stream_role)
         self.blocked_cookie_header = f"{ACCESS_COOKIE}={blocked_token}".encode()
-        admin_token, _ = create_access_refresh_tokens(self.admin_user)
+        admin_token, _, _ = create_access_refresh_tokens(self.admin_user)
         self.admin_cookie_header = f"{ACCESS_COOKIE}={admin_token}".encode()
 
     def test_connection_accepts_valid_cookie_auth(self):

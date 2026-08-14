@@ -74,9 +74,9 @@ class VisitWebSocketContractsTests(TestCase):
             defaults={"is_primary": True},
         )
 
-        access_token, _ = create_access_refresh_tokens(self.user)
+        access_token, _, _ = create_access_refresh_tokens(self.user)
         self.cookie_header = f"{ACCESS_COOKIE}={access_token}".encode()
-        admin_access_token, _ = create_access_refresh_tokens(self.admin_user)
+        admin_access_token, _, _ = create_access_refresh_tokens(self.admin_user)
         self.admin_cookie_header = f"{ACCESS_COOKIE}={admin_access_token}".encode()
 
     def test_handshake_requires_valid_cookie_auth(self):

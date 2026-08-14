@@ -190,7 +190,7 @@ class MedicosListCreateView(APIView):
                                   status.HTTP_404_NOT_FOUND, request_id=_request_id(request))
 
         det = getattr(usuario, "detalle", None)
-        if not det or det.tipo_personal != "MEDICO":
+        if not det or not det.id_tipo_personal or det.id_tipo_personal.name != "Médico":
             return error_response(
                 "TIPO_PERSONAL_INVALIDO",
                 "El usuario debe tener tipo_personal = MEDICO.",

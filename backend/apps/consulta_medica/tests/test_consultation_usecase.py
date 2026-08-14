@@ -1,5 +1,6 @@
 from django.test import TestCase
 
+from apps.authentication.models import SyUsuario
 from apps.catalogos.models import CatCies
 from apps.consulta_medica.models import VisitConsultation
 from apps.consulta_medica.uses_case.consultation_usecase import (
@@ -14,10 +15,20 @@ from apps.recepcion.services.errors import VisitDomainError
 
 
 class ConsultationUseCaseTests(TestCase):
+    def setUp(self):
+        # doctor_id ahora es FK real a SyUsuario (ver 0006_doctor_fk_integrity) --
+        # ya no acepta cualquier entero suelto, hace falta un usuario real.
+        self.doctor_id = SyUsuario.objects.create(
+            usuario="doctor_test_1", correo="doctor1@example.com", clave_hash="x",
+        ).id_usuario
+        self.doctor_id_2 = SyUsuario.objects.create(
+            usuario="doctor_test_2", correo="doctor2@example.com", clave_hash="x",
+        ).id_usuario
+
     def _visit(self, status):
         return Visit.objects.create(
             folio=f"CNS-{status}-{Visit.objects.count() + 1}",
-            patient_id=5000 + Visit.objects.count() + 1,
+            no_exp=f"EXP{5000 + Visit.objects.count() + 1}",
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id=f"APP-{Visit.objects.count() + 1}",
             status=status,
@@ -70,12 +81,12 @@ class ConsultationUseCaseTests(TestCase):
             roles=["DOCTOR"],
             primary_diagnosis="Hipertension arterial",
             final_note="Paciente estable y con tratamiento inicial.",
-            doctor_id=101,
+            doctor_id=self.doctor_id,
         )
 
         self.assertEqual(payload["visit"]["status"], "cerrada")
         self.assertEqual(payload["consultation"]["visitId"], visit.id_visit)
-        self.assertEqual(payload["consultation"]["doctorId"], 101)
+        self.assertEqual(payload["consultation"]["doctorId"], self.doctor_id)
         self.assertEqual(payload["consultation"]["primaryDiagnosis"], "Hipertension arterial")
 
         visit.refresh_from_db()
@@ -92,7 +103,7 @@ class ConsultationUseCaseTests(TestCase):
             roles=["CLINICO"],
             primary_diagnosis="Cefalea tensional",
             final_note="Paciente con manejo sintomatico.",
-            doctor_id=101,
+            doctor_id=self.doctor_id,
             permissions=["clinico:consultas:read"],
         )
 
@@ -107,7 +118,7 @@ class ConsultationUseCaseTests(TestCase):
                 roles=["DOCTOR"],
                 primary_diagnosis="  ",
                 final_note="",
-                doctor_id=101,
+                doctor_id=self.doctor_id,
             )
 
         self.assertEqual(raised.exception.code, "VISIT_STATE_INVALID")
@@ -120,7 +131,7 @@ class ConsultationUseCaseTests(TestCase):
             ["DOCTOR"],
             "Dx inicial",
             "Nota inicial",
-            101,
+            self.doctor_id,
         )
 
         visit.status = "en_consulta"
@@ -131,12 +142,12 @@ class ConsultationUseCaseTests(TestCase):
             ["DOCTOR"],
             "Dx final",
             "Nota final",
-            202,
+            self.doctor_id_2,
         )
 
         self.assertEqual(VisitConsultation.objects.filter(id_visit=visit).count(), 1)
         consultation = VisitConsultation.objects.get(id_visit=visit)
-        self.assertEqual(consultation.doctor_id, 202)
+        self.assertEqual(consultation.doctor_id, self.doctor_id_2)
         self.assertEqual(consultation.primary_diagnosis, "Dx final")
 
     def test_save_diagnosis_happy_path_persists_without_closing_visit(self):
@@ -147,7 +158,7 @@ class ConsultationUseCaseTests(TestCase):
             roles=["DOCTOR"],
             primary_diagnosis="Faringitis aguda",
             final_note="Paciente estable.",
-            doctor_id=101,
+            doctor_id=self.doctor_id,
         )
 
         self.assertEqual(payload["visitId"], visit.id_visit)
@@ -176,14 +187,14 @@ class ConsultationUseCaseTests(TestCase):
             roles=["DOCTOR"],
             primary_diagnosis="Gastroenteritis aguda",
             final_note="Paciente estable.",
-            doctor_id=101,
+            doctor_id=self.doctor_id,
             cie_code="a090",
         )
 
         self.assertEqual(payload["cieCode"], "A090")
 
         consultation = VisitConsultation.objects.get(id_visit=visit)
-        self.assertEqual(consultation.cie_code, "A090")
+        self.assertEqual(consultation.cie_id, "A090")
 
     def test_save_diagnosis_invalid_cie_code_raises_validation_error(self):
         visit = self._visit("en_consulta")
@@ -194,7 +205,7 @@ class ConsultationUseCaseTests(TestCase):
                 roles=["DOCTOR"],
                 primary_diagnosis="Dx",
                 final_note="Nota",
-                doctor_id=101,
+                doctor_id=self.doctor_id,
                 cie_code="ZZ999",
             )
 
@@ -222,7 +233,7 @@ class ConsultationUseCaseTests(TestCase):
                 roles=["DOCTOR"],
                 primary_diagnosis="Dx",
                 final_note="Nota",
-                doctor_id=101,
+                doctor_id=self.doctor_id,
             )
 
         self.assertEqual(raised.exception.code, "VISIT_STATE_INVALID")
@@ -235,7 +246,7 @@ class ConsultationUseCaseTests(TestCase):
             visit_id=visit.id_visit,
             roles=["DOCTOR"],
             items=["Paracetamol 500mg", "Reposo domiciliario"],
-            doctor_id=101,
+            doctor_id=self.doctor_id,
         )
 
         self.assertEqual(payload["visitId"], visit.id_visit)
@@ -253,7 +264,7 @@ class ConsultationUseCaseTests(TestCase):
             roles=["DOCTOR"],
             primary_diagnosis="Dx estable",
             final_note="Nota estable",
-            doctor_id=101,
+            doctor_id=self.doctor_id,
         )
 
         second_payload = close_consultation(
@@ -261,7 +272,7 @@ class ConsultationUseCaseTests(TestCase):
             roles=["DOCTOR"],
             primary_diagnosis="Dx estable",
             final_note="Nota estable",
-            doctor_id=101,
+            doctor_id=self.doctor_id,
         )
 
         self.assertEqual(first_payload["visit"]["status"], "cerrada")

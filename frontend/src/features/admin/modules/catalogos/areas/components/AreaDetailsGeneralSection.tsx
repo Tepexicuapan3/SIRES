@@ -24,7 +24,7 @@ import {
 } from "@features/admin/modules/catalogos/shared/domain/catalog-status";
 import type { AreaDetailsFormValues } from "@features/admin/modules/catalogos/areas/domain/areas.schemas";
 import { useTiposAreasList } from "@features/admin/modules/catalogos/tipos-areas/queries/useTiposAreasList";
-import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
+import { CatalogFkCombobox } from "@shared/ui/catalog-fk-combobox";
 
 interface AreaDetailsGeneralSectionProps {
   form: UseFormReturn<AreaDetailsFormValues>;

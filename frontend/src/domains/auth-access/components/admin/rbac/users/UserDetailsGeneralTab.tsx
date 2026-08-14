@@ -20,8 +20,6 @@ import {
 } from "@shared/ui/select";
 import type { CentroAtencionListItem, UserDetail } from "@api/types";
 import type { UserDetailsFormValues } from "@/domains/auth-access/types/rbac/users.schemas";
-import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
-import { AreaClinicaCombobox } from "@/domains/auth-access/components/admin/rbac/users/AreaClinicaCombobox";
 import { CatalogCombobox, type CatalogOption } from "@/domains/auth-access/components/admin/rbac/users/CatalogCombobox";
 import { CedulasSection } from "@/domains/auth-access/components/admin/rbac/users/CedulasSection";
 import { useAreaClinicasByClinic } from "@/domains/auth-access/hooks/rbac/users/useAreaClinicasByClinic";
@@ -58,6 +56,8 @@ type AccountStatusValue = (typeof ACCOUNT_STATUS)[keyof typeof ACCOUNT_STATUS];
 interface ClinicSelectOption {
   id: number;
   name: string;
+  code: string;
+  isActive: boolean;
 }
 
 export function UserDetailsGeneralTab({
@@ -81,14 +81,14 @@ export function UserDetailsGeneralTab({
     : ACCOUNT_STATUS.INACTIVE;
 
   const clinicSelectOptions: ClinicSelectOption[] = clinicOptions.map(
-    (clinic) => ({ id: clinic.id, name: clinic.name }),
+    (clinic) => ({ id: clinic.id, name: clinic.name, code: clinic.code, isActive: clinic.isActive }),
   );
   const currentClinic = userDetail.clinic;
   if (
     currentClinic &&
     !clinicSelectOptions.some((clinic) => clinic.id === currentClinic.id)
   ) {
-    clinicSelectOptions.unshift({ id: currentClinic.id, name: currentClinic.name });
+    clinicSelectOptions.unshift({ id: currentClinic.id, name: currentClinic.name, code: "", isActive: true });
   }
 
   const currentArea = userDetail.areaClinica;
@@ -317,11 +317,14 @@ export function UserDetailsGeneralTab({
                   </FormControl>
                 ) : (
                   <FormControl>
-                    <ClinicCombobox
+                    <CatalogCombobox
                       value={field.value ?? null}
                       onChange={field.onChange}
                       options={clinicSelectOptions}
                       disabled={!isEditable}
+                      placeholder="Selecciona un centro"
+                      emptyLabel="Sin centro"
+                      searchPlaceholder="Buscar por nombre..."
                     />
                   </FormControl>
                 )}
@@ -379,11 +382,13 @@ export function UserDetailsGeneralTab({
                   {watchedClinicId ? " (del centro seleccionado)" : ""}
                 </FormLabel>
                 <FormControl>
-                  <AreaClinicaCombobox
+                  <CatalogCombobox
                     value={field.value ?? null}
                     onChange={field.onChange}
-                    options={filteredAreaOptions}
+                    options={filteredAreaOptions.map((o) => ({ ...o, isActive: true }))}
                     disabled={!isEditable || isLoadingAreas}
+                    emptyLabel="Sin área"
+                    searchPlaceholder="Buscar por nombre..."
                     placeholder={
                       isLoadingAreas
                         ? "Cargando áreas..."

@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
+from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import CatCies, Permisos, Roles
 from apps.consulta_medica.models import VisitConsultation
@@ -40,14 +41,14 @@ class ConsultationContractsApiTests(APITestCase):
 
         self.visit_ready = Visit.objects.create(
             folio="CNS-7001",
-            patient_id=7001,
+            no_exp="EXP7001",
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id="APP-7001",
             status="lista_para_doctor",
         )
         self.visit_in_consultation = Visit.objects.create(
             folio="CNS-7002",
-            patient_id=7002,
+            no_exp="EXP7002",
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id="APP-7002",
             status="en_consulta",
@@ -126,6 +127,12 @@ class ConsultationContractsApiTests(APITestCase):
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
+        # Redis (sesion unica) no se limpia entre tests como la DB -- un
+        # user_id reciclado puede arrastrar una sesion "activa" de una
+        # corrida anterior y el login choca con SESSION_ALREADY_ACTIVE (409).
+        user = SyUsuario.objects.filter(usuario=username).first()
+        if user is not None:
+            PolicyStore().clear_active_session(user.id_usuario)
         response = self.client.post(
             "/api/v1/auth/login",
             {"username": username, "password": password},
@@ -270,7 +277,7 @@ class ConsultationContractsApiTests(APITestCase):
         self.assertEqual(response.data["cieCode"], "A090")
 
         consultation = VisitConsultation.objects.get(id_visit=self.visit_in_consultation)
-        self.assertEqual(consultation.cie_code, "A090")
+        self.assertEqual(consultation.cie_id, "A090")
 
     def test_search_cies_contract(self):
         self._login_as("doctor_user", self.doctor_password)

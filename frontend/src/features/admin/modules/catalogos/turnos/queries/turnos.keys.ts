@@ -1,14 +1,8 @@
 import type { TurnosListParams } from "@api/types";
+import { createCatalogKeys } from "@features/admin/modules/catalogos/shared/queries/createCatalogKeys";
 
-const BASE_KEY = ["admin", "catalogos", "turnos"] as const;
-
-export const turnosKeys = {
-  all: BASE_KEY,
-
-  list: (params?: TurnosListParams) =>
-    params
-      ? ([...BASE_KEY, "list", params] as const)
-      : ([...BASE_KEY, "list"] as const),
-
-  detail: (id: number) => [...BASE_KEY, "detail", id] as const,
-};
+export const turnosKeys = createCatalogKeys<TurnosListParams>([
+  "admin",
+  "catalogos",
+  "turnos",
+]);

@@ -29,7 +29,7 @@ import {
 } from "@features/admin/modules/catalogos/centros-atencion/domain/centros-atencion.schemas";
 import { useCentroAtencionHorariosList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentroAtencionHorariosList";
 import { useTurnosList } from "@features/admin/modules/catalogos/turnos/queries/useTurnosList";
-import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
+import { CatalogFkCombobox } from "@shared/ui/catalog-fk-combobox";
 import { useCreateCentroAtencionHorario } from "@features/admin/modules/catalogos/centros-atencion/mutations/useCreateCentroAtencionHorario";
 import { useUpdateCentroAtencionHorario } from "@features/admin/modules/catalogos/centros-atencion/mutations/useUpdateCentroAtencionHorario";
 import { useDeleteCentroAtencionHorario } from "@features/admin/modules/catalogos/centros-atencion/mutations/useDeleteCentroAtencionHorario";

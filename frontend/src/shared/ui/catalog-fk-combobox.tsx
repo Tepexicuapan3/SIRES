@@ -24,6 +24,9 @@ interface CatalogFkComboboxProps {
   className?: string;
 }
 
+// Combobox para FK obligatorias (sin opcion de "limpiar" seleccion) -- para
+// el caso de FK opcionales/limpiables, ver CatalogCombobox en este mismo
+// directorio.
 export function CatalogFkCombobox({
   options,
   value,

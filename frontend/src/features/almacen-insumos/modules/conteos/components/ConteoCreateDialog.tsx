@@ -4,6 +4,7 @@ import { Button } from "@shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shared/ui/dialog";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { useAlmacenesList } from "../../catalogos/queries/useCatalogosQueries";
 import { useCreateConteo } from "../mutations/useConteosMutations";
 import { getCatalogErrorMessage } from "../../catalogos/utils/catalogos.feedback";
@@ -61,10 +62,16 @@ export function ConteoCreateDialog({ open, onOpenChange, onSuccess }: Props) {
         <div className="space-y-3">
           <div className="space-y-1">
             <Label>Almacén *</Label>
-            <select value={form.idAlmacen} onChange={f("idAlmacen")} className="w-full border rounded-md px-3 py-2 text-sm">
-              <option value="">— Selecciona —</option>
-              {almacenes?.items.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            <Select value={form.idAlmacen} onValueChange={(v) => setForm((p) => ({ ...p, idAlmacen: v }))}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="— Selecciona —" />
+              </SelectTrigger>
+              <SelectContent>
+                {almacenes?.items.map((a) => (
+                  <SelectItem key={a.id} value={String(a.id)}>{a.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <Label>Fecha del conteo *</Label>

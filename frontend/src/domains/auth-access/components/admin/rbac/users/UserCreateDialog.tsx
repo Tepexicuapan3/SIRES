@@ -41,8 +41,6 @@ import {
 } from "@/domains/auth-access/types/rbac/users.schemas";
 import { getUserErrorMessage } from "@/domains/auth-access/adapters/rbac/users/users.feedback";
 import { UserDialogHeader } from "@/domains/auth-access/components/admin/rbac/users/UserDialogHeader";
-import { ClinicCombobox } from "@/domains/auth-access/components/admin/rbac/users/ClinicCombobox";
-import { AreaClinicaCombobox } from "@/domains/auth-access/components/admin/rbac/users/AreaClinicaCombobox";
 import { CatalogCombobox, type CatalogOption } from "@/domains/auth-access/components/admin/rbac/users/CatalogCombobox";
 import { CedulasSection } from "@/domains/auth-access/components/admin/rbac/users/CedulasSection";
 
@@ -442,10 +440,13 @@ export function UserCreateDialog({
                             <FormItem>
                               <FormLabel>Centro de atención</FormLabel>
                               <FormControl>
-                                <ClinicCombobox
+                                <CatalogCombobox
                                   value={field.value}
                                   onChange={field.onChange}
                                   options={clinicOptions}
+                                  placeholder="Selecciona un centro"
+                                  emptyLabel="Sin centro"
+                                  searchPlaceholder="Buscar por nombre..."
                                 />
                               </FormControl>
                               <FormMessage />
@@ -464,11 +465,13 @@ export function UserCreateDialog({
                                 {watchedClinicId ? " (del centro)" : ""}
                               </FormLabel>
                               <FormControl>
-                                <AreaClinicaCombobox
+                                <CatalogCombobox
                                   value={field.value ?? null}
                                   onChange={field.onChange}
-                                  options={filteredAreaOptions}
+                                  options={filteredAreaOptions.map((o) => ({ ...o, isActive: true }))}
                                   disabled={isLoadingAreas}
+                                  emptyLabel="Sin área"
+                                  searchPlaceholder="Buscar por nombre..."
                                   placeholder={
                                     isLoadingAreas
                                       ? "Cargando áreas..."

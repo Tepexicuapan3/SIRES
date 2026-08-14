@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.administracion.models import AuditoriaEvento, RelRolPermiso, RelUsuarioRol
+from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
 from apps.catalogos.models import CatPermiso, CatRol, Permisos, Roles
@@ -73,6 +74,10 @@ class RbacRolesPermissionsApiTests(APITestCase):
             is_active=True,
         )
 
+        # Redis (sesion unica) no se limpia entre tests como la DB -- un
+        # user_id reciclado puede arrastrar una sesion "activa" de una
+        # corrida anterior y el login choca con SESSION_ALREADY_ACTIVE (409).
+        PolicyStore().clear_active_session(self.admin.id_usuario)
         login_response = self.client.post(
             "/api/v1/auth/login",
             {"username": "admin_roles", "password": "Admin_123456"},
@@ -84,6 +89,9 @@ class RbacRolesPermissionsApiTests(APITestCase):
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
+        user = SyUsuario.objects.filter(usuario=username).first()
+        if user is not None:
+            PolicyStore().clear_active_session(user.id_usuario)
         response = self.client.post(
             "/api/v1/auth/login",
             {"username": username, "password": password},

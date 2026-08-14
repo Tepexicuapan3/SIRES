@@ -149,7 +149,7 @@ def save_diagnosis(
         "visitId": visit.id_visit,
         "status": visit.status,
         "primaryDiagnosis": consultation.primary_diagnosis,
-        "cieCode": consultation.cie_code,
+        "cieCode": consultation.cie_id,
         "finalNote": consultation.final_note,
     }
 
@@ -211,7 +211,7 @@ def close_consultation(
         if (
             existing_consultation is not None
             and existing_consultation.primary_diagnosis == normalized_primary_diagnosis
-            and existing_consultation.cie_code == normalized_cie_code
+            and existing_consultation.cie_id == normalized_cie_code
             and existing_consultation.final_note == normalized_final_note
         ):
             return {

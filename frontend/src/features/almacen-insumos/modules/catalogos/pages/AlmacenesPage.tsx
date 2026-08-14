@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Switch } from "@shared/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { Textarea } from "@shared/ui/textarea";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import type { Almacen, AlmacenTipo } from "@api/types";
@@ -256,20 +257,29 @@ export function AlmacenesPage() {
             </div>
             <div className="space-y-1">
               <Label>Tipo *</Label>
-              <select value={form.tipo} onChange={f("tipo")} className="w-full border rounded-md px-3 py-2 text-sm">
-                {Object.entries(ALMACEN_TIPO_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
+              <Select value={form.tipo} onValueChange={(v) => setForm((prev) => ({ ...prev, tipo: v as AlmacenTipo }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ALMACEN_TIPO_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label>Centro de atención *</Label>
-              <select value={form.idCentroAtencion} onChange={f("idCentroAtencion")} className="w-full border rounded-md px-3 py-2 text-sm">
-                <option value="">— Selecciona —</option>
-                {centrosData?.items.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <Select value={form.idCentroAtencion} onValueChange={(v) => setForm((prev) => ({ ...prev, idCentroAtencion: v }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="— Selecciona —" />
+                </SelectTrigger>
+                <SelectContent>
+                  {centrosData?.items.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-2 space-y-1">
               <Label>Descripción</Label>

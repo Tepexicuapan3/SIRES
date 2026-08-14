@@ -3,6 +3,7 @@ import { Bell, ClipboardList, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@shared/ui/button";
 import { Input }  from "@shared/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import {
   CONTRATO_STATUS, TP_DER_LABELS,
   type ContratoOxigeno, type ContratoStatus, type TpDer, type ContratosListParams,
@@ -230,27 +231,35 @@ export function ContratosPage() {
             />
           </div>
 
-          <select
-            className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-            value={status}
-            onChange={(e) => { setStatus(e.target.value as ContratoStatus | ""); handleFilterChange(); }}
+          <Select
+            value={status || "__all__"}
+            onValueChange={(v) => { setStatus(v === "__all__" ? "" : v as ContratoStatus); handleFilterChange(); }}
           >
-            <option value="">Todos los estados</option>
-            <option value={CONTRATO_STATUS.VIGENTE}>Vigente</option>
-            <option value={CONTRATO_STATUS.POR_VENCER}>Por Vencer</option>
-            <option value={CONTRATO_STATUS.VENCIDO}>Vencido</option>
-          </select>
+            <SelectTrigger className="h-10 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos los estados</SelectItem>
+              <SelectItem value={CONTRATO_STATUS.VIGENTE}>Vigente</SelectItem>
+              <SelectItem value={CONTRATO_STATUS.POR_VENCER}>Por Vencer</SelectItem>
+              <SelectItem value={CONTRATO_STATUS.VENCIDO}>Vencido</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <select
-            className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-            value={tpDer}
-            onChange={(e) => { setTpDer(e.target.value as TpDer | ""); handleFilterChange(); }}
+          <Select
+            value={tpDer || "__all__"}
+            onValueChange={(v) => { setTpDer(v === "__all__" ? "" : v as TpDer); handleFilterChange(); }}
           >
-            <option value="">Todos los tipos</option>
-            {(Object.entries(TP_DER_LABELS) as [TpDer, string][]).map(([k, v]) => (
-              <option key={k} value={k}>{k} — {v}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-10 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos los tipos</SelectItem>
+              {(Object.entries(TP_DER_LABELS) as [TpDer, string][]).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{k} — {v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <Input
             placeholder="Filtrar por sucursal..."
@@ -258,16 +267,20 @@ export function ContratosPage() {
             onChange={(e) => { setSucursal(e.target.value); handleFilterChange(); }}
           />
 
-          <select
-            className="h-10 w-full rounded-md border border-line-struct bg-paper px-3 text-sm"
-            value={clinica}
-            onChange={(e) => { setClinica(e.target.value); handleFilterChange(); }}
+          <Select
+            value={clinica || "__all__"}
+            onValueChange={(v) => { setClinica(v === "__all__" ? "" : v); handleFilterChange(); }}
           >
-            <option value="">Todas las clínicas</option>
-            {clinicaOptions.map((c) => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-10 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas las clínicas</SelectItem>
+              {clinicaOptions.map((c) => (
+                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

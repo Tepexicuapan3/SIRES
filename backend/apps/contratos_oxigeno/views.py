@@ -59,7 +59,7 @@ class ContratoOxigenoViewSet(viewsets.ModelViewSet):
         params = self.request.query_params
 
         if sucursal := params.get("sucursal"):
-            qs = qs.filter(sucursal__iexact=sucursal)
+            qs = qs.filter(sucursal__name__iexact=sucursal)
 
         if status_val := params.get("status"):
             qs = qs.filter(status=status_val)
@@ -104,8 +104,8 @@ class ContratoOxigenoViewSet(viewsets.ModelViewSet):
             for item in qs.values("status").annotate(total=Count("id"))
         }
         por_sucursal = {
-            item["sucursal"]: item["total"]
-            for item in qs.values("sucursal").annotate(total=Count("id"))
+            item["sucursal__name"]: item["total"]
+            for item in qs.values("sucursal__name").annotate(total=Count("id"))
         }
 
         return Response({

@@ -23,7 +23,7 @@ import {
 import { ScrollArea } from "@shared/ui/ScrollArea";
 import { CentroAreaClinicaDialogHeader } from "@features/admin/modules/catalogos/centro-area-clinica/components/CentroAreaClinicaDialogHeader";
 import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/shared/components/CatalogCreateResultCard";
-import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
+import { CatalogFkCombobox } from "@shared/ui/catalog-fk-combobox";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useAreasClinicasList } from "@features/admin/modules/catalogos/areas-clinicas/queries/useAreasClinicasList";
 import {

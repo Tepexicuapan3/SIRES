@@ -13,6 +13,7 @@ from apps.administracion.models import (
     RelUsuarioOverride,
     RelUsuarioRol,
 )
+from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.authentication.services.token_service import CSRF_COOKIE
 from apps.catalogos.models import CatCentroAtencion, CatPermiso, CatRol, Permisos, Roles
@@ -65,9 +66,9 @@ class RbacUsersApiTests(APITestCase):
         self.clinic = CatCentroAtencion.objects.create(
             name="Centro Usuarios",
             code="CU-001",
+            center_type=CatCentroAtencion.TipoCentro.CLINICA,
             is_external=False,
             address="Calle Uno 1",
-            schedule={"mon": "08:00-16:00"},
             is_active=True,
             created_by_id=self.admin.id_usuario,
         )
@@ -101,6 +102,10 @@ class RbacUsersApiTests(APITestCase):
             usr_asignacion=self.admin,
         )
 
+        # Redis (sesion unica) no se limpia entre tests como la DB -- un
+        # user_id reciclado puede arrastrar una sesion "activa" de una
+        # corrida anterior y el login choca con SESSION_ALREADY_ACTIVE (409).
+        PolicyStore().clear_active_session(self.admin.id_usuario)
         login_response = self.client.post(
             "/api/v1/auth/login",
             {"username": "admin_users", "password": "Admin_123456"},
@@ -112,6 +117,9 @@ class RbacUsersApiTests(APITestCase):
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
+        user = SyUsuario.objects.filter(usuario=username).first()
+        if user is not None:
+            PolicyStore().clear_active_session(user.id_usuario)
         response = self.client.post(
             "/api/v1/auth/login",
             {"username": username, "password": password},

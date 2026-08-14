@@ -8,6 +8,7 @@ from apps.administracion.models import (
     RelUsuarioOverride,
     RelUsuarioRol,
 )
+from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import Permisos, Roles
 from apps.recepcion.models import Visit
@@ -56,14 +57,14 @@ class VitalsContractsApiTests(APITestCase):
 
         self.visit_in_somato = Visit.objects.create(
             folio="SMT-9001",
-            patient_id=9001,
+            no_exp="EXP9001",
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id="APP-SMT-9001",
             status="en_somatometria",
         )
         self.visit_in_wait = Visit.objects.create(
             folio="SMT-9002",
-            patient_id=9002,
+            no_exp="EXP9002",
             arrival_type=Visit.ArrivalType.WALK_IN,
             status="en_espera",
         )
@@ -114,6 +115,12 @@ class VitalsContractsApiTests(APITestCase):
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
+        # Redis (sesion unica) no se limpia entre tests como la DB -- un
+        # user_id reciclado puede arrastrar una sesion "activa" de una
+        # corrida anterior y el login choca con SESSION_ALREADY_ACTIVE (409).
+        user = SyUsuario.objects.filter(usuario=username).first()
+        if user is not None:
+            PolicyStore().clear_active_session(user.id_usuario)
         response = self.client.post(
             "/api/v1/auth/login",
             {"username": username, "password": password},

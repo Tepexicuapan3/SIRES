@@ -9,13 +9,20 @@ class VisitConsultation(models.Model):
         on_delete=models.CASCADE,
         related_name="consultation",
     )
-    doctor_id = models.BigIntegerField(db_column="id_doctor", db_index=True)
+    doctor = models.ForeignKey(
+        "authentication.SyUsuario",
+        db_column="id_doctor",
+        on_delete=models.PROTECT,
+        related_name="consultas_atendidas",
+    )
     primary_diagnosis = models.CharField(max_length=255, db_column="diagnostico_primario")
-    cie_code = models.CharField(
-        max_length=8,
+    cie = models.ForeignKey(
+        "catalogos.CatCies",
         db_column="clave_cie",
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
+        related_name="consultas",
     )
     final_note = models.TextField(db_column="nota_final")
     is_active = models.BooleanField(db_column="est_activo", default=True)
@@ -28,7 +35,7 @@ class VisitConsultation(models.Model):
     class Meta:
         db_table = "cns_visit_consultation"
         indexes = [
-            models.Index(fields=["doctor_id"], name="cns_cons_doc_idx"),
+            models.Index(fields=["doctor"], name="cns_cons_doc_idx"),
             models.Index(fields=["is_active"], name="cns_cons_active_idx"),
             models.Index(fields=["created_at"], name="cns_cons_created_idx"),
         ]

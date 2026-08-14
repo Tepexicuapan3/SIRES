@@ -4,45 +4,51 @@ import { Popover, PopoverContent, PopoverTrigger } from "@shared/ui/popover";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { cn } from "@shared/utils/styling/cn";
-interface ClinicOption {
-  id: number;
+
+export interface CatalogOption {
+  id:   number;
   name: string;
 }
 
-interface ClinicComboboxProps {
-  value: number | null;
-  onChange: (value: number | null) => void;
-  options: ClinicOption[];
+interface CatalogComboboxProps {
+  value:    string;
+  onChange: (name: string) => void;
+  options:  CatalogOption[];
   disabled?: boolean;
   placeholder?: string;
+  searchPlaceholder?: string;
 }
 
-export function ClinicCombobox({
+// Combobox genérico: el valor que se guarda/expone es el NOMBRE de la opción
+// (la API sigue leyendo/escribiendo el nombre aunque por dentro sea FK real,
+// ver p.ej. SucursalNombreField/EspecialidadNombreField/MedicoNombreField en
+// los serializers del backend), pero la búsqueda/selección se hace contra un
+// catálogo real.
+export function CatalogCombobox({
   value,
   onChange,
   options,
   disabled = false,
-  placeholder = "Selecciona un centro",
-}: ClinicComboboxProps) {
+  placeholder = "Selecciona una opción...",
+  searchPlaceholder = "Buscar...",
+}: CatalogComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const selected = options.find((o) => o.id === value) ?? null;
 
   const filtered = useMemo(() => {
     const normalize = (s: string) =>
       s
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[̀-ͯ]/g, "")
         .toLowerCase();
     const q = normalize(search.trim());
     if (!q) return options;
     return options.filter((o) => normalize(o.name).includes(q));
   }, [options, search]);
 
-  const handleSelect = (id: number | null) => {
-    onChange(id);
+  const handleSelect = (name: string) => {
+    onChange(name);
     setOpen(false);
     setSearch("");
   };
@@ -65,15 +71,13 @@ export function ClinicCombobox({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "w-full justify-between font-normal",
-            !selected && "text-txt-muted",
+            "h-9 w-full justify-between text-sm font-normal",
+            !value && "text-txt-muted",
           )}
         >
-          <span className="truncate">
-            {selected ? selected.name : placeholder}
-          </span>
+          <span className="truncate">{value || placeholder}</span>
           <div className="ml-2 flex shrink-0 items-center gap-1">
-            {selected ? (
+            {value ? (
               <span
                 role="button"
                 tabIndex={-1}
@@ -81,7 +85,7 @@ export function ClinicCombobox({
                 className="rounded p-0.5 text-txt-muted hover:text-txt-body"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleSelect(null);
+                  handleSelect("");
                 }}
               >
                 <X className="size-3.5" />
@@ -97,14 +101,13 @@ export function ClinicCombobox({
         sideOffset={4}
         className="w-[var(--radix-popover-trigger-width)] p-0"
       >
-        {/* Búsqueda */}
         <div className="flex items-center gap-2 border-b border-line-struct px-3 py-2">
           <Search className="size-4 shrink-0 text-txt-muted" />
           <Input
             ref={inputRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre..."
+            placeholder={searchPlaceholder}
             className="h-8 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
           />
           {search ? (
@@ -118,50 +121,29 @@ export function ClinicCombobox({
           ) : null}
         </div>
 
-        {/* Lista */}
         <div className="max-h-56 overflow-y-auto py-1">
-          {/* Sin centro */}
-          <button
-            type="button"
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-subtle/40",
-              value === null && "font-medium text-txt-body",
-            )}
-            onClick={() => handleSelect(null)}
-          >
-            <Check
-              className={cn(
-                "size-4 shrink-0",
-                value === null ? "text-primary opacity-100" : "opacity-0",
-              )}
-            />
-            <span className="text-txt-muted italic">Sin centro</span>
-          </button>
-
           {filtered.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-txt-muted">
               Sin resultados para &quot;{search}&quot;
             </p>
           ) : (
-            filtered.map((clinic) => (
+            filtered.map((opt) => (
               <button
-                key={clinic.id}
+                key={opt.id}
                 type="button"
                 className={cn(
                   "flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-subtle/40",
-                  value === clinic.id && "font-medium text-txt-body",
+                  value === opt.name && "font-medium text-txt-body",
                 )}
-                onClick={() => handleSelect(clinic.id)}
+                onClick={() => handleSelect(opt.name)}
               >
                 <Check
                   className={cn(
                     "size-4 shrink-0",
-                    value === clinic.id
-                      ? "text-primary opacity-100"
-                      : "opacity-0",
+                    value === opt.name ? "text-primary opacity-100" : "opacity-0",
                   )}
                 />
-                <span className="truncate">{clinic.name}</span>
+                <span className="truncate">{opt.name}</span>
               </button>
             ))
           )}

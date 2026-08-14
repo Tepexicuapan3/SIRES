@@ -3,6 +3,7 @@ import { Loader2, Search } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input }  from "@shared/ui/input";
 import { Label }  from "@shared/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@shared/ui/dialog";
@@ -12,8 +13,9 @@ import {
 } from "@api/types";
 import { useBuscarDerechohabiente } from "@features/contratos-oxigeno/queries/useBuscarDerechohabiente";
 import { useSucursalesList } from "@features/admin/modules/catalogos/sucursales/queries/useSucursalesList";
+import { useEspecialidadesList } from "@features/admin/modules/catalogos/especialidades/queries/useEspecialidadesList";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
-import { CatalogCombobox } from "./CatalogCombobox";
+import { CatalogCombobox } from "@shared/ui/catalog-combobox";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -168,6 +170,10 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
   const { data: sucursalesData } = useSucursalesList({ pageSize: 200, isActive: true });
   const sucursalOptions = (sucursalesData?.items ?? []).map((s) => ({ id: s.id, name: s.name }));
 
+  // Catálogo de especialidades para el combobox de "Datos médicos"
+  const { data: especialidadesData } = useEspecialidadesList({ pageSize: 200, isActive: true });
+  const especialidadOptions = (especialidadesData?.items ?? []).map((e) => ({ id: e.id, name: e.name }));
+
   useEffect(() => {
     void Promise.resolve().then(() => {
       setForm(editing ? toFormData(editing) : EMPTY_FORM);
@@ -276,7 +282,6 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
   const estatus = previewStatus(dias);
 
   const inputCls = "h-9 text-sm";
-  const selectCls = `${inputCls} w-full rounded-md border border-line-struct bg-paper px-3`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -419,33 +424,48 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-servicio">Servicio / Equipo 1 *</Label>
-                <select id="cf-servicio" className={selectCls} value={form.servicio} onChange={set("servicio")}>
-                  <option value="">Seleccionar...</option>
-                  {SERVICIOS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  {form.servicio && !SERVICIOS.includes(form.servicio) && (
-                    <option value={form.servicio}>{form.servicio}</option>
-                  )}
-                </select>
+                <Select value={form.servicio || "__none__"} onValueChange={(v) => setForm((prev) => ({ ...prev, servicio: v === "__none__" ? "" : v }))}>
+                  <SelectTrigger id="cf-servicio" className="w-full">
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Seleccionar...</SelectItem>
+                    {SERVICIOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {form.servicio && !SERVICIOS.includes(form.servicio) && (
+                      <SelectItem value={form.servicio}>{form.servicio}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-servicio2">Servicio / Equipo 2</Label>
-                <select id="cf-servicio2" className={selectCls} value={form.servicio2} onChange={set("servicio2")}>
-                  <option value="">Sin asignar</option>
-                  {SERVICIOS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  {form.servicio2 && !SERVICIOS.includes(form.servicio2) && (
-                    <option value={form.servicio2}>{form.servicio2}</option>
-                  )}
-                </select>
+                <Select value={form.servicio2 || "__none__"} onValueChange={(v) => setForm((prev) => ({ ...prev, servicio2: v === "__none__" ? "" : v }))}>
+                  <SelectTrigger id="cf-servicio2" className="w-full">
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sin asignar</SelectItem>
+                    {SERVICIOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {form.servicio2 && !SERVICIOS.includes(form.servicio2) && (
+                      <SelectItem value={form.servicio2}>{form.servicio2}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-servicio3">Servicio / Equipo 3</Label>
-                <select id="cf-servicio3" className={selectCls} value={form.servicio3} onChange={set("servicio3")}>
-                  <option value="">Sin asignar</option>
-                  {SERVICIOS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  {form.servicio3 && !SERVICIOS.includes(form.servicio3) && (
-                    <option value={form.servicio3}>{form.servicio3}</option>
-                  )}
-                </select>
+                <Select value={form.servicio3 || "__none__"} onValueChange={(v) => setForm((prev) => ({ ...prev, servicio3: v === "__none__" ? "" : v }))}>
+                  <SelectTrigger id="cf-servicio3" className="w-full">
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sin asignar</SelectItem>
+                    {SERVICIOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {form.servicio3 && !SERVICIOS.includes(form.servicio3) && (
+                      <SelectItem value={form.servicio3}>{form.servicio3}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </section>
@@ -528,11 +548,16 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="cf-hospitalAzura">Hospital Azura</Label>
-                <select id="cf-hospitalAzura" className={selectCls} value={form.hospitalAzura} onChange={set("hospitalAzura")}>
-                  <option value="">Sin asignar</option>
-                  <option value="CENTRO">Centro</option>
-                  <option value="VALLE">Valle</option>
-                </select>
+                <Select value={form.hospitalAzura || "__none__"} onValueChange={(v) => setForm((prev) => ({ ...prev, hospitalAzura: v === "__none__" ? "" : v as typeof prev.hospitalAzura }))}>
+                  <SelectTrigger id="cf-hospitalAzura" className="w-full">
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sin asignar</SelectItem>
+                    <SelectItem value="CENTRO">Centro</SelectItem>
+                    <SelectItem value="VALLE">Valle</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-medicoTratante">Médico tratante</Label>
@@ -540,7 +565,13 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-especialidad">Especialidad</Label>
-                <Input id="cf-especialidad" className={inputCls} value={form.especialidad} onChange={set("especialidad")} />
+                <CatalogCombobox
+                  value={form.especialidad}
+                  onChange={(name) => setForm((prev) => ({ ...prev, especialidad: name }))}
+                  options={especialidadOptions}
+                  placeholder="Selecciona una especialidad..."
+                  searchPlaceholder="Buscar especialidad..."
+                />
               </div>
               <div className="flex items-center gap-2 pt-6">
                 <input id="cf-tercerNivel" type="checkbox" className="size-4" checked={form.tercerNivel} onChange={setChecked("tercerNivel")} />

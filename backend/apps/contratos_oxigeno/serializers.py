@@ -1,11 +1,44 @@
 from rest_framework import serializers
 
 from apps.administracion.services.fecha_service import calcular_edad
+from apps.catalogos.models import CatSucursal, Especialidades
 from .models import ContratoOxigeno
+
+
+class SucursalNombreField(serializers.SlugRelatedField):
+    """Lee/escribe la sucursal por nombre (no por id) para no romper el
+    contrato de API que el frontend ya conoce -- por dentro sigue siendo
+    una FK real a catalogos.CatSucursal."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("slug_field", "name")
+        kwargs.setdefault("queryset", CatSucursal.objects.all())
+        super().__init__(**kwargs)
+
+
+class EspecialidadNombreField(serializers.SlugRelatedField):
+    """Mismo patrón que SucursalNombreField, pero opcional: especialidad es
+    blank/null (a diferencia de sucursal). El combobox del frontend manda
+    "" al limpiar la selección -- eso debe resolver a None, no disparar un
+    lookup contra el catálogo con nombre vacío."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("slug_field", "name")
+        kwargs.setdefault("queryset", Especialidades.objects.all())
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("allow_null", True)
+        super().__init__(**kwargs)
+
+    def to_internal_value(self, data):
+        if not data:
+            return None
+        return super().to_internal_value(data)
 
 
 class ContratoOxigenoSerializer(serializers.ModelSerializer):
     # ── camelCase para el frontend ────────────────────────────────────────────
+    sucursal      = SucursalNombreField()
+    especialidad  = EspecialidadNombreField()
     numContrato   = serializers.CharField(source="num_contrato")
     tpDer         = serializers.CharField(source="tp_der")
     servicio2     = serializers.CharField(source="servicio_2", allow_blank=True, allow_null=True, required=False)

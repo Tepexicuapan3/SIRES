@@ -5,6 +5,7 @@ import { Button } from "@shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shared/ui/dialog";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { BarcodeScannerInput } from "@shared/ui/BarcodeScannerInput";
 import type { CatInsumo, CreateEntradaDetalleRequest } from "@api/types";
 import { useAlmacenesList, useProveedoresList, useInsumosList } from "../../catalogos/queries/useCatalogosQueries";
@@ -39,10 +40,6 @@ const initialForm = () => ({
   fchEntrada:    new Date().toISOString().split("T")[0],
   observaciones: "",
 });
-
-const selectCls =
-  "w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground " +
-  "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent h-10";
 
 export function EntradaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
   const uid = useId();
@@ -168,22 +165,34 @@ export function EntradaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                 <Label className="text-sm font-medium">
                   Almacén <span className="text-destructive">*</span>
                 </Label>
-                <select value={form.idAlmacen} onChange={f("idAlmacen")} className={selectCls}>
-                  <option value="">Selecciona…</option>
-                  {almacenes?.items.map((a) => (
-                    <option key={a.id} value={a.id}>{a.nombre}</option>
-                  ))}
-                </select>
+                <Select value={form.idAlmacen} onValueChange={(v) => setForm((prev) => ({ ...prev, idAlmacen: v }))}>
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue placeholder="Selecciona…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {almacenes?.items.map((a) => (
+                      <SelectItem key={a.id} value={String(a.id)}>{a.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="col-span-2 space-y-1.5">
                 <Label className="text-sm font-medium">Proveedor</Label>
-                <select value={form.idProveedor} onChange={f("idProveedor")} className={selectCls}>
-                  <option value="">Sin proveedor</option>
-                  {proveedores?.items.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nombre}</option>
-                  ))}
-                </select>
+                <Select
+                  value={form.idProveedor || "none"}
+                  onValueChange={(v) => setForm((prev) => ({ ...prev, idProveedor: v === "none" ? "" : v }))}
+                >
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin proveedor</SelectItem>
+                    {proveedores?.items.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
@@ -260,6 +269,7 @@ export function EntradaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                         size="icon"
                         variant="ghost"
                         className="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        aria-label="Eliminar fila"
                         onClick={() => removeRow(row._key)}
                         disabled={rows.length === 1}
                       >
@@ -295,22 +305,25 @@ export function EntradaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                           </button>
                         </div>
                       ) : (
-                        <select
-                          className={selectCls}
-                          value={row.idInsumo ?? ""}
-                          onChange={(e) => {
+                        <Select
+                          value={row.idInsumo !== null ? String(row.idInsumo) : ""}
+                          onValueChange={(v) => {
                             const ins = insumos?.items.find(
-                              (i: CatInsumo) => i.id === Number(e.target.value),
+                              (i: CatInsumo) => i.id === Number(v),
                             );
-                            updateRow(row._key, "idInsumo", e.target.value);
+                            updateRow(row._key, "idInsumo", v);
                             if (ins) updateRow(row._key, "insumoNombre", ins.nombre);
                           }}
                         >
-                          <option value="">Selecciona un insumo…</option>
-                          {insumos?.items.map((i: CatInsumo) => (
-                            <option key={i.id} value={i.id}>{i.nombre}</option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="h-10 w-full">
+                            <SelectValue placeholder="Selecciona un insumo…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {insumos?.items.map((i: CatInsumo) => (
+                              <SelectItem key={i.id} value={String(i.id)}>{i.nombre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                     </div>
 

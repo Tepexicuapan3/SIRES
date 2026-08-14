@@ -18,7 +18,11 @@ class ContratoOxigeno(models.Model):
         FAMILIAR   = "F", "Familiar"
         OTRO       = "O", "Otro"
 
-    sucursal      = models.CharField(max_length=100)
+    sucursal      = models.ForeignKey(
+        "catalogos.CatSucursal",
+        on_delete=models.PROTECT,
+        related_name="contratos_oxigeno",
+    )
     num_contrato  = models.CharField(max_length=50, unique=True)
     nombre        = models.CharField(max_length=200)
     expediente    = models.CharField(max_length=50)
@@ -68,7 +72,13 @@ class ContratoOxigeno(models.Model):
 
     hospital_azura             = models.CharField(max_length=10, choices=HospitalAzura.choices, blank=True)
     medico_tratante            = models.CharField(max_length=150, blank=True)
-    especialidad                = models.CharField(max_length=100, blank=True)
+    especialidad      = models.ForeignKey(
+        "catalogos.Especialidades",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="contratos_oxigeno",
+    )
     tercer_nivel                = models.BooleanField(default=False)
     institucion_referencia      = models.CharField(max_length=150, blank=True)
     medico_tratante_referencia  = models.CharField(max_length=150, blank=True)

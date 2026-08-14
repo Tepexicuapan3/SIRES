@@ -1,22 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { sucursalesAPI } from "@api/resources/catalogos/sucursales.api";
 import type { SucursalesListParams, SucursalesListResponse } from "@api/types";
 import { sucursalesKeys } from "@features/admin/modules/catalogos/sucursales/queries/sucursales.keys";
+import { createCatalogListHook } from "@features/admin/modules/catalogos/shared/queries/createCatalogListHook";
 
-interface Options {
-  enabled?: boolean;
-}
-
-export const useSucursalesList = (
-  params?: SucursalesListParams,
-  options: Options = {},
-) => {
-  const normalizedParams = params ?? {};
-
-  return useQuery<SucursalesListResponse>({
-    queryKey: sucursalesKeys.list(normalizedParams),
-    queryFn: () => sucursalesAPI.getAll(normalizedParams),
-    staleTime: 60 * 1000,
-    enabled: options.enabled ?? true,
-  });
-};
+export const useSucursalesList = createCatalogListHook<
+  SucursalesListParams,
+  SucursalesListResponse
+>({
+  keys: sucursalesKeys,
+  getAll: sucursalesAPI.getAll,
+});

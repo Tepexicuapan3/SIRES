@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authentication.services.cookie_auth import CookieJWTAuthentication
+from apps.medicos.models import CatMedico
 
 from ..models.catalogos import Almacen, CatInsumo, CatProveedor
 from ..models.kardex import (
@@ -502,7 +503,7 @@ class ConsumoConsultaViewSet(viewsets.ModelViewSet):
     serializer_class       = ConsumoConsultaSerializer
     pagination_class       = StandardListPagination
     filter_backends        = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields          = ["paciente", "medico", "id_almacen__nombre"]
+    search_fields          = ["paciente", "medico__id_usuario__detalle__nombre_completo", "id_almacen__nombre"]
     ordering_fields        = ["fch_consumo", "created_at"]
     ordering               = ["-fch_consumo"]
     http_method_names      = ["get", "post", "head", "options"]
@@ -535,13 +536,33 @@ class ConsumoConsultaViewSet(viewsets.ModelViewSet):
         except Almacen.DoesNotExist as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
+        medico = None
+        medico_nombre = (data.get("medico") or "").strip()
+        if medico_nombre:
+            candidatos = list(
+                CatMedico.objects.filter(
+                    id_usuario__detalle__nombre_completo=medico_nombre
+                )[:2]
+            )
+            if not candidatos:
+                return Response(
+                    {"detail": f"Médico '{medico_nombre}' no encontrado."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if len(candidatos) > 1:
+                return Response(
+                    {"detail": f"Hay más de un médico con el nombre '{medico_nombre}'."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            medico = candidatos[0]
+
         try:
             with transaction.atomic():
                 consumo = ConsumoConsulta.objects.create(
                     id_almacen    = almacen,
                     id_cita       = data.get("idCita"),
                     paciente      = data.get("paciente", ""),
-                    medico        = data.get("medico", ""),
+                    medico        = medico,
                     fch_consumo   = fch_consumo,
                     observaciones = data.get("observaciones", ""),
                     created_by_id = request.user.id_usuario,

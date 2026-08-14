@@ -20,13 +20,13 @@ class CatCentroAtencionHorario(CatalogBase):
     id = models.BigAutoField(primary_key=True, db_column="id_horario")
     center = models.ForeignKey(
         CatCentroAtencion,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.PROTECT,
         db_column="id_centro_atencion",
         related_name="schedules",
     )
     shift = models.ForeignKey(
         Turnos,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.PROTECT,
         db_column="id_turno",
         related_name="center_schedules",
     )

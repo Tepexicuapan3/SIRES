@@ -25,7 +25,7 @@ import { Textarea } from "@shared/ui/textarea";
 import { ScrollArea } from "@shared/ui/ScrollArea";
 import { AreaDialogHeader } from "@features/admin/modules/catalogos/areas/components/AreaDialogHeader";
 import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/shared/components/CatalogCreateResultCard";
-import { CatalogFkCombobox } from "@features/admin/modules/catalogos/shared/components/CatalogFkCombobox";
+import { CatalogFkCombobox } from "@shared/ui/catalog-fk-combobox";
 import {
   createAreaSchema,
   type CreateAreaFormValues,

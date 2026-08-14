@@ -20,7 +20,7 @@ class CatCentroAtencionExcepcion(CatalogBase):
     id = models.BigAutoField(primary_key=True, db_column="id_excepcion")
     center = models.ForeignKey(
         CatCentroAtencion,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.PROTECT,
         db_column="id_centro_atencion",
         related_name="excepciones",
     )

@@ -1,12 +1,14 @@
-import { useState, useId, useRef } from "react";
+import { useState, useId } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, ChevronDown, X } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shared/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Textarea } from "@shared/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
+import { CatalogCombobox } from "@shared/ui/catalog-combobox";
 import { lotesAPI } from "@api/resources/almacen/kardex.api";
 import { medicosAPI } from "@api/resources/medicos.api";
 import type { CatInsumo, CreateConsumoDetalleRequest } from "@api/types";
@@ -21,17 +23,21 @@ function LoteSelect({ idInsumo, value, onChange }: { idInsumo: number | null; va
     enabled: idInsumo != null,
   });
   return (
-    <select
-      className="h-8 text-xs w-full border rounded-md px-2 py-1"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+    <Select
+      value={value || "none"}
+      onValueChange={(v) => onChange(v === "none" ? "" : v)}
       disabled={!idInsumo}
     >
-      <option value="">— Lote —</option>
-      {data?.items.map((l) => (
-        <option key={l.id} value={l.id}>{l.numLote}</option>
-      ))}
-    </select>
+      <SelectTrigger className="h-8 w-full text-xs">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">— Lote —</SelectItem>
+        {data?.items.map((l) => (
+          <SelectItem key={l.id} value={String(l.id)}>{l.numLote}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -44,12 +50,9 @@ interface Props {
 interface Row { _key: string; idInsumo: number | null; idLote: string; cantidad: string; }
 const emptyRow = (key: string): Row => ({ _key: key, idInsumo: null, idLote: "", cantidad: "" });
 
-const selectCls = "w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring h-10";
-
 export function ConsumoCreateDialog({ open, onOpenChange, onSuccess }: Props) {
   const uid           = useId();
   const createConsumo = useCreateConsumo();
-  const medicoRef     = useRef<HTMLDivElement>(null);
 
   const [form, setForm] = useState({
     idAlmacen:    "",
@@ -58,39 +61,23 @@ export function ConsumoCreateDialog({ open, onOpenChange, onSuccess }: Props) {
     fchConsumo:   new Date().toISOString().split("T")[0],
     observaciones: "",
   });
-  const [rows, setRows]           = useState<Row[]>([emptyRow(`${uid}-0`)]);
-  const [medicoQuery, setMedicoQuery] = useState("");
-  const [medicoOpen, setMedicoOpen]   = useState(false);
+  const [rows, setRows] = useState<Row[]>([emptyRow(`${uid}-0`)]);
 
   const { data: almacenes } = useAlmacenesList({ page: 1, pageSize: 100 });
   const { data: insumos   } = useInsumosList({ page: 1, pageSize: 500 });
-  const { data: medicos   } = useQuery({
+  // Médico ahora es FK real (medicos.CatMedico) del lado del backend -- el
+  // combobox fuerza una selección real del catálogo en vez del autocomplete
+  // de texto libre que había antes (ver MedicoNombreField en el serializer).
+  const { data: medicos } = useQuery({
     queryKey: ["medicos-catalogo-consumo"],
     queryFn:  () => medicosAPI.getAll({ estatusMedico: "ACTIVO" }),
     staleTime: 5 * 60 * 1000,
   });
-
-  const medicosFiltrados = (medicos?.items ?? []).filter((m) =>
-    m.nombreCompleto.toLowerCase().includes(medicoQuery.toLowerCase())
-  );
-
-  const seleccionarMedico = (nombre: string) => {
-    setForm((p) => ({ ...p, medico: nombre }));
-    setMedicoQuery(nombre);
-    setMedicoOpen(false);
-  };
-
-  const limpiarMedico = () => {
-    setForm((p) => ({ ...p, medico: "" }));
-    setMedicoQuery("");
-    setMedicoOpen(false);
-  };
+  const medicoOptions = (medicos?.items ?? []).map((m) => ({ id: m.id, name: m.nombreCompleto }));
 
   const handleClose = () => {
     setForm({ idAlmacen: "", paciente: "", medico: "", fchConsumo: new Date().toISOString().split("T")[0], observaciones: "" });
     setRows([emptyRow(`${uid}-reset`)]);
-    setMedicoQuery("");
-    setMedicoOpen(false);
     onOpenChange(false);
   };
 
@@ -143,10 +130,19 @@ export function ConsumoCreateDialog({ open, onOpenChange, onSuccess }: Props) {
           {/* Almacén */}
           <div className="space-y-1">
             <Label>Almacén <span className="text-destructive">*</span></Label>
-            <select value={form.idAlmacen} onChange={f("idAlmacen")} className={selectCls}>
-              <option value="">— Selecciona —</option>
-              {almacenes?.items.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            <Select
+              value={form.idAlmacen}
+              onValueChange={(v) => setForm((p) => ({ ...p, idAlmacen: v }))}
+            >
+              <SelectTrigger className="h-10 w-full">
+                <SelectValue placeholder="— Selecciona —" />
+              </SelectTrigger>
+              <SelectContent>
+                {almacenes?.items.map((a) => (
+                  <SelectItem key={a.id} value={String(a.id)}>{a.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Fecha */}
@@ -161,68 +157,16 @@ export function ConsumoCreateDialog({ open, onOpenChange, onSuccess }: Props) {
             <Input value={form.paciente} onChange={f("paciente")} placeholder="Nombre del paciente" className="h-10" />
           </div>
 
-          {/* Médico — combobox con catálogo */}
+          {/* Médico — combobox con catálogo (selección forzada) */}
           <div className="space-y-1">
             <Label>Médico</Label>
-            <div ref={medicoRef} className="relative">
-              <div className="relative flex items-center">
-                <Input
-                  value={medicoQuery}
-                  onChange={(e) => {
-                    setMedicoQuery(e.target.value);
-                    setForm((p) => ({ ...p, medico: e.target.value }));
-                    setMedicoOpen(true);
-                  }}
-                  onFocus={() => setMedicoOpen(true)}
-                  onBlur={() => setTimeout(() => setMedicoOpen(false), 150)}
-                  placeholder="Buscar o escribir médico…"
-                  className="h-10 pr-16"
-                  autoComplete="off"
-                />
-                <div className="absolute right-2 flex items-center gap-1">
-                  {medicoQuery && (
-                    <button
-                      type="button"
-                      onMouseDown={(e) => { e.preventDefault(); limpiarMedico(); }}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      title="Limpiar"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  )}
-                  <ChevronDown className="size-3.5 text-muted-foreground" />
-                </div>
-              </div>
-
-              {medicoOpen && (
-                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg overflow-hidden">
-                  {medicosFiltrados.length === 0 ? (
-                    <p className="px-3 py-2 text-xs text-muted-foreground">
-                      {medicoQuery.length > 0 ? "Sin coincidencias" : "Escribe para filtrar"}
-                    </p>
-                  ) : (
-                    <ul className="max-h-48 overflow-y-auto">
-                      {medicosFiltrados.map((m) => (
-                        <li key={m.id}>
-                          <button
-                            type="button"
-                            onMouseDown={(e) => { e.preventDefault(); seleccionarMedico(m.nombreCompleto); }}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors ${
-                              form.medico === m.nombreCompleto ? "bg-accent font-medium" : ""
-                            }`}
-                          >
-                            <span className="block font-medium">{m.nombreCompleto}</span>
-                            {m.especialidades[0] && (
-                              <span className="block text-xs text-muted-foreground">{m.especialidades[0].name}</span>
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
+            <CatalogCombobox
+              value={form.medico}
+              onChange={(name) => setForm((p) => ({ ...p, medico: name }))}
+              options={medicoOptions}
+              placeholder="Selecciona un médico..."
+              searchPlaceholder="Buscar médico..."
+            />
           </div>
 
           {/* Observaciones */}
@@ -258,12 +202,19 @@ export function ConsumoCreateDialog({ open, onOpenChange, onSuccess }: Props) {
               {rows.map((row) => (
                 <tr key={row._key} className="border-b last:border-0">
                   <td className="py-1 pr-2">
-                    <select className="w-full border rounded-md px-2 py-1 text-xs"
-                      value={row.idInsumo ?? ""}
-                      onChange={(e) => updateRow(row._key, "idInsumo", e.target.value)}>
-                      <option value="">— Insumo —</option>
-                      {insumos?.items.map((i: CatInsumo) => <option key={i.id} value={i.id}>{i.nombre}</option>)}
-                    </select>
+                    <Select
+                      value={row.idInsumo !== null ? String(row.idInsumo) : ""}
+                      onValueChange={(v) => updateRow(row._key, "idInsumo", v)}
+                    >
+                      <SelectTrigger className="h-8 w-full text-xs">
+                        <SelectValue placeholder="— Insumo —" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {insumos?.items.map((i: CatInsumo) => (
+                          <SelectItem key={i.id} value={String(i.id)}>{i.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </td>
                   <td className="py-1 pr-2">
                     <LoteSelect idInsumo={row.idInsumo} value={row.idLote} onChange={(v) => updateRow(row._key, "idLote", v)} />
@@ -273,7 +224,7 @@ export function ConsumoCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                       onChange={(e) => updateRow(row._key, "cantidad", e.target.value)} placeholder="0" />
                   </td>
                   <td className="py-1">
-                    <Button size="icon" variant="ghost" className="size-7 text-destructive"
+                    <Button size="icon" variant="ghost" className="size-7 text-destructive" aria-label="Eliminar fila"
                       onClick={() => setRows((p) => p.filter((r) => r._key !== row._key))} disabled={rows.length === 1}>
                       <Trash2 className="size-3" />
                     </Button>

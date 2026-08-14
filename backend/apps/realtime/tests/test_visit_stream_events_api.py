@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
+from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.models import DetUsuario, SyUsuario
 from apps.catalogos.models import CatCies, Permisos, Roles
 from apps.recepcion.models import Visit
@@ -59,27 +60,27 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
 
         self.visit_recepcion = Visit.objects.create(
             folio="WS-RCP-0001",
-            patient_id=91001,
+            no_exp="EXP91001",
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id="APP-WS-0001",
             status="en_espera",
         )
         self.visit_somatometria = Visit.objects.create(
             folio="WS-SMT-0001",
-            patient_id=92001,
+            no_exp="EXP92001",
             arrival_type=Visit.ArrivalType.WALK_IN,
             status="en_somatometria",
         )
         self.visit_doctor_ready = Visit.objects.create(
             folio="WS-DOC-0001",
-            patient_id=93001,
+            no_exp="EXP93001",
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id="APP-WS-0002",
             status="lista_para_doctor",
         )
         self.visit_doctor_open = Visit.objects.create(
             folio="WS-DOC-0002",
-            patient_id=93002,
+            no_exp="EXP93002",
             arrival_type=Visit.ArrivalType.APPOINTMENT,
             appointment_id="APP-WS-0003",
             status="en_consulta",
@@ -145,6 +146,12 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
 
     def _login_as(self, username, password):
         self.client.cookies.clear()
+        # Redis (sesion unica) no se limpia entre tests como la DB -- un
+        # user_id reciclado puede arrastrar una sesion "activa" de una
+        # corrida anterior y el login choca con SESSION_ALREADY_ACTIVE (409).
+        user = SyUsuario.objects.filter(usuario=username).first()
+        if user is not None:
+            PolicyStore().clear_active_session(user.id_usuario)
         response = self.client.post(
             "/api/v1/auth/login",
             {"username": username, "password": password},
@@ -334,7 +341,7 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
         response = self.client.post(
             "/api/v1/visits",
             {
-                "patientId": 94001,
+                "noExp": "EXP94001",
                 "arrivalType": "appointment",
                 "appointmentId": "APP-WS-94001",
             },

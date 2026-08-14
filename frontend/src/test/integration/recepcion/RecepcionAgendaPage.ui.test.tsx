@@ -132,7 +132,8 @@ describe("RecepcionAgendaPage UI", () => {
       screen.getByRole("button", { name: "Generar ficha de consulta" }),
     ).toBeVisible();
 
-    await user.selectOptions(screen.getByLabelText("Servicio"), "urgencias");
+    await user.click(screen.getByRole("combobox", { name: "Servicio" }));
+    await user.click(screen.getByRole("option", { name: "Urgencias" }));
 
     expect(screen.getByText("VST-003")).toBeVisible();
     expect(screen.queryByText("VST-001")).not.toBeInTheDocument();

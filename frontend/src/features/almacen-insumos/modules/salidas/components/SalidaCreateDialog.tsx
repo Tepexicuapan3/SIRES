@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Textarea } from "@shared/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
 import { lotesAPI } from "@api/resources/almacen/kardex.api";
 import type { CatInsumo, CreateSalidaDetalleRequest } from "@api/types";
 import { TIPO_SALIDA, TIPO_SALIDA_LABELS } from "@api/types";
@@ -21,17 +22,21 @@ function LoteSelect({ idInsumo, value, onChange }: { idInsumo: number | null; va
     enabled: idInsumo != null,
   });
   return (
-    <select
-      className="h-8 text-xs w-full border rounded-md px-2 py-1"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+    <Select
+      value={value || "none"}
+      onValueChange={(v) => onChange(v === "none" ? "" : v)}
       disabled={!idInsumo}
     >
-      <option value="">— Lote —</option>
-      {data?.items.map((l) => (
-        <option key={l.id} value={l.id}>{l.numLote}</option>
-      ))}
-    </select>
+      <SelectTrigger className="h-8 w-full text-xs">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">— Lote —</SelectItem>
+        {data?.items.map((l) => (
+          <SelectItem key={l.id} value={String(l.id)}>{l.numLote}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -56,7 +61,7 @@ export function SalidaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
 
   const [form, setForm] = useState({
     idAlmacen:  "",
-    tipoSalida: TIPO_SALIDA.SALIDA,
+    tipoSalida: TIPO_SALIDA.SALIDA as (typeof TIPO_SALIDA)[keyof typeof TIPO_SALIDA],
     numFolio:   "",
     fchSalida:  new Date().toISOString().split("T")[0],
     motivo:     "",
@@ -119,16 +124,32 @@ export function SalidaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Almacén *</Label>
-            <select value={form.idAlmacen} onChange={f("idAlmacen")} className="w-full border rounded-md px-3 py-2 text-sm">
-              <option value="">— Selecciona —</option>
-              {almacenes?.items.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            <Select value={form.idAlmacen} onValueChange={(v) => setForm((p) => ({ ...p, idAlmacen: v }))}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="— Selecciona —" />
+              </SelectTrigger>
+              <SelectContent>
+                {almacenes?.items.map((a) => (
+                  <SelectItem key={a.id} value={String(a.id)}>{a.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <Label>Tipo *</Label>
-            <select value={form.tipoSalida} onChange={f("tipoSalida")} className="w-full border rounded-md px-3 py-2 text-sm">
-              {Object.entries(TIPO_SALIDA_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
+            <Select
+              value={form.tipoSalida}
+              onValueChange={(v) => setForm((p) => ({ ...p, tipoSalida: v as (typeof TIPO_SALIDA)[keyof typeof TIPO_SALIDA] }))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TIPO_SALIDA_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <Label>Núm. folio</Label>
@@ -164,12 +185,19 @@ export function SalidaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
               {rows.map((row) => (
                 <tr key={row._key} className="border-b last:border-0">
                   <td className="py-1 pr-2">
-                    <select className="w-full border rounded-md px-2 py-1 text-xs"
-                      value={row.idInsumo ?? ""}
-                      onChange={(e) => updateRow(row._key, "idInsumo", e.target.value)}>
-                      <option value="">— Insumo —</option>
-                      {insumos?.items.map((i: CatInsumo) => <option key={i.id} value={i.id}>{i.nombre}</option>)}
-                    </select>
+                    <Select
+                      value={row.idInsumo !== null ? String(row.idInsumo) : ""}
+                      onValueChange={(v) => updateRow(row._key, "idInsumo", v)}
+                    >
+                      <SelectTrigger className="h-8 w-full text-xs">
+                        <SelectValue placeholder="— Insumo —" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {insumos?.items.map((i: CatInsumo) => (
+                          <SelectItem key={i.id} value={String(i.id)}>{i.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </td>
                   <td className="py-1 pr-2">
                     <LoteSelect idInsumo={row.idInsumo} value={row.idLote} onChange={(v) => updateRow(row._key, "idLote", v)} />
@@ -178,7 +206,7 @@ export function SalidaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
                     <Input className="h-8 text-xs" type="number" min="1" step="1" value={row.cantidad} onChange={(e) => updateRow(row._key, "cantidad", e.target.value)} placeholder="0" />
                   </td>
                   <td className="py-1">
-                    <Button size="icon" variant="ghost" className="size-7 text-destructive"
+                    <Button size="icon" variant="ghost" className="size-7 text-destructive" aria-label="Eliminar fila"
                       onClick={() => setRows((p) => p.filter((r) => r._key !== row._key))} disabled={rows.length === 1}>
                       <Trash2 className="size-3" />
                     </Button>

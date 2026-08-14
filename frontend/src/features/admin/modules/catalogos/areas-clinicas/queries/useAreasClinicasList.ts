@@ -1,22 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
 import { areasClinicasAPI } from "@api/resources/catalogos/areas-clinicas.api";
 import type { AreasClinicasListParams, AreasClinicasListResponse } from "@api/types";
 import { areasClinicasKeys } from "@features/admin/modules/catalogos/areas-clinicas/queries/areas-clinicas.keys";
+import { createCatalogListHook } from "@features/admin/modules/catalogos/shared/queries/createCatalogListHook";
 
-interface Options {
-  enabled?: boolean;
-}
-
-export const useAreasClinicasList = (
-  params?: AreasClinicasListParams,
-  options: Options = {},
-) => {
-  const normalizedParams = params ?? {};
-
-  return useQuery<AreasClinicasListResponse>({
-    queryKey: areasClinicasKeys.list(normalizedParams),
-    queryFn: () => areasClinicasAPI.getAll(normalizedParams),
-    staleTime: 60 * 1000,
-    enabled: options.enabled ?? true,
-  });
-};
+// areasClinicasKeys no se migro a createCatalogKeys: tiene un metodo extra
+// (centroAreasClinicas) que el factory generico no cubre. Solo el hook se
+// simplifica aca -- sigue usando la .list() que ya expone.
+export const useAreasClinicasList = createCatalogListHook<
+  AreasClinicasListParams,
+  AreasClinicasListResponse
+>({
+  keys: areasClinicasKeys,
+  getAll: areasClinicasAPI.getAll,
+});

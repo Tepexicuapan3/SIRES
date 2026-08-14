@@ -1,22 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { escuelasAPI } from "@api/resources/catalogos/escuelas.api";
 import type { EscuelasListParams, EscuelasListResponse } from "@api/types";
 import { escuelasKeys } from "@features/admin/modules/catalogos/escuelas/queries/escuelas.keys";
+import { createCatalogListHook } from "@features/admin/modules/catalogos/shared/queries/createCatalogListHook";
 
-interface Options {
-  enabled?: boolean;
-}
-
-export const useEscuelasList = (
-  params?: EscuelasListParams,
-  options: Options = {},
-) => {
-  const normalizedParams = params ?? {};
-
-  return useQuery<EscuelasListResponse>({
-    queryKey: escuelasKeys.list(normalizedParams),
-    queryFn: () => escuelasAPI.getAll(normalizedParams),
-    staleTime: 60 * 1000,
-    enabled: options.enabled ?? true,
-  });
-};
+export const useEscuelasList = createCatalogListHook<
+  EscuelasListParams,
+  EscuelasListResponse
+>({
+  keys: escuelasKeys,
+  getAll: escuelasAPI.getAll,
+});

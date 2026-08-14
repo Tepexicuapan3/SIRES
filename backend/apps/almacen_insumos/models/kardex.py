@@ -180,7 +180,13 @@ class ConsumoConsulta(CatalogBase):
     id_almacen    = models.ForeignKey(Almacen, on_delete=models.PROTECT, related_name="consumos",  db_column="id_almacen")
     id_cita       = models.BigIntegerField(null=True, blank=True, db_index=True)
     paciente      = models.CharField(max_length=200, blank=True, default="")
-    medico        = models.CharField(max_length=200, blank=True, default="")
+    medico        = models.ForeignKey(
+        "medicos.CatMedico",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="consumos_insumos",
+    )
     fch_consumo   = models.DateField()
     observaciones = models.TextField(blank=True, default="")
 
