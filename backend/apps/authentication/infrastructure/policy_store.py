@@ -129,6 +129,13 @@ class PolicyStore:
 
         raw_client = cache_client.get_client(write=True)
         redis_key = cache.make_key(key) if hasattr(cache, "make_key") else key
+        # django-redis guarda el valor codificado (pickle/compresor), no el string
+        # crudo -- hay que codificar expected_code igual antes de comparar en Lua,
+        # si no la comparacion nunca coincide aunque el codigo sea correcto.
+        try:
+            encoded_expected = cache_client.encode(expected_code)
+        except Exception:
+            return None
         script = """
         local stored = redis.call('GET', KEYS[1])
         if not stored then
@@ -140,5 +147,5 @@ class PolicyStore:
         redis.call('DEL', KEYS[1])
         return 1
         """
-        result = raw_client.eval(script, 1, redis_key, expected_code)
+        result = raw_client.eval(script, 1, redis_key, encoded_expected)
         return int(result) == 1

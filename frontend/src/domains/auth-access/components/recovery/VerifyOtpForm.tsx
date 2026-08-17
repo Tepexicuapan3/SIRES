@@ -179,7 +179,7 @@ export const VerifyOtpForm = ({ email, onSuccess, onBack }: Props) => {
               <Loader2 className="size-5 animate-spin text-brand" />
             ) : (
               <p className="text-xs text-txt-hint">
-                El código expira en 10 minutos
+                El código expira en 5 minutos
               </p>
             )}
           </div>
