@@ -83,7 +83,6 @@ class VitalsContractsApiTests(APITestCase):
             nombre=username,
             paterno="Test",
             materno="User",
-            nombre_completo=f"{username} Test User",
         )
         role, _ = Roles.objects.get_or_create(
             rol=role_code,

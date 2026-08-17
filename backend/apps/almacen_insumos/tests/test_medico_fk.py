@@ -24,9 +24,11 @@ def _make_medico(username, nombre_completo):
         usuario=username, correo=f"{username}@example.com", clave_hash=make_password("x"),
         est_activo=True,
     )
+    partes = nombre_completo.split()
+    nombre, paterno = partes[0], partes[1] if len(partes) > 1 else ""
+    materno = " ".join(partes[2:])
     DetUsuario.objects.create(
-        id_usuario=user, nombre=nombre_completo.split()[0], paterno="Test", materno="User",
-        nombre_completo=nombre_completo,
+        id_usuario=user, nombre=nombre, paterno=paterno, materno=materno,
     )
     return CatMedico.objects.create(id_usuario=user)
 

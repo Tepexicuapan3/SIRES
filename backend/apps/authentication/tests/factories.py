@@ -28,7 +28,6 @@ def build_auth_user_fixture(
         nombre="Abel",
         paterno="Buendia",
         materno="Velazco",
-        nombre_completo="Abel Buendia Velazco",
     )
 
     role = Roles.objects.create(

@@ -75,7 +75,6 @@ class VisitContractsApiTests(APITestCase):
             nombre=username,
             paterno="Test",
             materno="User",
-            nombre_completo=f"{username} Test User",
         )
         resolved_landing_route = landing_route or (
             "/recepcion" if role_code == "RECEPCION" else "/consultas"

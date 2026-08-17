@@ -33,7 +33,6 @@ class AuthObservabilityApiTests(APITestCase):
             nombre="Obs",
             paterno="Admin",
             materno="",
-            nombre_completo="Obs Admin",
         )
         self.admin_role = Roles.objects.create(
             rol="AUTH_OBS_ADMIN",

@@ -46,7 +46,6 @@ class AuthApiTests(APITestCase):
             nombre="Abel",
             paterno="Buendia",
             materno="Velazco",
-            nombre_completo="Abel Buendia Velazco",
         )
         self.role = Roles.objects.create(
             rol="MEDICO",

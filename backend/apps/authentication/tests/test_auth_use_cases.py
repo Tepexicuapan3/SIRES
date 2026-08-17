@@ -32,7 +32,6 @@ class AuthUseCasesTests(TestCase):
             nombre="Usecase",
             paterno="User",
             materno="",
-            nombre_completo="Usecase User",
         )
 
     @patch("apps.authentication.uses_case.onboarding_usecase.validate_password")
@@ -86,7 +85,6 @@ class AuthUseCasesTests(TestCase):
         self.user.detalle.nombre = ""
         self.user.detalle.paterno = ""
         self.user.detalle.materno = ""
-        self.user.detalle.nombre_completo = ""
         self.user.detalle.save()
 
         code_mock.return_value = "123456"

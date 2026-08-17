@@ -48,7 +48,6 @@ class AuthCoreServicesTests(TestCase):
             nombre="Core",
             paterno="User",
             materno="",
-            nombre_completo="Core User",
         )
 
     def test_get_request_id_and_error_response_payload(self):

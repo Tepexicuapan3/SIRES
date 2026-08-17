@@ -71,7 +71,7 @@ class GetSlotsPortalTests(TestCase):
             usuario=username, correo=f"{username}@example.com", clave_hash="x", est_activo=True,
         )
         DetUsuario.objects.create(
-            id_usuario=usuario, nombre="Dr", paterno=username, nombre_completo=f"Dr {username}",
+            id_usuario=usuario, nombre="Dr", paterno=username,
         )
         return CatMedico.objects.create(id_usuario=usuario)
 

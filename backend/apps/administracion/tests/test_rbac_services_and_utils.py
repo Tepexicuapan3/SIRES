@@ -146,7 +146,6 @@ class RbacResolverTests(TestCase):
             nombre="Resolver",
             paterno="User",
             materno="",
-            nombre_completo="Resolver User",
         )
 
         self.role = Roles.objects.create(
@@ -691,7 +690,6 @@ class RbacViewHelpersTests(TestCase):
             nombre="Helper",
             paterno="Roles",
             materno="",
-            nombre_completo="Helper Roles",
         )
         role = Roles.objects.create(
             rol="HELPER_ROLE_NO_PRIMARY",

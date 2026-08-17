@@ -1001,7 +1001,6 @@ def _get_or_create_user(username, email, full_name, center, admin_user=None, **f
             "nombre": first_name,
             "paterno": paternal_name,
             "materno": maternal_name,
-            "nombre_completo": full_name,
             "id_centro_atencion": center,
         },
     )

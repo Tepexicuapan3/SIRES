@@ -82,7 +82,6 @@ class CatalogosContractTests(APITestCase):
             nombre="Admin",
             paterno="Catalog",
             materno="",
-            nombre_completo="Admin Catalog",
         )
 
         role = Roles.objects.create(

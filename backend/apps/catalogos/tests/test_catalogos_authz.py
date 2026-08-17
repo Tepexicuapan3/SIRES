@@ -70,7 +70,6 @@ class CatalogosAuthzTests(APITestCase):
             nombre="Catalog",
             paterno="User",
             materno="",
-            nombre_completo="Catalog User",
         )
         RelUsuarioRol.objects.create(id_usuario=self.user, id_rol=self.role, is_primary=True)
 

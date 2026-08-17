@@ -25,7 +25,6 @@ class AuthPermissionsTests(TestCase):
             nombre="Admin",
             paterno="User",
             materno="",
-            nombre_completo="Admin User",
         )
 
     def test_build_auth_user_sets_admin_permissions_and_capabilities(self):

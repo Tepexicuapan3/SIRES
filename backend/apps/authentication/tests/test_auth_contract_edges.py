@@ -38,7 +38,6 @@ class AuthContractEdgeTests(APITestCase):
             nombre="Edge",
             paterno="User",
             materno="",
-            nombre_completo="Edge User",
         )
 
         role = Roles.objects.create(

@@ -38,7 +38,7 @@ class GetDisponibilidadMensualTests(TestCase):
             usuario="medico.mensual", correo="medico.mensual@example.com", clave_hash="x", est_activo=True,
         )
         DetUsuario.objects.create(
-            id_usuario=usuario, nombre="Dr", paterno="Mensual", nombre_completo="Dr Mensual",
+            id_usuario=usuario, nombre="Dr", paterno="Mensual",
         )
         self.medico = CatMedico.objects.create(id_usuario=usuario)
 

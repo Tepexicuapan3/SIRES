@@ -150,7 +150,6 @@ def _upsert_user(
             "nombre": username.split("_")[0].capitalize(),
             "paterno": "Auth",
             "materno": "Access",
-            "nombre_completo": f"{username.split('_')[0].capitalize()} Auth Access",
         },
     )
     return user, created

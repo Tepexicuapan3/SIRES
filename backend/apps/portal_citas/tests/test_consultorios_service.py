@@ -47,7 +47,6 @@ class ListarConsultoriosEnLineaTests(TestCase):
             id_usuario=usuario,
             nombre="Ana",
             paterno="Ruiz",
-            nombre_completo="Ana Ruiz",
         )
         self.medico = CatMedico.objects.create(id_usuario=usuario)
 
@@ -191,7 +190,6 @@ class ListarConsultoriosEnLineaFiltroCentroTests(TestCase):
             id_usuario=usuario,
             nombre="Luis",
             paterno="Diaz",
-            nombre_completo="Luis Diaz",
         )
         self.medico = CatMedico.objects.create(id_usuario=usuario)
 
@@ -270,7 +268,6 @@ class ListarCentrosEnLineaTests(TestCase):
             id_usuario=usuario,
             nombre="Ana",
             paterno="Ruiz",
-            nombre_completo="Ana Ruiz",
         )
         self.medico = CatMedico.objects.create(id_usuario=usuario)
 

@@ -166,7 +166,6 @@ class PortalCentrosYFiltroClinicaTests(APITestCase):
             id_usuario=usuario,
             nombre="Bea",
             paterno="Soto",
-            nombre_completo="Bea Soto",
         )
         self.medico = CatMedico.objects.create(id_usuario=usuario)
 
@@ -328,7 +327,6 @@ class PortalCitasPrivacidadMedicoRegresionTests(APITestCase):
             id_usuario=usuario,
             nombre="Carla",
             paterno="Nunez",
-            nombre_completo="Carla Nunez",
         )
         self.medico = CatMedico.objects.create(id_usuario=usuario)
 

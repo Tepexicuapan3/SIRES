@@ -34,7 +34,6 @@ class RbacUsersApiTests(APITestCase):
             nombre="Admin",
             paterno="Users",
             materno="",
-            nombre_completo="Admin Users",
         )
 
         self.admin_role = Roles.objects.create(
@@ -92,7 +91,6 @@ class RbacUsersApiTests(APITestCase):
             nombre="Target",
             paterno="User",
             materno="",
-            nombre_completo="Target User",
             id_centro_atencion=self.clinic,
         )
         RelUsuarioRol.objects.create(
@@ -166,7 +164,6 @@ class RbacUsersApiTests(APITestCase):
             nombre="Pending",
             paterno="User",
             materno="",
-            nombre_completo="Pending User",
         )
         RelUsuarioRol.objects.create(
             id_usuario=pending_user,
@@ -452,7 +449,6 @@ class RbacUsersApiTests(APITestCase):
             nombre="Another",
             paterno="User",
             materno="",
-            nombre_completo="Another User",
         )
 
         response = self.client.patch(
@@ -1117,7 +1113,6 @@ class RbacUsersApiTests(APITestCase):
             nombre="Limited",
             paterno="Self",
             materno="",
-            nombre_completo="Limited Self",
         )
         RelUsuarioRol.objects.create(
             id_usuario=limited_actor, id_rol=limited_role, is_primary=True
@@ -1185,7 +1180,6 @@ class RbacUsersApiTests(APITestCase):
             nombre="Limited",
             paterno="Scope",
             materno="",
-            nombre_completo="Limited Scope",
         )
         RelUsuarioRol.objects.create(
             id_usuario=limited_actor, id_rol=limited_role, is_primary=True
@@ -1251,7 +1245,6 @@ class RbacUsersApiTests(APITestCase):
             nombre="Limited",
             paterno="System",
             materno="",
-            nombre_completo="Limited System",
         )
         RelUsuarioRol.objects.create(
             id_usuario=limited_actor, id_rol=limited_role, is_primary=True
@@ -1316,7 +1309,6 @@ class RbacUsersApiTests(APITestCase):
             nombre="Limited",
             paterno="Remove",
             materno="",
-            nombre_completo="Limited Remove",
         )
         RelUsuarioRol.objects.create(
             id_usuario=limited_actor, id_rol=limited_role, is_primary=True

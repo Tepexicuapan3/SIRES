@@ -1,4 +1,43 @@
 from django.db import models
+from django.db.models import CharField, F, Func, GeneratedField, Value
+from django.db.models.functions import Coalesce, NullIf, Trim
+
+# Postgres's CONCAT_WS()/CONCAT() are marked STABLE (not IMMUTABLE) because
+# they accept a variadic "any" argument list, so they are rejected by
+# Postgres in GENERATED column expressions ("la expresion de generacion no
+# es inmutable"). We reproduce the same skip-empty-join semantics using only
+# the IMMUTABLE `||` concatenation operator, NULLIF, COALESCE and TRIM.
+
+
+def _name_part_with_trailing_space(field_name: str):
+    # "<valor> " si el campo tiene contenido, "" si esta vacio/NULL.
+    # Concatenar estas piezas y hacer TRIM() al final reproduce
+    # " ".join(part for part in [nombre, paterno, materno] if part)
+    # sin espacios sobrantes cuando alguna de las 3 partes esta vacia
+    # (no solo materno -- nombre/paterno tambien pueden venir en "").
+    return Coalesce(
+        Func(
+            NullIf(F(field_name), Value("")),
+            Value(" "),
+            template="%(expressions)s",
+            arg_joiner=" || ",
+            output_field=CharField(),
+        ),
+        Value(""),
+        output_field=CharField(),
+    )
+
+
+_NOMBRE_COMPLETO_EXPRESSION = Trim(
+    Func(
+        _name_part_with_trailing_space("nombre"),
+        _name_part_with_trailing_space("paterno"),
+        _name_part_with_trailing_space("materno"),
+        template="%(expressions)s",
+        arg_joiner=" || ",
+        output_field=CharField(max_length=255),
+    )
+)
 
 
 class SyUsuario(models.Model):
@@ -68,7 +107,12 @@ class DetUsuario(models.Model):
     nombre = models.CharField(max_length=80)
     paterno = models.CharField(max_length=80)
     materno = models.CharField(max_length=80, null=True, blank=True)
-    nombre_completo = models.CharField(max_length=255, db_index=True)
+    nombre_completo = GeneratedField(
+        expression=_NOMBRE_COMPLETO_EXPRESSION,
+        output_field=CharField(max_length=255),
+        db_persist=True,
+        db_index=True,
+    )
     id_centro_atencion = models.ForeignKey(
         "catalogos.CatCentroAtencion",
         db_column="id_centro_atencion",

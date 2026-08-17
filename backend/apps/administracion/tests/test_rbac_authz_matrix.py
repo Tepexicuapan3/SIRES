@@ -25,7 +25,6 @@ class RbacAuthzMatrixTests(APITestCase):
             nombre="NoPriv",
             paterno="User",
             materno="",
-            nombre_completo="NoPriv User",
         )
 
         role = Roles.objects.create(
@@ -61,7 +60,6 @@ class RbacAuthzMatrixTests(APITestCase):
             nombre="Target",
             paterno="NoPriv",
             materno="",
-            nombre_completo="Target NoPriv",
         )
         RelUsuarioRol.objects.create(
             id_usuario=self.target_user,

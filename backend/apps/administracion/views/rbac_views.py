@@ -1469,7 +1469,6 @@ class UsersListCreateView(APIView):
             nombre=request.data.get("firstName"),
             paterno=request.data.get("paternalName"),
             materno=maternal_name,
-            nombre_completo=full_name,
             id_centro_atencion=clinic,
             no_exp=request.data.get("noExp") or None,
             cd_laboral=request.data.get("cdLaboral") or None,
@@ -1693,7 +1692,6 @@ class UserDetailView(APIView):
                 nombre="",
                 paterno="",
                 materno="",
-                nombre_completo="",
             )
 
         if "email" in request.data:
@@ -1816,11 +1814,6 @@ class UserDetailView(APIView):
                     )
                 detail.id_area_clinica = area
 
-        detail.nombre_completo = " ".join(
-            part
-            for part in [detail.nombre, detail.paterno, detail.materno or ""]
-            if part
-        ).strip()
         detail.save()
 
         if "cedulas" in request.data:

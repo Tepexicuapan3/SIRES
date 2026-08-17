@@ -25,7 +25,6 @@ class RbacContractTests(APITestCase):
             nombre="Admin",
             paterno="RBAC",
             materno="",
-            nombre_completo="Admin RBAC",
         )
 
         self.role = Roles.objects.create(
@@ -145,7 +144,6 @@ class RbacReadS1ParityTests(APITestCase):
             nombre="Admin",
             paterno="RBAC",
             materno="S1",
-            nombre_completo="Admin RBAC S1",
         )
 
         self.role = Roles.objects.create(

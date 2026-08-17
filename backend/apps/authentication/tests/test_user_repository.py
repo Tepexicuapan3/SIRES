@@ -25,7 +25,6 @@ class UserRepositoryTests(TestCase):
             nombre="Repo",
             paterno="User",
             materno="",
-            nombre_completo="Repo User",
         )
         self.role = Roles.objects.create(
             rol="REPO_ROLE",
@@ -55,7 +54,6 @@ class UserRepositoryTests(TestCase):
         self.assertFalse(self.user.est_bloqueado)
 
     def test_build_auth_user_uses_name_parts_when_full_name_missing(self):
-        self.detail.nombre_completo = ""
         self.detail.nombre = "Repo"
         self.detail.paterno = "Fallback"
         self.detail.materno = "Name"

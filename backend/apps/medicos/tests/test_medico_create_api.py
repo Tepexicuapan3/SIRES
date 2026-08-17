@@ -60,7 +60,6 @@ class MedicoCreateApiTests(APITestCase):
             nombre=username,
             paterno="Test",
             materno="User",
-            nombre_completo=f"{username} Test User",
             id_tipo_personal=tipo_personal,
         )
         RelUsuarioRol.objects.create(id_usuario=user, id_rol=self.role, is_primary=True)

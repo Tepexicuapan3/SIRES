@@ -68,7 +68,6 @@ class CheckinManualApiTests(APITestCase):
         )
         DetUsuario.objects.create(
             id_usuario=medico_user, nombre="Medico", paterno="Checkin", materno="Test",
-            nombre_completo="Medico Checkin Test",
         )
         self.medico = CatMedico.objects.create(id_usuario=medico_user)
 
@@ -83,7 +82,6 @@ class CheckinManualApiTests(APITestCase):
         )
         DetUsuario.objects.create(
             id_usuario=user, nombre=username, paterno="Test", materno="User",
-            nombre_completo=f"{username} Test User",
         )
         role = Roles.objects.create(
             rol=role_code, desc_rol=f"Rol {role_code}",

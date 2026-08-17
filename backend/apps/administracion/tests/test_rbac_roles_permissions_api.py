@@ -28,7 +28,6 @@ class RbacRolesPermissionsApiTests(APITestCase):
             nombre="Admin",
             paterno="Roles",
             materno="",
-            nombre_completo="Admin Roles",
         )
 
         self.admin_role = Roles.objects.create(
@@ -299,7 +298,6 @@ class RbacRolesPermissionsApiTests(APITestCase):
             nombre="Medico",
             paterno="Activo",
             materno="",
-            nombre_completo="Medico Activo",
         )
         RelUsuarioRol.objects.create(
             id_usuario=user, id_rol=self.target_role, is_primary=True
@@ -520,7 +518,6 @@ class RbacRolesPermissionsApiTests(APITestCase):
             nombre="Role",
             paterno="Sync",
             materno="User",
-            nombre_completo="Role Sync User",
         )
         RelUsuarioRol.objects.create(
             id_usuario=target_user,
@@ -645,7 +642,6 @@ class RbacRolesPermissionsApiTests(APITestCase):
             nombre="Limited",
             paterno="Manager",
             materno="",
-            nombre_completo="Limited Manager",
         )
         RelUsuarioRol.objects.create(
             id_usuario=limited_user, id_rol=limited_role, is_primary=True
@@ -700,7 +696,6 @@ class RbacRolesPermissionsApiTests(APITestCase):
             nombre="Limited",
             paterno="Admin",
             materno="",
-            nombre_completo="Limited Admin",
         )
         RelUsuarioRol.objects.create(
             id_usuario=limited_user, id_rol=limited_role, is_primary=True
@@ -755,7 +750,6 @@ class RbacRolesPermissionsApiTests(APITestCase):
             nombre="Limited",
             paterno="Granter",
             materno="",
-            nombre_completo="Limited Granter",
         )
         RelUsuarioRol.objects.create(
             id_usuario=limited_user, id_rol=limited_role, is_primary=True
