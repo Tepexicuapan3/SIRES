@@ -185,6 +185,20 @@ class RbacUsersApiTests(APITestCase):
         usernames_search = {item["username"] for item in response_search.data["items"]}
         self.assertIn("target_user", usernames_search)
 
+        # Busqueda multi-palabra cruzando campos: "target_user" solo matchea
+        # en `usuario` y "Target" solo matchea en `nombre_completo` -- ningun
+        # campo individual contiene la frase completa "target_user Target",
+        # asi que esto solo encuentra al usuario si cada palabra se busca
+        # por separado contra usuario/correo/nombre_completo.
+        response_cross_field = self.client.get(
+            "/api/v1/users?search=target_user Target"
+        )
+        self.assertEqual(response_cross_field.status_code, status.HTTP_200_OK)
+        usernames_cross_field = {
+            item["username"] for item in response_cross_field.data["items"]
+        }
+        self.assertIn("target_user", usernames_cross_field)
+
         response_is_active = self.client.get("/api/v1/users?isActive=true")
         self.assertEqual(response_is_active.status_code, status.HTTP_200_OK)
 

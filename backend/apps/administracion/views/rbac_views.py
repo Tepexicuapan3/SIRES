@@ -143,6 +143,30 @@ def _generate_temporary_password(length=TEMP_PASSWORD_LENGTH):
         return candidate
 
 
+def _apply_user_search_filter(queryset, search, *, path_prefix="", include_correo=True):
+    # Busqueda multi-palabra: cada palabra del texto buscado debe aparecer
+    # en usuario, correo (opcional) o nombre_completo (en cualquiera de los
+    # tres, no necesariamente en el mismo campo). Permite buscar
+    # "jgarcia juan" y encontrar al usuario jgarcia01 llamado Juan sin
+    # concatenar ni guardar nada nuevo -- se resuelve con los campos
+    # existentes en cada consulta.
+    #
+    # `path_prefix` permite reusar este filtro desde modelos que llegan a
+    # SyUsuario/DetUsuario por relacion (ej. "id_usuario__" desde CatMedico).
+    if not search:
+        return queryset
+
+    for token in search.split():
+        query = Q(**{f"{path_prefix}usuario__icontains": token}) | Q(
+            **{f"{path_prefix}detalle__nombre_completo__icontains": token}
+        )
+        if include_correo:
+            query |= Q(**{f"{path_prefix}correo__icontains": token})
+        queryset = queryset.filter(query)
+
+    return queryset
+
+
 def _parse_bool(raw_value):
     if raw_value is None:
         return None
@@ -1236,12 +1260,7 @@ class UsersListCreateView(APIView):
         ).all()
 
         search = request.query_params.get("search")
-        if search:
-            queryset = queryset.filter(
-                Q(usuario__icontains=search)
-                | Q(correo__icontains=search)
-                | Q(detalle__nombre_completo__icontains=search)
-            )
+        queryset = _apply_user_search_filter(queryset, search)
 
         is_active_raw = _parse_bool(request.query_params.get("isActive"))
         if is_active_raw == "invalid":
@@ -2515,12 +2534,7 @@ class UserExportView(APIView):
         ).prefetch_related("cedulas", _ROLES_PREFETCH).all()
 
         search = request.query_params.get("search")
-        if search:
-            qs = qs.filter(
-                Q(usuario__icontains=search)
-                | Q(correo__icontains=search)
-                | Q(detalle__nombre_completo__icontains=search)
-            )
+        qs = _apply_user_search_filter(qs, search)
 
         is_active_raw = _parse_bool(request.query_params.get("isActive"))
         if is_active_raw not in (None, "invalid"):

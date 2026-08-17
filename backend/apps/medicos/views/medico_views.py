@@ -6,14 +6,17 @@ Usa el mismo patrón de autorización que rbac_views.py.
 from datetime import date
 
 from django.db import transaction
-from django.db.models import Q
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
 from apps.authentication.services.response_service import error_response
-from apps.administracion.views.rbac_views import _authorize, _request_id
+from apps.administracion.views.rbac_views import (
+    _apply_user_search_filter,
+    _authorize,
+    _request_id,
+)
 from apps.authentication.models import SyUsuario
 from apps.medicos.models import (
     CatMedico,
@@ -164,11 +167,9 @@ class MedicosListCreateView(APIView):
             qs = qs.filter(estatus_medico=estatus)
 
         search = request.query_params.get("search")
-        if search:
-            qs = qs.filter(
-                Q(id_usuario__detalle__nombre_completo__icontains=search) |
-                Q(id_usuario__usuario__icontains=search)
-            )
+        qs = _apply_user_search_filter(
+            qs, search, path_prefix="id_usuario__", include_correo=False
+        )
 
         items = [_serialize_medico(m) for m in qs.order_by("id_usuario__detalle__nombre_completo")]
         return Response({"items": items, "total": len(items)})
