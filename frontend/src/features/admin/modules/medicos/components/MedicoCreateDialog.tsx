@@ -155,7 +155,9 @@ export function MedicoCreateDialog({ open, onOpenChange, onCreated }: Props) {
     { search: debouncedSearch, pageSize: 20, page: 1 },
     { enabled: open && debouncedSearch.length >= 2 },
   );
-  const medicoUsers = (usersData?.items ?? []).filter((u) => u.tipoPersonal?.name === "MEDICO");
+  const medicoUsers = (usersData?.items ?? []).filter(
+    (u) => (u.tipoPersonal?.name ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase() === "MEDICO",
+  );
 
   const { data: espData }    = useEspecialidadesList({ pageSize: 100, isActive: true });
   const espOptions: CatalogOption[] = (espData?.items ?? []).map((e) => ({ id: e.id, name: e.name, isActive: e.isActive }));

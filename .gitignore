@@ -27,6 +27,10 @@ frontend/.env
 !**/.env.development
 !**/.env.production
 
+# Secrets - credenciales Oracle cifradas, no deben subirse
+backend/config.json
+backend/apps/administracion/config.json
+
 # Build outputs
 dist/
 build/
