@@ -1,8 +1,19 @@
 # Visit.doctor_id vivia como entero suelto aunque siempre referencio a
-# authentication.SyUsuario (verificado: 0 huerfanos contra esa tabla en
-# datos reales, y visit_repository.py / ficha_service.py ya lo resuelven
-# via DetUsuario.objects.filter(id_usuario_id=visit.doctor_id) -- la
-# aplicacion siempre lo trato como un id de usuario, nunca como texto).
+# authentication.SyUsuario (la aplicacion siempre lo trato como un id de
+# usuario, nunca como texto, via visit_repository.py / ficha_service.py).
+#
+# La verificacion de "0 huerfanos" original corrio contra datos de
+# desarrollo, no contra produccion -- en produccion SI hay filas de
+# rcp_visits con doctor_id apuntando a un SyUsuario que ya no existe
+# (medico dado de baja/eliminado sin limpiar la referencia). El intento
+# de aplicar el AlterField sin este backfill fallo con IntegrityError
+# (ver incidente: doctor_id=120 no presente en sy_usuarios). Postgres
+# revirtio la migracion completa al fallar -- no hubo perdida de datos.
+#
+# Este backfill deja en NULL cualquier doctor_id huerfano ANTES de crear
+# la constraint. Es coherente con on_delete=SET_NULL de mas abajo: un
+# doctor_id que ya no existe es exactamente el caso que SET_NULL esta
+# pensado para representar.
 #
 # db_column="doctor_id" se mantiene identico, asi que el RenameField no
 # genera SQL de columna -- el AlterField que sigue solo agrega la
@@ -10,6 +21,30 @@
 # recrea porque el nombre del campo Python cambio (la columna fisica no).
 import django.db.models.deletion
 from django.db import migrations, models
+
+
+def _null_orphan_doctor_ids(apps, schema_editor):
+    Visit = apps.get_model("recepcion", "Visit")
+    SyUsuario = apps.get_model("authentication", "SyUsuario")
+
+    valid_ids = set(SyUsuario.objects.values_list("id_usuario", flat=True))
+    orphans = list(
+        Visit.objects.exclude(doctor_id__isnull=True)
+        .exclude(doctor_id__in=valid_ids)
+        .values_list("id_visit", "folio", "doctor_id")
+    )
+
+    if not orphans:
+        return
+
+    print(
+        f"[0019_doctor_fk_integrity] {len(orphans)} visita(s) con doctor_id "
+        "huerfano -- se ponen en NULL antes de crear la constraint FK:"
+    )
+    for visit_id, folio, doctor_id in orphans:
+        print(f"  - visit id_visit={visit_id} folio={folio} doctor_id={doctor_id} (no existe en sy_usuarios)")
+
+    Visit.objects.filter(id_visit__in=[row[0] for row in orphans]).update(doctor_id=None)
 
 
 class Migration(migrations.Migration):
@@ -24,6 +59,7 @@ class Migration(migrations.Migration):
             model_name="visit",
             name="rcp_visits_doc_status_idx",
         ),
+        migrations.RunPython(_null_orphan_doctor_ids, migrations.RunPython.noop),
         migrations.RenameField(
             model_name="visit",
             old_name="doctor_id",
