@@ -9,6 +9,7 @@ import { Skeleton } from "@shared/ui/skeleton";
 import { CentroAtencionDetailsGeneralSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsGeneralSection";
 import { CentroAtencionDetailsHorariosSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsHorariosSection";
 import { CentroAtencionDetailsExcepcionesSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsExcepcionesSection";
+import { CentroAtencionDetailsConsultoriosSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsConsultoriosSection";
 import { CentroAtencionDialogHeader } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDialogHeader";
 import {
   centroAtencionDetailsSchema,
@@ -292,6 +293,16 @@ export function CentroAtencionDetailsDialog({
         label: "Excepciones",
         content: (
           <CentroAtencionDetailsExcepcionesSection
+            centerId={centerDetail.id}
+            canEdit={canEdit}
+          />
+        ),
+      },
+      {
+        id: "consultorios",
+        label: "Consultorios",
+        content: (
+          <CentroAtencionDetailsConsultoriosSection
             centerId={centerDetail.id}
             canEdit={canEdit}
           />

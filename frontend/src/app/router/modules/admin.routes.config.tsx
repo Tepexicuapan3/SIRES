@@ -9,7 +9,6 @@ import CiesPage from "@features/admin/modules/catalogos/cies/pages/CiesPage";
 import AutorizadoresPage from "@features/admin/modules/catalogos/autorizadores/pages/AutorizadoresPage";
 import BajasPage from "@features/admin/modules/catalogos/bajas/pages/BajasPage";
 import CalidadLaboralPage from "@features/admin/modules/catalogos/calidad-laboral/pages/CalidadLaboralPage";
-import ConsultoriosPage from "@features/admin/modules/catalogos/consultorios/pages/ConsultoriosPage";
 import EdoCivilPage from "@features/admin/modules/catalogos/edo-civil/pages/EdoCivilPage";
 import EnfermedadesPage from "@features/admin/modules/catalogos/enfermedades/pages/EnfermedadesPage";
 import EscolaridadPage from "@features/admin/modules/catalogos/escolaridad/pages/EscolaridadPage";
@@ -151,14 +150,6 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:calidad_laboral:read">
             <CalidadLaboralPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "consultorios",
-        element: (
-          <ProtectedRoute requiredPermission="admin:catalogos:consultorios:read">
-            <ConsultoriosPage />
           </ProtectedRoute>
         ),
       },

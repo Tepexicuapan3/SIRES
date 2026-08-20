@@ -25,7 +25,6 @@ import { ScrollArea } from "@shared/ui/ScrollArea";
 import { ConsultorioDialogHeader } from "@features/admin/modules/catalogos/consultorios/components/ConsultorioDialogHeader";
 import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/shared/components/CatalogCreateResultCard";
 import { CatalogFkCombobox } from "@shared/ui/catalog-fk-combobox";
-import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useTurnosList } from "@features/admin/modules/catalogos/turnos/queries/useTurnosList";
 import {
   createConsultorioSchema,
@@ -38,39 +37,38 @@ import type { CreateConsultorioResponse } from "@api/types";
 interface ConsultorioCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  centerId: number;
 }
-
-const DEFAULT_VALUES: CreateConsultorioFormValues = {
-  name: "",
-  numero: "",
-  idTurn: 0,
-  idCenter: 0,
-};
 
 const FORM_ID = "consultorio-create-form";
 
 export function ConsultorioCreateDialog({
   open,
   onOpenChange,
+  centerId,
 }: ConsultorioCreateDialogProps) {
   const [createdConsultorio, setCreatedConsultorio] =
     useState<CreateConsultorioResponse | null>(null);
   const createConsultorio = useCreateConsultorio();
 
-  const { data: centrosData } = useCentrosAtencionList({ isActive: true }, { enabled: open });
-  const centrosOptions = (centrosData?.items ?? []).map((c) => ({ id: c.id, name: c.name }));
-
   const { data: turnosData } = useTurnosList({ isActive: true }, { enabled: open });
   const turnosOptions = (turnosData?.items ?? []).map((t) => ({ id: t.id, name: t.name }));
 
+  const defaultValues: CreateConsultorioFormValues = {
+    name: "",
+    numero: "",
+    idTurn: 0,
+    idCenter: centerId,
+  };
+
   const form = useForm<CreateConsultorioFormValues>({
     resolver: zodResolver(createConsultorioSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues,
   });
 
   const handleDialogOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
-      form.reset(DEFAULT_VALUES);
+      form.reset(defaultValues);
       setCreatedConsultorio(null);
     }
     onOpenChange(nextOpen);
@@ -83,7 +81,7 @@ export function ConsultorioCreateDialog({
           name: values.name,
           numero: Number(values.numero),
           idTurn: values.idTurn,
-          idCenter: values.idCenter,
+          idCenter: centerId,
           isActive: true,
         },
       });
@@ -92,7 +90,7 @@ export function ConsultorioCreateDialog({
       toast.success("Consultorio creado", {
         description: `El consultorio ${result.name} se creo correctamente.`,
       });
-      form.reset(DEFAULT_VALUES);
+      form.reset(defaultValues);
     } catch (error) {
       toast.error("No se pudo crear el consultorio", {
         description: getConsultorioErrorMessage(
@@ -171,25 +169,6 @@ export function ConsultorioCreateDialog({
                                 onChange={field.onChange}
                                 placeholder="Selecciona un turno"
                                 searchPlaceholder="Buscar turno..."
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="idCenter"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Centro de atención</FormLabel>
-                            <FormControl>
-                              <CatalogFkCombobox
-                                options={centrosOptions}
-                                value={field.value}
-                                onChange={field.onChange}
-                                placeholder="Selecciona un centro"
-                                searchPlaceholder="Buscar centro..."
                               />
                             </FormControl>
                             <FormMessage />

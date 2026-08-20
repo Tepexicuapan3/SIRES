@@ -1,7 +1,6 @@
 export const CATALOGOS = {
   CENTROS_ATENCION: "centros-atencion",
   AREAS: "areas",
-  CONSULTORIOS: "consultorios",
   CIES: "cies",
 } as const;
 

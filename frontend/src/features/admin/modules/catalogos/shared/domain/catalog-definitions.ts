@@ -29,14 +29,6 @@ export const catalogDefinitions = {
     endpoint: "labor-quality",
     permissionRead: "admin:catalogos:calidad_laboral:read",
   },
-  consultorios: {
-    slug: "consultorios",
-    title: "Consultorios",
-    description: "Catalogo de consultorios disponibles por centro.",
-    endpoint: "consulting-rooms",
-    permissionRead: "admin:catalogos:consultorios:read",
-    hasCodeColumn: true,
-  },
   edoCivil: {
     slug: "edo-civil",
     title: "Estado civil",

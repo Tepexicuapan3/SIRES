@@ -113,11 +113,6 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["admin:catalogos:calidad_laboral:read"],
           },
           {
-            title: "Consultorios",
-            url: "/admin/catalogos/consultorios",
-            permissions: ["admin:catalogos:consultorios:read"],
-          },
-          {
             title: "Estado civil",
             url: "/admin/catalogos/edo-civil",
             permissions: ["admin:catalogos:edo_civil:read"],
