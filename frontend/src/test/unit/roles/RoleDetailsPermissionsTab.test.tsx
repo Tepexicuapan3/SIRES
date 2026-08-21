@@ -206,4 +206,50 @@ describe("RoleDetailsPermissionsTab", () => {
       ),
     ).toBeVisible();
   });
+
+  it("admin role: shows the full catalog as assigned with the admin legend, regardless of the real RelRolPermiso list", () => {
+    render(
+      <RoleDetailsPermissionsTab
+        permissions={[]}
+        permissionCatalog={catalog}
+        isLoadingPermissions={false}
+        isEditable={false}
+        isAdmin
+        onAddPermission={onAddPermission}
+        onRemovePermission={onRemovePermission}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Este rol tiene acceso total automatico a todos los permisos y modulos -- no depende de asignaciones individuales.",
+      ),
+    ).toBeVisible();
+    // El mensaje generico de solo-lectura NO se muestra: la leyenda admin lo reemplaza.
+    expect(
+      screen.queryByText(
+        "Solo lectura: no puedes actualizar este rol porque no tienes permisos.",
+      ),
+    ).toBeNull();
+
+    // Todo el catalogo aparece como "asignado" (con boton de quitar, aunque
+    // deshabilitado), aunque `permissions` (RelRolPermiso) este vacio.
+    expect(
+      screen.getByRole("button", {
+        name: "Remover permiso admin:gestion:roles:update",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Remover permiso admin:gestion:roles:read",
+      }),
+    ).toBeDisabled();
+
+    // Nada queda en "disponibles para agregar": el rol admin ya tiene todo.
+    expect(
+      screen.getByText(
+        "Este rol ya tiene acceso a todos los permisos automaticamente.",
+      ),
+    ).toBeVisible();
+  });
 });

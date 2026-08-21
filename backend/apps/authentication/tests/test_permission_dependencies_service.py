@@ -132,3 +132,28 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
 
     def test_get_permission_dependency_closure_returns_empty_for_blank_permission_code(self):
         self.assertEqual(get_permission_dependency_closure("   "), [])
+
+    def test_modulos_write_actions_imply_modulos_read(self):
+        """
+        `admin:gestion:modulos:{create,update,delete}` (change
+        menu-modulos-crud-ui) no tiene entrada explicita en
+        EXPLICIT_PERMISSION_DEPENDENCIES: `_infer_read_dependency` ya cubre
+        el caso porque `create`/`update`/`delete` estan en WRITE_ACTIONS y
+        el codigo sigue el patron `recurso:accion`. Este test fija ese
+        comportamiento para que no se rompa en silencio si alguien cambia
+        WRITE_ACTIONS o el formato de los codigos.
+        """
+        for action in ("create", "update", "delete"):
+            with self.subTest(action=action):
+                closure = get_permission_dependency_closure(
+                    f"admin:gestion:modulos:{action}"
+                )
+                self.assertEqual(
+                    closure,
+                    sorted(
+                        {
+                            f"admin:gestion:modulos:{action}",
+                            "admin:gestion:modulos:read",
+                        }
+                    ),
+                )

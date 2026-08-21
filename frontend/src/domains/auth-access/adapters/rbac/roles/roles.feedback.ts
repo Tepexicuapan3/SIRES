@@ -10,6 +10,12 @@ const ROLE_ERROR_MESSAGES: Record<string, string> = {
     "No puedes revocar :read mientras existan permisos de escritura del mismo recurso.",
   PERMISSION_NOT_FOUND: "El permiso seleccionado no existe o fue removido.",
   PERMISSION_DENIED: "No tienes permiso para realizar esta accion.",
+  PERMISSION_GRANT_NOT_ALLOWED:
+    "No puedes asignar permisos que no tienes.",
+  ROLE_ADMIN_PROTECTED:
+    "No puedes modificar los permisos de un rol administrador.",
+  SELF_ROLE_PERMISSION_ASSIGNMENT_FORBIDDEN:
+    "No puedes modificar los permisos de un rol que tienes asignado actualmente.",
   SESSION_EXPIRED: "Tu sesion expiro. Inicia sesion nuevamente.",
   VALIDATION_ERROR: "Revisa los datos capturados antes de guardar.",
   NETWORK_ERROR: "No hay conexion con el servidor. Intenta nuevamente.",

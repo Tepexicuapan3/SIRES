@@ -8,6 +8,8 @@
     "src/test/unit/auth/**/*.tsx",
     "src/test/unit/router/**/*.ts",
     "src/test/unit/router/**/*.tsx",
+    "src/test/unit/navigation/**/*.ts",
+    "src/test/unit/navigation/**/*.tsx",
     "src/test/integration/contracts/**/*.ts",
     "src/test/integration/contracts/**/*.tsx",
     "src/test/mocks/**/*.ts",

@@ -22,9 +22,42 @@ from .views.rbac_views import (
 )
 
 from .views.expediente_view import ExpedienteView, ActualizarExpedienteView, BuscarPorNombreView
+from .views.navigation_menu_views import ModuleCatalogView, NavigationMenuView
+from .views.navigation_module_mutation_views import (
+    CreateModuleView,
+    ModuleVisibilityView,
+    ReorderModulesView,
+    UpdateModuleView,
+)
+
+
+def _modules_collection_view(request, *args, **kwargs):
+    """
+    `GET /modules` (catalogo, `ModuleCatalogView`) y `POST /modules`
+    (alta, `CreateModuleView`) comparten la misma ruta -- mismo patron REST
+    que `RolesListCreateView`/`UsersListCreateView`, pero acá cada verbo
+    vive en su propia clase (lectura en `navigation_menu_views.py`,
+    escritura en `navigation_module_mutation_views.py`) para no mezclar
+    las dependencias de un endpoint de solo-lectura con las de un
+    endpoint de escritura con CSRF/policy de mutacion. Django no permite
+    dos `path()` con el mismo string apuntando a vistas distintas -- este
+    despachador por metodo HTTP es el punto de union.
+    """
+    if request.method == "POST":
+        return CreateModuleView.as_view()(request, *args, **kwargs)
+    return ModuleCatalogView.as_view()(request, *args, **kwargs)
 
 
 urlpatterns = [
+    path("navigation-menu", NavigationMenuView.as_view(), name="navigation-menu"),
+    path("modules", _modules_collection_view, name="module-catalog"),
+    path("modules/reorder", ReorderModulesView.as_view(), name="module-reorder"),
+    path("modules/<str:clave>", UpdateModuleView.as_view(), name="module-update"),
+    path(
+        "modules/<str:clave>/visibility",
+        ModuleVisibilityView.as_view(),
+        name="module-visibility",
+    ),
     path("roles", RolesListCreateView.as_view(), name="rbac-roles-list-create"),
     path("roles/<int:role_id>", RoleDetailView.as_view(), name="rbac-role-detail"),
     path("permissions", PermissionsCatalogView.as_view(), name="rbac-permissions-list"),

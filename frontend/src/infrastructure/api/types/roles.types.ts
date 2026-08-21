@@ -41,6 +41,16 @@ export interface RoleListItem {
   description: string;
   isActive: boolean;
   isSystem: boolean;
+  /**
+   * Rol con acceso administrativo total (`cat_roles.is_admin`).
+   *
+   * El `RBACResolver` le otorga el wildcard `*` de forma dinamica a estos
+   * roles -- NO depende de filas en `RelRolPermiso`. Las tabs de detalle de
+   * rol (Permisos, Modulos) usan este flag para mostrar TODO el catalogo
+   * como asignado en modo solo lectura, en vez del estado real (casi
+   * siempre vacio) de las relaciones rol-permiso.
+   */
+  isAdmin: boolean;
   landingRoute: string | null;
   permissionsCount: number;
   usersCount: number;

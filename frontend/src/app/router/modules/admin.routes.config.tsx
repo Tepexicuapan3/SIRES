@@ -33,6 +33,7 @@ import CentrosAreasClinicasPage from "@features/admin/modules/catalogos/centro-a
 import SucursalesPage from "@features/admin/modules/catalogos/sucursales/pages/SucursalesPage";
 import PlaceholderPage from "@shared/components/PlaceholderPage";
 import MedicosPage from "@features/admin/modules/medicos/pages/MedicosPage";
+import MenusPage from "@features/admin/modules/menus/pages/MenusPage";
 import { lazy, Suspense } from "react";
 
 // Administracion
@@ -81,6 +82,32 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <ProtectedRoute requiredPermission="admin:usuarios:sesiones:read">
         <SessionsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    // Pantalla de gestion de menus (CRUD de `Modulo` -- crear accesos
+    // directos/carpetas, ocultar, mover, reordenar). Requiere el permiso
+    // MAS ESPECIFICO `admin:gestion:modulos:read` (no alcanza con
+    // `admin:gestion:roles:read`, que solo habilita la lectura via la tab
+    // "Modulos" del detalle de rol) -- ver `ModuleCatalogView` en el
+    // backend.
+    //
+    // NOTA DE SEGUIMIENTO (fuera del alcance de esta fase, es un cambio de
+    // backend): el nodo `administracion.panel.menus` todavia NO esta dado
+    // de alta en `navigation_seed.py` -- la Fase 1 de este change dejo
+    // pendiente agregarlo ahora que esta ruta real ya existe. Hasta que se
+    // sume al seed (y a `CLAVES_SISTEMA`), esta pantalla es accesible por
+    // URL directa para quien tenga el permiso, pero no aparece como item
+    // de sidebar.
+    path: "menus",
+    element: (
+      <ProtectedRoute
+        requiredCapability="admin.menus.read"
+        fallbackRequirement={{ allOf: ["admin:gestion:modulos:read"] }}
+        dependencyAware
+      >
+        <MenusPage />
       </ProtectedRoute>
     ),
   },

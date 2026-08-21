@@ -367,6 +367,27 @@ export type {
 } from "@api/types/catalogos/escuelas.types";
 
 // =============================================================================
+// CATÁLOGO ESTADO CIVIL
+// =============================================================================
+export type {
+  // Entidades
+  EdoCivilListItem,
+  EdoCivilDetail,
+  // CRUD Requests
+  CreateEdoCivilRequest,
+  UpdateEdoCivilRequest,
+  // CRUD Responses
+  CreateEdoCivilResponse,
+  UpdateEdoCivilResponse,
+  DeleteEdoCivilResponse,
+  // Listados
+  EdoCivilListParams,
+  EdoCivilListResponse,
+  // Detalle
+  EdoCivilDetailResponse,
+} from "@api/types/catalogos/edoCivil.types";
+
+// =============================================================================
 // CATÁLOGO SUCURSALES
 // =============================================================================
 export type {
@@ -468,6 +489,29 @@ export type {
   ApplyDosesRequest,
   ApplyDosesResponse,
 } from "@api/types/farmacia/inventario-vacunas.types";
+
+// =============================================================================
+// NAVIGATION MENU TYPES (arbol servido por cat_modulos)
+// =============================================================================
+export type {
+  NavigationMenuSource,
+  NavigationMenuItemDTO,
+  NavigationMenuSectionDTO,
+  NavigationMenuResponse,
+  ModuleCatalogNodeDTO,
+  ModuleCatalogResponse,
+  ModuleCatalogListParams,
+  ModuleSummaryDTO,
+  CreateModuleRequest,
+  CreateModuleResponse,
+  UpdateModuleRequest,
+  UpdateModuleResponse,
+  SetModuleVisibilityRequest,
+  SetModuleVisibilityResponse,
+  ReorderModulesRequest,
+  ReorderModulesResultItem,
+  ReorderModulesResponse,
+} from "@api/types/navigation.types";
 
 // =============================================================================
 // CLINICAL FLOW TYPES (visits, vitals, doctor flow)

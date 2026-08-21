@@ -135,6 +135,10 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "admin.catalogs.especialidades.create": {"allOf": ["admin:catalogos:especialidades:create"]},
     "admin.catalogs.especialidades.update": {"allOf": ["admin:catalogos:especialidades:update"]},
     "admin.catalogs.especialidades.delete": {"allOf": ["admin:catalogos:especialidades:delete"]},
+    "admin.catalogs.edo_civil.read": {"allOf": ["admin:catalogos:edo_civil:read"]},
+    "admin.catalogs.edo_civil.create": {"allOf": ["admin:catalogos:edo_civil:create"]},
+    "admin.catalogs.edo_civil.update": {"allOf": ["admin:catalogos:edo_civil:update"]},
+    "admin.catalogs.edo_civil.delete": {"allOf": ["admin:catalogos:edo_civil:delete"]},
     "admin.catalogs.cies.upload": {"allOf": ["admin:catalogos:cies:upload"]},
     # Médicos
     "admin.medicos.read":        {"allOf": ["admin:gestion:medicos:read"]},

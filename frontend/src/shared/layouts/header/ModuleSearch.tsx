@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Badge } from "@shared/ui/badge";
@@ -10,7 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@shared/ui/dialog";
-import { NAV_CONFIG, type NavItem } from "@app/navigation/nav-config";
+import type { NavItem } from "@app/navigation/nav-config";
+import { useNavigation } from "@features/navigation/hooks/useNavigation";
 import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
 import { cn } from "@shared/utils/styling/cn";
 
@@ -113,6 +120,7 @@ const flattenNavItems = (
  */
 export const ModuleSearch = () => {
   const navigate = useNavigate();
+  const { sections } = useNavigation();
   const { isAdmin, hasAnyPermission } = usePermissions();
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogInputRef = useRef<HTMLInputElement>(null);
@@ -123,22 +131,26 @@ export const ModuleSearch = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const showPlaceholder = query.length === 0;
+  const isAdminUser = isAdmin();
 
-  // Flatten nav items respetando permisos
-  const items = (() => {
+  // Flatten nav items respetando permisos.
+  // `sections` ya viene filtrado por useNavigation (fallback NAV_CONFIG o
+  // arbol del backend) -- se re-chequean permisos igual por idempotencia
+  // con el fallback (mismo criterio que filterNavigation).
+  const items = useMemo(() => {
     const collected: SearchItem[] = [];
-    NAV_CONFIG.forEach((section) => {
+    sections.forEach((section) => {
       flattenNavItems(
         section.items,
         section.title,
         [],
-        isAdmin(),
+        isAdminUser,
         hasAnyPermission,
         collected,
       );
     });
     return collected;
-  })();
+  }, [sections, isAdminUser, hasAnyPermission]);
 
   // Filtrar resultados
   const results = (() => {

@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import {
+  AlertTriangle,
+  Boxes,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -7,9 +12,12 @@ import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { Skeleton } from "@shared/ui/skeleton";
 import { usePermissionsCatalog } from "@/domains/auth-access/hooks/rbac/permissions/usePermissionsCatalog";
+import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
+import { useModuleCatalog } from "@features/navigation/queries/useModuleCatalog";
 import { RoleDetailsGeneralTab } from "@/domains/auth-access/components/admin/rbac/roles/RoleDetailsGeneralTab";
 import { RoleDetailsFooter } from "@/domains/auth-access/components/admin/rbac/roles/RoleDetailsFooter";
 import { RoleDetailsPermissionsTab } from "@/domains/auth-access/components/admin/rbac/roles/RoleDetailsPermissionsTab";
+import { RoleDetailsModulesTab } from "@/domains/auth-access/components/admin/rbac/roles/RoleDetailsModulesTab";
 import { RoleDetailsSidePanel } from "@/domains/auth-access/components/admin/rbac/roles/RoleDetailsSidePanel";
 import { RoleDialogHeader } from "@/domains/auth-access/components/admin/rbac/roles/RoleDialogHeader";
 import {
@@ -20,10 +28,12 @@ import { useAssignRolePermissions } from "@/domains/auth-access/hooks/rbac/roles
 import { useUpdateRole } from "@/domains/auth-access/hooks/rbac/roles/useUpdateRole";
 import { useRoleDetail } from "@/domains/auth-access/hooks/rbac/roles/useRoleDetail";
 import {
+  addPermissionsToDraft,
   addPermissionToDraft,
   arePermissionSetsDifferent,
   mapRoleDetailToFormValues,
   removePermissionFromDraft,
+  removePermissionsFromDraft,
 } from "@/domains/auth-access/adapters/rbac/roles/roles.details-draft";
 import {
   applyRoleDetailsSavePlan,
@@ -79,10 +89,20 @@ export function RoleDetailsDialog({
     error: permissionsCatalogError,
     refetch: refetchPermissionsCatalog,
   } = usePermissionsCatalog(open && canReadPermissionsCatalog);
+  const {
+    data: moduleCatalogData,
+    isLoading: isLoadingModules,
+    isError: isModuleCatalogError,
+    error: moduleCatalogError,
+    refetch: refetchModuleCatalog,
+  } = useModuleCatalog(open);
+  const { data: authUser } = useAuthSession();
 
   const roleDetail = roleDetailResponse?.role;
   const assignedPermissions = roleDetailResponse?.permissions ?? [];
   const permissionCatalog = permissionsData?.items ?? [];
+  const moduleTree = moduleCatalogData?.modules ?? [];
+  const actorPermissions = authUser?.permissions ?? [];
 
   const updateRole = useUpdateRole();
   const assignPermissions = useAssignRolePermissions();
@@ -149,10 +169,17 @@ export function RoleDetailsDialog({
   const shouldShowError =
     open && !isClosing && (isError || (!isLoading && !roleDetail));
   const isSystem = roleDetail?.isSystem ?? roleSummary?.isSystem;
+  const isAdmin = roleDetail?.isAdmin ?? roleSummary?.isAdmin ?? false;
   const isEditable = canEdit && !isSystem;
   const readOnlyRoleMessage = isSystem
     ? "Solo lectura: no puedes actualizar este rol porque es de sistema o no tienes permisos."
     : "Solo lectura: no puedes actualizar este rol porque no tienes permisos.";
+  // El rol admin tiene acceso total dinamico via el RBACResolver (wildcard
+  // "*"), independiente de lo que haya en RelRolPermiso. Las tabs de
+  // Permisos y Modulos se fuerzan a solo-lectura para este rol -- no tiene
+  // sentido dejar "agregar/quitar" en una asignacion que el resolver ignora
+  // por completo. El tab General (nombre/descripcion/estado) sigue editable.
+  const isPermissionsModulesEditable = isEditable && !isAdmin;
   const permissionsCatalogAccessMessage = canReadPermissionsCatalog
     ? null
     : "No tienes acceso al catalogo de permisos. Puedes gestionar solo los permisos ya asignados.";
@@ -161,7 +188,7 @@ export function RoleDetailsDialog({
     isSavingAll || updateRole.isPending || assignPermissions.isPending;
 
   const handleAddPermissionDraft = (permissionId: number) => {
-    if (!isEditable || !roleDetail) return;
+    if (!isPermissionsModulesEditable || !roleDetail) return;
 
     setDraftRoleId(roleDetail.id);
     setDraftPermissions((previousPermissions) => {
@@ -177,7 +204,7 @@ export function RoleDetailsDialog({
   };
 
   const handleRemovePermissionDraft = (permissionId: number) => {
-    if (!isEditable || !roleDetail) return;
+    if (!isPermissionsModulesEditable || !roleDetail) return;
 
     setDraftRoleId(roleDetail.id);
     setDraftPermissions((previousPermissions) => {
@@ -185,6 +212,24 @@ export function RoleDetailsDialog({
         ? previousPermissions
         : assignedPermissions;
       return removePermissionFromDraft(basePermissions, permissionId);
+    });
+  };
+
+  const handleToggleModuleDraft = (
+    permissionIds: number[],
+    nextChecked: boolean,
+  ) => {
+    if (!isPermissionsModulesEditable || !roleDetail || permissionIds.length === 0)
+      return;
+
+    setDraftRoleId(roleDetail.id);
+    setDraftPermissions((previousPermissions) => {
+      const basePermissions = hasDraftForCurrentRole
+        ? previousPermissions
+        : assignedPermissions;
+      return nextChecked
+        ? addPermissionsToDraft(basePermissions, permissionCatalog, permissionIds)
+        : removePermissionsFromDraft(basePermissions, permissionIds);
     });
   };
 
@@ -380,7 +425,7 @@ export function RoleDetailsDialog({
               variant="secondary"
               className="ml-1 h-5 min-w-5 rounded-full px-1 text-[10px]"
             >
-              {workingPermissions.length}
+              {isAdmin ? permissionCatalog.length : workingPermissions.length}
             </Badge>
           ),
           content: (
@@ -388,7 +433,8 @@ export function RoleDetailsDialog({
               permissions={workingPermissions}
               permissionCatalog={permissionCatalog}
               isLoadingPermissions={isLoadingPermissions}
-              isEditable={isEditable}
+              isEditable={isPermissionsModulesEditable}
+              isAdmin={isAdmin}
               readOnlyMessage={readOnlyRoleMessage}
               catalogAccessMessage={permissionsCatalogAccessMessage}
               isSaving={isSaving}
@@ -409,6 +455,45 @@ export function RoleDetailsDialog({
               }
               onAddPermission={handleAddPermissionDraft}
               onRemovePermission={handleRemovePermissionDraft}
+            />
+          ),
+        },
+        {
+          id: "modules",
+          label: "Modulos",
+          icon: <Boxes className="size-4" />,
+          badge: moduleTree.length > 0 ? (
+            <Badge
+              variant="secondary"
+              className="ml-1 h-5 min-w-5 rounded-full px-1 text-[10px]"
+            >
+              {moduleTree.length}
+            </Badge>
+          ) : null,
+          content: (
+            <RoleDetailsModulesTab
+              modules={moduleTree}
+              isLoadingModules={isLoadingModules}
+              workingPermissions={workingPermissions}
+              permissionCatalog={permissionCatalog}
+              actorPermissions={actorPermissions}
+              isEditable={isPermissionsModulesEditable}
+              isAdmin={isAdmin}
+              readOnlyMessage={readOnlyRoleMessage}
+              catalogAccessMessage={permissionsCatalogAccessMessage}
+              isSaving={isSaving}
+              moduleCatalogErrorMessage={
+                isModuleCatalogError
+                  ? getRoleErrorMessage(
+                      moduleCatalogError,
+                      "No se pudo cargar el catalogo de modulos. Verifica que tengas admin:gestion:roles:read.",
+                    )
+                  : null
+              }
+              onRetryModuleCatalog={() => {
+                void refetchModuleCatalog();
+              }}
+              onToggleModule={handleToggleModuleDraft}
             />
           ),
         },

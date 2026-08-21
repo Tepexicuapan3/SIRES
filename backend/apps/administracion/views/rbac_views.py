@@ -304,6 +304,7 @@ def _serialize_role(role):
         "description": role.desc_rol,
         "isActive": bool(role.is_active),
         "isSystem": bool(role.es_sistema),
+        "isAdmin": bool(role.is_admin),
         "landingRoute": role.landing_route,
         "permissionsCount": permissions_count,
         "usersCount": users_count,

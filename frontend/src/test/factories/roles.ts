@@ -33,6 +33,7 @@ export const createMockRoleListItem = (
     description: faker.person.jobDescriptor(),
     isActive: true,
     isSystem: false,
+    isAdmin: false,
     landingRoute: "/dashboard",
     permissionsCount: faker.number.int({ min: 5, max: 50 }),
     usersCount: faker.number.int({ min: 0, max: 20 }),

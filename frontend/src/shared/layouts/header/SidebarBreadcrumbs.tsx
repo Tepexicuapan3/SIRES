@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Breadcrumb,
@@ -14,7 +15,8 @@ import {
   TooltipTrigger,
 } from "@shared/ui/tooltip";
 import { TruncatedTooltip } from "@shared/ui/truncated-tooltip";
-import { NAV_CONFIG, type NavItem } from "@app/navigation/nav-config";
+import { useNavigation } from "@features/navigation/hooks/useNavigation";
+import type { NavItem, NavSection } from "@app/navigation/nav-config";
 
 interface BreadcrumbItemData {
   path: string;
@@ -25,27 +27,38 @@ type BreadcrumbDisplayItem =
   | { type: "ellipsis"; title: string }
   | { type: "crumb"; data: BreadcrumbItemData };
 
-const buildLabelMap = (items: NavItem[], map: Map<string, string>) => {
+const walkItems = (items: NavItem[], map: Map<string, string>) => {
   items.forEach((item) => {
     if (item.url) {
       map.set(item.url, item.title);
     }
     if (item.items) {
-      buildLabelMap(item.items, map);
+      walkItems(item.items, map);
     }
   });
 };
 
-const LABEL_MAP = (() => {
+/**
+ * Construye el mapa url -> label a partir de las secciones ACTUALES
+ * (`useNavigation()`), no de una constante estatica.
+ *
+ * Bug corregido: antes `LABEL_MAP` se calculaba UNA SOLA VEZ al importar
+ * el modulo desde `NAV_CONFIG` (nunca se recalculaba, ni siquiera cuando
+ * el arbol viene del backend). Ahora vive en `useMemo` con `[sections]`
+ * como dependencia, asi que se recalcula si la fuente cambia (fallback
+ * <-> backend, o alta de un modulo nuevo tras invalidar la query).
+ */
+const buildLabelMap = (sections: NavSection[]): Map<string, string> => {
   const map = new Map<string, string>();
-  NAV_CONFIG.forEach((section) => buildLabelMap(section.items, map));
+  sections.forEach((section) => walkItems(section.items, map));
   return map;
-})();
+};
 
 const useBreadcrumbs = (): BreadcrumbItemData[] => {
   const location = useLocation();
+  const { sections } = useNavigation();
+  const labelMap = useMemo(() => buildLabelMap(sections), [sections]);
   const pathSegments = location.pathname.split("/").filter(Boolean);
-  const labelMap = LABEL_MAP;
 
   if (pathSegments.length === 0) {
     return [];

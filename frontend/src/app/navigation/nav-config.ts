@@ -27,6 +27,11 @@ import {
  * Razon industria:
  * - Mantiene el sidebar alineado a rutas reales.
  * - Usa permisos como filtro UX (backend siempre valida).
+ *
+ * Nota: `NavItem`/`NavSection` (los tipos) siguen vigentes -- son el shape
+ * canonico que usan `useNavigation`, `mapNavigationMenu`, `NavMain`,
+ * `SidebarBreadcrumbs` y `ModuleSearch`. Lo deprecado es la CONSTANTE
+ * `NAV_CONFIG` (ver mas abajo), no los tipos.
  */
 
 export interface NavItem {
@@ -47,6 +52,18 @@ export interface NavSection {
 // Badge reutilizable para modulos aun no implementados.
 export const PLACEHOLDER_BADGE = "Dev";
 
+/**
+ * @deprecated Ya NO es la fuente de datos del sidebar/breadcrumbs/buscador.
+ * La fuente real es el catalogo `cat_modulos` servido por
+ * `GET /navigation-menu` (ver `useNavigationMenu`/`useNavigation`).
+ * Este archivo queda como FALLBACK PERMANENTE -- se usa cuando el endpoint
+ * falla, hace timeout, el feature flag backend esta OFF (`source !== "db"`)
+ * o el arbol viene vacio, para que el sidebar nunca quede sin menu.
+ * NO se borra. Editar navegacion real = editar `cat_modulos` (Django admin),
+ * no este archivo. Si se edita este archivo, revisar que el seed
+ * (`backend/apps/administracion/management/seeds/navigation_seed.py`) siga
+ * siendo transcripcion fiel para no romper la paridad flag-OFF.
+ */
 export const NAV_CONFIG: NavSection[] = [
   {
     title: "Administracion",

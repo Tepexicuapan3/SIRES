@@ -387,6 +387,12 @@ RBAC_ROLE_PERMISSION_S3_ENABLED = config(
     "RBAC_ROLE_PERMISSION_S3_ENABLED", default=False, cast=bool
 )
 
+# ── Navigation menu feature flags ─────────────────────────────────────────────
+NAVIGATION_MENU_DB_ENABLED = config(
+    "NAVIGATION_MENU_DB_ENABLED", default=False, cast=bool
+)
+NAVIGATION_MENU_SOURCE = config("NAVIGATION_MENU_SOURCE", default="auto")
+
 # ── Portal Citas en Línea (Fase 6 — cancelación) ──────────────────────────────
 # Ventana mínima (en horas) antes de la fecha/hora de la cita para permitir
 # que el paciente la cancele por su cuenta desde el portal. Ajustable según

@@ -18,6 +18,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:run": "vitest run",
+    "gen:menu-destinations": "node scripts/gen-menu-destinations.ts",
     "test:e2e": "pnpm exec playwright test --config=scripts/playwright.config.ts",
     "test:e2e:auth:smoke": "PLAYWRIGHT_API_BASE_URL=http://backend:5000/api/v1 pnpm exec playwright test src/test/e2e/auth/auth.e2e.ts --config=scripts/playwright.smoke.docker.config.cjs --project=chromium",
     "test:e2e:auth:critical:real": "pnpm run test:e2e:smoke:preflight && PLAYWRIGHT_AUTH_HARNESS_MODE=backend-real PLAYWRIGHT_API_BASE_URL=http://backend:5000/api/v1 VITE_USE_MSW=false pnpm exec playwright test src/test/e2e/auth/auth.e2e.ts --config=scripts/playwright.auth.docker.config.cjs --project=chromium --grep @kan-92-critical",

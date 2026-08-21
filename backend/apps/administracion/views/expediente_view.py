@@ -1,11 +1,17 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from apps.authentication.services.errors import AuthServiceError
-from apps.authentication.services.session_service import authenticate_request
+
+from apps.administracion.views.rbac_views import _authorize
 
 from ..use_cases.expedientes.buscar_expediente import buscar_expediente, buscar_por_nombre
 from ..use_cases.expedientes.actualizar_expediente import actualizar_expediente
+
+# Único permiso RBAC definido para el módulo de expedientes administrativos
+# (ver frontend/src/app/navigation/nav-config.ts y navigation_seed.py:
+# "administracion.panel.expedientes" gatea ver, actualizar y buscar por
+# nombre con este mismo código — no existe un código separado de escritura).
+PERMISO_EXPEDIENTES = "admin:gestion:expedientes:read"
 
 
 class ExpedienteView(APIView):
@@ -14,10 +20,9 @@ class ExpedienteView(APIView):
     permission_classes = []
 
     def get(self, request):
-        try:
-            authenticate_request(request)
-        except AuthServiceError as exc:
-            return Response({"code": exc.code, "message": exc.message}, status=exc.status_code)
+        _, auth_error = _authorize(request, PERMISO_EXPEDIENTES)
+        if auth_error:
+            return auth_error
 
         id_empleado = request.query_params.get("id_empleado", "").strip()
 
@@ -45,11 +50,9 @@ class ActualizarExpedienteView(APIView):
     permission_classes = []
 
     def post(self, request):
-
-        try:
-            authenticate_request(request)
-        except AuthServiceError as exc:
-            return Response({"code": exc.code, "message": exc.message}, status=exc.status_code)
+        _, auth_error = _authorize(request, PERMISO_EXPEDIENTES, require_csrf=True)
+        if auth_error:
+            return auth_error
 
         expediente = request.data.get("expediente", "").strip()
 
@@ -70,10 +73,9 @@ class BuscarPorNombreView(APIView):
     permission_classes = []
 
     def get(self, request):
-        try:
-            authenticate_request(request)
-        except AuthServiceError as exc:
-            return Response({"code": exc.code, "message": exc.message}, status=exc.status_code)
+        _, auth_error = _authorize(request, PERMISO_EXPEDIENTES)
+        if auth_error:
+            return auth_error
 
         nombre = request.query_params.get("nombre", "").strip()
 
