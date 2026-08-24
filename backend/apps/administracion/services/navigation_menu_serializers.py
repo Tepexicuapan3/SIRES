@@ -19,6 +19,7 @@ def _serialize_section(node):
     modulo = node["modulo"]
     return {
         "title": modulo.titulo,
+        "icon": modulo.icono,
         "permissions": node["permissions"],
         "items": [_serialize_item(child) for child in node["items"]],
     }

@@ -193,6 +193,7 @@ export function MenusPage() {
       {canReadMenus && !isLoading && !error ? (
         <ModuleTreeEditor
           nodes={visibleNodes}
+          searchActive={normalizedSearch.length > 0}
           canUpdate={canUpdateModule}
           canDelete={canDeleteModule}
           onEditNode={setEditingNode}

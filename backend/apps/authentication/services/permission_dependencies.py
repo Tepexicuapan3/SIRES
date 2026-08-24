@@ -140,6 +140,29 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "admin.catalogs.edo_civil.update": {"allOf": ["admin:catalogos:edo_civil:update"]},
     "admin.catalogs.edo_civil.delete": {"allOf": ["admin:catalogos:edo_civil:delete"]},
     "admin.catalogs.cies.upload": {"allOf": ["admin:catalogos:cies:upload"]},
+    # Catalogos genericos (GenericCatalogPage) -- la clave la arma el
+    # frontend como `admin.catalogs.${catalog.slug}.read` a partir de
+    # `catalog-definitions.ts` (slug con GUIONES, no camelCase/underscore).
+    # Debe coincidir caracter por caracter con ese slug o la pantalla queda
+    # bloqueada para TODOS (incluido admin), porque "admin." es un prefijo
+    # estricto que no cae al fallback de permisos crudos.
+    "admin.catalogs.autorizadores.read": {"allOf": ["admin:catalogos:autorizadores:read"]},
+    "admin.catalogs.bajas.read": {"allOf": ["admin:catalogos:bajas:read"]},
+    "admin.catalogs.calidad-laboral.read": {"allOf": ["admin:catalogos:calidad_laboral:read"]},
+    "admin.catalogs.edo-civil.read": {"allOf": ["admin:catalogos:edo_civil:read"]},
+    "admin.catalogs.enfermedades.read": {"allOf": ["admin:catalogos:enfermedades:read"]},
+    "admin.catalogs.estudios-medicos.read": {"allOf": ["admin:catalogos:estudios_med:read"]},
+    "admin.catalogs.grupos-medicamentos.read": {"allOf": ["admin:catalogos:grupos_medicamentos:read"]},
+    "admin.catalogs.ocupaciones.read": {"allOf": ["admin:catalogos:ocupaciones:read"]},
+    "admin.catalogs.origen-consulta.read": {"allOf": ["admin:catalogos:origen_cons:read"]},
+    "admin.catalogs.parentescos.read": {"allOf": ["admin:catalogos:parentescos:read"]},
+    "admin.catalogs.pases.read": {"allOf": ["admin:catalogos:pases:read"]},
+    "admin.catalogs.tipos-areas.read": {"allOf": ["admin:catalogos:tipos_areas:read"]},
+    "admin.catalogs.tipos-autorizacion.read": {"allOf": ["admin:catalogos:tp_autorizacion:read"]},
+    "admin.catalogs.licencias.read": {"allOf": ["admin:catalogos:licencias:read"]},
+    "admin.catalogs.tipos-sanguineo.read": {"allOf": ["admin:catalogos:tipos_sanguineo:read"]},
+    "admin.catalogs.areas-clinicas.read": {"allOf": ["admin:catalogos:areas_clinicas:read"]},
+    "admin.catalogs.centro-area-clinica.read": {"allOf": ["admin:catalogos:centro_area_clinica:read"]},
     # Gestion de menus (arbol de navegacion / cat_modulos)
     "admin.menus.read": {"allOf": ["admin:gestion:modulos:read"]},
     "admin.menus.create": {"allOf": ["admin:gestion:modulos:create"]},

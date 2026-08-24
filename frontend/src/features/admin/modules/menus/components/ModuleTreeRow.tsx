@@ -1,5 +1,6 @@
 import {
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Eye,
   EyeOff,
@@ -27,6 +28,9 @@ interface ModuleTreeRowProps {
   canUpdate: boolean;
   canDelete: boolean;
   isBusy: boolean;
+  /** Si el nodo tiene hijos, controla si se muestran o quedan colapsados. */
+  isExpanded: boolean;
+  onToggleExpand: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onMoveToFolder: () => void;
@@ -57,6 +61,8 @@ export function ModuleTreeRow({
   canUpdate,
   canDelete,
   isBusy,
+  isExpanded,
+  onToggleExpand,
   onMoveUp,
   onMoveDown,
   onMoveToFolder,
@@ -66,12 +72,16 @@ export function ModuleTreeRow({
   const isUnmanaged = node.permissions.length === 0;
   const protectedNode = node.isSystem;
   const hasActions = canUpdate || canDelete;
+  const hasChildren = node.items.length > 0;
   // Ver comentario en RoleDetailsModulesTab.tsx: se envuelve en un objeto
   // para no romper react-hooks/static-components con `resolveNavIcon`.
   const icon = { Component: resolveNavIcon(node.icon) };
 
   const infoLine = [
     node.isSection ? "Carpeta" : "Acceso directo",
+    hasChildren && !isExpanded
+      ? `${node.items.length} elemento${node.items.length === 1 ? "" : "s"} adentro`
+      : null,
     !node.isActive ? "oculto del menú" : null,
     protectedNode ? "protegido (elemento de sistema)" : null,
     isUnmanaged && !node.isSection ? "visible para todos" : null,
@@ -103,7 +113,28 @@ export function ModuleTreeRow({
   );
 
   return (
-    <div style={{ marginLeft: depth * 20 }}>
+    <div
+      className="flex items-center gap-1"
+      style={{ marginLeft: depth * 20 }}
+    >
+      {hasChildren ? (
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="flex size-6 shrink-0 items-center justify-center rounded-md text-txt-muted transition-colors hover:bg-surface-hover hover:text-txt-body"
+          aria-label={isExpanded ? `Contraer ${node.title}` : `Expandir ${node.title}`}
+          aria-expanded={isExpanded}
+        >
+          {isExpanded ? (
+            <ChevronDown className="size-4" />
+          ) : (
+            <ChevronRight className="size-4" />
+          )}
+        </button>
+      ) : (
+        <span className="size-6 shrink-0" />
+      )}
+
       {!hasActions ? (
         rowContent
       ) : (

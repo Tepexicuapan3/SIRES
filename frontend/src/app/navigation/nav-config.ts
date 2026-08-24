@@ -45,6 +45,7 @@ export interface NavItem {
 
 export interface NavSection {
   title: string;
+  icon?: LucideIcon;
   items: NavItem[];
   permissions?: string[];
 }

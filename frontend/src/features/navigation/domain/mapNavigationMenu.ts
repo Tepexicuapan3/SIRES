@@ -41,11 +41,15 @@ const mapItem = (dto: NavigationMenuItemDTO): NavigationItem => {
   return item;
 };
 
-const mapSection = (dto: NavigationMenuSectionDTO): NavigationSection => ({
-  title: dto.title,
-  permissions: dto.permissions,
-  items: dto.items.map(mapItem),
-});
+const mapSection = (dto: NavigationMenuSectionDTO): NavigationSection => {
+  const section: NavigationSection = {
+    title: dto.title,
+    permissions: dto.permissions,
+    items: dto.items.map(mapItem),
+  };
+  if (dto.icon) section.icon = resolveNavIcon(dto.icon);
+  return section;
+};
 
 /**
  * Convierte la respuesta cruda de `GET /navigation-menu` al shape

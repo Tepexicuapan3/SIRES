@@ -20,6 +20,7 @@ import type { NavItem } from "@app/navigation/nav-config";
 import { useNavigation } from "@features/navigation/hooks/useNavigation";
 import { usePermissions } from "@/domains/auth-access/hooks/usePermissions";
 import { cn } from "@shared/utils/styling/cn";
+import { normalizeSearchText } from "@shared/utils/text/normalizeSearchText";
 
 interface SearchItem {
   title: string;
@@ -152,12 +153,13 @@ export const ModuleSearch = () => {
     return collected;
   }, [sections, isAdminUser, hasAnyPermission]);
 
-  // Filtrar resultados
+  // Filtrar resultados -- normalizado (sin acentos/mayusculas) para que
+  // "areas" encuentre "Áreas clínicas" y no solo coincidencias exactas.
   const results = (() => {
-    const term = query.trim().toLowerCase();
+    const term = normalizeSearchText(query);
     if (!term) return [];
     return items
-      .filter((item) => item.breadcrumb.toLowerCase().includes(term))
+      .filter((item) => normalizeSearchText(item.breadcrumb).includes(term))
       .slice(0, 8);
   })();
 

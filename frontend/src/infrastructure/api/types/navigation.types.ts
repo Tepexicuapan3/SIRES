@@ -26,6 +26,7 @@ export interface NavigationMenuItemDTO {
 
 export interface NavigationMenuSectionDTO {
   title: string;
+  icon: string | null;
   permissions: string[];
   items: NavigationMenuItemDTO[];
 }
