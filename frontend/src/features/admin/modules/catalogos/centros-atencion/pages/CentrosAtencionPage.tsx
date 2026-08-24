@@ -452,6 +452,7 @@ export function CentrosAtencionPage() {
       <CentroAtencionCreateDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        canEdit={canUpdateCenter}
       />
 
       <ConfirmDestructiveDialog

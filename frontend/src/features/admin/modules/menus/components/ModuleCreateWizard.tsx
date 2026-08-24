@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { FolderPlus, Link2 } from "lucide-react";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import {
@@ -21,7 +22,7 @@ import {
   FormMessage,
 } from "@shared/ui/form";
 import { Input } from "@shared/ui/input";
-import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
+import { cn } from "@shared/utils/styling/cn";
 import {
   Select,
   SelectContent,
@@ -35,7 +36,6 @@ import {
   createModuleFormSchema,
   type CreateModuleFormValues,
 } from "@features/admin/modules/menus/domain/menus.schemas";
-import { deriveModuleKey } from "@features/admin/modules/menus/domain/deriveModuleKey";
 import { flattenModuleFolders } from "@features/admin/modules/menus/domain/flattenModuleFolders";
 import { useCreateModule } from "@features/admin/modules/menus/mutations/useCreateModule";
 import { useUpdateModule } from "@features/admin/modules/menus/mutations/useUpdateModule";
@@ -54,8 +54,7 @@ const ROOT_VALUE = "__root__";
 interface ModuleCreateWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Arbol COMPLETO -- alimenta el preview de `clave` (colisiones) y el
-   * selector de carpeta del paso 3. */
+  /** Arbol COMPLETO -- alimenta el selector de carpeta del paso 3. */
   allNodes: ModuleCatalogNodeDTO[];
   /**
    * Si se pasa, el wizard entra en MODO EDICION sobre este nodo: reusa los
@@ -69,16 +68,6 @@ interface ModuleCreateWizardProps {
    * una carpeta). Ignorado en modo edicion. */
   defaultParentKey?: string | null;
 }
-
-const collectAllKeys = (nodes: ModuleCatalogNodeDTO[]): Set<string> => {
-  const keys = new Set<string>();
-  const visit = (node: ModuleCatalogNodeDTO) => {
-    keys.add(node.key);
-    for (const child of node.items) visit(child);
-  };
-  for (const root of nodes) visit(root);
-  return keys;
-};
 
 const DEFAULT_VALUES: CreateModuleFormValues = {
   kind: "shortcut",
@@ -123,7 +112,6 @@ export function ModuleCreateWizard({
   const kind = form.watch("kind");
   const title = form.watch("title");
   const url = form.watch("url");
-  const parentKey = form.watch("parentKey");
 
   const stepSequence = useMemo(() => {
     const sequence: Array<1 | 2 | 3> = [1];
@@ -135,23 +123,12 @@ export function ModuleCreateWizard({
   const currentStep = stepSequence[Math.min(stepIndex, stepSequence.length - 1)];
   const isLastStep = stepIndex >= stepSequence.length - 1;
 
-  const existingKeys = useMemo(() => collectAllKeys(allNodes), [allNodes]);
   const folderOptions = useMemo(
     () =>
       flattenModuleFolders(allNodes, {
         excludeSubtreeOf: editingNode?.key ?? null,
       }),
     [allNodes, editingNode],
-  );
-
-  const keyPreview = useMemo(
-    () =>
-      deriveModuleKey({
-        title,
-        parentKey: isEditMode ? (editingNode?.parentKey ?? null) : parentKey,
-        existingKeys,
-      }),
-    [title, parentKey, existingKeys, isEditMode, editingNode],
   );
 
   useEffect(() => {
@@ -228,9 +205,9 @@ export function ModuleCreateWizard({
             ? { url: values.url, permissionCodes: values.permissionCodes }
             : {}),
         };
-        const result = await createModule.mutateAsync(payload);
+        await createModule.mutateAsync(payload);
         toast.success("Módulo creado", {
-          description: `Se creó con la clave "${result.key}".`,
+          description: `«${values.title}» ya aparece en el menú.`,
         });
       }
       handleClose();
@@ -251,7 +228,7 @@ export function ModuleCreateWizard({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isEditMode ? "Editar módulo" : "Nuevo módulo"}
+            {isEditMode ? "Editar elemento del menú" : "Nuevo elemento del menú"}
           </DialogTitle>
           <DialogDescription>{stepLabel}</DialogDescription>
         </DialogHeader>
@@ -269,24 +246,46 @@ export function ModuleCreateWizard({
                   name="kind"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo de módulo</FormLabel>
+                      <FormLabel>¿Qué quieres crear?</FormLabel>
                       <FormControl>
-                        <RadioGroup
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          className="grid grid-cols-2 gap-3"
-                        >
-                          <label
-                            className="flex cursor-pointer items-center gap-2 rounded-lg border border-line-struct/60 px-3 py-2 text-sm has-[[data-state=checked]]:border-brand"
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={() => field.onChange("folder")}
+                            className={cn(
+                              "flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-colors",
+                              field.value === "folder"
+                                ? "border-brand bg-brand/5"
+                                : "border-line-struct/60 hover:border-line-struct",
+                            )}
                           >
-                            <RadioGroupItem value="shortcut" />
-                            Acceso directo
-                          </label>
-                          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-line-struct/60 px-3 py-2 text-sm has-[[data-state=checked]]:border-brand">
-                            <RadioGroupItem value="folder" />
-                            Carpeta
-                          </label>
-                        </RadioGroup>
+                            <FolderPlus className="size-6 text-txt-muted" />
+                            <span className="text-sm font-semibold text-txt-body">
+                              Carpeta
+                            </span>
+                            <span className="text-xs text-txt-muted">
+                              Un menú que agrupa otras pantallas adentro.
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => field.onChange("shortcut")}
+                            className={cn(
+                              "flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-colors",
+                              field.value === "shortcut"
+                                ? "border-brand bg-brand/5"
+                                : "border-line-struct/60 hover:border-line-struct",
+                            )}
+                          >
+                            <Link2 className="size-6 text-txt-muted" />
+                            <span className="text-sm font-semibold text-txt-body">
+                              Acceso directo
+                            </span>
+                            <span className="text-xs text-txt-muted">
+                              Un submenú que lleva a una pantalla específica.
+                            </span>
+                          </button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -297,15 +296,13 @@ export function ModuleCreateWizard({
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Título</FormLabel>
+                      <FormLabel>Nombre</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Ej. Vacunas" />
                       </FormControl>
-                      {title ? (
-                        <p className="text-xs text-txt-muted">
-                          Clave: <span className="font-mono">{keyPreview}</span>
-                        </p>
-                      ) : null}
+                      <p className="text-xs text-txt-muted">
+                        Es lo que va a ver el usuario en el menú lateral.
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -315,7 +312,7 @@ export function ModuleCreateWizard({
                   name="icon"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Icono</FormLabel>
+                      <FormLabel>Ícono (opcional)</FormLabel>
                       <FormControl>
                         <NavIconPicker
                           value={field.value}
@@ -335,7 +332,7 @@ export function ModuleCreateWizard({
                 name="url"
                 render={() => (
                   <FormItem>
-                    <FormLabel>Destino</FormLabel>
+                    <FormLabel>¿A qué pantalla lleva?</FormLabel>
                     <FormControl>
                       <MenuDestinationSelect
                         value={url}
@@ -355,7 +352,7 @@ export function ModuleCreateWizard({
                   name="parentKey"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ubicación</FormLabel>
+                      <FormLabel>¿Dentro de qué carpeta va?</FormLabel>
                       <FormControl>
                         <Select
                           value={field.value ?? ROOT_VALUE}
@@ -364,11 +361,11 @@ export function ModuleCreateWizard({
                           }
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecciona una carpeta" />
+                            <SelectValue placeholder="Elige una carpeta" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value={ROOT_VALUE}>
-                              — Raíz (sin carpeta) —
+                              — Nivel principal (sin carpeta) —
                             </SelectItem>
                             {folderOptions.map((option) => (
                               <SelectItem key={option.key} value={option.key}>
@@ -384,10 +381,10 @@ export function ModuleCreateWizard({
                   )}
                 />
                 <div className="rounded-lg border border-line-struct/60 bg-subtle/20 p-3 text-sm">
-                  <p className="font-semibold text-txt-body">Resumen</p>
+                  <p className="font-semibold text-txt-body">Así va a quedar</p>
                   <p className="text-txt-muted">
                     {form.getValues("kind") === "folder" ? "Carpeta" : "Acceso directo"}{" "}
-                    «{title}» — clave <span className="font-mono">{keyPreview}</span>
+                    «{title}»
                   </p>
                   {form.getValues("kind") === "shortcut" && url ? (
                     <Badge variant="outline" className="mt-2 text-[10px]">

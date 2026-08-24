@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from urllib.parse import quote
 
 from django.core.cache import cache
+
+logger = logging.getLogger(__name__)
 
 _COUNTER_PREFIX = "auth_access:obs:counter"
 _LATENCY_PREFIX = "auth_access:obs:latency"
@@ -21,11 +24,17 @@ def _latency_key(endpoint: str, stat: str) -> str:
 
 
 def _increment_cache_key(key: str, amount: int = 1):
-    cache.add(key, 0)
     try:
-        cache.incr(key, amount)
-    except ValueError:
-        cache.set(key, amount, None)
+        cache.add(key, 0)
+        try:
+            cache.incr(key, amount)
+        except ValueError:
+            cache.set(key, amount, None)
+    except Exception:
+        # Las metricas son best-effort: si el cache (Redis) no esta
+        # disponible, no debe tumbar el flujo de negocio que las dispara
+        # (login, logout, auditoria, etc).
+        logger.warning("No se pudo actualizar la metrica de observabilidad '%s'", key, exc_info=True)
 
 
 def increment_counter(name: str, label: str, amount: int = 1):
@@ -38,9 +47,12 @@ def observe_latency_ms(endpoint: str, elapsed_ms: float):
     _increment_cache_key(_latency_key(endpoint, "sum"), elapsed_int)
 
     max_key = _latency_key(endpoint, "max")
-    current_max = cache.get(max_key, 0) or 0
-    if elapsed_int > current_max:
-        cache.set(max_key, elapsed_int, None)
+    try:
+        current_max = cache.get(max_key, 0) or 0
+        if elapsed_int > current_max:
+            cache.set(max_key, elapsed_int, None)
+    except Exception:
+        logger.warning("No se pudo actualizar la metrica de latencia maxima '%s'", endpoint, exc_info=True)
 
 
 def record_login_result(result: str, error_code: str | None = None):

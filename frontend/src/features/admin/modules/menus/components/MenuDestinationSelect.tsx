@@ -162,10 +162,9 @@ export function MenuDestinationSelect({
         <div className="flex items-start gap-2 rounded-lg border border-status-warning/30 bg-status-warning/5 px-3 py-2 text-xs text-status-warning">
           <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
           <p>
-            Esta pantalla no declara permisos propios: el acceso directo va
-            a ser visible para cualquiera que vea la carpeta que lo
-            contiene. No se le puede asignar un permiso porque no existe
-            uno para esta pantalla.
+            Esta pantalla es visible para cualquiera que vea la carpeta que
+            la contiene — no se puede restringir a un grupo de usuarios en
+            particular.
           </p>
         </div>
       ) : null}

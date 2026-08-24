@@ -161,18 +161,6 @@ NAV_SEED = [
         "permisos": ["admin:usuarios:sesiones:read"],
     },
     {
-        "clave": "administracion.panel.menus",
-        "titulo": "Gestión de Menús",
-        "icono": "clipboard-list",
-        "url": "/admin/menus",
-        "badge": None,
-        "orden": 5,
-        "es_seccion": False,
-        "grupo": "primary",
-        "parent_clave": "administracion.panel",
-        "permisos": ["admin:gestion:modulos:read"],
-    },
-    {
         "clave": "administracion.catalogos",
         "titulo": "Catalogos",
         "icono": "book-open",
@@ -519,6 +507,18 @@ NAV_SEED = [
         "grupo": "primary",
         "parent_clave": "administracion.catalogos",
         "permisos": ["admin:catalogos:cies:upload"],
+    },
+    {
+        "clave": "administracion.panel.menus",
+        "titulo": "Menús y Submenús",
+        "icono": "clipboard-list",
+        "url": "/admin/menus",
+        "badge": None,
+        "orden": 29,
+        "es_seccion": False,
+        "grupo": "primary",
+        "parent_clave": "administracion.catalogos",
+        "permisos": ["admin:gestion:modulos:read"],
     },
     # ── Clinico ──────────────────────────────────────────────────────────
     {

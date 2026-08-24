@@ -31,12 +31,16 @@ import {
 } from "@shared/ui/select";
 import { ScrollArea } from "@shared/ui/ScrollArea";
 import { Separator } from "@shared/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
 import type {
   CreateCentroAtencionResponse,
   PostalCodeSearchItem,
 } from "@api/types";
 import { centrosAtencionAPI } from "@api/resources/catalogos/centros-atencion.api";
 import { CentroAtencionDialogHeader } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDialogHeader";
+import { CentroAtencionDetailsHorariosSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsHorariosSection";
+import { CentroAtencionDetailsExcepcionesSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsExcepcionesSection";
+import { CentroAtencionDetailsConsultoriosSection } from "@features/admin/modules/catalogos/centros-atencion/components/CentroAtencionDetailsConsultoriosSection";
 import {
   createCentroAtencionSchema,
   type CreateCentroAtencionFormValues,
@@ -49,6 +53,7 @@ import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/share
 interface CentroAtencionCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  canEdit: boolean;
 }
 
 const CENTER_ORIGIN = {
@@ -83,7 +88,9 @@ const CP_DEBOUNCE_MS = 600;
 export function CentroAtencionCreateDialog({
   open,
   onOpenChange,
+  canEdit,
 }: CentroAtencionCreateDialogProps) {
+  const [activeTab, setActiveTab] = useState("general");
   const [createdCenter, setCreatedCenter] =
     useState<CreateCentroAtencionResponse | null>(null);
   const [postalCodeOptions, setPostalCodeOptions] = useState<
@@ -151,6 +158,7 @@ export function CentroAtencionCreateDialog({
       form.reset(DEFAULT_VALUES);
       setCreatedCenter(null);
       setPostalCodeOptions([]);
+      setActiveTab("general");
     }
     onOpenChange(nextOpen);
   };
@@ -174,11 +182,12 @@ export function CentroAtencionCreateDialog({
       setCreatedCenter(result);
 
       toast.success("Centro creado", {
-        description: `El centro ${result.name} se creo correctamente.`,
+        description: `El centro ${result.name} se creo correctamente. Ahora captura sus horarios, excepciones y consultorios.`,
       });
 
       form.reset(DEFAULT_VALUES);
       setPostalCodeOptions([]);
+      setActiveTab("horarios");
     } catch (error) {
       toast.error("No se pudo crear el centro", {
         description: getCentroAtencionErrorMessage(
@@ -202,20 +211,70 @@ export function CentroAtencionCreateDialog({
             </DialogDescription>
             <CentroAtencionDialogHeader
               title="Nuevo centro"
-              subtitle="Configura datos generales y direccion"
+              subtitle={
+                createdCenter
+                  ? "Centro creado. Captura horarios, excepciones y consultorios"
+                  : "Configura datos generales y direccion"
+              }
               status={<Badge variant="outline">Plantilla</Badge>}
             />
           </DialogHeader>
 
           <ScrollArea className="flex-1 px-8 pb-8">
             <div className="space-y-6 pt-4">
-              <div className="rounded-2xl border border-line-struct bg-paper p-5">
-                <Form {...form}>
-                  <form
-                    id={FORM_ID}
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-6"
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
+                <TabsList className="w-full">
+                  <TabsTrigger value="general" className="flex-1">
+                    General
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="horarios"
+                    className="flex-1"
+                    disabled={!createdCenter}
                   >
+                    Horarios
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="excepciones"
+                    className="flex-1"
+                    disabled={!createdCenter}
+                  >
+                    Excepciones
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="consultorios"
+                    className="flex-1"
+                    disabled={!createdCenter}
+                  >
+                    Consultorios
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="general" className="pt-4">
+                  <div className="space-y-4">
+                    {createdCenter ? (
+                      <CatalogCreateResultCard
+                        title="Centro creado"
+                        description="El centro ya esta disponible en el catalogo. Continua en las pestañas de arriba para capturar horarios, excepciones y consultorios."
+                        badgeLabel="Activo"
+                        fields={[
+                          { label: "Nombre", value: createdCenter.name },
+                          { label: "ID", value: createdCenter.id },
+                        ]}
+                      />
+                    ) : null}
+
+                    <div className="rounded-2xl border border-line-struct bg-paper p-5">
+                      <Form {...form}>
+                        <form
+                          id={FORM_ID}
+                          onSubmit={form.handleSubmit(onSubmit)}
+                          className="space-y-6"
+                        >
                     {/* ── Datos generales ── */}
                     <div>
                       <h4 className="mb-3 text-sm font-semibold text-txt-body">
@@ -518,27 +577,59 @@ export function CentroAtencionCreateDialog({
                         />
                       </div>
                     </div>
-                  </form>
-                </Form>
-              </div>
+                        </form>
+                      </Form>
+                    </div>
+                  </div>
+                </TabsContent>
 
-              {createdCenter ? (
-                <CatalogCreateResultCard
-                  title="Centro creado"
-                  description="El centro ya esta disponible en el catalogo."
-                  badgeLabel="Activo"
-                  fields={[
-                    { label: "Nombre", value: createdCenter.name },
-                    { label: "ID", value: createdCenter.id },
-                  ]}
-                />
-              ) : null}
+                <TabsContent value="horarios" className="pt-4">
+                  {createdCenter ? (
+                    <CentroAtencionDetailsHorariosSection
+                      centerId={createdCenter.id}
+                      canEdit={canEdit}
+                    />
+                  ) : (
+                    <p className="text-sm text-txt-muted">
+                      Guarda los datos generales para habilitar esta sección.
+                    </p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="excepciones" className="pt-4">
+                  {createdCenter ? (
+                    <CentroAtencionDetailsExcepcionesSection
+                      centerId={createdCenter.id}
+                      canEdit={canEdit}
+                    />
+                  ) : (
+                    <p className="text-sm text-txt-muted">
+                      Guarda los datos generales para habilitar esta sección.
+                    </p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="consultorios" className="pt-4">
+                  {createdCenter ? (
+                    <CentroAtencionDetailsConsultoriosSection
+                      centerId={createdCenter.id}
+                      canEdit={canEdit}
+                    />
+                  ) : (
+                    <p className="text-sm text-txt-muted">
+                      Guarda los datos generales para habilitar esta sección.
+                    </p>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           </ScrollArea>
 
           <DialogFooter className="flex flex-col gap-3 border-t border-line-struct px-8 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-xs text-txt-muted">
-              Completa los campos requeridos.
+              {createdCenter
+                ? "Puedes registrar otro centro o cerrar este dialogo."
+                : "Completa los campos requeridos."}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
@@ -546,15 +637,17 @@ export function CentroAtencionCreateDialog({
                 variant="outline"
                 onClick={() => handleDialogOpenChange(false)}
               >
-                Cancelar
+                {createdCenter ? "Cerrar" : "Cancelar"}
               </Button>
-              <Button
-                type="submit"
-                form={FORM_ID}
-                disabled={createCenter.isPending}
-              >
-                Crear centro
-              </Button>
+              {activeTab === "general" ? (
+                <Button
+                  type="submit"
+                  form={FORM_ID}
+                  disabled={createCenter.isPending}
+                >
+                  {createdCenter ? "Registrar otro centro" : "Crear centro"}
+                </Button>
+              ) : null}
             </div>
           </DialogFooter>
         </div>

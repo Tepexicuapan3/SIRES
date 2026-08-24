@@ -140,6 +140,11 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "admin.catalogs.edo_civil.update": {"allOf": ["admin:catalogos:edo_civil:update"]},
     "admin.catalogs.edo_civil.delete": {"allOf": ["admin:catalogos:edo_civil:delete"]},
     "admin.catalogs.cies.upload": {"allOf": ["admin:catalogos:cies:upload"]},
+    # Gestion de menus (arbol de navegacion / cat_modulos)
+    "admin.menus.read": {"allOf": ["admin:gestion:modulos:read"]},
+    "admin.menus.create": {"allOf": ["admin:gestion:modulos:create"]},
+    "admin.menus.update": {"allOf": ["admin:gestion:modulos:update"]},
+    "admin.menus.delete": {"allOf": ["admin:gestion:modulos:delete"]},
     # Médicos
     "admin.medicos.read":        {"allOf": ["admin:gestion:medicos:read"]},
     "admin.medicos.create":      {"allOf": ["admin:gestion:medicos:create"]},

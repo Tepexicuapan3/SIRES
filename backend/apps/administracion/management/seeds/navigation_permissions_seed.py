@@ -52,3 +52,44 @@ NAVIGATION_PERMISSIONS_SEED: list[tuple[str, str]] = [
     ("recepcion:fichas:especialidad:create", "Registrar ficha de especialidad"),
     ("recepcion:fichas:urgencias:create", "Registrar ficha de urgencias"),
 ]
+
+# Segunda tanda (2026-08-23, fuera de la auditoria original): catalogos que
+# se agregaron a `navigation_seed.py` DESPUES del audit engram y nunca
+# recibieron su codigo en `cat_permisos`. Confirmados uno por uno contra
+# `requiredPermission` en `admin.routes.config.tsx` / `servicios.routes.config.tsx`
+# -- todos protegen una pantalla real ya montada en el router, no son
+# placeholders. Sin estos codigos, esos modulos quedaban "publicos" en el
+# menu (visibles para cualquier autenticado) por la regla de
+# `GetNavigationMenuUseCase`: sin permiso asociado = publico.
+NAVIGATION_PERMISSIONS_SEED += [
+    ("admin:catalogos:autorizadores:read", "Ver catalogo de autorizadores"),
+    ("admin:catalogos:bajas:read", "Ver catalogo de bajas"),
+    ("admin:catalogos:calidad_laboral:read", "Ver catalogo de calidad laboral"),
+    ("admin:catalogos:cies:upload", "Cargar catalogo CIE-S"),
+    ("admin:catalogos:edo_civil:read", "Ver catalogo de estado civil"),
+    ("admin:catalogos:enfermedades:read", "Ver catalogo de enfermedades"),
+    ("admin:catalogos:escolaridad:read", "Ver catalogo de escolaridad"),
+    ("admin:catalogos:escuelas:read", "Ver catalogo de escuelas"),
+    ("admin:catalogos:estudios_med:read", "Ver catalogo de estudios medicos"),
+    (
+        "admin:catalogos:grupos_medicamentos:read",
+        "Ver catalogo de grupos de medicamentos",
+    ),
+    ("admin:catalogos:licencias:read", "Ver catalogo de licencias"),
+    ("admin:catalogos:ocupaciones:read", "Ver catalogo de ocupaciones"),
+    ("admin:catalogos:origen_cons:read", "Ver catalogo de origen de consulta"),
+    ("admin:catalogos:parentescos:read", "Ver catalogo de parentescos"),
+    ("admin:catalogos:pases:read", "Ver catalogo de pases"),
+    ("admin:catalogos:sucursales:read", "Ver catalogo de sucursales"),
+    ("admin:catalogos:tipo_citas:read", "Ver catalogo de tipos de citas"),
+    ("admin:catalogos:tipo_personal:read", "Ver catalogo de tipos de personal"),
+    ("admin:catalogos:tipos_areas:read", "Ver catalogo de tipos de areas"),
+    ("admin:catalogos:tipos_sanguineo:read", "Ver catalogo de tipos sanguineos"),
+    (
+        "admin:catalogos:tp_autorizacion:read",
+        "Ver catalogo de tipos de autorizacion",
+    ),
+    ("admin:catalogos:turnos:read", "Ver catalogo de turnos"),
+    ("almacen:inventario:read", "Ver inventario de almacen"),
+    ("servicios:contratos_oxigeno:read", "Ver contratos de oxigeno"),
+]

@@ -93,13 +93,10 @@ export const adminRoutes: RouteObject[] = [
     // "Modulos" del detalle de rol) -- ver `ModuleCatalogView` en el
     // backend.
     //
-    // NOTA DE SEGUIMIENTO (fuera del alcance de esta fase, es un cambio de
-    // backend): el nodo `administracion.panel.menus` todavia NO esta dado
-    // de alta en `navigation_seed.py` -- la Fase 1 de este change dejo
-    // pendiente agregarlo ahora que esta ruta real ya existe. Hasta que se
-    // sume al seed (y a `CLAVES_SISTEMA`), esta pantalla es accesible por
-    // URL directa para quien tenga el permiso, pero no aparece como item
-    // de sidebar.
+    // El nodo `administracion.panel.menus` esta dado de alta en
+    // `navigation_seed.py` bajo `administracion.catalogos` (clave sin
+    // renombrar por compatibilidad, pero el item vive en "Catalogos" ->
+    // "Menús y Submenús" en el sidebar).
     path: "menus",
     element: (
       <ProtectedRoute

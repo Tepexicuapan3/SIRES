@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ListTree, Plus, RotateCcw } from "lucide-react";
+import { FolderTree, Link2, ListTree, Plus, RotateCcw } from "lucide-react";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { TableHeaderBar } from "@features/admin/shared/components/TableHeaderBar";
 import { TableOptionsMenu, type TableOptionItem } from "@features/admin/shared/components/TableOptionsMenu";
@@ -116,12 +116,35 @@ export function MenusPage() {
 
   return (
     <CatalogModuleLayout
-      title="Gestión de menús"
-      description="Administra la estructura del menú de navegación: crea accesos directos, organiza carpetas y controla qué se muestra."
+      title="Menús y submenús"
+      description="Decide qué aparece en el menú lateral de la aplicación: agrega pantallas nuevas, ordénalas en carpetas y controla qué ve cada quién."
       icon={<ListTree className="size-12" />}
     >
       {!canReadMenus ? (
         <AdminReadOnlyNotice message="No tienes acceso para consultar la gestión de menús." />
+      ) : null}
+
+      {canReadMenus ? (
+        <div className="grid gap-3 rounded-xl border border-line-struct/60 bg-subtle/20 p-4 text-sm sm:grid-cols-2">
+          <div className="flex gap-3">
+            <FolderTree className="size-5 shrink-0 text-txt-muted" />
+            <p className="text-txt-muted">
+              <span className="font-semibold text-txt-body">Carpeta</span> —
+              un menú que agrupa varias pantallas adentro (aparece en el
+              lateral como un botón que se despliega).
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Link2 className="size-5 shrink-0 text-txt-muted" />
+            <p className="text-txt-muted">
+              <span className="font-semibold text-txt-body">
+                Acceso directo
+              </span>{" "}
+              — un submenú que lleva directo a una pantalla (elige a cuál
+              carpeta pertenece al crearlo).
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {canReadMenus ? (

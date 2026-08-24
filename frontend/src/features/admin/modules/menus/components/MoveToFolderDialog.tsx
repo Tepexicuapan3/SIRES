@@ -92,20 +92,22 @@ export function MoveToFolderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Mover módulo</DialogTitle>
+          <DialogTitle>Mover a otra carpeta</DialogTitle>
           <DialogDescription>
-            Elige la carpeta destino para «{node.title}». El módulo se
-            agrega al final de los hermanos de la carpeta elegida.
+            Elige a qué carpeta se cambia «{node.title}». Se agrega al final
+            de esa carpeta.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2 py-2">
           <Select value={selectedParentKey} onValueChange={setSelectedParentKey}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecciona una carpeta" />
+              <SelectValue placeholder="Elige una carpeta" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ROOT_VALUE}>— Raíz (sin carpeta) —</SelectItem>
+              <SelectItem value={ROOT_VALUE}>
+                — Nivel principal (sin carpeta) —
+              </SelectItem>
               {folderOptions.map((option) => (
                 <SelectItem key={option.key} value={option.key}>
                   {"  ".repeat(option.depth)}
