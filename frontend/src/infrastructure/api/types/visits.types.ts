@@ -164,6 +164,29 @@ export interface CaptureVitalsResponse {
   vitals: VisitVitalsPayload;
 }
 
+/** Ultima captura de vitales del PACIENTE (no de esta visita) -- para
+ * precargar el formulario. `null` si el paciente nunca tuvo una captura
+ * previa. `notes` no viaja: las observaciones son propias de cada visita,
+ * no algo que tenga sentido reciclar. */
+export interface LatestPatientVitals {
+  weightKg: number;
+  heightCm: number;
+  temperatureC: number | null;
+  oxygenSaturationPct: number | null;
+  heartRateBpm: number | null;
+  respiratoryRateBpm: number | null;
+  bloodPressureSystolic: number | null;
+  bloodPressureDiastolic: number | null;
+  waistCircumferenceCm: number | null;
+  glucosaCapilarMgdl: number | null;
+  bmi: number;
+  capturedAt: string;
+}
+
+export interface LatestVitalsResponse {
+  vitals: LatestPatientVitals | null;
+}
+
 export interface SaveDiagnosisRequest {
   primaryDiagnosis: string;
   finalNote: string;

@@ -21,6 +21,7 @@ from apps.somatometria.services.visit_flow_service import (
 from apps.somatometria.uses_case.capture_vitals_usecase import (
     capture_vitals,
     ensure_somatometria_role,
+    get_latest_vitals_for_visit,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,29 @@ def _emit_visit_status_changed_event(request, *, visit_id, status, previous_stat
 class VisitVitalsView(APIView):
     authentication_classes = []
     permission_classes = []
+
+    def get(self, request, visit_id):
+        """
+        Ultima captura de signos vitales del PACIENTE de esta visita (no de
+        la visita en si) -- la usa el formulario para precargar valores por
+        default. Devuelve `{"vitals": null}` si el paciente nunca tuvo una
+        captura previa (paciente nuevo).
+        """
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        try:
+            _require_somatometria_role(user)
+        except VisitFlowError as exc:
+            return _domain_error_response(request, exc)
+
+        try:
+            latest = get_latest_vitals_for_visit(visit_id)
+        except VisitFlowError as exc:
+            return _domain_error_response(request, exc)
+
+        return Response({"vitals": latest}, status=status.HTTP_200_OK)
 
     def post(self, request, visit_id):
         user, error = _auth_or_error(request)

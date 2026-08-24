@@ -55,6 +55,24 @@ def capture_vitals(visit_id, vitals_payload, *, visit_flow_service=None):
     }
 
 
+def get_latest_vitals_for_visit(visit_id, *, visit_flow_service=None):
+    visit_flow = visit_flow_service or get_visit_flow_service()
+
+    visit = visit_flow.get_by_id(visit_id)
+    if not visit:
+        raise VisitFlowError(
+            "VISIT_NOT_FOUND",
+            "Visita no encontrada.",
+            404,
+        )
+
+    latest = VitalsRepository.get_latest_for_patient(visit.no_exp)
+    if not latest:
+        return None
+
+    return VitalsRepository.latest_to_contract(latest)
+
+
 def _has_minimum_vitals(payload):
     return (
         payload.get("temperatureC") is not None

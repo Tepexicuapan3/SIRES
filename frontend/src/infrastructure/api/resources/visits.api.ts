@@ -4,6 +4,7 @@ import type {
   CieSearchResponse,
   CaptureVitalsRequest,
   CaptureVitalsResponse,
+  LatestVitalsResponse,
   CloseVisitRequest,
   CloseVisitResponse,
   CreateVisitRequest,
@@ -52,6 +53,15 @@ export const visitsAPI = {
     const response = await apiClient.post<CaptureVitalsResponse>(
       `/visits/${visitId}/vitals`,
       data,
+    );
+    return response.data;
+  },
+
+  /** Ultima captura de vitales del paciente de esta visita, para precargar
+   * el formulario -- `vitals: null` si el paciente nunca tuvo una previa. */
+  getLatestVitals: async (visitId: number): Promise<LatestVitalsResponse> => {
+    const response = await apiClient.get<LatestVitalsResponse>(
+      `/visits/${visitId}/vitals`,
     );
     return response.data;
   },

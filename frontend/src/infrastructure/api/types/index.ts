@@ -533,6 +533,8 @@ export type {
   CaptureVitalsRequest,
   CaptureVitalsResponse,
   VisitVitalsPayload,
+  LatestPatientVitals,
+  LatestVitalsResponse,
   SaveDiagnosisRequest,
   SaveDiagnosisResponse,
   CieSearchParams,

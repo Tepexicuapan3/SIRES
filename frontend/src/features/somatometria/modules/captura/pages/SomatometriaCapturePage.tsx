@@ -18,6 +18,7 @@ import {
 } from "@shared/ui/select";
 import { toast } from "sonner";
 import { VISIT_STATUS } from "@api/types";
+import type { LatestPatientVitals } from "@api/types";
 import { canCaptureVitals } from "@features/operativo/shared/domain/visit-flow.constants";
 import {
   captureVitalsFormSchema,
@@ -26,8 +27,16 @@ import {
 } from "@features/somatometria/modules/captura/domain/capture-vitals.schemas";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
+import { useLatestVitals } from "@features/somatometria/modules/captura/queries/useLatestVitals";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
 import { usePatientLookupHistorico } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
+
+/** Item de la bandeja tal cual lo devuelve `useSomatometriaQueue` -- se
+ * infiere del propio hook en vez de importar un tipo aparte para no
+ * arriesgar un nombre/ruta equivocado. */
+type QueueVisit = NonNullable<
+  ReturnType<typeof useSomatometriaQueue>["data"]
+>["items"][number];
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -93,6 +102,39 @@ const formatFechaNac = (iso: string | null | undefined): string => {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 };
+
+const numberOrEmpty = (value: number | null): string =>
+  value !== null ? String(value) : "";
+
+const formatCapturedAt = (iso: string): string =>
+  new Date(iso).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+/** Convierte la ultima captura del paciente (si existe) en los valores
+ * iniciales del formulario -- se usa SOLO como `defaultValues` de
+ * `useForm`, nunca via `form.reset()` en un efecto: este componente se
+ * remonta por visita (`key={visit.id}` en el padre), asi que `useForm` ya
+ * arranca con el valor correcto sin necesitar sincronizarlo despues. */
+const buildDefaultValues = (
+  latest: LatestPatientVitals | null,
+): CaptureVitalsFormInput =>
+  latest
+    ? {
+        weightKg: numberOrEmpty(latest.weightKg),
+        heightCm: numberOrEmpty(latest.heightCm),
+        temperatureC: numberOrEmpty(latest.temperatureC),
+        oxygenSaturationPct: numberOrEmpty(latest.oxygenSaturationPct),
+        heartRateBpm: numberOrEmpty(latest.heartRateBpm),
+        respiratoryRateBpm: numberOrEmpty(latest.respiratoryRateBpm),
+        bloodPressureSystolic: numberOrEmpty(latest.bloodPressureSystolic),
+        bloodPressureDiastolic: numberOrEmpty(latest.bloodPressureDiastolic),
+        glucosaCapilarMgdl: numberOrEmpty(latest.glucosaCapilarMgdl),
+        observations: "",
+      }
+    : DEFAULT_FORM_VALUES;
 
 const buildCaptureVitalsPayload = (values: CaptureVitalsFormValues) => ({
   weightKg:              values.weightKg,
@@ -179,6 +221,279 @@ function PatientInfoRow({ label, value }: { label: string; value: React.ReactNod
   );
 }
 
+// ─── Formulario de vitales (uno por visita: el padre lo monta con
+// `key={visit.id}`, asi que cada instancia nueva arranca limpia) ─────────────
+
+interface VitalsCaptureFormProps {
+  visit: QueueVisit;
+  initialVitals: LatestPatientVitals | null;
+  canCaptureSomatometriaVitals: boolean;
+  canCaptureSelectedVisit: boolean;
+}
+
+function VitalsCaptureForm({
+  visit,
+  initialVitals,
+  canCaptureSomatometriaVitals,
+  canCaptureSelectedVisit,
+}: VitalsCaptureFormProps) {
+  const captureVitals = useCaptureVitals();
+  const [capturedBmi, setCapturedBmi] = useState<number | null>(null);
+
+  const form = useForm<CaptureVitalsFormInput, unknown, CaptureVitalsFormValues>({
+    resolver: zodResolver(captureVitalsFormSchema),
+    mode: "onChange",
+    defaultValues: buildDefaultValues(initialVitals),
+  });
+
+  const [watchedWeightKg, watchedHeightCm] = useWatch({
+    control: form.control,
+    name: ["weightKg", "heightCm"],
+  });
+
+  const previewWeight = toPositiveNumber(watchedWeightKg);
+  const previewHeight = toPositiveNumber(watchedHeightCm);
+  const bmiPreview =
+    previewWeight !== null && previewHeight !== null
+      ? calculateBmi(previewWeight, previewHeight)
+      : null;
+  const visibleBmi = bmiPreview ?? capturedBmi;
+
+  const handleCaptureVitals = async (values: CaptureVitalsFormValues) => {
+    if (!canCaptureSomatometriaVitals || !canCaptureSelectedVisit) return;
+
+    try {
+      await captureVitals.mutateAsync({
+        visitId: visit.id,
+        data: buildCaptureVitalsPayload(values),
+      });
+
+      toast.success("Signos vitales guardados correctamente.", {
+        description: `Visita ${visit.folio} actualizada.`,
+      });
+      form.reset(DEFAULT_FORM_VALUES);
+      setCapturedBmi(null);
+    } catch (error) {
+      setCapturedBmi(null);
+      toast.error("No se pudo guardar", {
+        description: resolveCaptureVitalsErrorMessage(error),
+      });
+    }
+  };
+
+  const isFormDisabled = !canCaptureSelectedVisit || captureVitals.isPending;
+
+  return (
+    <>
+      {initialVitals ? (
+        <Alert>
+          <AlertTitle>Valores precargados</AlertTitle>
+          <AlertDescription>
+            Estos datos son de la última consulta del paciente (
+            {formatCapturedAt(initialVitals.capturedAt)}). Revísalos y ajusta
+            lo que haya cambiado antes de guardar.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <Separator />
+
+      <form
+        className="space-y-5"
+        noValidate
+        onSubmit={form.handleSubmit(handleCaptureVitals)}
+      >
+        {/* Estatura + Peso */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <MetricField
+            fieldId="heightCm"
+            label="Estatura"
+            unit="cm"
+            step={0.1}
+            disabled={isFormDisabled}
+            error={form.formState.errors.heightCm?.message}
+            registration={form.register("heightCm")}
+          />
+          <MetricField
+            fieldId="weightKg"
+            label="Peso"
+            unit="kg"
+            step={0.1}
+            disabled={isFormDisabled}
+            error={form.formState.errors.weightKg?.message}
+            registration={form.register("weightKg")}
+          />
+        </div>
+
+        {/* IMC (calculado) + Temperatura */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="bmi">IMC</Label>
+            <div className="flex overflow-hidden rounded-2xl border border-line-struct bg-paper">
+              <Input
+                id="bmi"
+                data-testid="somato-bmi-input"
+                readOnly
+                value={visibleBmi !== null ? formatBmi(visibleBmi) : "--"}
+                className="rounded-none border-0 focus-visible:ring-0 text-txt-muted"
+              />
+              <span className="inline-flex min-w-20 items-center justify-center border-l border-line-hairline bg-subtle px-3 text-sm text-txt-muted">
+                kg/m²
+              </span>
+            </div>
+          </div>
+          <MetricField
+            fieldId="temperatureC"
+            label="Temperatura"
+            unit="°C"
+            step={0.1}
+            disabled={isFormDisabled}
+            error={form.formState.errors.temperatureC?.message}
+            registration={form.register("temperatureC")}
+          />
+        </div>
+
+        {/* Saturación O2 + Frecuencia Cardiaca */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <MetricField
+            fieldId="oxygenSaturationPct"
+            label="Saturación de oxígeno"
+            unit="%"
+            disabled={isFormDisabled}
+            error={form.formState.errors.oxygenSaturationPct?.message}
+            registration={form.register("oxygenSaturationPct")}
+          />
+          <MetricField
+            fieldId="heartRateBpm"
+            label="Frecuencia cardiaca"
+            unit="lpm"
+            optional
+            disabled={isFormDisabled}
+            error={form.formState.errors.heartRateBpm?.message}
+            registration={form.register("heartRateBpm")}
+          />
+        </div>
+
+        {/* Frecuencia Respiratoria + Glucosa Capilar */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <MetricField
+            fieldId="respiratoryRateBpm"
+            label="Frecuencia respiratoria"
+            unit="rpm"
+            optional
+            disabled={isFormDisabled}
+            error={form.formState.errors.respiratoryRateBpm?.message}
+            registration={form.register("respiratoryRateBpm")}
+          />
+          <MetricField
+            fieldId="glucosaCapilarMgdl"
+            label="Glucosa capilar"
+            unit="mg/dL"
+            optional
+            disabled={isFormDisabled}
+            error={form.formState.errors.glucosaCapilarMgdl?.message}
+            registration={form.register("glucosaCapilarMgdl")}
+          />
+        </div>
+
+        {/* Tensión Arterial */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium leading-none">
+            Tensión arterial
+            <span className="ml-1 text-xs font-normal text-txt-muted">(opcional)</span>
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <MetricField
+              fieldId="bloodPressureSystolic"
+              label="Sistólica"
+              unit="mmHg"
+              disabled={isFormDisabled}
+              error={form.formState.errors.bloodPressureSystolic?.message}
+              registration={form.register("bloodPressureSystolic")}
+            />
+            <MetricField
+              fieldId="bloodPressureDiastolic"
+              label="Diastólica"
+              unit="mmHg"
+              disabled={isFormDisabled}
+              error={form.formState.errors.bloodPressureDiastolic?.message}
+              registration={form.register("bloodPressureDiastolic")}
+            />
+          </div>
+        </div>
+
+        {/* Observaciones */}
+        <div className="space-y-2">
+          <Label htmlFor="observations">
+            Observaciones
+            <span className="ml-1 text-xs font-normal text-txt-muted">(opcional)</span>
+          </Label>
+          <Textarea
+            id="observations"
+            data-testid="somato-observations-input"
+            rows={3}
+            disabled={isFormDisabled}
+            placeholder="Observaciones clínicas relevantes..."
+            {...form.register("observations")}
+          />
+          {form.formState.errors.observations?.message ? (
+            <p className="text-sm text-status-critical" role="alert">
+              {form.formState.errors.observations.message}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Guardar */}
+        <div className="border-t border-line-hairline pt-4">
+          <Button
+            type="submit"
+            data-testid="somato-save-button"
+            className="w-full md:w-auto"
+            disabled={isFormDisabled}
+          >
+            {captureVitals.isPending ? "Guardando..." : "Guardar signos vitales"}
+          </Button>
+        </div>
+      </form>
+    </>
+  );
+}
+
+// ─── Carga la ultima captura del paciente ANTES de montar el formulario
+// (evita tener que "reescribirlo" despues con un efecto) ────────────────────
+
+interface VitalsCaptureLoaderProps {
+  visit: QueueVisit;
+  canCaptureSomatometriaVitals: boolean;
+  canCaptureSelectedVisit: boolean;
+}
+
+function VitalsCaptureLoader({
+  visit,
+  canCaptureSomatometriaVitals,
+  canCaptureSelectedVisit,
+}: VitalsCaptureLoaderProps) {
+  const latestVitalsQuery = useLatestVitals(
+    visit.id,
+    canCaptureSomatometriaVitals,
+  );
+
+  if (canCaptureSomatometriaVitals && latestVitalsQuery.isLoading) {
+    return (
+      <p className="text-sm text-txt-muted">Cargando datos previos del paciente...</p>
+    );
+  }
+
+  return (
+    <VitalsCaptureForm
+      visit={visit}
+      initialVitals={latestVitalsQuery.data?.vitals ?? null}
+      canCaptureSomatometriaVitals={canCaptureSomatometriaVitals}
+      canCaptureSelectedVisit={canCaptureSelectedVisit}
+    />
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export const SomatometriaCapturePage = () => {
@@ -193,16 +508,8 @@ export const SomatometriaCapturePage = () => {
   );
 
   const queueQuery = useSomatometriaQueue({ enabled: canReadSomatometriaQueue });
-  const captureVitals = useCaptureVitals();
 
   const [selectedVisitIdState, setSelectedVisitIdState] = useState<number | null>(null);
-  const [capturedBmi, setCapturedBmi] = useState<number | null>(null);
-
-  const form = useForm<CaptureVitalsFormInput, unknown, CaptureVitalsFormValues>({
-    resolver: zodResolver(captureVitalsFormSchema),
-    mode: "onChange",
-    defaultValues: DEFAULT_FORM_VALUES,
-  });
 
   const visits = queueQuery.data?.items ?? [];
 
@@ -230,53 +537,7 @@ export const SomatometriaCapturePage = () => {
         .find((m) => m!.pkNum === selectedVisit?.pkNum) ?? null
     : null;
 
-  const [watchedWeightKg, watchedHeightCm] = useWatch({
-    control: form.control,
-    name: ["weightKg", "heightCm"],
-  });
-
-  const previewWeight = toPositiveNumber(watchedWeightKg);
-  const previewHeight = toPositiveNumber(watchedHeightCm);
-  const bmiPreview =
-    previewWeight !== null && previewHeight !== null
-      ? calculateBmi(previewWeight, previewHeight)
-      : null;
-  const visibleBmi = bmiPreview ?? capturedBmi;
-
-  const resetCaptureForm = () => {
-    form.reset(DEFAULT_FORM_VALUES);
-    setCapturedBmi(null);
-  };
-
-  const handleVisitChange = (nextVisitId: number) => {
-    setSelectedVisitIdState(nextVisitId);
-    resetCaptureForm();
-  };
-
-  const handleCaptureVitals = async (values: CaptureVitalsFormValues) => {
-    if (!selectedVisit || !canCaptureSomatometriaVitals || !canCaptureSelectedVisit) return;
-
-    try {
-      const result = await captureVitals.mutateAsync({
-        visitId: selectedVisit.id,
-        data: buildCaptureVitalsPayload(values),
-      });
-
-      setCapturedBmi(result.vitals.bmi);
-      toast.success("Signos vitales guardados correctamente.", {
-        description: `Visita ${selectedVisit.folio} actualizada.`,
-      });
-      resetCaptureForm();
-    } catch (error) {
-      setCapturedBmi(null);
-      toast.error("No se pudo guardar", {
-        description: resolveCaptureVitalsErrorMessage(error),
-      });
-    }
-  };
-
   const currentStatus = selectedVisit?.status ?? VISIT_STATUS.EN_SOMATOMETRIA;
-  const isFormDisabled = !canCaptureSelectedVisit || captureVitals.isPending;
 
   return (
     <section className="space-y-6 p-6">
@@ -327,7 +588,7 @@ export const SomatometriaCapturePage = () => {
               <Label htmlFor="visit-selector">Visita activa</Label>
               <Select
                 value={selectedVisitId?.toString() ?? ""}
-                onValueChange={(value) => handleVisitChange(Number(value))}
+                onValueChange={(value) => setSelectedVisitIdState(Number(value))}
               >
                 <SelectTrigger
                   id="visit-selector"
@@ -405,166 +666,14 @@ export const SomatometriaCapturePage = () => {
             </div>
           ) : null}
 
-          <Separator />
-
-          {/* ── Formulario de vitales ──────────────────────────── */}
-          <form
-            className="space-y-5"
-            noValidate
-            onSubmit={form.handleSubmit(handleCaptureVitals)}
-          >
-            {/* Estatura + Peso */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <MetricField
-                fieldId="heightCm"
-                label="Estatura"
-                unit="cm"
-                step={0.1}
-                disabled={isFormDisabled}
-                error={form.formState.errors.heightCm?.message}
-                registration={form.register("heightCm")}
-              />
-              <MetricField
-                fieldId="weightKg"
-                label="Peso"
-                unit="kg"
-                step={0.1}
-                disabled={isFormDisabled}
-                error={form.formState.errors.weightKg?.message}
-                registration={form.register("weightKg")}
-              />
-            </div>
-
-            {/* IMC (calculado) + Temperatura */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="bmi">IMC</Label>
-                <div className="flex overflow-hidden rounded-2xl border border-line-struct bg-paper">
-                  <Input
-                    id="bmi"
-                    data-testid="somato-bmi-input"
-                    readOnly
-                    value={visibleBmi !== null ? formatBmi(visibleBmi) : "--"}
-                    className="rounded-none border-0 focus-visible:ring-0 text-txt-muted"
-                  />
-                  <span className="inline-flex min-w-20 items-center justify-center border-l border-line-hairline bg-subtle px-3 text-sm text-txt-muted">
-                    kg/m²
-                  </span>
-                </div>
-              </div>
-              <MetricField
-                fieldId="temperatureC"
-                label="Temperatura"
-                unit="°C"
-                step={0.1}
-                disabled={isFormDisabled}
-                error={form.formState.errors.temperatureC?.message}
-                registration={form.register("temperatureC")}
-              />
-            </div>
-
-            {/* Saturación O2 + Frecuencia Cardiaca */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <MetricField
-                fieldId="oxygenSaturationPct"
-                label="Saturación de oxígeno"
-                unit="%"
-                disabled={isFormDisabled}
-                error={form.formState.errors.oxygenSaturationPct?.message}
-                registration={form.register("oxygenSaturationPct")}
-              />
-              <MetricField
-                fieldId="heartRateBpm"
-                label="Frecuencia cardiaca"
-                unit="lpm"
-                optional
-                disabled={isFormDisabled}
-                error={form.formState.errors.heartRateBpm?.message}
-                registration={form.register("heartRateBpm")}
-              />
-            </div>
-
-            {/* Frecuencia Respiratoria + Glucosa Capilar */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <MetricField
-                fieldId="respiratoryRateBpm"
-                label="Frecuencia respiratoria"
-                unit="rpm"
-                optional
-                disabled={isFormDisabled}
-                error={form.formState.errors.respiratoryRateBpm?.message}
-                registration={form.register("respiratoryRateBpm")}
-              />
-              <MetricField
-                fieldId="glucosaCapilarMgdl"
-                label="Glucosa capilar"
-                unit="mg/dL"
-                optional
-                disabled={isFormDisabled}
-                error={form.formState.errors.glucosaCapilarMgdl?.message}
-                registration={form.register("glucosaCapilarMgdl")}
-              />
-            </div>
-
-            {/* Tensión Arterial */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium leading-none">
-                Tensión arterial
-                <span className="ml-1 text-xs font-normal text-txt-muted">(opcional)</span>
-              </p>
-              <div className="grid gap-4 md:grid-cols-2">
-                <MetricField
-                  fieldId="bloodPressureSystolic"
-                  label="Sistólica"
-                  unit="mmHg"
-                  disabled={isFormDisabled}
-                  error={form.formState.errors.bloodPressureSystolic?.message}
-                  registration={form.register("bloodPressureSystolic")}
-                />
-                <MetricField
-                  fieldId="bloodPressureDiastolic"
-                  label="Diastólica"
-                  unit="mmHg"
-                  disabled={isFormDisabled}
-                  error={form.formState.errors.bloodPressureDiastolic?.message}
-                  registration={form.register("bloodPressureDiastolic")}
-                />
-              </div>
-            </div>
-
-            {/* Observaciones */}
-            <div className="space-y-2">
-              <Label htmlFor="observations">
-                Observaciones
-                <span className="ml-1 text-xs font-normal text-txt-muted">(opcional)</span>
-              </Label>
-              <Textarea
-                id="observations"
-                data-testid="somato-observations-input"
-                rows={3}
-                disabled={isFormDisabled}
-                placeholder="Observaciones clínicas relevantes..."
-                {...form.register("observations")}
-              />
-              {form.formState.errors.observations?.message ? (
-                <p className="text-sm text-status-critical" role="alert">
-                  {form.formState.errors.observations.message}
-                </p>
-              ) : null}
-            </div>
-
-            {/* Guardar */}
-            <div className="border-t border-line-hairline pt-4">
-              <Button
-                type="submit"
-                data-testid="somato-save-button"
-                className="w-full md:w-auto"
-                disabled={isFormDisabled}
-              >
-                {captureVitals.isPending ? "Guardando..." : "Guardar signos vitales"}
-              </Button>
-            </div>
-          </form>
+          {selectedVisit ? (
+            <VitalsCaptureLoader
+              key={selectedVisit.id}
+              visit={selectedVisit}
+              canCaptureSomatometriaVitals={canCaptureSomatometriaVitals}
+              canCaptureSelectedVisit={canCaptureSelectedVisit}
+            />
+          ) : null}
 
           {!canCaptureSomatometriaVitals ? (
             <p className="text-sm text-txt-muted" role="status">

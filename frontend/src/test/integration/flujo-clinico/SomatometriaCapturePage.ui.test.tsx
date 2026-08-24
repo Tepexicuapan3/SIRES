@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import SomatometriaCapturePage from "@features/somatometria/modules/captura/pages/SomatometriaCapturePage";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
+import { useLatestVitals } from "@features/somatometria/modules/captura/queries/useLatestVitals";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import type { VisitQueueItem } from "@api/types";
 
@@ -27,6 +28,13 @@ vi.mock(
   "@features/somatometria/modules/captura/mutations/useCaptureVitals",
   () => ({
     useCaptureVitals: vi.fn(),
+  }),
+);
+
+vi.mock(
+  "@features/somatometria/modules/captura/queries/useLatestVitals",
+  () => ({
+    useLatestVitals: vi.fn(),
   }),
 );
 
@@ -91,6 +99,12 @@ describe("SomatometriaCapturePage UI", () => {
       isPending: false,
     } as unknown as ReturnType<typeof useCaptureVitals>);
 
+    vi.mocked(useLatestVitals).mockReturnValue({
+      data: { vitals: null },
+      isLoading: false,
+      isSuccess: true,
+    } as unknown as ReturnType<typeof useLatestVitals>);
+
     captureMutateAsync.mockResolvedValue({
       visitId: 1,
       status: "lista_para_doctor",
@@ -150,9 +164,7 @@ describe("SomatometriaCapturePage UI", () => {
 
     render(<SomatometriaCapturePage />);
 
-    expect(
-      screen.getByText("Cargando bandeja de somatometria..."),
-    ).toBeVisible();
+    expect(screen.getByText("Cargando bandeja...")).toBeVisible();
   });
 
   it("renderiza estado empty", () => {
