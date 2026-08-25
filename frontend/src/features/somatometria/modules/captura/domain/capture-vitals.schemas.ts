@@ -62,6 +62,10 @@ export const captureVitalsFormSchema = z
       toOptionalInt,
       z.number().int().min(20, { error: "Glucosa minima 20 mg/dL." }).max(800, { error: "Glucosa maxima 800 mg/dL." }).optional(),
     ),
+    waistCircumferenceCm: z.preprocess(
+      toOptionalInt,
+      z.number().int().min(30, { error: "Cintura minima 30 cm." }).max(200, { error: "Cintura maxima 200 cm." }).optional(),
+    ),
     observations: z
       .string()
       .trim()

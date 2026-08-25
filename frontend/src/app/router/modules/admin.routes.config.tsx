@@ -95,9 +95,9 @@ export const adminRoutes: RouteObject[] = [
     // backend.
     //
     // El nodo `administracion.panel.menus` esta dado de alta en
-    // `navigation_seed.py` bajo `administracion.catalogos` (clave sin
-    // renombrar por compatibilidad, pero el item vive en "Catalogos" ->
-    // "Menús y Submenús" en el sidebar).
+    // `navigation_seed.py` bajo `administracion.catalogos` -- clave sin
+    // renombrar por compatibilidad, el item vive dentro de "Catalogos" en
+    // el sidebar.
     path: "menus",
     element: (
       <ProtectedRoute

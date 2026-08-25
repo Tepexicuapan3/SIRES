@@ -169,7 +169,7 @@ NAV_SEED = [
         "orden": 1,
         "es_seccion": True,
         "grupo": "primary",
-        "parent_clave": None,
+        "parent_clave": "administracion",
         "permisos": [],
     },
     {
@@ -514,7 +514,7 @@ NAV_SEED = [
         "icono": None,
         "url": "/admin/menus",
         "badge": None,
-        "orden": 16,
+        "orden": 29,
         "es_seccion": False,
         "grupo": "primary",
         "parent_clave": "administracion.catalogos",

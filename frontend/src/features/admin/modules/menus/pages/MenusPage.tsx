@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { FolderTree, Link2, ListTree, Plus, RotateCcw } from "lucide-react";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
+import { TableFilterMenu } from "@features/admin/shared/components/TableFilterMenu";
 import { TableHeaderBar } from "@features/admin/shared/components/TableHeaderBar";
 import { TableOptionsMenu, type TableOptionItem } from "@features/admin/shared/components/TableOptionsMenu";
 import { TablePrimaryAction } from "@features/admin/shared/components/TablePrimaryAction";
@@ -46,9 +47,39 @@ function filterTreeByTitle(
   return result;
 }
 
+const STATUS_FILTER = {
+  ALL: "all",
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+} as const;
+
+type StatusFilter = (typeof STATUS_FILTER)[keyof typeof STATUS_FILTER];
+
+/** Filtra el arbol por estado (activo/oculto). Si un nodo no matchea, se
+ * poda junto con TODO su subarbol -- no tiene sentido mostrar los hijos de
+ * un modulo que el filtro pidio ocultar. */
+function filterTreeByStatus(
+  nodes: ModuleCatalogNodeDTO[],
+  statusFilter: StatusFilter,
+): ModuleCatalogNodeDTO[] {
+  if (statusFilter === STATUS_FILTER.ALL) return nodes;
+
+  const result: ModuleCatalogNodeDTO[] = [];
+  for (const node of nodes) {
+    const matchesStatus =
+      statusFilter === STATUS_FILTER.ACTIVE ? node.isActive : !node.isActive;
+    if (!matchesStatus) continue;
+    result.push({ ...node, items: filterTreeByStatus(node.items, statusFilter) });
+  }
+  return result;
+}
+
 export function MenusPage() {
   const { hasCapability } = usePermissionDependencies();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    STATUS_FILTER.ALL,
+  );
 
   const canReadMenus = hasCapability("admin.menus.read", {
     allOf: ["admin:gestion:modulos:read"],
@@ -70,10 +101,32 @@ export function MenusPage() {
   const allNodes = useMemo(() => data?.modules ?? [], [data]);
 
   const normalizedSearch = search.trim().toLowerCase();
-  const visibleNodes = useMemo(
-    () => filterTreeByTitle(allNodes, normalizedSearch),
-    [allNodes, normalizedSearch],
-  );
+  const visibleNodes = useMemo(() => {
+    const byStatus = filterTreeByStatus(allNodes, statusFilter);
+    return filterTreeByTitle(byStatus, normalizedSearch);
+  }, [allNodes, normalizedSearch, statusFilter]);
+
+  const appliedFiltersCount = statusFilter === STATUS_FILTER.ALL ? 0 : 1;
+  const filterSections = [
+    {
+      id: "status",
+      label: "Estado",
+      options: [
+        {
+          id: STATUS_FILTER.ACTIVE,
+          label: "Activos",
+          selected: statusFilter === STATUS_FILTER.ACTIVE,
+          onSelect: () => setStatusFilter(STATUS_FILTER.ACTIVE),
+        },
+        {
+          id: STATUS_FILTER.INACTIVE,
+          label: "Ocultos",
+          selected: statusFilter === STATUS_FILTER.INACTIVE,
+          onSelect: () => setStatusFilter(STATUS_FILTER.INACTIVE),
+        },
+      ],
+    },
+  ];
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editingNode, setEditingNode] = useState<ModuleCatalogNodeDTO | null>(null);
@@ -158,6 +211,11 @@ export function MenusPage() {
           }
           actions={
             <>
+              <TableFilterMenu
+                sections={filterSections}
+                appliedCount={appliedFiltersCount}
+                onClear={() => setStatusFilter(STATUS_FILTER.ALL)}
+              />
               <TableOptionsMenu options={tableOptions} />
               {canCreateModule ? (
                 <TablePrimaryAction

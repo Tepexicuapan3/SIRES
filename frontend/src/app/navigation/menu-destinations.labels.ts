@@ -38,6 +38,7 @@ export const MENU_DESTINATION_LABELS: Record<
     label: "Autorización de Recetas",
     grupo: "Administración",
   },
+  "/admin/catalogos": { label: "Catálogos", grupo: "Catálogos" },
   "/admin/catalogos/areas": { label: "Áreas", grupo: "Catálogos" },
   "/admin/catalogos/areas-clinicas": {
     label: "Áreas Clínicas",

@@ -67,6 +67,7 @@ const DEFAULT_FORM_VALUES: CaptureVitalsFormInput = {
   bloodPressureSystolic: "",
   bloodPressureDiastolic: "",
   glucosaCapilarMgdl: "",
+  waistCircumferenceCm: "",
   observations: "",
 };
 
@@ -132,6 +133,7 @@ const buildDefaultValues = (
         bloodPressureSystolic: numberOrEmpty(latest.bloodPressureSystolic),
         bloodPressureDiastolic: numberOrEmpty(latest.bloodPressureDiastolic),
         glucosaCapilarMgdl: numberOrEmpty(latest.glucosaCapilarMgdl),
+        waistCircumferenceCm: numberOrEmpty(latest.waistCircumferenceCm),
         observations: "",
       }
     : DEFAULT_FORM_VALUES;
@@ -146,7 +148,7 @@ const buildCaptureVitalsPayload = (values: CaptureVitalsFormValues) => ({
   bloodPressureSystolic: values.bloodPressureSystolic,
   bloodPressureDiastolic: values.bloodPressureDiastolic,
   glucosaCapilarMgdl:    values.glucosaCapilarMgdl,
-  waistCircumferenceCm:  undefined,
+  waistCircumferenceCm:  values.waistCircumferenceCm,
   notes:                 values.observations,
 });
 
@@ -393,6 +395,19 @@ function VitalsCaptureForm({
             disabled={isFormDisabled}
             error={form.formState.errors.glucosaCapilarMgdl?.message}
             registration={form.register("glucosaCapilarMgdl")}
+          />
+        </div>
+
+        {/* Circunferencia de cintura */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <MetricField
+            fieldId="waistCircumferenceCm"
+            label="Circunferencia de cintura"
+            unit="cm"
+            optional
+            disabled={isFormDisabled}
+            error={form.formState.errors.waistCircumferenceCm?.message}
+            registration={form.register("waistCircumferenceCm")}
           />
         </div>
 

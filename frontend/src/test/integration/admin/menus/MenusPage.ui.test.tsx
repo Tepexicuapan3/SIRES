@@ -142,10 +142,17 @@ describe("MenusPage integration (MSW)", () => {
     const user = userEvent.setup();
     render(<MenusPage />);
 
+    await screen.findByText("Farmacia");
+    await user.click(screen.getByRole("button", { name: "Expandir Farmacia" }));
     await screen.findByText("Recetas");
 
     await user.click(
-      screen.getByRole("button", { name: "Ocultar Recetas del menú" }),
+      screen.getByRole("button", {
+        name: "Ver información y acciones de Recetas",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: /ocultar del menú/i }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -189,14 +196,25 @@ describe("MenusPage integration (MSW)", () => {
     const user = userEvent.setup();
     render(<MenusPage />);
 
+    await screen.findByText("Farmacia");
+    await user.click(screen.getByRole("button", { name: "Expandir Farmacia" }));
     await screen.findByText("Recetas");
 
-    await user.click(screen.getByRole("button", { name: "Editar Recetas" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Ver información y acciones de Recetas",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: /^editar$/i }),
+    );
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Editar módulo")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Editar elemento del menú"),
+    ).toBeInTheDocument();
 
-    const titleInput = within(dialog).getByLabelText("Título");
+    const titleInput = within(dialog).getByLabelText("Nombre");
     await user.clear(titleInput);
     await user.type(titleInput, "Recetas actualizado");
 

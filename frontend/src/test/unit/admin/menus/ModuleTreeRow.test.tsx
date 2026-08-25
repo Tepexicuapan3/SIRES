@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { render, screen } from "@/test/utils";
 import { ModuleTreeRow } from "@features/admin/modules/menus/components/ModuleTreeRow";
 import type { ModuleCatalogNodeDTO } from "@api/types";
@@ -29,6 +30,8 @@ describe("ModuleTreeRow", () => {
         canUpdate
         canDelete
         isBusy={false}
+        isExpanded={false}
+        onToggleExpand={noop}
         onMoveUp={noop}
         onMoveDown={noop}
         onMoveToFolder={noop}
@@ -41,7 +44,8 @@ describe("ModuleTreeRow", () => {
     expect(screen.queryByText(/farmacia:vacunas/)).not.toBeInTheDocument();
   });
 
-  it("deshabilita mover-a-carpeta y ocultar en un nodo de sistema", () => {
+  it("deshabilita mover-a-carpeta y ocultar en un nodo de sistema", async () => {
+    const user = userEvent.setup();
     const onMoveToFolder = vi.fn();
     const onToggleVisibility = vi.fn();
 
@@ -54,6 +58,8 @@ describe("ModuleTreeRow", () => {
         canUpdate
         canDelete
         isBusy={false}
+        isExpanded={false}
+        onToggleExpand={noop}
         onMoveUp={noop}
         onMoveDown={noop}
         onMoveToFolder={onMoveToFolder}
@@ -62,15 +68,23 @@ describe("ModuleTreeRow", () => {
       />,
     );
 
+    await user.click(
+      screen.getByRole("button", {
+        name: /ver información y acciones de vacunas/i,
+      }),
+    );
+
     expect(
-      screen.getByRole("button", { name: /mover vacunas a otra carpeta/i }),
-    ).toBeDisabled();
+      await screen.findByRole("menuitem", { name: /mover a otra carpeta/i }),
+    ).toHaveAttribute("data-disabled");
     expect(
-      screen.getByRole("button", { name: /ocultar vacunas del menú/i }),
-    ).toBeDisabled();
+      screen.getByRole("menuitem", { name: /ocultar del menú/i }),
+    ).toHaveAttribute("data-disabled");
   });
 
-  it("no deshabilita editar en un nodo de sistema", () => {
+  it("no deshabilita editar en un nodo de sistema", async () => {
+    const user = userEvent.setup();
+
     render(
       <ModuleTreeRow
         node={{ ...baseNode, isSystem: true }}
@@ -80,6 +94,8 @@ describe("ModuleTreeRow", () => {
         canUpdate
         canDelete
         isBusy={false}
+        isExpanded={false}
+        onToggleExpand={noop}
         onMoveUp={noop}
         onMoveDown={noop}
         onMoveToFolder={noop}
@@ -88,8 +104,14 @@ describe("ModuleTreeRow", () => {
       />,
     );
 
+    await user.click(
+      screen.getByRole("button", {
+        name: /ver información y acciones de vacunas/i,
+      }),
+    );
+
     expect(
-      screen.getByRole("button", { name: /editar vacunas/i }),
-    ).not.toBeDisabled();
+      await screen.findByRole("menuitem", { name: /^editar$/i }),
+    ).not.toHaveAttribute("data-disabled");
   });
 });

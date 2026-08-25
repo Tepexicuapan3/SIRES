@@ -37,7 +37,7 @@ describe("ModuleCreateWizard - icono", () => {
 
     // Paso 1: titulo + icono.
     await user.type(
-      screen.getByLabelText("Título"),
+      screen.getByLabelText("Nombre"),
       "Autorización de Estudios",
     );
 

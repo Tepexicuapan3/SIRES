@@ -71,7 +71,6 @@ describe("SomatometriaCapturePage UI", () => {
     expect(getVitalsInput("oxygenSaturationPct")).toHaveValue(null);
     expect(screen.getByTestId("somato-bmi-input")).toHaveValue("--");
     expect(screen.getByTestId("somato-observations-input")).toHaveValue("");
-    expect(screen.queryByText(/IMC calculado:/)).not.toBeInTheDocument();
   };
 
   beforeEach(() => {
@@ -255,45 +254,41 @@ describe("SomatometriaCapturePage UI", () => {
     await user.type(getVitalsInput("weightKg"), "70");
     await user.type(getVitalsInput("heightCm"), "175");
 
-    expect(screen.getByText("IMC calculado: 22.86")).toBeVisible();
+    expect(screen.getByTestId("somato-bmi-input")).toHaveValue("22.86");
   });
 
   it("conserva vitales opcionales previos para evitar perdida de datos", async () => {
-    vi.mocked(useSomatometriaQueue).mockReturnValue({
+    vi.mocked(useLatestVitals).mockReturnValue({
       data: {
-        items: [
-          createVisit({
-            vitals: {
-              weightKg: 69,
-              heightCm: 175,
-              temperatureC: 36.5,
-              oxygenSaturationPct: 99,
-              heartRateBpm: 68,
-              respiratoryRateBpm: 14,
-              bloodPressureSystolic: 118,
-              bloodPressureDiastolic: 76,
-              waistCircumferenceCm: 89,
-              notes: "historial previo",
-              bmi: 22.53,
-            },
-          }),
-        ],
-        page: 1,
-        pageSize: 20,
-        total: 1,
-        totalPages: 1,
+        vitals: {
+          weightKg: 69,
+          heightCm: 175,
+          temperatureC: 36.5,
+          oxygenSaturationPct: 99,
+          heartRateBpm: 68,
+          respiratoryRateBpm: 14,
+          bloodPressureSystolic: 118,
+          bloodPressureDiastolic: 76,
+          waistCircumferenceCm: 89,
+          glucosaCapilarMgdl: null,
+          bmi: 22.53,
+          capturedAt: "2026-08-01T00:00:00Z",
+        },
       },
       isLoading: false,
-      isError: false,
-      error: null,
-    } as unknown as ReturnType<typeof useSomatometriaQueue>);
+      isSuccess: true,
+    } as unknown as ReturnType<typeof useLatestVitals>);
 
     const user = userEvent.setup();
     render(<SomatometriaCapturePage />);
 
+    await user.clear(getVitalsInput("weightKg"));
     await user.type(getVitalsInput("weightKg"), "70");
+    await user.clear(getVitalsInput("heightCm"));
     await user.type(getVitalsInput("heightCm"), "175");
+    await user.clear(getVitalsInput("temperatureC"));
     await user.type(getVitalsInput("temperatureC"), "36.6");
+    await user.clear(getVitalsInput("oxygenSaturationPct"));
     await user.type(getVitalsInput("oxygenSaturationPct"), "98");
     await user.click(screen.getByTestId("somato-save-button"));
 
@@ -310,7 +305,7 @@ describe("SomatometriaCapturePage UI", () => {
           bloodPressureSystolic: 118,
           bloodPressureDiastolic: 76,
           waistCircumferenceCm: 89,
-          notes: "historial previo",
+          notes: undefined,
         },
       });
     });

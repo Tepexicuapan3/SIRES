@@ -139,7 +139,7 @@ DATABASES = {
         "PASSWORD": config("POSTGRES_PASSWORD", default="112233"),
         "HOST": config("POSTGRES_HOST", default="50.192.41.223"),
         "PORT": config("POSTGRES_PORT", default="5432"),
-        "OPTIONS": {"client_encoding": "UTF8", "options": "-c search_path=public,sires"},
+        "OPTIONS": {"client_encoding": "UTF8", "options": "-c search_path=sires,public"},
     },
     "expedientes": {
         "ENGINE": "django.db.backends.postgresql",
@@ -389,7 +389,7 @@ RBAC_ROLE_PERMISSION_S3_ENABLED = config(
 
 # ── Navigation menu feature flags ─────────────────────────────────────────────
 NAVIGATION_MENU_DB_ENABLED = config(
-    "NAVIGATION_MENU_DB_ENABLED", default=False, cast=bool
+    "NAVIGATION_MENU_DB_ENABLED", default=True, cast=bool
 )
 NAVIGATION_MENU_SOURCE = config("NAVIGATION_MENU_SOURCE", default="auto")
 

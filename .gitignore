@@ -73,6 +73,8 @@ frontend/playwright-report/
 # Database
 *.db
 *.sqlite
+*.rdb
+dump.rdb
 
 # Docker
 .docker/

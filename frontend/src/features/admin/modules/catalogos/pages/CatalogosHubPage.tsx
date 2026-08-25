@@ -5,13 +5,44 @@ import { CatalogModuleLayout } from "@features/admin/modules/catalogos/shared/co
 import { TableSearch } from "@features/admin/shared/components/TableSearch";
 import { useNavigation } from "@features/navigation/hooks/useNavigation";
 import { normalizeSearchText } from "@shared/utils/text/normalizeSearchText";
-import type { NavItem } from "@app/navigation/nav-config";
+import type { NavItem, NavSection } from "@app/navigation/nav-config";
 
-/** Clave de sidebar del modulo raiz "Catalogos" (ver navigation_seed.py:
- * `administracion.catalogos`, promovido a seccion raiz). El titulo en BD no
- * lleva acento ("Catalogos") -- se compara normalizado para no depender de
- * esa grafia exacta. */
+/** Titulo del nodo "Catalogos" (ver navigation_seed.py:
+ * `administracion.catalogos`, hijo de `administracion`). El titulo en BD
+ * no lleva acento ("Catalogos") -- se compara normalizado para no
+ * depender de esa grafia exacta. */
 const CATALOGOS_SECTION_TITLE = "catalogos";
+
+/** Titulo de la seccion raiz bajo la que vive "Catalogos" -- necesario
+ * para desambiguar: existe OTRO nodo "Catalogos" (Insumos, Proveedores,
+ * etc.) dentro de "Almacen", con el mismo titulo pero nada que ver con
+ * los catalogos de datos administrativos que esta pagina indexa. Buscar
+ * por titulo en todo el arbol sin acotar por padre agarraria cualquiera
+ * de los dos. */
+const ADMINISTRACION_SECTION_TITLE = "administracion";
+
+/** Busca el nodo "Catalogos" dentro del subarbol de "Administracion"
+ * (a cualquier profundidad dentro de ese subarbol), nunca fuera de el. */
+function findCatalogosNode(sections: NavSection[]): NavItem | undefined {
+  const visitItems = (items: NavItem[]): NavItem | undefined => {
+    for (const item of items) {
+      if (normalizeSearchText(item.title) === CATALOGOS_SECTION_TITLE) {
+        return item;
+      }
+      if (item.items?.length) {
+        const found = visitItems(item.items);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
+  const administracion = sections.find(
+    (s) => normalizeSearchText(s.title) === ADMINISTRACION_SECTION_TITLE,
+  );
+  if (!administracion) return undefined;
+  return visitItems(administracion.items);
+}
 
 /** Aplana los items de la seccion (por si algun dia vuelve a tener
  * subcarpetas) y descarta los que no llevan a ninguna pantalla. */
@@ -40,10 +71,8 @@ export function CatalogosHubPage() {
   const [search, setSearch] = useState("");
 
   const catalogos = useMemo(() => {
-    const section = sections.find(
-      (s) => normalizeSearchText(s.title) === CATALOGOS_SECTION_TITLE,
-    );
-    const leaves = section ? flattenLeafItems(section.items) : [];
+    const section = findCatalogosNode(sections);
+    const leaves = section ? flattenLeafItems(section.items ?? []) : [];
     return [...leaves].sort((a, b) =>
       a.title.localeCompare(b.title, "es", { sensitivity: "base" }),
     );

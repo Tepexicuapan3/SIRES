@@ -30,6 +30,7 @@ describe("mapNavigationMenu", () => {
       sections: [
         {
           title: "Administracion",
+          icon: null,
           permissions: [],
           items: [
             {
@@ -101,6 +102,7 @@ describe("mapNavigationMenu", () => {
       sections: [
         {
           title: "Clinico",
+          icon: null,
           permissions: [],
           items: [
             {
@@ -127,6 +129,7 @@ describe("mapNavigationMenu", () => {
       sections: [
         {
           title: "Farmacia",
+          icon: null,
           permissions: [],
           items: [
             {
@@ -153,6 +156,7 @@ describe("mapNavigationMenu", () => {
       sections: [
         {
           title: "Seccion",
+          icon: null,
           permissions: [],
           items: [
             {

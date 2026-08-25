@@ -131,6 +131,13 @@ const getBadgePriority = (items?: NavItem[]): BadgeKey | null => {
   return "Dev";
 };
 
+// A partir de esta cantidad de items, una carpeta (a CUALQUIER
+// profundidad, no solo secciones raiz) arranca colapsada y suma un
+// buscador propio arriba de su lista -- ej. "Catalogos" con ~29 items,
+// viva como seccion raiz o anidada dentro de "Administracion". Carpetas
+// chicas (la mayoria: 1-6 items) no cambian de comportamiento.
+const SECTION_COLLAPSE_THRESHOLD = 8;
+
 /**
  * Componente recursivo para renderizar items de navegación
  * Soporta profundidad infinita usando SidebarMenuSub
@@ -142,6 +149,8 @@ function NavRecursiveItem({
   onToggle,
   badgeSeenGroups,
   showInlineTooltips,
+  sectionSearch,
+  onSectionSearchChange,
 }: {
   item: NavItem;
   level?: number;
@@ -149,6 +158,8 @@ function NavRecursiveItem({
   onToggle: (title: string, isOpen: boolean) => void;
   badgeSeenGroups: Record<string, boolean>;
   showInlineTooltips: boolean;
+  sectionSearch: Record<string, string>;
+  onSectionSearchChange: (key: string, value: string) => void;
 }) {
   const location = useLocation();
   // Active si la URL exacta coincide
@@ -169,6 +180,19 @@ function NavRecursiveItem({
   const childBadgePriority = getBadgePriority(item.items);
   const showBadgeChevron =
     Boolean(childBadgePriority) && !isOpen && !badgeSeenGroups[item.title];
+
+  // Carpeta grande (a cualquier profundidad): suma buscador propio arriba
+  // de su lista de hijos -- mismo criterio que las secciones raiz grandes.
+  const isSearchableFolder =
+    Boolean(hasSubItems) && item.items!.length > SECTION_COLLAPSE_THRESHOLD;
+  const searchQuery = sectionSearch[item.title] ?? "";
+  const normalizedSearchQuery = normalizeSearchText(searchQuery);
+  const visibleChildren =
+    isSearchableFolder && normalizedSearchQuery
+      ? item.items!.filter((child) =>
+          normalizeSearchText(child.title).includes(normalizedSearchQuery),
+        )
+      : item.items;
 
   // CASO 1: Item con submenú (Carpeta)
   if (hasSubItems) {
@@ -224,19 +248,44 @@ function NavRecursiveItem({
             </SidebarMenuButton>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <SidebarMenuSub>
-              {item.items?.map((subItem) => (
-                <NavRecursiveItem
-                  key={subItem.title}
-                  item={subItem}
-                  level={level + 1}
-                  openGroups={openGroups}
-                  onToggle={onToggle}
-                  badgeSeenGroups={badgeSeenGroups}
-                  showInlineTooltips={showInlineTooltips}
-                />
-              ))}
-            </SidebarMenuSub>
+            {isSearchableFolder && showInlineTooltips ? (
+              <div className="px-2 pb-1.5 pt-1">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-txt-muted" />
+                  <Input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) =>
+                      onSectionSearchChange(item.title, event.target.value)
+                    }
+                    placeholder={`Buscar en ${item.title.toLowerCase()}`}
+                    className="h-7 rounded-md bg-subtle pl-7 text-xs focus-visible:ring-1 focus-visible:ring-line-struct/50 focus-visible:ring-offset-0"
+                    aria-label={`Buscar en ${item.title}`}
+                  />
+                </div>
+              </div>
+            ) : null}
+            {isSearchableFolder && visibleChildren?.length === 0 ? (
+              <p className="px-4 pb-1.5 text-xs text-txt-muted">
+                Sin resultados para &quot;{searchQuery}&quot;.
+              </p>
+            ) : (
+              <SidebarMenuSub>
+                {visibleChildren?.map((subItem) => (
+                  <NavRecursiveItem
+                    key={subItem.title}
+                    item={subItem}
+                    level={level + 1}
+                    openGroups={openGroups}
+                    onToggle={onToggle}
+                    badgeSeenGroups={badgeSeenGroups}
+                    showInlineTooltips={showInlineTooltips}
+                    sectionSearch={sectionSearch}
+                    onSectionSearchChange={onSectionSearchChange}
+                  />
+                ))}
+              </SidebarMenuSub>
+            )}
           </CollapsibleContent>
         </SidebarMenuItem>
       </Collapsible>
@@ -315,12 +364,6 @@ function NavRecursiveItem({
   );
 }
 
-// A partir de esta cantidad de items, la seccion arranca colapsada (como
-// carpeta plegable) en vez de listar todo de una -- ej. "Catalogos" con ~29
-// items. Secciones chicas (la mayoria: 1-6 items) no cambian de
-// comportamiento, siguen siempre expandidas.
-const SECTION_COLLAPSE_THRESHOLD = 8;
-
 const sectionHasActiveRoute = (items: NavItem[], pathname: string): boolean =>
   items.some(
     (item) =>
@@ -346,6 +389,9 @@ export function NavMain({ sections }: NavMainProps) {
   const [sectionSearch, setSectionSearch] = useState<Record<string, string>>(
     {},
   );
+  const handleSectionSearchChange = (key: string, value: string) => {
+    setSectionSearch((current) => ({ ...current, [key]: value }));
+  };
 
   return (
     <>
@@ -364,6 +410,8 @@ export function NavMain({ sections }: NavMainProps) {
                     onToggle={toggleGroup}
                     badgeSeenGroups={badgeSeenGroups}
                     showInlineTooltips={showInlineTooltips}
+                    sectionSearch={sectionSearch}
+                    onSectionSearchChange={handleSectionSearchChange}
                   />
                 ))}
               </SidebarMenu>
@@ -421,6 +469,8 @@ export function NavMain({ sections }: NavMainProps) {
                     onToggle={toggleGroup}
                     badgeSeenGroups={badgeSeenGroups}
                     showInlineTooltips={showInlineTooltips}
+                    sectionSearch={sectionSearch}
+                    onSectionSearchChange={handleSectionSearchChange}
                   />
                 ))}
               </SidebarMenuSub>

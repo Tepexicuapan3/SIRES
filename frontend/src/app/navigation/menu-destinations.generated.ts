@@ -28,6 +28,7 @@ export interface MenuDestination {
 export const MENU_DESTINATIONS: MenuDestination[] = [
   {"path":"/admin/autorizacion/estudios","permissions":["admin:autorizacion:estudios:read"]},
   {"path":"/admin/autorizacion/recetas","permissions":["admin:autorizacion:recetas:read"]},
+  {"path":"/admin/catalogos","permissions":[]},
   {"path":"/admin/catalogos/areas","permissions":["admin:catalogos:areas:read"],"capability":"admin.catalogs.areas.read"},
   {"path":"/admin/catalogos/areas-clinicas","permissions":["admin:catalogos:areas_clinicas:read"]},
   {"path":"/admin/catalogos/autorizadores","permissions":["admin:catalogos:autorizadores:read"]},
