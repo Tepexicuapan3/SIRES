@@ -15,6 +15,7 @@ routes = [
     ("schools", EscuelasListCreateView, EscuelasDetailView, "int"),
     ("specialties", EspecialidadesListCreateView, EspecialidadesDetailView, "int"),
     ("med-studies", EstudiosMedListCreateView, EstudiosMedDetailView, "int"),
+    ("estudios", EstudiosListCreateView, EstudiosDetailView, "int"),
     ("med-groups", GruposDeMedicamentosListCreateView, GruposDeMedicamentosDetailView, "int"),
     ("occupations", OcupacionesListCreateView, OcupacionesDetailView, "int"),
     ("consultation-origins", OrigenConsListCreateView, OrigenConsDetailView, "str"),

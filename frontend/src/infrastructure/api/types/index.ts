@@ -635,6 +635,27 @@ export type {
 } from "@api/types/catalogos/estudios-medicos.types";
 
 // =============================================================================
+// ESTUDIOS TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  EstudioListItem,
+  EstudioDetail,
+  // CRUD Requests
+  CreateEstudioRequest,
+  UpdateEstudioRequest,
+  // CRUD Responses
+  CreateEstudioResponse,
+  UpdateEstudioResponse,
+  DeleteEstudioResponse,
+  // Listados
+  EstudiosListParams,
+  EstudiosListResponse,
+  // Detalle
+  EstudioDetailResponse,
+} from "@api/types/catalogos/estudios.types";
+
+// =============================================================================
 // CATÁLOGO ESTADO CIVIL
 // =============================================================================
 export type {

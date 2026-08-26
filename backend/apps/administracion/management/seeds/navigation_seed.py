@@ -473,6 +473,18 @@ NAV_SEED = [
         "permisos": ["admin:catalogos:vacunas:read"],
     },
     {
+        "clave": "administracion.catalogos.estudios",
+        "titulo": "Estudios",
+        "icono": None,
+        "url": "/admin/catalogos/estudios",
+        "badge": None,
+        "orden": 29,
+        "es_seccion": False,
+        "grupo": "primary",
+        "parent_clave": "administracion.catalogos",
+        "permisos": ["admin:catalogos:estudios:read"],
+    },
+    {
         "clave": "administracion.catalogos.areas_clinicas",
         "titulo": "Áreas clínicas",
         "icono": None,

@@ -20,6 +20,7 @@ from apps.catalogos.models import (
     Escolaridad,
     Escuelas,
     Especialidades,
+    Estudios,
     EstudiosMed,
     GruposDeMedicamentos,
     Licencias,
@@ -496,6 +497,95 @@ class EstudiosMedWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = EstudiosMed
         fields = CatalogWriteSerializer.Meta.fields + ("studyType", "indication")
+
+
+# ---------------------------------------------------------------------------
+# Estudios (cat_estudios, legacy sin auditoria, status como char flag)
+# ---------------------------------------------------------------------------
+
+class EstudiosListSerializer(serializers.ModelSerializer):
+    isActive = serializers.BooleanField(source="is_active", read_only=True)
+    studyType = serializers.CharField(source="study_type")
+
+    class Meta:
+        model = Estudios
+        fields = ("id", "name", "precio", "studyType", "isActive")
+
+
+class EstudiosDetailSerializer(serializers.ModelSerializer):
+    isActive = serializers.BooleanField(source="is_active", read_only=True)
+    isGeneral = serializers.BooleanField(source="is_general", read_only=True)
+    isAuthorized = serializers.BooleanField(source="is_authorized", read_only=True)
+    studyType = serializers.CharField(source="study_type")
+    groupType = serializers.CharField(source="group_type", allow_null=True)
+    providerId = serializers.DecimalField(source="provider_id", max_digits=10, decimal_places=0, allow_null=True)
+
+    class Meta:
+        model = Estudios
+        fields = (
+            "id", "name", "precio", "studyType", "indication",
+            "isGeneral", "isAuthorized", "isActive", "groupType", "providerId",
+        )
+
+
+class EstudiosWriteSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255, required=False)
+    precio = serializers.FloatField(required=False, allow_null=True)
+    studyType = serializers.CharField(max_length=20, required=False)
+    indication = serializers.CharField(max_length=700, required=False, allow_null=True, allow_blank=True)
+    isGeneral = serializers.BooleanField(required=False)
+    isAuthorized = serializers.BooleanField(required=False)
+    isActive = serializers.BooleanField(required=False)
+    groupType = serializers.CharField(max_length=5, required=False, allow_null=True, allow_blank=True)
+    providerId = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        if self.instance is None:
+            missing = [f for f in ("name", "studyType") if f not in attrs]
+            if missing:
+                raise serializers.ValidationError({f: ["Este campo es requerido"] for f in missing})
+        return attrs
+
+    @staticmethod
+    def _flag(value):
+        return Estudios.ACTIVE_FLAG if value else Estudios.INACTIVE_FLAG
+
+    def create(self, validated_data):
+        instance = Estudios(
+            name=validated_data["name"],
+            precio=validated_data.get("precio"),
+            study_type=validated_data["studyType"],
+            indication=validated_data.get("indication", ""),
+            group_type=validated_data.get("groupType"),
+            provider_id=validated_data.get("providerId"),
+            general_flag=self._flag(validated_data.get("isGeneral", False)),
+            authorized_flag=self._flag(validated_data.get("isAuthorized", False)),
+            status=self._flag(validated_data.get("isActive", True)),
+        )
+        instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        if "name" in validated_data:
+            instance.name = validated_data["name"]
+        if "precio" in validated_data:
+            instance.precio = validated_data["precio"]
+        if "studyType" in validated_data:
+            instance.study_type = validated_data["studyType"]
+        if "indication" in validated_data:
+            instance.indication = validated_data["indication"]
+        if "groupType" in validated_data:
+            instance.group_type = validated_data["groupType"]
+        if "providerId" in validated_data:
+            instance.provider_id = validated_data["providerId"]
+        if "isGeneral" in validated_data:
+            instance.general_flag = self._flag(validated_data["isGeneral"])
+        if "isAuthorized" in validated_data:
+            instance.authorized_flag = self._flag(validated_data["isAuthorized"])
+        if "isActive" in validated_data:
+            instance.status = self._flag(validated_data["isActive"])
+        instance.save()
+        return instance
 
 
 class GruposDeMedicamentosListSerializer(CatalogListSerializer):

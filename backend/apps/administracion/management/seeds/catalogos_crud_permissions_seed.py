@@ -81,4 +81,9 @@ CATALOGOS_CRUD_PERMISSIONS_SEED: list[tuple[str, str]] = [
     ("admin:catalogos:sucursales:create", "Crear en catalogo de sucursales"),
     ("admin:catalogos:sucursales:update", "Editar catalogo de sucursales"),
     ("admin:catalogos:sucursales:delete", "Eliminar en catalogo de sucursales"),
+
+    ("admin:catalogos:estudios:read", "Ver catalogo de estudios"),
+    ("admin:catalogos:estudios:create", "Crear en catalogo de estudios"),
+    ("admin:catalogos:estudios:update", "Editar catalogo de estudios"),
+    ("admin:catalogos:estudios:delete", "Eliminar en catalogo de estudios"),
 ]

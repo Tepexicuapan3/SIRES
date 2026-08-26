@@ -16,6 +16,7 @@ from .escolaridad import Escolaridad
 from .escuelas import Escuelas
 from .tipo_personal import CatTipoPersonal
 from .especialidades import Especialidades
+from .estudios import Estudios
 from .estudios_medicos import EstudiosMed
 from .grupos_medicamentos import GruposDeMedicamentos
 from .ocupaciones import Ocupaciones
@@ -58,6 +59,7 @@ __all__ = [
     "Escolaridad",
     "Escuelas",
     "Especialidades",
+    "Estudios",
     "EstudiosMed",
     "GruposDeMedicamentos",
     "Ocupaciones",
