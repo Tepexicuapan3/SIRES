@@ -1,4 +1,9 @@
-import type { PaginationParams, ListResponse } from "@api/types/common.types";
+import type {
+  PaginationParams,
+  ListResponse,
+  SuccessResponse,
+} from "@api/types/common.types";
+import type { UserRef } from "@api/types/users.types";
 
 // =============================================================================
 // ENTIDADES
@@ -8,6 +13,13 @@ export interface SucursalListItem {
   id: number;
   name: string;
   isActive: boolean;
+}
+
+export interface SucursalDetail extends SucursalListItem {
+  createdAt: string;
+  createdBy: UserRef | null;
+  updatedAt: string | null;
+  updatedBy: UserRef | null;
 }
 
 // =============================================================================
@@ -37,3 +49,18 @@ export interface CreateSucursalResponse {
   name: string;
   isActive: boolean;
 }
+
+export interface UpdateSucursalRequest {
+  name?: string;
+  isActive?: boolean;
+}
+
+export interface SucursalDetailResponse {
+  branch: SucursalDetail;
+}
+
+export interface UpdateSucursalResponse {
+  branch: SucursalDetail;
+}
+
+export type DeleteSucursalResponse = SuccessResponse;

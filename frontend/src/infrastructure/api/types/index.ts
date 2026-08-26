@@ -288,6 +288,22 @@ export type {
 } from "@api/types/catalogos/tipos-areas.types";
 
 // =============================================================================
+// TIPOS DE AUTORIZACION TYPES (CRUD)
+// =============================================================================
+export type {
+  TipoAutorizacionListItem,
+  TipoAutorizacionDetail,
+  CreateTipoAutorizacionRequest,
+  UpdateTipoAutorizacionRequest,
+  CreateTipoAutorizacionResponse,
+  UpdateTipoAutorizacionResponse,
+  DeleteTipoAutorizacionResponse,
+  TiposAutorizacionListParams,
+  TiposAutorizacionListResponse,
+  TipoAutorizacionDetailResponse,
+} from "@api/types/catalogos/tipos-autorizacion.types";
+
+// =============================================================================
 // TIPOS DE CITAS TYPES (CRUD)
 // =============================================================================
 export type {
@@ -325,6 +341,27 @@ export type {
 } from "@api/types/catalogos/tipo-personal.types";
 
 // =============================================================================
+// ENFERMEDADES TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  EnfermedadListItem,
+  EnfermedadDetail,
+  // CRUD Requests
+  CreateEnfermedadRequest,
+  UpdateEnfermedadRequest,
+  // CRUD Responses
+  CreateEnfermedadResponse,
+  UpdateEnfermedadResponse,
+  DeleteEnfermedadResponse,
+  // Listados
+  EnfermedadesListParams,
+  EnfermedadesListResponse,
+  // Detalle
+  EnfermedadDetailResponse,
+} from "@api/types/catalogos/enfermedades.types";
+
+// =============================================================================
 // ESCOLARIDAD TYPES (CRUD)
 // =============================================================================
 export type {
@@ -346,6 +383,216 @@ export type {
 } from "@api/types/catalogos/escolaridad.types";
 
 // =============================================================================
+// BAJAS TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  BajaListItem,
+  BajaDetail,
+  // CRUD Requests
+  CreateBajaRequest,
+  UpdateBajaRequest,
+  // CRUD Responses
+  CreateBajaResponse,
+  UpdateBajaResponse,
+  DeleteBajaResponse,
+  // Listados
+  BajasListParams,
+  BajasListResponse,
+  // Detalle
+  BajaDetailResponse,
+} from "@api/types/catalogos/bajas.types";
+
+// =============================================================================
+// PASES TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  PaseListItem,
+  PaseDetail,
+  // CRUD Requests
+  CreatePaseRequest,
+  UpdatePaseRequest,
+  // CRUD Responses
+  CreatePaseResponse,
+  UpdatePaseResponse,
+  DeletePaseResponse,
+  // Listados
+  PasesListParams,
+  PasesListResponse,
+  // Detalle
+  PaseDetailResponse,
+} from "@api/types/catalogos/pases.types";
+
+// =============================================================================
+// TIPOS SANGUINEO TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  TipoSanguineoListItem,
+  TipoSanguineoDetail,
+  // CRUD Requests
+  CreateTipoSanguineoRequest,
+  UpdateTipoSanguineoRequest,
+  // CRUD Responses
+  CreateTipoSanguineoResponse,
+  UpdateTipoSanguineoResponse,
+  DeleteTipoSanguineoResponse,
+  // Listados
+  TiposSanguineoListParams,
+  TiposSanguineoListResponse,
+  // Detalle
+  TipoSanguineoDetailResponse,
+} from "@api/types/catalogos/tipos-sanguineo.types";
+
+// =============================================================================
+// GRUPOS DE MEDICAMENTOS TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  GrupoMedicamentosListItem,
+  GrupoMedicamentosDetail,
+  // CRUD Requests
+  CreateGrupoMedicamentosRequest,
+  UpdateGrupoMedicamentosRequest,
+  // CRUD Responses
+  CreateGrupoMedicamentosResponse,
+  UpdateGrupoMedicamentosResponse,
+  DeleteGrupoMedicamentosResponse,
+  // Listados
+  GruposMedicamentosListParams,
+  GruposMedicamentosListResponse,
+  // Detalle
+  GrupoMedicamentosDetailResponse,
+} from "@api/types/catalogos/grupos-medicamentos.types";
+
+// =============================================================================
+// OCUPACIONES TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  OcupacionListItem,
+  OcupacionDetail,
+  // CRUD Requests
+  CreateOcupacionRequest,
+  UpdateOcupacionRequest,
+  // CRUD Responses
+  CreateOcupacionResponse,
+  UpdateOcupacionResponse,
+  DeleteOcupacionResponse,
+  // Listados
+  OcupacionesListParams,
+  OcupacionesListResponse,
+  // Detalle
+  OcupacionDetailResponse,
+} from "@api/types/catalogos/ocupaciones.types";
+
+// =============================================================================
+// LICENCIAS TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  LicenciaListItem,
+  LicenciaDetail,
+  // CRUD Requests
+  CreateLicenciaRequest,
+  UpdateLicenciaRequest,
+  // CRUD Responses
+  CreateLicenciaResponse,
+  UpdateLicenciaResponse,
+  DeleteLicenciaResponse,
+  // Listados
+  LicenciasListParams,
+  LicenciasListResponse,
+  // Detalle
+  LicenciaDetailResponse,
+} from "@api/types/catalogos/licencias.types";
+
+// =============================================================================
+// AUTORIZADORES TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  AutorizadorListItem,
+  AutorizadorDetail,
+  // CRUD Requests
+  CreateAutorizadorRequest,
+  UpdateAutorizadorRequest,
+  // CRUD Responses
+  CreateAutorizadorResponse,
+  UpdateAutorizadorResponse,
+  DeleteAutorizadorResponse,
+  // Listados
+  AutorizadoresListParams,
+  AutorizadoresListResponse,
+  // Detalle
+  AutorizadorDetailResponse,
+} from "@api/types/catalogos/autorizadores.types";
+
+// =============================================================================
+// CALIDAD LABORAL TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  CalidadLaboralListItem,
+  CalidadLaboralDetail,
+  // CRUD Requests
+  CreateCalidadLaboralRequest,
+  UpdateCalidadLaboralRequest,
+  // CRUD Responses
+  CreateCalidadLaboralResponse,
+  UpdateCalidadLaboralResponse,
+  DeleteCalidadLaboralResponse,
+  // Listados
+  CalidadLaboralListParams,
+  CalidadLaboralListResponse,
+  // Detalle
+  CalidadLaboralDetailResponse,
+} from "@api/types/catalogos/calidadLaboral.types";
+
+// =============================================================================
+// ORIGEN CONSULTA TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  OrigenConsultaListItem,
+  OrigenConsultaDetail,
+  // CRUD Requests
+  CreateOrigenConsultaRequest,
+  UpdateOrigenConsultaRequest,
+  // CRUD Responses
+  CreateOrigenConsultaResponse,
+  UpdateOrigenConsultaResponse,
+  DeleteOrigenConsultaResponse,
+  // Listados
+  OrigenConsultaListParams,
+  OrigenConsultaListResponse,
+  // Detalle
+  OrigenConsultaDetailResponse,
+} from "@api/types/catalogos/origenConsulta.types";
+
+// =============================================================================
+// PARENTESCO TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  ParentescoListItem,
+  ParentescoDetail,
+  // CRUD Requests
+  CreateParentescoRequest,
+  UpdateParentescoRequest,
+  // CRUD Responses
+  CreateParentescoResponse,
+  UpdateParentescoResponse,
+  DeleteParentescoResponse,
+  // Listados
+  ParentescoListParams,
+  ParentescoListResponse,
+  // Detalle
+  ParentescoDetailResponse,
+} from "@api/types/catalogos/parentesco.types";
+
+// =============================================================================
 // ESCUELAS TYPES (CRUD)
 // =============================================================================
 export type {
@@ -365,6 +612,27 @@ export type {
   // Detalle
   EscuelaDetailResponse,
 } from "@api/types/catalogos/escuelas.types";
+
+// =============================================================================
+// ESTUDIOS MEDICOS TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  EstudioMedicoListItem,
+  EstudioMedicoDetail,
+  // CRUD Requests
+  CreateEstudioMedicoRequest,
+  UpdateEstudioMedicoRequest,
+  // CRUD Responses
+  CreateEstudioMedicoResponse,
+  UpdateEstudioMedicoResponse,
+  DeleteEstudioMedicoResponse,
+  // Listados
+  EstudiosMedicosListParams,
+  EstudiosMedicosListResponse,
+  // Detalle
+  EstudioMedicoDetailResponse,
+} from "@api/types/catalogos/estudios-medicos.types";
 
 // =============================================================================
 // CATÁLOGO ESTADO CIVIL
@@ -392,10 +660,15 @@ export type {
 // =============================================================================
 export type {
   SucursalListItem,
+  SucursalDetail,
   SucursalesListParams,
   SucursalesListResponse,
   CreateSucursalRequest,
   CreateSucursalResponse,
+  UpdateSucursalRequest,
+  UpdateSucursalResponse,
+  DeleteSucursalResponse,
+  SucursalDetailResponse,
 } from "@api/types/catalogos/sucursales.types";
 
 // =============================================================================

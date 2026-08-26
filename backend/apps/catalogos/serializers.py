@@ -406,13 +406,17 @@ class SucursalWriteSerializer(CatalogWriteSerializer):
         model = CatSucursal
 
 
-class EnfermedadesListSerializer(CatalogListSerializer):
-    class Meta(CatalogListSerializer.Meta):
+class EnfermedadesListSerializer(CatalogListWithCodeSerializer):
+    cieVersion = serializers.CharField(source="cie_version")
+    class Meta(CatalogListWithCodeSerializer.Meta):
         model = Enfermedades
+        fields = CatalogListWithCodeSerializer.Meta.fields + ("cieVersion",)
 
-class EnfermedadesDetailSerializer(CatalogDetailSerializer):
-    class Meta(CatalogDetailSerializer.Meta):
+class EnfermedadesDetailSerializer(CatalogDetailWithCodeSerializer):
+    cieVersion = serializers.CharField(source="cie_version")
+    class Meta(CatalogDetailWithCodeSerializer.Meta):
         model = Enfermedades
+        fields = CatalogDetailWithCodeSerializer.Meta.fields + ("cieVersion",)
 
 class EnfermedadesWriteSerializer(CatalogWriteSerializer):
     cieVersion = serializers.CharField(source="cie_version")
@@ -476,12 +480,16 @@ class EspecialidadesWriteSerializer(CatalogWriteSerializer):
 
 
 class EstudiosMedListSerializer(CatalogListWithCodeSerializer):
+    studyType = serializers.CharField(source="study_type")
     class Meta(CatalogListWithCodeSerializer.Meta):
         model = EstudiosMed
+        fields = CatalogListWithCodeSerializer.Meta.fields + ("studyType",)
 
 class EstudiosMedDetailSerializer(CatalogDetailWithCodeSerializer):
+    studyType = serializers.CharField(source="study_type")
     class Meta(CatalogDetailWithCodeSerializer.Meta):
         model = EstudiosMed
+        fields = CatalogDetailWithCodeSerializer.Meta.fields + ("studyType", "indication")
 
 class EstudiosMedWriteSerializer(CatalogWriteSerializer):
     studyType = serializers.CharField(source="study_type")

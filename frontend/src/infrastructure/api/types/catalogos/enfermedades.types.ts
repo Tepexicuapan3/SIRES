@@ -1,8 +1,3 @@
-/**
- * Enfermedades Types - Pure TypeScript interfaces
- * Catálogo CIE (enfermedades).
- */
-
 import type {
   PaginationParams,
   ListResponse,
@@ -14,30 +9,14 @@ import type { UserRef } from "@api/types/users.types";
 // ENTIDADES
 // =============================================================================
 
-/**
- * Referencia mínima (para relaciones futuras)
- */
-export interface EnfermedadRef {
-  id: number;
-  name: string;
-}
-
-/**
- * Enfermedad para listado en tablas
- * GET /api/v1/catalogos/enfermedades
- */
 export interface EnfermedadListItem {
   id: number;
-  code: string;
   name: string;
+  code: string;
   cieVersion: string;
   isActive: boolean;
 }
 
-/**
- * Enfermedad con detalle completo
- * GET /api/v1/catalogos/enfermedades/:id
- */
 export interface EnfermedadDetail extends EnfermedadListItem {
   createdAt: string;
   createdBy: UserRef | null;
@@ -46,30 +25,31 @@ export interface EnfermedadDetail extends EnfermedadListItem {
 }
 
 // =============================================================================
-// CRUD REQUESTS
+// REQUESTS
 // =============================================================================
 
 export interface CreateEnfermedadRequest {
-  code: string;
   name: string;
+  code: string;
   cieVersion: string;
+  isActive?: boolean;
 }
 
 export interface UpdateEnfermedadRequest {
-  code?: string;
   name?: string;
+  code?: string;
   cieVersion?: string;
   isActive?: boolean;
 }
 
 // =============================================================================
-// CRUD RESPONSES
+// RESPONSES
 // =============================================================================
 
 export type EnfermedadesListResponse = ListResponse<EnfermedadListItem>;
 
 export interface EnfermedadDetailResponse {
-  enfermedad: EnfermedadDetail;
+  disease: EnfermedadDetail;
 }
 
 export interface CreateEnfermedadResponse {
@@ -78,7 +58,7 @@ export interface CreateEnfermedadResponse {
 }
 
 export interface UpdateEnfermedadResponse {
-  enfermedad: EnfermedadDetail;
+  disease: EnfermedadDetail;
 }
 
 export type DeleteEnfermedadResponse = SuccessResponse;
@@ -88,6 +68,8 @@ export type DeleteEnfermedadResponse = SuccessResponse;
 // =============================================================================
 
 export interface EnfermedadesListParams extends PaginationParams {
+  search?: string;
   isActive?: boolean;
-  cieVersion?: string;
+  sortBy?: "name" | "isActive";
+  sortOrder?: "asc" | "desc";
 }

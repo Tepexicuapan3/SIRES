@@ -8,13 +8,15 @@
  * useCatalogList, o casos con enabled/params no estandar como
  * centro-area-clinica) NO pasan por aca a proposito.
  */
-export function createCatalogKeys<TParams>(baseKey: readonly string[]) {
+export function createCatalogKeys<TParams, TId = number>(
+  baseKey: readonly string[],
+) {
   return {
     all: baseKey,
     list: (params?: TParams) =>
       params
         ? ([...baseKey, "list", params] as const)
         : ([...baseKey, "list"] as const),
-    detail: (id: number) => [...baseKey, "detail", id] as const,
+    detail: (id: TId) => [...baseKey, "detail", id] as const,
   };
 }
