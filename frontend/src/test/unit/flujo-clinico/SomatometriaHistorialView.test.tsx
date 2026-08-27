@@ -159,6 +159,7 @@ describe("SomatometriaHistorialView", () => {
 
     expect(useSomatometriaHistorial).toHaveBeenLastCalledWith(
       expect.objectContaining({ centroId: undefined }),
+      expect.anything(),
     );
 
     await user.click(
@@ -168,12 +169,17 @@ describe("SomatometriaHistorialView", () => {
 
     expect(useSomatometriaHistorial).toHaveBeenLastCalledWith(
       expect.objectContaining({ centroId: 2 }),
+      expect.anything(),
     );
   });
 
   it("respeta el rango de fecha desde/hasta -- pasa fechaDesde/fechaHasta al hook de historial", async () => {
+    // Los inputs Desde/Hasta solo se ven cuando "Fecha personalizada" esta
+    // activo -- ya no estan siempre visibles junto a los presets.
     const user = userEvent.setup();
     render(<SomatometriaHistorialView />);
+
+    await user.click(screen.getByTestId("somato-hist-preset-personalizada"));
 
     const desdeInput = screen.getByLabelText("Desde") as HTMLInputElement;
     const hastaInput = screen.getByLabelText(/Hasta/) as HTMLInputElement;
@@ -188,7 +194,33 @@ describe("SomatometriaHistorialView", () => {
         fechaDesde: "2026-08-01",
         fechaHasta: "2026-08-20",
       }),
+      expect.anything(),
     );
+
+    expect(
+      screen.getByTestId("somato-hist-active-filter-label"),
+    ).toHaveTextContent("Fecha personalizada (01/08/2026 – 20/08/2026)");
+  });
+
+  it("marca 'Fecha personalizada' como filtro activo y nunca deja el estado en blanco", async () => {
+    const user = userEvent.setup();
+    render(<SomatometriaHistorialView />);
+
+    // Antes de tocar nada, "Hoy" es el filtro activo por default -- nunca
+    // deberia haber un estado sin ningun boton resaltado ni leyenda.
+    expect(
+      screen.getByTestId("somato-hist-active-filter-label"),
+    ).toHaveTextContent("Filtro activo: Hoy");
+
+    await user.click(screen.getByTestId("somato-hist-preset-personalizada"));
+
+    expect(screen.getByTestId("somato-hist-preset-personalizada")).toHaveClass(
+      "bg-primary",
+    );
+    expect(
+      screen.getByTestId("somato-hist-active-filter-label"),
+    ).toHaveTextContent("Fecha personalizada");
+    expect(screen.getByLabelText("Desde")).toBeVisible();
   });
 
   it("muestra estado de carga", () => {
@@ -244,6 +276,7 @@ describe("SomatometriaHistorialView", () => {
         fechaDesde: expect.any(String),
         fechaHasta: expect.any(String),
       }),
+      expect.anything(),
     );
     const lastCallArgs = vi.mocked(useSomatometriaHistorial).mock.calls.at(-1);
     const params = lastCallArgs?.[0] as { fechaDesde: string; fechaHasta: string };
@@ -284,6 +317,7 @@ describe("SomatometriaHistorialView", () => {
 
     expect(useSomatometriaHistorial).toHaveBeenLastCalledWith(
       expect.objectContaining({ page: 2 }),
+      expect.anything(),
     );
   });
 });

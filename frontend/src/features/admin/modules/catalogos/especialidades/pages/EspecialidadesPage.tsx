@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Plus, RotateCcw, Stethoscope } from "lucide-react";
+import { Download, Plus, RotateCcw, Stethoscope, Upload } from "lucide-react";
 import { useDebounce } from "@shared/hooks/useDebounce";
 import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
@@ -28,6 +28,8 @@ import {
 import { EspecialidadCreateDialog } from "@features/admin/modules/catalogos/especialidades/components/EspecialidadCreateDialog";
 import { EspecialidadDetailsDialog } from "@features/admin/modules/catalogos/especialidades/components/EspecialidadDetailsDialog";
 import { getEspecialidadErrorMessage } from "@features/admin/modules/catalogos/especialidades/utils/especialidades.feedback";
+import { CatalogImportDialog } from "@features/admin/modules/catalogos/shared/import/CatalogImportDialog";
+import { ESPECIALIDADES_IMPORT_CONFIG } from "@features/admin/modules/catalogos/shared/import/catalog-import.config";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import type { EspecialidadListItem } from "@api/types";
@@ -58,6 +60,7 @@ export function EspecialidadesPage() {
       actions: true,
     });
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [especialidadToDelete, setEspecialidadToDelete] =
     useState<EspecialidadListItem | null>(null);
@@ -218,6 +221,13 @@ export function EspecialidadesPage() {
       icon: Download,
       loadingAnimation: "pulse",
     },
+    {
+      id: "import-especialidades",
+      label: "Importar Excel",
+      icon: Upload,
+      disabled: !canCreateEspecialidad,
+      onSelect: () => setImportOpen(true),
+    },
   ];
 
   const filterSections = [
@@ -341,6 +351,13 @@ export function EspecialidadesPage() {
       <EspecialidadCreateDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+      />
+
+      <CatalogImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        config={ESPECIALIDADES_IMPORT_CONFIG}
+        onImported={() => void refetch()}
       />
 
       <ConfirmDestructiveDialog

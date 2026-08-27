@@ -57,6 +57,7 @@ import {
   matchesSearch,
   matchesService,
   matchesStatus,
+  RECEPCION_ACTION,
   RECEPCION_ACTION_COPY,
   resolveDomainErrorMessage,
   SERVICE_FILTER,
@@ -315,6 +316,40 @@ export const RecepcionAgendaPage = () => {
     setPendingStatusAction({ visitId, folio, targetStatus });
   };
 
+  // "Llego" -> envia a somatometria SIN dialogo de confirmacion (a
+  // diferencia de cancelar/no-show, que si lo piden por ser
+  // irreversibles). Mismo flujo de mutacion/toast/refetch-on-error que
+  // `handleConfirmStatusAction`, pero disparado directo desde el boton.
+  const handleMarkArrived = async (visitId: number, folio: string) => {
+    if (!canWriteRecepcion || visitStatusAction.isPending) {
+      return;
+    }
+
+    try {
+      await visitStatusAction.mutateAsync({
+        visitId,
+        targetStatus: RECEPCION_ACTION.EN_SOMATOMETRIA,
+      });
+
+      toast.success(
+        RECEPCION_ACTION_COPY[RECEPCION_ACTION.EN_SOMATOMETRIA].successMessage,
+        { description: `Folio ${folio}.` },
+      );
+    } catch (error) {
+      if (shouldRefreshQueueAfterError(error)) {
+        void queueQuery.refetch?.();
+      }
+
+      toast.error("No se pudo actualizar el estado", {
+        description: resolveDomainErrorMessage(
+          error,
+          VISIT_STATUS_DOMAIN_ERROR_MESSAGE,
+          FALLBACK_VISIT_STATUS_ERROR_MESSAGE,
+        ),
+      });
+    }
+  };
+
   const handleConfirmStatusAction = async () => {
     if (!pendingStatusAction) {
       return;
@@ -422,13 +457,6 @@ export const RecepcionAgendaPage = () => {
           ) : null}
           <Button
             type="button"
-            onClick={() => handleOpenQuickCheckin()}
-            disabled={!canWriteRecepcion}
-          >
-            Generar ficha de consulta
-          </Button>
-          <Button
-            type="button"
             variant="outline"
             className="gap-2"
             onClick={() => navigate("/recepcion/checkin/qr")}
@@ -517,6 +545,7 @@ export const RecepcionAgendaPage = () => {
           filteredVisits={filteredVisits}
           visitStatusActionPending={visitStatusAction.isPending}
           openStatusActionConfirmation={openStatusActionConfirmation}
+          onMarkArrived={handleMarkArrived}
           setFichaVisit={setFichaVisit}
           setFichaOpen={setFichaOpen}
         />

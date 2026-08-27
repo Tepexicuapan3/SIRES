@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Accessibility, Download, Plus, RotateCcw } from "lucide-react";
+import { Accessibility, Download, Plus, RotateCcw, Upload } from "lucide-react";
 import { useDebounce } from "@shared/hooks/useDebounce";
 import { DataTable } from "@features/admin/shared/components/DataTable";
 import {
@@ -28,6 +28,8 @@ import {
 import { DiscapacidadCreateDialog } from "@features/admin/modules/catalogos/discapacidades/components/DiscapacidadCreateDialog";
 import { DiscapacidadDetailsDialog } from "@features/admin/modules/catalogos/discapacidades/components/DiscapacidadDetailsDialog";
 import { getDiscapacidadErrorMessage } from "@features/admin/modules/catalogos/discapacidades/utils/discapacidades.feedback";
+import { CatalogImportDialog } from "@features/admin/modules/catalogos/shared/import/CatalogImportDialog";
+import { DISCAPACIDADES_IMPORT_CONFIG } from "@features/admin/modules/catalogos/shared/import/catalog-import.config";
 import { AdminReadOnlyNotice } from "@features/admin/shared/components/AdminReadOnlyNotice";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
 import type { DiscapacidadListItem } from "@api/types";
@@ -59,6 +61,7 @@ export function DiscapacidadesPage() {
       actions: true,
     });
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [discapacidadToDelete, setDiscapacidadToDelete] =
     useState<DiscapacidadListItem | null>(null);
@@ -219,6 +222,13 @@ export function DiscapacidadesPage() {
       icon: Download,
       loadingAnimation: "pulse",
     },
+    {
+      id: "import-discapacidades",
+      label: "Importar Excel",
+      icon: Upload,
+      disabled: !canCreateDiscapacidad,
+      onSelect: () => setImportOpen(true),
+    },
   ];
 
   const filterSections = [
@@ -340,6 +350,13 @@ export function DiscapacidadesPage() {
       />
 
       <DiscapacidadCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+
+      <CatalogImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        config={DISCAPACIDADES_IMPORT_CONFIG}
+        onImported={() => void refetch()}
+      />
 
       <ConfirmDestructiveDialog
         open={deleteOpen}

@@ -1,6 +1,7 @@
 from types import MappingProxyType
 import traceback
 
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -8,8 +9,13 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.catalogos.imports.registry import CATALOG_IMPORT_REGISTRY
 from apps.catalogos.models.cies import CatCies
 from apps.catalogos.serializers import CatCiesSerializer
+from apps.catalogos.services.catalog_import_service import ImportFileError
+from apps.catalogos.uses_case.catalog_import_use_case import (
+    ConfirmCatalogImportUseCase, PreviewCatalogImportUseCase, TemplateUseCase,
+)
 from apps.catalogos.uses_case.confirm_cies_use_case import ConfirmCiesUseCase
 from apps.catalogos.uses_case.upload_cies_use_case import PreviewCiesUseCase
 
@@ -1250,6 +1256,80 @@ class CatCiesDetailView(CatalogPermissionMixin, ErrorMixin, RetrieveUpdateDestro
     catalog = "cies"
     queryset = CatCies.objects.all()
     serializer_class = CatCiesSerializer
+
+
+# ---------------------------------------------------------------------------
+# Import masivo de catálogos (Excel) — genérico, `spec`/`catalog` se fijan por
+# catálogo al registrar la URL vía CatalogImportXxxAPIView.as_view(spec=..., catalog=...)
+# ---------------------------------------------------------------------------
+
+class CatalogImportTemplateAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
+    spec = None
+
+    def get(self, request):
+        content = TemplateUseCase().execute(self.spec)
+        response = HttpResponse(
+            content,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="plantilla_{self.spec.slug}.xlsx"'
+        return response
+
+
+class CatalogImportPreviewAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
+    spec = None
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file = request.FILES.get("file")
+        if not file:
+            return self._error(
+                request, code="VALIDATION_ERROR",
+                message="Archivo requerido",
+                http_status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = PreviewCatalogImportUseCase().execute(spec=self.spec, file=file)
+        except ImportFileError as exc:
+            return self._error(
+                request, code=exc.code, message=exc.message,
+                http_status=status.HTTP_400_BAD_REQUEST, details=exc.details,
+            )
+
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class CatalogImportConfirmAPIView(CatalogPermissionMixin, ErrorMixin, APIView):
+    spec = None
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file = request.FILES.get("file")
+        if not file:
+            return self._error(
+                request, code="VALIDATION_ERROR",
+                message="Archivo requerido",
+                http_status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = ConfirmCatalogImportUseCase().execute(
+                spec=self.spec, file=file, user_id=_get_actor_id(request.user),
+            )
+        except ImportFileError as exc:
+            return self._error(
+                request, code=exc.code, message=exc.message,
+                http_status=status.HTTP_400_BAD_REQUEST, details=exc.details,
+            )
+
+        has_errors = result.pop("has_errors", False)
+        if has_errors:
+            return Response(
+                {**result, "code": "IMPORT_HAS_ERRORS"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(result, status=status.HTTP_200_OK)
 
 
 # ---------------------------------------------------------------------------

@@ -146,202 +146,203 @@ def sincronizar_tabla(
     conteos = {'insertados': 0, 'eliminados': 0, 'actualizados': 0}
 
     oracle_cursor = oracle_conn.cursor()
+    try:
+        pg_conn = connections['expedientes']
+        with pg_conn.cursor() as pg_cursor:
 
-    pg_conn = connections['expedientes']
-    with pg_conn.cursor() as pg_cursor:
+            # ── Obtener columnas dinámicamente desde PostgreSQL ──────────────
+            pg_cursor.execute("""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = %s
+                ORDER BY ordinal_position
+            """, (tabla,))
+            columnas_info = pg_cursor.fetchall()
 
-        # ── Obtener columnas dinámicamente desde PostgreSQL ──────────────
-        pg_cursor.execute("""
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_name = %s
-            ORDER BY ordinal_position
-        """, (tabla,))
-        columnas_info = pg_cursor.fetchall()
+            if not columnas_info:
+                logger.warning("Tabla '%s' no encontrada en PostgreSQL.", tabla)
+                return conteos
 
-        if not columnas_info:
-            logger.warning("Tabla '%s' no encontrada en PostgreSQL.", tabla)
-            return conteos
+            columnas        = [c[0] for c in columnas_info]
+            columnas_blob   = [c[0] for c in columnas_info if c[1].lower() in ('bytea',)]
+            columnas_act    = [c for c in columnas if c not in llaves_primarias]
+            pk_str          = ", ".join(llaves_primarias)
 
-        columnas        = [c[0] for c in columnas_info]
-        columnas_blob   = [c[0] for c in columnas_info if c[1].lower() in ('bytea',)]
-        columnas_act    = [c for c in columnas if c not in llaves_primarias]
-        pk_str          = ", ".join(llaves_primarias)
+            # Para PostgreSQL: columnas entre comillas (case-sensitive, minúsculas)
+            col_str         = ", ".join(f'"{c}"' for c in columnas)
+            col_act_str     = ", ".join(f'"{c}"' for c in columnas_act)
 
-        # Para PostgreSQL: columnas entre comillas (case-sensitive, minúsculas)
-        col_str         = ", ".join(f'"{c}"' for c in columnas)
-        col_act_str     = ", ".join(f'"{c}"' for c in columnas_act)
+            # Para Oracle: columnas sin comillas (Oracle las convierte a mayúsculas automáticamente)
+            col_str_ora     = ", ".join(columnas)
+            col_act_str_ora = ", ".join(columnas_act)
 
-        # Para Oracle: columnas sin comillas (Oracle las convierte a mayúsculas automáticamente)
-        col_str_ora     = ", ".join(columnas)
-        col_act_str_ora = ", ".join(columnas_act)
+            # ── Obtener llaves de ambas BDs ──────────────────────────────────
+            llaves_oracle = _fetch_llaves_oracle(
+                oracle_cursor, pk_str, tabla, no_exp, expediente, BATCH_SIZE
+            )
+            llaves_pg = _fetch_llaves_postgres(
+                pg_cursor, pk_str, tabla, no_exp, expediente, BATCH_SIZE
+            )
 
-        # ── Obtener llaves de ambas BDs ──────────────────────────────────
-        llaves_oracle = _fetch_llaves_oracle(
-            oracle_cursor, pk_str, tabla, no_exp, expediente, BATCH_SIZE
-        )
-        llaves_pg = _fetch_llaves_postgres(
-            pg_cursor, pk_str, tabla, no_exp, expediente, BATCH_SIZE
-        )
+            nuevos     = list(llaves_oracle - llaves_pg)
+            eliminados = list(llaves_pg - llaves_oracle)
+            logger.info("  ↳ Nuevos: %d | Eliminados: %d", len(nuevos), len(eliminados))
 
-        nuevos     = list(llaves_oracle - llaves_pg)
-        eliminados = list(llaves_pg - llaves_oracle)
-        logger.info("  ↳ Nuevos: %d | Eliminados: %d", len(nuevos), len(eliminados))
+            # ── DELETE ──────────────────────────────────────────────────────
+            if eliminados:
+                t0 = time.time()
+                where_pk = " AND ".join(f'"{c}" = %s' for c in llaves_primarias)
+                sql_del  = f'DELETE FROM "{tabla}" WHERE {where_pk}'
+                for bloque in _dividir_lista(eliminados, BATCH_SIZE):
+                    try:
+                        pg_cursor.executemany(sql_del, bloque)
+                        conteos['eliminados'] += pg_cursor.rowcount
+                    except Exception as exc:
+                        logger.error("Error DELETE en %s: %s", tabla, exc)
+                pg_conn.connection.commit()
+                logger.info("  ↳ Eliminados en %.2fs", time.time() - t0)
 
-        # ── DELETE ──────────────────────────────────────────────────────
-        if eliminados:
-            t0 = time.time()
-            where_pk = " AND ".join(f'"{c}" = %s' for c in llaves_primarias)
-            sql_del  = f'DELETE FROM "{tabla}" WHERE {where_pk}'
-            for bloque in _dividir_lista(eliminados, BATCH_SIZE):
-                try:
-                    pg_cursor.executemany(sql_del, bloque)
-                    conteos['eliminados'] += pg_cursor.rowcount
-                except Exception as exc:
-                    logger.error("Error DELETE en %s: %s", tabla, exc)
-            pg_conn.connection.commit()
-            logger.info("  ↳ Eliminados en %.2fs", time.time() - t0)
+            # ── INSERT ──────────────────────────────────────────────────────
+            if nuevos:
+                t0 = time.time()
+                ph_pg   = ", ".join(["%s"] * len(columnas))
+                sql_ins = f'INSERT INTO "{tabla}" ({col_str}) VALUES ({ph_pg})'
 
-        # ── INSERT ──────────────────────────────────────────────────────
-        if nuevos:
-            t0 = time.time()
-            ph_pg   = ", ".join(["%s"] * len(columnas))
-            sql_ins = f'INSERT INTO "{tabla}" ({col_str}) VALUES ({ph_pg})'
-
-            for bloque in _dividir_lista(nuevos, BATCH_SIZE):
-                if len(llaves_primarias) == 1:
-                    ph_ora = ", ".join(f":{i+1}" for i in range(len(bloque)))
-                    sql_sel = f"""
-                        SELECT {col_str_ora} FROM (
-                            SELECT t.*, ROW_NUMBER() OVER (
-                                PARTITION BY t.{llaves_primarias[0]}
-                                ORDER BY t.{fec_actualizacion} DESC NULLS LAST
-                            ) AS rn
-                            FROM {tabla} t
-                            WHERE {llaves_primarias[0]} IN ({ph_ora})
-                        ) sub WHERE rn = 1
-                    """
-                    vals_sel: list[Any] = [p[0] for p in bloque]
-                else:
-                    conds = ' OR '.join(
-                        '(' + ' AND '.join(
-                            f"t.{c} = :{i * len(llaves_primarias) + j + 1}"
-                            for j, c in enumerate(llaves_primarias)
-                        ) + ')'
-                        for i, _ in enumerate(bloque)
-                    )
-                    part  = ", ".join(f"t.{c}" for c in llaves_primarias)
-                    sql_sel = f"""
-                        SELECT {col_str_ora} FROM (
-                            SELECT t.*, ROW_NUMBER() OVER (
-                                PARTITION BY {part}
-                                ORDER BY t.{fec_actualizacion} DESC NULLS LAST
-                            ) AS rn
-                            FROM {tabla} t WHERE {conds}
-                        ) sub WHERE rn = 1
-                    """
-                    vals_sel = [v for par in bloque for v in par]
-
-                oracle_cursor.execute(sql_sel, vals_sel)
-                rows = oracle_cursor.fetchall()
-
-                if columnas_blob:
-                    indices_blob = [i for i, c in enumerate(columnas) if c in columnas_blob]
-                    with ThreadPoolExecutor(max_workers=4) as ex:
-                        rows = sum(
-                            ex.map(
-                                lambda chunk: [_procesar_blob(f, indices_blob) for f in chunk],
-                                _dividir_lista(rows, 50),
-                            ),
-                            [],
+                for bloque in _dividir_lista(nuevos, BATCH_SIZE):
+                    if len(llaves_primarias) == 1:
+                        ph_ora = ", ".join(f":{i+1}" for i in range(len(bloque)))
+                        sql_sel = f"""
+                            SELECT {col_str_ora} FROM (
+                                SELECT t.*, ROW_NUMBER() OVER (
+                                    PARTITION BY t.{llaves_primarias[0]}
+                                    ORDER BY t.{fec_actualizacion} DESC NULLS LAST
+                                ) AS rn
+                                FROM {tabla} t
+                                WHERE {llaves_primarias[0]} IN ({ph_ora})
+                            ) sub WHERE rn = 1
+                        """
+                        vals_sel: list[Any] = [p[0] for p in bloque]
+                    else:
+                        conds = ' OR '.join(
+                            '(' + ' AND '.join(
+                                f"t.{c} = :{i * len(llaves_primarias) + j + 1}"
+                                for j, c in enumerate(llaves_primarias)
+                            ) + ')'
+                            for i, _ in enumerate(bloque)
                         )
+                        part  = ", ".join(f"t.{c}" for c in llaves_primarias)
+                        sql_sel = f"""
+                            SELECT {col_str_ora} FROM (
+                                SELECT t.*, ROW_NUMBER() OVER (
+                                    PARTITION BY {part}
+                                    ORDER BY t.{fec_actualizacion} DESC NULLS LAST
+                                ) AS rn
+                                FROM {tabla} t WHERE {conds}
+                            ) sub WHERE rn = 1
+                        """
+                        vals_sel = [v for par in bloque for v in par]
 
-                try:
-                    pg_cursor.executemany(sql_ins, rows)
-                    conteos['insertados'] += pg_cursor.rowcount
-                    pg_conn.connection.commit()
-                except Exception as exc:
-                    logger.error("Error INSERT en %s: %s", tabla, exc)
+                    oracle_cursor.execute(sql_sel, vals_sel)
+                    rows = oracle_cursor.fetchall()
 
-            logger.info("  ↳ Insertados en %.2fs", time.time() - t0)
+                    if columnas_blob:
+                        indices_blob = [i for i, c in enumerate(columnas) if c in columnas_blob]
+                        with ThreadPoolExecutor(max_workers=4) as ex:
+                            rows = sum(
+                                ex.map(
+                                    lambda chunk: [_procesar_blob(f, indices_blob) for f in chunk],
+                                    _dividir_lista(rows, 50),
+                                ),
+                                [],
+                            )
 
-        # ── UPDATE ──────────────────────────────────────────────────────
-        fechas_oracle = _fetch_fechas_oracle(
-            oracle_cursor, pk_str, fec_actualizacion, tabla, no_exp, expediente, BATCH_SIZE
-        )
-        fechas_pg = _fetch_fechas_postgres(
-            pg_cursor, pk_str, fec_actualizacion, tabla, no_exp, expediente, BATCH_SIZE
-        )
+                    try:
+                        pg_cursor.executemany(sql_ins, rows)
+                        conteos['insertados'] += pg_cursor.rowcount
+                        pg_conn.connection.commit()
+                    except Exception as exc:
+                        logger.error("Error INSERT en %s: %s", tabla, exc)
 
-        actualizar = [k for k in fechas_pg if fechas_pg.get(k) != fechas_oracle.get(k)]
-        logger.info("  ↳ Por actualizar: %d", len(actualizar))
+                logger.info("  ↳ Insertados en %.2fs", time.time() - t0)
 
-        if actualizar:
-            t0 = time.time()
-            set_clause   = ", ".join(f'"{c}" = %s' for c in columnas_act)
-            where_clause = " AND ".join(f'"{c}" = %s' for c in llaves_primarias)
-            sql_upd = f'UPDATE "{tabla}" SET {set_clause} WHERE {where_clause}'
+            # ── UPDATE ──────────────────────────────────────────────────────
+            fechas_oracle = _fetch_fechas_oracle(
+                oracle_cursor, pk_str, fec_actualizacion, tabla, no_exp, expediente, BATCH_SIZE
+            )
+            fechas_pg = _fetch_fechas_postgres(
+                pg_cursor, pk_str, fec_actualizacion, tabla, no_exp, expediente, BATCH_SIZE
+            )
 
-            for bloque in _dividir_lista(actualizar, BATCH_SIZE):
-                if len(llaves_primarias) == 1:
-                    ph_ora = ", ".join(f":{i+1}" for i in range(len(bloque)))
-                    sql_sel = f"""
-                        SELECT {col_act_str_ora}, {pk_str} FROM (
-                            SELECT t.*, ROW_NUMBER() OVER (
-                                PARTITION BY t.{llaves_primarias[0]}
-                                ORDER BY t.{fec_actualizacion} DESC NULLS LAST
-                            ) AS rn
-                            FROM {tabla} t
-                            WHERE {llaves_primarias[0]} IN ({ph_ora})
-                        ) sub WHERE rn = 1
-                    """
-                    vals_sel = [p[0] for p in bloque]
-                else:
-                    conds = ' OR '.join(
-                        '(' + ' AND '.join(
-                            f"t.{c} = :{i * len(llaves_primarias) + j + 1}"
-                            for j, c in enumerate(llaves_primarias)
-                        ) + ')'
-                        for i, _ in enumerate(bloque)
-                    )
-                    part  = ", ".join(f"t.{c}" for c in llaves_primarias)
-                    sql_sel = f"""
-                        SELECT {col_act_str_ora}, {pk_str} FROM (
-                            SELECT t.*, ROW_NUMBER() OVER (
-                                PARTITION BY {part}
-                                ORDER BY t.{fec_actualizacion} DESC NULLS LAST
-                            ) AS rn
-                            FROM {tabla} t WHERE {conds}
-                        ) sub WHERE rn = 1
-                    """
-                    vals_sel = [v for par in bloque for v in par]
+            actualizar = [k for k in fechas_pg if fechas_pg.get(k) != fechas_oracle.get(k)]
+            logger.info("  ↳ Por actualizar: %d", len(actualizar))
 
-                oracle_cursor.execute(sql_sel, vals_sel)
-                rows = oracle_cursor.fetchall()
+            if actualizar:
+                t0 = time.time()
+                set_clause   = ", ".join(f'"{c}" = %s' for c in columnas_act)
+                where_clause = " AND ".join(f'"{c}" = %s' for c in llaves_primarias)
+                sql_upd = f'UPDATE "{tabla}" SET {set_clause} WHERE {where_clause}'
 
-                if columnas_blob:
-                    indices_blob = [
-                        i for i, c in enumerate(columnas_act + llaves_primarias)
-                        if c in columnas_blob
-                    ]
-                    with ThreadPoolExecutor(max_workers=4) as ex:
-                        rows = sum(
-                            ex.map(
-                                lambda chunk: [_procesar_blob(f, indices_blob) for f in chunk],
-                                _dividir_lista(rows, 50),
-                            ),
-                            [],
+                for bloque in _dividir_lista(actualizar, BATCH_SIZE):
+                    if len(llaves_primarias) == 1:
+                        ph_ora = ", ".join(f":{i+1}" for i in range(len(bloque)))
+                        sql_sel = f"""
+                            SELECT {col_act_str_ora}, {pk_str} FROM (
+                                SELECT t.*, ROW_NUMBER() OVER (
+                                    PARTITION BY t.{llaves_primarias[0]}
+                                    ORDER BY t.{fec_actualizacion} DESC NULLS LAST
+                                ) AS rn
+                                FROM {tabla} t
+                                WHERE {llaves_primarias[0]} IN ({ph_ora})
+                            ) sub WHERE rn = 1
+                        """
+                        vals_sel = [p[0] for p in bloque]
+                    else:
+                        conds = ' OR '.join(
+                            '(' + ' AND '.join(
+                                f"t.{c} = :{i * len(llaves_primarias) + j + 1}"
+                                for j, c in enumerate(llaves_primarias)
+                            ) + ')'
+                            for i, _ in enumerate(bloque)
                         )
+                        part  = ", ".join(f"t.{c}" for c in llaves_primarias)
+                        sql_sel = f"""
+                            SELECT {col_act_str_ora}, {pk_str} FROM (
+                                SELECT t.*, ROW_NUMBER() OVER (
+                                    PARTITION BY {part}
+                                    ORDER BY t.{fec_actualizacion} DESC NULLS LAST
+                                ) AS rn
+                                FROM {tabla} t WHERE {conds}
+                            ) sub WHERE rn = 1
+                        """
+                        vals_sel = [v for par in bloque for v in par]
 
-                try:
-                    pg_cursor.executemany(sql_upd, rows)
-                    conteos['actualizados'] += pg_cursor.rowcount
-                    pg_conn.connection.commit()
-                except Exception as exc:
-                    logger.error("Error UPDATE en %s: %s", tabla, exc)
+                    oracle_cursor.execute(sql_sel, vals_sel)
+                    rows = oracle_cursor.fetchall()
 
-            logger.info("  ↳ Actualizados en %.2fs", time.time() - t0)
+                    if columnas_blob:
+                        indices_blob = [
+                            i for i, c in enumerate(columnas_act + llaves_primarias)
+                            if c in columnas_blob
+                        ]
+                        with ThreadPoolExecutor(max_workers=4) as ex:
+                            rows = sum(
+                                ex.map(
+                                    lambda chunk: [_procesar_blob(f, indices_blob) for f in chunk],
+                                    _dividir_lista(rows, 50),
+                                ),
+                                [],
+                            )
 
-    oracle_cursor.close()
-    gc.collect()
-    return conteos
+                    try:
+                        pg_cursor.executemany(sql_upd, rows)
+                        conteos['actualizados'] += pg_cursor.rowcount
+                        pg_conn.connection.commit()
+                    except Exception as exc:
+                        logger.error("Error UPDATE en %s: %s", tabla, exc)
+
+                logger.info("  ↳ Actualizados en %.2fs", time.time() - t0)
+
+        return conteos
+    finally:
+        oracle_cursor.close()
+        gc.collect()

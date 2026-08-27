@@ -68,7 +68,11 @@ export const DEFAULT_CHECKIN_FORM_VALUES: CheckinFormInput = {
   noExp:          "",
   pkNum:          0,
   serviceType:    RECEPCION_SERVICE.MEDICINA_GENERAL,
-  arrivalType:    ARRIVAL_TYPE.APPOINTMENT,
+  // El campo "ID de cita" se saco del formulario de generar ficha (no
+  // aporta al flujo de recepcion) -- las visitas creadas ahi quedan
+  // siempre como walk-in, nunca "con cita" (arrivalType=appointment
+  // exige un appointmentId que ya no hay forma de cargar en la UI).
+  arrivalType:    ARRIVAL_TYPE.WALK_IN,
   appointmentId:  "",
   doctorId:       undefined,
   consultorioId:  undefined,

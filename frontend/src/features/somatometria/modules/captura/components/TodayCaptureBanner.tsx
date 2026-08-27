@@ -53,6 +53,92 @@ export function TodayCaptureBanner({
         {formatCapturedAtDateTime(todayCapture.capturedAt)}
       </AlertDescription>
 
+      {/* Valores visibles SIEMPRE, sin importar la decision -- la enfermera
+       * necesita verlos para poder analizarlos clinicamente ANTES de
+       * decidir si reusar o volver a tomar, no recien despues de elegir
+       * "Reusar" (que ademas ya los precarga en el formulario). */}
+      <dl
+        className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-3"
+        data-testid="today-capture-values"
+      >
+        <div>
+          <dt className="text-txt-muted">Peso</dt>
+          <dd className="font-semibold text-txt-body">
+            {todayCapture.values.weightKg} kg
+          </dd>
+        </div>
+        <div>
+          <dt className="text-txt-muted">Talla</dt>
+          <dd className="font-semibold text-txt-body">
+            {todayCapture.values.heightCm} cm
+          </dd>
+        </div>
+        <div>
+          <dt className="text-txt-muted">IMC</dt>
+          <dd className="font-semibold text-txt-body">
+            {todayCapture.values.bmi}
+          </dd>
+        </div>
+        {todayCapture.values.temperatureC != null ? (
+          <div>
+            <dt className="text-txt-muted">Temp.</dt>
+            <dd className="font-semibold text-txt-body">
+              {todayCapture.values.temperatureC} °C
+            </dd>
+          </div>
+        ) : null}
+        {todayCapture.values.oxygenSaturationPct != null ? (
+          <div>
+            <dt className="text-txt-muted">Sat. O2</dt>
+            <dd className="font-semibold text-txt-body">
+              {todayCapture.values.oxygenSaturationPct}%
+            </dd>
+          </div>
+        ) : null}
+        {todayCapture.values.bloodPressureSystolic != null &&
+        todayCapture.values.bloodPressureDiastolic != null ? (
+          <div>
+            <dt className="text-txt-muted">T.A.</dt>
+            <dd className="font-semibold text-txt-body">
+              {todayCapture.values.bloodPressureSystolic}/
+              {todayCapture.values.bloodPressureDiastolic}
+            </dd>
+          </div>
+        ) : null}
+        {todayCapture.values.heartRateBpm != null ? (
+          <div>
+            <dt className="text-txt-muted">Frec. cardiaca</dt>
+            <dd className="font-semibold text-txt-body">
+              {todayCapture.values.heartRateBpm} lpm
+            </dd>
+          </div>
+        ) : null}
+        {todayCapture.values.respiratoryRateBpm != null ? (
+          <div>
+            <dt className="text-txt-muted">Frec. respiratoria</dt>
+            <dd className="font-semibold text-txt-body">
+              {todayCapture.values.respiratoryRateBpm} rpm
+            </dd>
+          </div>
+        ) : null}
+        {todayCapture.values.glucosaCapilarMgdl != null ? (
+          <div>
+            <dt className="text-txt-muted">Glucosa capilar</dt>
+            <dd className="font-semibold text-txt-body">
+              {todayCapture.values.glucosaCapilarMgdl} mg/dL
+            </dd>
+          </div>
+        ) : null}
+        {todayCapture.values.waistCircumferenceCm != null ? (
+          <div>
+            <dt className="text-txt-muted">Cintura</dt>
+            <dd className="font-semibold text-txt-body">
+              {todayCapture.values.waistCircumferenceCm} cm
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+
       {decision === "pending" ? (
         <div className="flex flex-wrap gap-2 pt-3">
           <Button

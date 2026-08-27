@@ -16,9 +16,15 @@ import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centro
 import { useSomatometriaHistorial } from "@features/somatometria/modules/captura/queries/useSomatometriaHistorial";
 import { SomatometriaPacienteHistorialDialog } from "@features/somatometria/modules/captura/components/SomatometriaPacienteHistorialDialog";
 import {
+  isValidCustomRange,
   resolvePreset,
   type DateRangePreset,
 } from "@features/somatometria/modules/captura/domain/date-range-presets";
+
+/** Filtro de fecha activo -- "personalizada" es un botón mas al mismo
+ * nivel que los presets (D-nuevo, pedido explicito: nunca debe quedar en
+ * blanco/ambiguo cual esta activo, "personalizada" incluida). */
+type ActiveDateFilter = DateRangePreset | "personalizada";
 
 const DATE_PRESET_LABEL: Record<DateRangePreset, string> = {
   hoy: "Hoy",
@@ -28,6 +34,12 @@ const DATE_PRESET_LABEL: Record<DateRangePreset, string> = {
 };
 
 const DATE_PRESETS: DateRangePreset[] = ["hoy", "semana", "mes", "anio"];
+
+const formatFechaCorta = (isoDate: string): string => {
+  if (!isoDate) return "—";
+  const [year, month, day] = isoDate.split("-");
+  return `${day}/${month}/${year}`;
+};
 
 interface SelectedPaciente {
   noExp: string;
@@ -76,9 +88,9 @@ export function SomatometriaHistorialView() {
   const initialRange = resolvePreset("hoy");
   const [fechaDesde, setFechaDesde] = useState(initialRange.fechaDesde);
   const [fechaHasta, setFechaHasta] = useState(initialRange.fechaHasta);
-  const [activePreset, setActivePreset] = useState<DateRangePreset | null>(
-    "hoy",
-  );
+  // Nunca `null`: siempre hay un filtro activo, "personalizada" incluida
+  // -- evita el estado "en blanco" donde ningun boton se veia resaltado.
+  const [activeFilter, setActiveFilter] = useState<ActiveDateFilter>("hoy");
   const [page, setPage] = useState(1);
   const [selectedPaciente, setSelectedPaciente] =
     useState<SelectedPaciente | null>(null);
@@ -93,19 +105,35 @@ export function SomatometriaHistorialView() {
     const range = resolvePreset(preset);
     setFechaDesde(range.fechaDesde);
     setFechaHasta(range.fechaHasta);
-    setActivePreset(preset);
+    setActiveFilter(preset);
     setPage(1);
   };
 
-  const { data, isLoading, isError } = useSomatometriaHistorial({
-    page,
-    pageSize: 50,
-    fechaDesde: fechaDesde || undefined,
-    fechaHasta: fechaHasta || undefined,
-    // `centroId` viaja como parametro REAL de backend (D3/D13) -- ya no se
-    // filtra client-side sobre la pagina traida.
-    centroId: centroFilter === "all" ? undefined : centroFilter,
-  });
+  const activateCustomRange = () => {
+    setActiveFilter("personalizada");
+    setPage(1);
+  };
+
+  const customRangeIsInvalid =
+    activeFilter === "personalizada" && !isValidCustomRange(fechaDesde, fechaHasta);
+
+  const activeFilterLabel =
+    activeFilter === "personalizada"
+      ? `Fecha personalizada (${formatFechaCorta(fechaDesde)} – ${formatFechaCorta(fechaHasta)})`
+      : DATE_PRESET_LABEL[activeFilter];
+
+  const { data, isLoading, isError } = useSomatometriaHistorial(
+    {
+      page,
+      pageSize: 50,
+      fechaDesde: fechaDesde || undefined,
+      fechaHasta: fechaHasta || undefined,
+      // `centroId` viaja como parametro REAL de backend (D3/D13) -- ya no se
+      // filtra client-side sobre la pagina traida.
+      centroId: centroFilter === "all" ? undefined : centroFilter,
+    },
+    { enabled: !customRangeIsInvalid },
+  );
 
   const visits = data?.items ?? [];
   const visitsWithVitals = visits.filter(hasVitals);
@@ -128,7 +156,7 @@ export function SomatometriaHistorialView() {
                 onClick={() => applyPreset(preset)}
                 className={[
                   "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-                  activePreset === preset
+                  activeFilter === preset
                     ? "border-primary bg-primary text-white"
                     : "border-line-struct hover:border-primary/60 hover:bg-primary/5",
                 ].join(" ")}
@@ -136,65 +164,103 @@ export function SomatometriaHistorialView() {
                 {DATE_PRESET_LABEL[preset]}
               </button>
             ))}
+            <button
+              type="button"
+              data-testid="somato-hist-preset-personalizada"
+              onClick={activateCustomRange}
+              className={[
+                "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                activeFilter === "personalizada"
+                  ? "border-primary bg-primary text-white"
+                  : "border-line-struct hover:border-primary/60 hover:bg-primary/5",
+              ].join(" ")}
+            >
+              Fecha personalizada
+            </button>
           </div>
+
+          {/* Leyenda: siempre visible, nunca "en blanco" -- confirma cual
+           * filtro esta activo, presets y personalizada por igual. */}
+          <p
+            className="text-xs text-txt-muted"
+            data-testid="somato-hist-active-filter-label"
+          >
+            Filtro activo:{" "}
+            <span className="font-semibold text-txt-body">
+              {activeFilterLabel}
+            </span>
+          </p>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="somato-hist-centro-filter">
-              Centro de atención
-            </Label>
-            <Select
-              value={centroFilter === "all" ? "all" : String(centroFilter)}
-              onValueChange={(value) => {
-                setCentroFilter(value === "all" ? "all" : Number(value));
-                setPage(1);
-              }}
+        {activeFilter === "personalizada" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="somato-hist-desde">Desde</Label>
+              <Input
+                id="somato-hist-desde"
+                type="date"
+                value={fechaDesde}
+                onChange={(event) => {
+                  setFechaDesde(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="somato-hist-hasta">
+                Hasta{" "}
+                <span className="font-normal text-txt-muted">(opc.)</span>
+              </Label>
+              <Input
+                id="somato-hist-hasta"
+                type="date"
+                value={fechaHasta}
+                min={fechaDesde}
+                onChange={(event) => {
+                  setFechaHasta(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+
+            {customRangeIsInvalid ? (
+              <p
+                className="sm:col-span-2 text-xs text-status-critical"
+                role="alert"
+              >
+                La fecha "Desde" no puede ser posterior a "Hasta".
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <Label htmlFor="somato-hist-centro-filter">
+            Centro de atención
+          </Label>
+          <Select
+            value={centroFilter === "all" ? "all" : String(centroFilter)}
+            onValueChange={(value) => {
+              setCentroFilter(value === "all" ? "all" : Number(value));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger
+              id="somato-hist-centro-filter"
+              className="w-full sm:w-64"
             >
-              <SelectTrigger id="somato-hist-centro-filter" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los centros</SelectItem>
-                {centroOptions.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    {c.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="somato-hist-desde">Desde</Label>
-            <Input
-              id="somato-hist-desde"
-              type="date"
-              value={fechaDesde}
-              onChange={(event) => {
-                setFechaDesde(event.target.value);
-                setActivePreset(null);
-                setPage(1);
-              }}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="somato-hist-hasta">
-              Hasta <span className="font-normal text-txt-muted">(opc.)</span>
-            </Label>
-            <Input
-              id="somato-hist-hasta"
-              type="date"
-              value={fechaHasta}
-              min={fechaDesde}
-              onChange={(event) => {
-                setFechaHasta(event.target.value);
-                setActivePreset(null);
-                setPage(1);
-              }}
-            />
-          </div>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los centros</SelectItem>
+              {centroOptions.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </section>
 

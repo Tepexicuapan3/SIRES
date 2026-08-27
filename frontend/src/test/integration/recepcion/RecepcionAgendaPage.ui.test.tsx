@@ -121,7 +121,10 @@ describe("RecepcionAgendaPage UI", () => {
     ).toBeVisible();
   });
 
-  it("renderiza panel operativo, filtros y CTA principal de ficha", async () => {
+  it("renderiza panel operativo y filtros", async () => {
+    // El boton "Generar ficha de consulta" del header se eliminó (pedido
+    // explicito del usuario, sin reemplazo) -- el check-in manual sigue
+    // existiendo via `?focus=checkin` y desde la vista de Disponibilidad.
     const user = userEvent.setup();
     render(<RecepcionAgendaPage />);
 
@@ -129,8 +132,8 @@ describe("RecepcionAgendaPage UI", () => {
       screen.getByRole("heading", { name: "Citas y check-in operativo" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Generar ficha de consulta" }),
-    ).toBeVisible();
+      screen.queryByRole("button", { name: "Generar ficha de consulta" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("combobox", { name: "Servicio" }));
     await user.click(screen.getByRole("option", { name: "Urgencias" }));
@@ -170,7 +173,10 @@ describe("RecepcionAgendaPage UI", () => {
     ).toBeVisible();
   });
 
-  it("ejecuta accion Llego desde una tarjeta con toast", async () => {
+  it("ejecuta accion Llego directo desde la tarjeta, sin dialogo de confirmacion", async () => {
+    // "Llego" es frecuente y reversible (a diferencia de cancelar/no-show,
+    // que si piden confirmacion por ser irreversibles) -- un solo click
+    // envia a somatometria, sin paso intermedio.
     const user = userEvent.setup();
     render(<RecepcionAgendaPage />);
 
@@ -181,9 +187,10 @@ describe("RecepcionAgendaPage UI", () => {
     await user.click(
       within(visitCard as HTMLElement).getByRole("button", { name: "Llego" }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Enviar a somatometria" }),
-    );
+
+    expect(
+      screen.queryByRole("button", { name: "Enviar a somatometria" }),
+    ).not.toBeInTheDocument();
 
     expect(mutateAsync).toHaveBeenCalledWith({
       visitId: 1,
@@ -191,6 +198,7 @@ describe("RecepcionAgendaPage UI", () => {
     });
     expect(toast.success).toHaveBeenCalledWith(
       "Paciente enviado a somatometria.",
+      { description: "Folio VST-001." },
     );
   });
 });

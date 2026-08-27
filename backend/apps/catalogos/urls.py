@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .imports.registry import CATALOG_IMPORT_REGISTRY
 from .views import *
 
 routes = [
@@ -103,3 +104,24 @@ urlpatterns += [
     path("cies/", CatCiesListCreateView.as_view(), name="cies-list"),
     path("cies/<str:pk>/", CatCiesDetailView.as_view(), name="cies-detail"),
 ]
+
+# IMPORT MASIVO DE CATALOGOS (Excel) — un catalogo nuevo en CATALOG_IMPORT_REGISTRY
+# solo necesita su entrada ahi; estas 3 rutas por catalogo salen solas de este loop.
+for _import_spec in CATALOG_IMPORT_REGISTRY.values():
+    urlpatterns += [
+        path(
+            f"{_import_spec.slug}/import/template/",
+            CatalogImportTemplateAPIView.as_view(spec=_import_spec, catalog=_import_spec.permission_catalog),
+            name=f"{_import_spec.slug}-import-template",
+        ),
+        path(
+            f"{_import_spec.slug}/import/preview/",
+            CatalogImportPreviewAPIView.as_view(spec=_import_spec, catalog=_import_spec.permission_catalog),
+            name=f"{_import_spec.slug}-import-preview",
+        ),
+        path(
+            f"{_import_spec.slug}/import/confirm/",
+            CatalogImportConfirmAPIView.as_view(spec=_import_spec, catalog=_import_spec.permission_catalog),
+            name=f"{_import_spec.slug}-import-confirm",
+        ),
+    ]

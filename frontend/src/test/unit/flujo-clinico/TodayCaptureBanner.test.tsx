@@ -147,6 +147,33 @@ describe("TodayCaptureBanner", () => {
     );
   });
 
+  it("muestra los valores de la captura de hoy incluso en estado 'pending', antes de decidir", () => {
+    // La enfermera necesita ver peso/talla/TA/etc. para poder analizarlos
+    // clinicamente ANTES de elegir reusar o volver a tomar -- no recien
+    // despues de hacer click en "Reusar" (que ademas ya los precarga en el
+    // formulario, pero eso es una decision distinta de solo poder verlos).
+    render(
+      <TodayCaptureBanner
+        todayCapture={buildTodayCapture()}
+        decision="pending"
+        onReuse={vi.fn()}
+        onCaptureFresh={vi.fn()}
+      />,
+    );
+
+    const values = screen.getByTestId("today-capture-values");
+    expect(values).toHaveTextContent("72.5 kg");
+    expect(values).toHaveTextContent("168 cm");
+    expect(values).toHaveTextContent("25.69");
+    expect(values).toHaveTextContent("36.6 °C");
+    expect(values).toHaveTextContent("97%");
+    expect(values).toHaveTextContent("118/76");
+    expect(values).toHaveTextContent("78 lpm");
+    expect(values).toHaveTextContent("16 rpm");
+    expect(values).toHaveTextContent("94 mg/dL");
+    expect(values).toHaveTextContent("88 cm");
+  });
+
   it("deshabilita ambos botones cuando `disabled` es true", () => {
     render(
       <TodayCaptureBanner

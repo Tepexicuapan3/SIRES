@@ -84,6 +84,7 @@ interface Props {
 
   visitStatusActionPending:      boolean;
   openStatusActionConfirmation:  (visitId: number, folio: string, targetStatus: RecepcionAction) => void;
+  onMarkArrived:                 (visitId: number, folio: string) => void;
   setFichaVisit:                 (visit: VisitQueueItem) => void;
   setFichaOpen:                  (open: boolean) => void;
 }
@@ -136,6 +137,7 @@ export function BandejaView({
   filteredVisits,
   visitStatusActionPending,
   openStatusActionConfirmation,
+  onMarkArrived,
   setFichaVisit,
   setFichaOpen,
 }: Props) {
@@ -544,11 +546,12 @@ export function BandejaView({
                             size="sm"
                             disabled={actionDisabled}
                             onClick={() => {
-                              openStatusActionConfirmation(
-                                visit.id,
-                                visit.folio,
-                                RECEPCION_ACTION.EN_SOMATOMETRIA,
-                              );
+                              // Sin dialogo de confirmacion a proposito:
+                              // "Llego" es una accion frecuente y reversible
+                              // (a diferencia de cancelar/no-show), agregar
+                              // una confirmacion ahi solo sumaba un clic
+                              // extra sin beneficio real para recepcion.
+                              onMarkArrived(visit.id, visit.folio);
                             }}
                           >
                             {

@@ -181,15 +181,12 @@ export const RecepcionQuickCheckinDialog = ({
     defaultValues: { ...DEFAULT_CHECKIN_FORM_VALUES, fechaConsulta: todayISO },
   });
 
-  const [serviceType, pkNumWatch, horaConsultaWatch] = useWatch({
+  const [pkNumWatch, horaConsultaWatch] = useWatch({
     control: form.control,
-    name:    ["serviceType", "pkNum", "horaConsulta"],
+    name:    ["pkNum", "horaConsulta"],
   });
 
-  const isWalkInOnlyService = isServiceForcedToWalkIn(serviceType);
-
   const serviceTypeField    = form.register("serviceType");
-  const appointmentIdField  = form.register("appointmentId");
   const [tipoCitaId, setTipoCitaId] = useState<string>("");
   const { data: tiposCitasData } = useTiposCitasList({
     pageSize: 100,
@@ -492,31 +489,6 @@ export const RecepcionQuickCheckinDialog = ({
             </div>
           </div>
 
-          {!isWalkInOnlyService ? (
-            <div className="space-y-2">
-              <Label htmlFor="quick-appointmentId">ID de cita</Label>
-              <Input
-                id="quick-appointmentId"
-                disabled={!canWrite || createVisit.isPending}
-                placeholder="Opcional: folio de la cita agendada"
-                {...appointmentIdField}
-                onChange={(event) => {
-                  appointmentIdField.onChange(event);
-                  const hasFolio = event.target.value.trim().length > 0;
-                  form.setValue(
-                    "arrivalType",
-                    hasFolio ? ARRIVAL_TYPE.APPOINTMENT : ARRIVAL_TYPE.WALK_IN,
-                    { shouldDirty: true, shouldValidate: true },
-                  );
-                }}
-              />
-              {form.formState.errors.appointmentId?.message ? (
-                <p className="text-sm text-status-critical" role="alert">
-                  {form.formState.errors.appointmentId.message}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
 
           <Separator />
 

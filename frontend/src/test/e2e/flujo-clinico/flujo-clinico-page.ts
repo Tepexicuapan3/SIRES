@@ -154,71 +154,46 @@ export class FlujoClinicoPage {
       waitUntil: "domcontentloaded",
     });
     await expect(this.page).toHaveURL(/\/recepcion\/agenda(\?.*)?$/);
+    // El boton "Generar ficha de consulta" del header se eliminó (pedido
+    // explicito del usuario, sin reemplazo) -- la prueba de que llegamos a
+    // la pagina correcta ahora es el heading, no una accion puntual que ya
+    // no existe.
     await expect(
-      this.page.getByRole("button", {
-        name: /Generar ficha de consulta/i,
-      }),
-      "No se encontro la accion principal de recepcion",
+      this.page.getByRole("heading", { name: "Citas y check-in operativo" }),
+      "No se encontro la pagina de citas y check-in operativo",
     ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
   }
 
   async gotoRecepcionAgendarCita(): Promise<boolean> {
+    // El boton "Generar ficha de consulta" del header se eliminó (pedido
+    // explicito del usuario, sin reemplazo) -- el dialogo de check-in
+    // manual ya NO se abre haciendo click en un boton del header, solo
+    // via `?focus=checkin` (auto-abre `quickCheckinOpen` al montar, ver
+    // `RecepcionAgendaPage.tsx`) o desde la vista de Disponibilidad
+    // (click en un slot). Este helper depende de la primera via.
     const candidateRoutes = [
       "/recepcion/checkin",
+      "/recepcion/agenda?focus=checkin",
       "/recepcion/agenda",
       "/recepcion/agendar-cita",
-      "/recepcion/agenda?focus=checkin",
     ] as const;
 
     let foundRoute = false;
     for (const route of candidateRoutes) {
       await this.page.goto(route, { waitUntil: "domcontentloaded" });
 
-      const hasCheckinUi = await this.page
+      const hasInlineForm = await this.page
         .waitForFunction(
-          () => {
-            const hasPrimaryAction = Array.from(
-              document.querySelectorAll("button"),
-            ).some((button) =>
-              /Generar ficha de consulta/i.test(button.textContent ?? ""),
-            );
-
-            const hasInlineInputs =
-              document.querySelector("#noExp") !== null;
-
-            const hasLabeledInput =
-              document.querySelector('label[for="noExp"]') !== null;
-
-            return hasPrimaryAction || hasInlineInputs || hasLabeledInput;
-          },
+          () =>
+            document.querySelector("#noExp") !== null ||
+            document.querySelector('label[for="noExp"]') !== null,
           null,
-          {
-            timeout: 5_000,
-          },
+          { timeout: 5_000 },
         )
         .then(() => true)
         .catch(() => false);
 
-      if (!hasCheckinUi) {
-        continue;
-      }
-
-      const primaryAction = this.page
-        .getByRole("button", {
-          name: /Generar ficha de consulta/i,
-        })
-        .first();
-      const hasPrimaryAction = (await primaryAction.count()) > 0;
-      const hasInlineForm =
-        (await this.page.locator("#noExp").count()) > 0 ||
-        (await this.page.getByLabel("Número de expediente").count()) > 0;
-
-      if (hasPrimaryAction || hasInlineForm) {
-        if (hasPrimaryAction) {
-          await expect(primaryAction).toBeVisible({
-            timeout: DEFAULT_TIMEOUT_MS,
-          });
-        }
+      if (hasInlineForm) {
         foundRoute = true;
         break;
       }
@@ -231,24 +206,6 @@ export class FlujoClinicoPage {
     let noExpField = this.page.locator("#noExp").first();
     if ((await noExpField.count()) === 0) {
       noExpField = this.page.getByLabel("Número de expediente").first();
-    }
-
-    if (
-      (await noExpField.count()) === 0 ||
-      !(await noExpField.isVisible())
-    ) {
-      await this.page
-        .getByRole("button", {
-          name: /Generar ficha de consulta/i,
-        })
-        .first()
-        .click();
-
-      await expect(
-        this.page.getByRole("dialog").getByText("Generar ficha de consulta"),
-      ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
-
-      noExpField = this.page.locator("#noExp").first();
     }
 
     await expect(noExpField).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
