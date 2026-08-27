@@ -44,6 +44,7 @@ NAVIGATION_PERMISSIONS_SEED: list[tuple[str, str]] = [
     ("admin:usuarios:sesiones:read", "Ver sesiones activas de usuarios"),
     ("clinico:consultas:read", "Ver consultas medicas"),
     ("clinico:somatometria:read", "Ver somatometria"),
+    ("clinico:somatometria:update", "Corregir somatometria"),
     ("farmacia:vacunas:read", "Ver inventario operativo de vacunas"),
     (
         "recepcion:fichas:medicina_general:create",

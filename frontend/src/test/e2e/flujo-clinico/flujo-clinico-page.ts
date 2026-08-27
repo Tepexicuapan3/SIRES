@@ -55,6 +55,10 @@ interface CaptureVitalsByVisitIdInput {
   notes?: string;
 }
 
+interface EditVitalsByVisitIdInput extends CaptureVitalsByVisitIdInput {
+  motivo: string;
+}
+
 interface SavePrescriptionInput {
   items: string[];
 }
@@ -460,6 +464,60 @@ export class FlujoClinicoPage {
     );
   }
 
+  /**
+   * Edicion auditada (Fase 3, D8, change `somatometria-modulo-integral`).
+   * Mismo patron que `captureVitalsByVisitId` -- API cruda via
+   * `page.evaluate`, no hay componente de UI dedicado para esta accion
+   * (no fue parte de las tasks 3.5-3.7, que solo cubren el hook y el
+   * aviso "Corregido por" en `ConsultationDetailDialog`). El test e2e usa
+   * esto para preparar/ejecutar la correccion y verifica el resultado
+   * REAL en la UI del medico (`assertVitalsShowsCorrectedBy`).
+   */
+  async editVitalsByVisitId(
+    visitId: number,
+    input: EditVitalsByVisitIdInput,
+  ): Promise<HttpJsonResponse> {
+    const apiBaseUrl = this.getApiBaseUrl();
+
+    return this.page.evaluate(
+      async ({ requestUrl, payload, requestId }) => {
+        const csrfToken =
+          document.cookie
+            .split("; ")
+            .find((cookie) => cookie.startsWith("csrf_token="))
+            ?.slice("csrf_token=".length) ?? "";
+
+        const response = await fetch(requestUrl, {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": csrfToken,
+            "X-Request-ID": requestId,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        let body: unknown = null;
+        try {
+          body = await response.json();
+        } catch {
+          body = null;
+        }
+
+        return {
+          status: response.status,
+          body,
+        } satisfies HttpJsonResponse;
+      },
+      {
+        requestUrl: `${apiBaseUrl}/visits/${visitId}/vitals`,
+        payload: input,
+        requestId: `kan-edit-vitals-${Date.now()}`,
+      },
+    );
+  }
+
   async startConsultationByVisitId(visitId: number): Promise<HttpJsonResponse> {
     const apiBaseUrl = this.getApiBaseUrl();
 
@@ -808,6 +866,19 @@ export class FlujoClinicoPage {
     } else {
       await expect(indicator).not.toContainText(/reusados/i);
     }
+  }
+
+  /**
+   * Requiere que `openDoctorConsultationModal` ya haya abierto el modal.
+   * Valida el aviso de correccion de Fase 3 (`ConsultationDetailDialog`,
+   * `data-testid="vitals-updated-by"`) -- un valor corregido nunca se
+   * presenta como si fuera el original.
+   */
+  async assertVitalsShowsCorrectedBy(namePattern: RegExp): Promise<void> {
+    const indicator = this.page.getByTestId("vitals-updated-by");
+    await expect(indicator).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+    await expect(indicator).toContainText(/Corregido por/i);
+    await expect(indicator).toContainText(namePattern);
   }
 
   async waitForVisitOption(

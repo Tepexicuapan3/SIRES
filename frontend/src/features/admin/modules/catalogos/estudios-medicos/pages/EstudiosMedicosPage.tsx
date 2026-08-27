@@ -55,7 +55,12 @@ export function EstudiosMedicosPage() {
     useState<ColumnVisibilityState>({
       name: true,
       studyType: true,
-      code: true,
+      precio: true,
+      indication: true,
+      groupType: true,
+      providerId: true,
+      isGeneral: true,
+      isAuthorized: true,
       isActive: true,
       actions: true,
     });

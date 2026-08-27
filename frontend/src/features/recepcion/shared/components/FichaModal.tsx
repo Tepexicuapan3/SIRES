@@ -6,7 +6,9 @@ import { Badge }  from "@shared/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@shared/ui/dialog";
-import type { VisitQueueItem, VisitService, VisitStatus, VisitStatusLogItem } from "@api/types";
+import type {
+  VisitQueueItem, VisitService, VisitStatus, VisitStatusLogItem, VisitVitalsPayload,
+} from "@api/types";
 import { visitsAPI } from "@api/resources/visits.api";
 import { usePatientLookupHistorico } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
 import { useVisitStatusLog } from "@features/recepcion/modules/checkin/queries/useVisitStatusLog";
@@ -90,6 +92,19 @@ function StatusLogEntry({ entry }: { entry: VisitStatusLogItem }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Narrowing de recepcion (D3, somatometria-modulo-integral): un caller sin
+ * capability de lectura de metricas (recepcion) recibe unicamente
+ * `{hasVitals, capturedAt, reusedFromVisitId, reusedFrom}` -- SIN
+ * "weightKg" ni ningun otro valor numerico. El chequeo es en runtime (no
+ * en el tipo) porque `VisitVitalsPayload` sigue modelando el contrato
+ * completo para el resto de los consumidores (enfermeria/medico), que
+ * siempre reciben los valores completos.
+ */
+function hasVitalsValues(vitals: VisitVitalsPayload): boolean {
+  return typeof (vitals as { weightKg?: unknown }).weightKg === "number";
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -287,23 +302,34 @@ export function FichaModal({ open, onOpenChange, visit }: FichaModalProps) {
                     Signos vitales
                   </p>
                 </div>
-                <InfoRow label="Peso"       value={`${visit.vitals.weightKg} kg`} />
-                <InfoRow label="Talla"      value={`${visit.vitals.heightCm} cm`} />
-                <InfoRow label="IMC"        value={visit.vitals.bmi?.toFixed(1)} />
-                <InfoRow label="Temperatura" value={`${visit.vitals.temperatureC} °C`} />
-                <InfoRow label="Saturación" value={`${visit.vitals.oxygenSaturationPct} %`} />
-                {visit.vitals.heartRateBpm ? (
-                  <InfoRow label="Frec. cardíaca" value={`${visit.vitals.heartRateBpm} lpm`} />
-                ) : null}
-                {visit.vitals.bloodPressureSystolic ? (
+                {hasVitalsValues(visit.vitals) ? (
+                  <>
+                    <InfoRow label="Peso"       value={`${visit.vitals.weightKg} kg`} />
+                    <InfoRow label="Talla"      value={`${visit.vitals.heightCm} cm`} />
+                    <InfoRow label="IMC"        value={visit.vitals.bmi?.toFixed(1)} />
+                    <InfoRow label="Temperatura" value={`${visit.vitals.temperatureC} °C`} />
+                    <InfoRow label="Saturación" value={`${visit.vitals.oxygenSaturationPct} %`} />
+                    {visit.vitals.heartRateBpm ? (
+                      <InfoRow label="Frec. cardíaca" value={`${visit.vitals.heartRateBpm} lpm`} />
+                    ) : null}
+                    {visit.vitals.bloodPressureSystolic ? (
+                      <InfoRow
+                        label="Tensión arterial"
+                        value={`${visit.vitals.bloodPressureSystolic}/${visit.vitals.bloodPressureDiastolic} mmHg`}
+                      />
+                    ) : null}
+                    {visit.vitals.respiratoryRateBpm ? (
+                      <InfoRow label="Frec. respiratoria" value={`${visit.vitals.respiratoryRateBpm} rpm`} />
+                    ) : null}
+                  </>
+                ) : (
+                  // Recepcion no tiene capability de lectura de metricas (D3):
+                  // el contrato narrowed no trae valores, solo estado.
                   <InfoRow
-                    label="Tensión arterial"
-                    value={`${visit.vitals.bloodPressureSystolic}/${visit.vitals.bloodPressureDiastolic} mmHg`}
+                    label="Estado"
+                    value={`Signos vitales capturados el ${formatFechaHora(visit.vitals.capturedAt)}`}
                   />
-                ) : null}
-                {visit.vitals.respiratoryRateBpm ? (
-                  <InfoRow label="Frec. respiratoria" value={`${visit.vitals.respiratoryRateBpm} rpm`} />
-                ) : null}
+                )}
               </>
             ) : null}
           </dl>

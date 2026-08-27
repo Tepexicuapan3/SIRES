@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import OuterRef, Q, Subquery
 
 from apps.authentication.models import DetUsuario
 from apps.recepcion.models import Visit, VisitStatusLog
@@ -84,6 +85,7 @@ class VisitRepository:
                 # por visita al armar `reusedFrom` en `to_contract`.
                 "vital_signs__reused_from_visit__vital_signs",
             )
+            .annotate(en_somatometria_at=VisitRepository._en_somatometria_at_subquery())
             .filter(id_visit=visit_id)
             .first()
         )
@@ -118,6 +120,8 @@ class VisitRepository:
         fecha_desde=None,
         fecha_hasta=None,
         folio: str | None = None,
+        q: str | None = None,
+        pk_num: int | None = None,
     ) -> tuple[list[Visit], int, int]:
         queryset = (
             Visit.objects
@@ -129,6 +133,7 @@ class VisitRepository:
                 # cola, sin N+1 por fila.
                 "vital_signs__reused_from_visit__vital_signs",
             )
+            .annotate(en_somatometria_at=VisitRepository._en_somatometria_at_subquery())
             .order_by("-id_visit")
         )
 
@@ -152,6 +157,17 @@ class VisitRepository:
             queryset = queryset.filter(no_exp=no_exp)
         if folio:
             queryset = queryset.filter(folio__icontains=folio)
+        if q:
+            queryset = queryset.filter(
+                Q(nombre_paciente__icontains=q)
+                | Q(folio__icontains=q)
+                | Q(no_exp__icontains=q)
+            )
+        # `pk_num` es el índice del integrante familiar (0 = titular): filtro
+        # EXACTO, siempre separado de `q`. Debe ser `is not None` — `pk_num=0`
+        # es el titular y `if pk_num:` lo descartaría en silencio (D13).
+        if pk_num is not None:
+            queryset = queryset.filter(pk_num=pk_num)
 
         total       = queryset.count()
         start       = (page - 1) * page_size
@@ -181,6 +197,8 @@ class VisitRepository:
         visit: Visit,
         doctor_nombres: dict | None = None,
         cita_fechas: dict | None = None,
+        *,
+        include_vitals_values: bool = True,
     ) -> dict:
         try:
             vital_signs = visit.vital_signs
@@ -243,9 +261,19 @@ class VisitRepository:
             "turnoNombre":       visit.turno_nombre or "",
             "status":            visit.status,
             "fechaAlta":         visit.fch_alta.isoformat() if visit.fch_alta else None,
+            "fechaModf":         visit.fch_modf.isoformat() if visit.fch_modf else None,
+            "enSomatometriaAt":  VisitRepository._resolve_en_somatometria_at(visit),
             "createdById":       visit.created_by_id,
             "vitals": (
-                VitalsRepository.to_contract(vital_signs)
+                (
+                    VitalsRepository.to_contract(vital_signs)
+                    if include_vitals_values
+                    # Narrowing de recepcion (D3, somatometria-modulo-integral):
+                    # solo estado, jamas peso/talla/presion/glucosa. Afecta
+                    # UNICAMENTE al LIST -- el detalle de una visita individual
+                    # siempre llama a `to_contract` con el default `True`.
+                    else VitalsRepository.to_status_contract(vital_signs)
+                )
                 if vital_signs is not None
                 else None
             ),
@@ -267,6 +295,46 @@ class VisitRepository:
         }
 
     # ── Helpers ───────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _en_somatometria_at_subquery() -> Subquery:
+        """
+        Subquery (evita N+1) que resuelve el `changed_at` MAS RECIENTE del
+        log de auditoria NOM-024 (`VisitStatusLog`) donde la visita
+        transiciono a `en_somatometria`. Se usa como `.annotate(...)` en
+        `get_by_id` y `list_paginated`, siguiendo el mismo patron de
+        `select_related` ya usado en este archivo para evitar 1 query extra
+        por fila.
+
+        Se toma el ultimo registro (no el primero) por seguridad: si el
+        state machine algun dia permitiera volver a pasar por
+        `en_somatometria` mas de una vez, queremos la transicion mas
+        reciente, no la primera.
+        """
+        return Subquery(
+            VisitStatusLog.objects
+            .filter(visit_id=OuterRef("pk"), to_status="en_somatometria")
+            .order_by("-changed_at")
+            .values("changed_at")[:1]
+        )
+
+    @staticmethod
+    def _resolve_en_somatometria_at(visit: Visit) -> str | None:
+        # Si `visit` viene de una queryset anotada (get_by_id / list_paginated),
+        # usamos el valor ya resuelto en bulk. Si no esta anotado (ej. un Visit
+        # armado a mano en un test o en otro flujo), resolvemos on-demand como
+        # fallback para no romper el contrato.
+        if hasattr(visit, "en_somatometria_at"):
+            changed_at = visit.en_somatometria_at
+        else:
+            log = (
+                VisitStatusLog.objects
+                .filter(visit_id=visit.id_visit, to_status="en_somatometria")
+                .order_by("-changed_at")
+                .first()
+            )
+            changed_at = log.changed_at if log else None
+        return changed_at.isoformat() if changed_at else None
 
     @staticmethod
     def _resolve_hora_consulta(visit: Visit, fecha_cita: str | None) -> str | None:

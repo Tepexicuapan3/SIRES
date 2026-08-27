@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 import { Separator } from "@shared/ui/separator";
+import { Switch } from "@shared/ui/switch";
 import { Textarea } from "@shared/ui/textarea";
 import type { EstudioMedicoDetail } from "@api/types";
 import {
@@ -98,18 +99,125 @@ export function EstudioMedicoDetailsGeneralSection({
           )}
         />
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <FormField
+          control={form.control}
+          name="precio"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Precio</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  disabled={!isEditable}
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(event) =>
+                    field.onChange(
+                      event.target.value === ""
+                        ? undefined
+                        : Number(event.target.value),
+                    )
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="groupType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de grupo</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    disabled={!isEditable}
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(event) =>
+                      field.onChange(
+                        event.target.value === ""
+                          ? undefined
+                          : Number(event.target.value),
+                      )
+                    }
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="providerId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Proveedor</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    disabled={!isEditable}
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(event) =>
+                      field.onChange(
+                        event.target.value === ""
+                          ? undefined
+                          : Number(event.target.value),
+                      )
+                    }
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="isGeneral"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between rounded-lg border border-line-struct p-3">
+                <FormLabel className="mb-0">Estudio general</FormLabel>
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? false}
+                    onCheckedChange={field.onChange}
+                    disabled={!isEditable}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="isAuthorized"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between rounded-lg border border-line-struct p-3">
+                <FormLabel className="mb-0">Requiere autorizacion</FormLabel>
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? false}
+                    onCheckedChange={field.onChange}
+                    disabled={!isEditable}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>ID</Label>
             <Input value={estudioMedicoDetail.id.toString()} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Valor</Label>
-            <Input
-              value={estudioMedicoDetail.code ?? ""}
-              disabled
-              placeholder="Sin valor"
-            />
           </div>
           <div className="space-y-2">
             <Label>Estado</Label>

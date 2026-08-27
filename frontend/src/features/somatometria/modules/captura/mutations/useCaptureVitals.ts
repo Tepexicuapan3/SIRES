@@ -14,6 +14,12 @@ export const useCaptureVitals = () => {
   return useMutation({
     mutationFn: ({ visitId, data }: CaptureVitalsInput) =>
       visitsAPI.captureVitals(visitId, data),
+    // D8 (change `somatometria-modulo-integral`, task 3.6): sin esto
+    // react-query reintenta 3 veces por default. Un 409
+    // `VITALS_ALREADY_CAPTURED` (o cualquier otro rechazo de negocio) NO
+    // se arregla reintentando -- solo repite el mismo rechazo, y en el
+    // peor caso confunde a la enfermera sobre cuantos POST se dispararon.
+    retry: false,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: visitFlowKeys.lists() });
     },

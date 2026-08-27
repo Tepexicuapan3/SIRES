@@ -4,6 +4,8 @@ import type {
   CieSearchResponse,
   CaptureVitalsRequest,
   CaptureVitalsResponse,
+  EditVitalsRequest,
+  EditVitalsResponse,
   LatestVitalsResponse,
   CloseVisitRequest,
   CloseVisitResponse,
@@ -51,6 +53,22 @@ export const visitsAPI = {
     data: CaptureVitalsRequest,
   ): Promise<CaptureVitalsResponse> => {
     const response = await apiClient.post<CaptureVitalsResponse>(
+      `/visits/${visitId}/vitals`,
+      data,
+    );
+    return response.data;
+  },
+
+  /** Edicion auditada de una captura YA existente (Fase 3, D8). NO crea
+   * fila nueva, NO avanza `status`, NO acepta reuso -- corrige la MISMA
+   * fila. Requiere `motivo`; el backend responde 400 sin el, 404
+   * `VITALS_NOT_FOUND` si la visita nunca tuvo captura, 403 sin la
+   * capability `flow.somatometria.edit`. */
+  editVitals: async (
+    visitId: number,
+    data: EditVitalsRequest,
+  ): Promise<EditVitalsResponse> => {
+    const response = await apiClient.patch<EditVitalsResponse>(
       `/visits/${visitId}/vitals`,
       data,
     );

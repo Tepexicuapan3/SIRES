@@ -161,6 +161,11 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["admin:catalogos:escuelas:read"],
           },
           {
+            title: "Discapacidades",
+            url: "/admin/catalogos/discapacidades",
+            permissions: ["admin:catalogos:discapacidades:read"],
+          },
+          {
             title: "Especialidades",
             url: "/admin/catalogos/especialidades",
             permissions: ["admin:catalogos:especialidades:read"],

@@ -50,6 +50,13 @@ export interface VisitQueueItem {
   turnoNombre:        string;
   status:             VisitStatus;
   fechaAlta:          string | null;
+  /** ISO 8601 — `fch_modf` (auto_now) del backend. Opcional para no forzar a
+   * TODOS los consumidores existentes de `VisitQueueItem` (recepcion,
+   * consulta-medica, mocks/tests fuera de scope de este change) a declararlo;
+   * solo lo usa `useRelativeChangeTracker` para el badge "Nuevo"/"Hace N min"
+   * de la cola de somatometria. */
+  fechaModf?:         string | null;
+  enSomatometriaAt:   string | null;  // ISO 8601 — momento en que la visita transicionó a en_somatometria (log NOM-024)
   createdById:        number | null;
   vitals:             VisitVitalsPayload | null;
 }
@@ -96,9 +103,12 @@ export interface VisitsListParams {
   consultorioId?: number;
   centroId?:      number;
   noExp?:         string;
+  pkNum?:         number;
   fechaDesde?:    string;  // YYYY-MM-DD rango inicio
   fechaHasta?:    string;  // YYYY-MM-DD rango fin
   folio?:         string;
+  /** Busqueda de texto libre (min. 3 caracteres) sobre nombre/folio/no_exp. */
+  q?:             string;
 }
 
 // ── Lookup de paciente por expediente ────────────────────────────────────────
@@ -172,6 +182,13 @@ export interface ReusedFromPayload {
   capturedAt: string;
 }
 
+/** Referencia a un usuario que capturo/corrigio signos vitales -- `id` +
+ * `nombre` (resuelto server-side via batch lookup de `DetUsuario`). */
+export interface VitalsUserRef {
+  id: number;
+  nombre: string | null;
+}
+
 export interface VisitVitalsPayload extends Omit<CaptureVitalsRequest, "reusedFromVisitId"> {
   bmi: number;
   /** Momento de captura (`VisitVitalSigns.fch_alta`) -- visible tanto para
@@ -182,11 +199,47 @@ export interface VisitVitalsPayload extends Omit<CaptureVitalsRequest, "reusedFr
   /** Folio/especialidad/hora de la visita origen del reuso; `null` cuando
    * `reusedFromVisitId` tambien es `null` (retrocompatible). */
   reusedFrom: ReusedFromPayload | null;
+  /** Quien tomo la medicion original (Fase 3, edicion auditada). OPCIONAL
+   * a proposito (igual criterio que `fechaModf` en `VisitQueueItem`,
+   * change `somatometria-modulo-integral`/P4c): declararlo requerido
+   * obligaria a actualizar decenas de mocks/tests que construyen este
+   * payload por literal, fuera del scope de esta fase. `undefined` en
+   * contratos viejos (no deberia ocurrir contra el backend actual, que
+   * siempre lo incluye) se trata igual que `null`. */
+  capturedBy?: VitalsUserRef | null;
+  /** Quien corrigio la medicion via `PATCH` (edicion auditada). `null`
+   * mientras la fila nunca fue corregida. Ver nota de `capturedBy` sobre
+   * por que es opcional. */
+  updatedBy?: VitalsUserRef | null;
+  /** Momento de la ULTIMA modificacion (`VisitVitalSigns.fch_modf`,
+   * `auto_now`) -- DISTINTO de `capturedAt` (`fch_alta`, `auto_now_add`,
+   * jamas cambia). Solo tiene sentido mostrarlo cuando `updatedBy` no es
+   * `null`: mostrarlo siempre confundiria "cuando se guardo la fila la
+   * primera vez" con "cuando se corrigio". Opcional por el mismo motivo
+   * que `capturedBy`/`updatedBy`. */
+  updatedAt?: string;
 }
 
 export interface CaptureVitalsResponse {
   visitId: number;
   status: VisitStatus;
+  vitals: VisitVitalsPayload;
+}
+
+/** Payload de la edicion auditada (Fase 3, `PATCH /visits/{id}/vitals`).
+ * Mismos campos que `CaptureVitalsRequest` MENOS `reusedFromVisitId` (una
+ * correccion no tiene sentido de reuso, corrige la MISMA fila) MAS
+ * `motivo`, REQUERIDO -- el backend rechaza con 400 si falta o mide menos
+ * de 5 caracteres. */
+export interface EditVitalsRequest
+  extends Omit<CaptureVitalsRequest, "reusedFromVisitId"> {
+  motivo: string;
+}
+
+/** A diferencia de `CaptureVitalsResponse`, NO trae `status`: la edicion
+ * NUNCA avanza el flujo de la visita (D8). */
+export interface EditVitalsResponse {
+  visitId: number;
   vitals: VisitVitalsPayload;
 }
 

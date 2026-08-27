@@ -72,6 +72,8 @@ class ListVisitsQuerySerializer(serializers.Serializer):
     fechaDesde  = serializers.DateField(required=False, input_formats=["%Y-%m-%d"])
     fechaHasta  = serializers.DateField(required=False, input_formats=["%Y-%m-%d"])
     folio       = serializers.CharField(max_length=64, required=False)
+    q           = serializers.CharField(min_length=3, max_length=100, required=False)
+    pkNum       = serializers.IntegerField(min_value=0, required=False)
 
 
 class UpdateVisitStatusSerializer(serializers.Serializer):

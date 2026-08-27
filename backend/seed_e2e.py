@@ -104,6 +104,7 @@ PERMISSIONS = [
     ("clinico:expedientes:read", "Clinico - Ver expedientes"),
     ("clinico:expedientes:create", "Clinico - Crear expediente"),
     ("clinico:somatometria:read", "Clinico - Ver somatometria"),
+    ("clinico:somatometria:update", "Clinico - Corregir somatometria"),
     (
         "recepcion:fichas:medicina_general:read",
         "Recepcion - Ver ficha medicina general",
@@ -285,6 +286,7 @@ ROLE_DEFS = [
             "clinico:expedientes:read",
             "clinico:expedientes:create",
             "clinico:somatometria:read",
+            "clinico:somatometria:update",
         ],
     },
     {

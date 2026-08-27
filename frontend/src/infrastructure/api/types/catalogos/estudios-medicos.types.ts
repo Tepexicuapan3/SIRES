@@ -12,8 +12,13 @@ import type { UserRef } from "@api/types/users.types";
 export interface EstudioMedicoListItem {
   id: number;
   name: string;
-  code: string | null;
+  precio: string | null;
   studyType: string;
+  indication: string;
+  isGeneral: boolean;
+  isAuthorized: boolean;
+  groupType: number | null;
+  providerId: number | null;
   isActive: boolean;
 }
 
@@ -22,7 +27,6 @@ export interface EstudioMedicoDetail extends EstudioMedicoListItem {
   createdBy: UserRef | null;
   updatedAt: string | null;
   updatedBy: UserRef | null;
-  indication: string;
 }
 
 // =============================================================================
@@ -33,6 +37,11 @@ export interface CreateEstudioMedicoRequest {
   name: string;
   studyType: string;
   indication: string;
+  precio?: string | null;
+  isGeneral?: boolean;
+  isAuthorized?: boolean;
+  groupType?: number | null;
+  providerId?: number | null;
   isActive?: boolean;
 }
 
@@ -40,6 +49,11 @@ export interface UpdateEstudioMedicoRequest {
   name?: string;
   studyType?: string;
   indication?: string;
+  precio?: string | null;
+  isGeneral?: boolean;
+  isAuthorized?: boolean;
+  groupType?: number | null;
+  providerId?: number | null;
   isActive?: boolean;
 }
 

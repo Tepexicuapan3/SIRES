@@ -37,6 +37,7 @@ export const MENU_DESTINATIONS: MenuDestination[] = [
   {"path":"/admin/catalogos/centro-area-clinica","permissions":["admin:catalogos:centro_area_clinica:read"]},
   {"path":"/admin/catalogos/centros-atencion","permissions":["admin:catalogos:centros_atencion:read"],"capability":"admin.catalogs.centers.read"},
   {"path":"/admin/catalogos/cies","permissions":["admin:catalogos:cies:upload"]},
+  {"path":"/admin/catalogos/discapacidades","permissions":["admin:catalogos:discapacidades:read"]},
   {"path":"/admin/catalogos/edo-civil","permissions":["admin:catalogos:edo_civil:read"]},
   {"path":"/admin/catalogos/enfermedades","permissions":["admin:catalogos:enfermedades:read"]},
   {"path":"/admin/catalogos/escolaridad","permissions":["admin:catalogos:escolaridad:read"],"capability":"admin.catalogs.escolaridad.read"},

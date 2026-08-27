@@ -75,6 +75,10 @@ export const MENU_DESTINATION_LABELS: Record<
     grupo: "Catálogos",
   },
   "/admin/catalogos/escuelas": { label: "Escuelas", grupo: "Catálogos" },
+  "/admin/catalogos/discapacidades": {
+    label: "Discapacidades",
+    grupo: "Catálogos",
+  },
   "/admin/catalogos/especialidades": {
     label: "Especialidades",
     grupo: "Catálogos",

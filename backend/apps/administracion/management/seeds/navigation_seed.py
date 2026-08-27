@@ -521,6 +521,18 @@ NAV_SEED = [
         "permisos": ["admin:catalogos:cies:upload"],
     },
     {
+        "clave": "administracion.catalogos.discapacidades",
+        "titulo": "Discapacidades",
+        "icono": None,
+        "url": "/admin/catalogos/discapacidades",
+        "badge": None,
+        "orden": 30,
+        "es_seccion": False,
+        "grupo": "primary",
+        "parent_clave": "administracion.catalogos",
+        "permisos": ["admin:catalogos:discapacidades:read"],
+    },
+    {
         "clave": "administracion.panel.menus",
         "titulo": "Menús y Submenús",
         "icono": None,

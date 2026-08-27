@@ -51,7 +51,7 @@ class GetLatestTodayForPatientTests(TestCase):
         current = _create_visit(
             folio="V-TODAY-CUR", no_exp="EXP-TODAY-1", status="en_somatometria",
         )
-        VitalsRepository.upsert_for_visit(source, _payload())
+        VitalsRepository.create_for_visit(source, _payload(), captured_by=None)
 
         found = VitalsRepository.get_latest_today_for_patient(
             "EXP-TODAY-1", 0, exclude_visit_id=current.id_visit,
@@ -64,7 +64,7 @@ class GetLatestTodayForPatientTests(TestCase):
         current = _create_visit(
             folio="V-SELF-1", no_exp="EXP-SELF-1", status="en_somatometria",
         )
-        VitalsRepository.upsert_for_visit(current, _payload())
+        VitalsRepository.create_for_visit(current, _payload(), captured_by=None)
 
         found = VitalsRepository.get_latest_today_for_patient(
             "EXP-SELF-1", 0, exclude_visit_id=current.id_visit,
@@ -77,7 +77,7 @@ class GetLatestTodayForPatientTests(TestCase):
         derechohabiente = _create_visit(
             folio="V-FAM-2", no_exp="EXP-FAM-1", pk_num=2, status="en_somatometria",
         )
-        VitalsRepository.upsert_for_visit(titular, _payload())
+        VitalsRepository.create_for_visit(titular, _payload(), captured_by=None)
 
         found = VitalsRepository.get_latest_today_for_patient(
             "EXP-FAM-1", 2, exclude_visit_id=derechohabiente.id_visit,
@@ -98,7 +98,7 @@ class GetLatestTodayForPatientTests(TestCase):
                     no_exp=f"EXP-{status_value}",
                     status="en_somatometria",
                 )
-                VitalsRepository.upsert_for_visit(source, _payload())
+                VitalsRepository.create_for_visit(source, _payload(), captured_by=None)
 
                 found = VitalsRepository.get_latest_today_for_patient(
                     f"EXP-{status_value}", 0, exclude_visit_id=current.id_visit,
@@ -114,7 +114,7 @@ class GetLatestTodayForPatientTests(TestCase):
 
         yesterday_utc = datetime(2026, 8, 25, 18, 0, 0, tzinfo=dt_timezone.utc)
         with mock.patch("django.utils.timezone.now", return_value=yesterday_utc):
-            VitalsRepository.upsert_for_visit(source, _payload())
+            VitalsRepository.create_for_visit(source, _payload(), captured_by=None)
 
         today_utc = datetime(2026, 8, 26, 18, 0, 0, tzinfo=dt_timezone.utc)
         with mock.patch("django.utils.timezone.now", return_value=today_utc):
@@ -148,7 +148,7 @@ class GetLatestTodayForPatientTimezoneBoundaryTests(TestCase):
         # 2026-08-26T05:50:00Z == 2026-08-25 23:50 hora CDMX (UTC-6).
         capture_instant_utc = datetime(2026, 8, 26, 5, 50, 0, tzinfo=dt_timezone.utc)
         with mock.patch("django.utils.timezone.now", return_value=capture_instant_utc):
-            VitalsRepository.upsert_for_visit(source, _payload())
+            VitalsRepository.create_for_visit(source, _payload(), captured_by=None)
 
         # 2026-08-26T06:10:00Z == 2026-08-26 00:10 hora CDMX: solo 20 min
         # de reloj despues, pero cruza la medianoche LOCAL.
@@ -176,7 +176,7 @@ class GetLatestTodayForPatientTimezoneBoundaryTests(TestCase):
 
         capture_instant_utc = datetime(2026, 8, 26, 5, 50, 0, tzinfo=dt_timezone.utc)
         with mock.patch("django.utils.timezone.now", return_value=capture_instant_utc):
-            VitalsRepository.upsert_for_visit(source, _payload())
+            VitalsRepository.create_for_visit(source, _payload(), captured_by=None)
 
         same_local_day_query_utc = datetime(2026, 8, 26, 5, 55, 0, tzinfo=dt_timezone.utc)
         with mock.patch("django.utils.timezone.now", return_value=same_local_day_query_utc):

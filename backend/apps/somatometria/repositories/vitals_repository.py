@@ -5,8 +5,13 @@ from apps.somatometria.models import PatientLatestVitals, VisitVitalSigns
 
 class VitalsRepository:
     @staticmethod
-    def upsert_for_visit(visit, vitals_payload, *, reused_from=None):
-        defaults = {
+    def _metric_fields_from_payload(vitals_payload):
+        """
+        Campos de METRICA puros (sin autoria ni reuso) -- compartidos entre
+        `create_for_visit` y `update_for_visit` para no duplicar la lista
+        de columnas en dos lugares.
+        """
+        return {
             "weight_kg": vitals_payload["weightKg"],
             "height_cm": vitals_payload["heightCm"],
             "temperature_c": vitals_payload.get("temperatureC"),
@@ -19,31 +24,79 @@ class VitalsRepository:
             "glucosa_capilar_mgdl": vitals_payload.get("glucosaCapilarMgdl"),
             "bmi": vitals_payload["bmi"],
             "notes": vitals_payload.get("notes"),
-            "reused_from_visit": reused_from,
         }
-        vital_signs, _ = VisitVitalSigns.objects.update_or_create(
+
+    @staticmethod
+    def create_for_visit(visit, vitals_payload, *, reused_from=None, captured_by):
+        """
+        Crea la fila de captura INICIAL de una visita. `captured_by` es
+        kwarg-only SIN default a proposito (mismo criterio que
+        `get_latest_for_patient`): un caller que se olvide de pasarlo debe
+        explotar ruidoso, nunca guardar una captura sin autor.
+
+        El `OneToOneField` sobre `id_visit` ya garantiza unicidad -- una
+        carrera entre dos POST concurrentes pierde con `IntegrityError`,
+        que el use case mapea a 409 VITALS_ALREADY_CAPTURED (la
+        precondicion normal es el chequeo previo del use case; esto es
+        solo la red de seguridad).
+        """
+        fields = VitalsRepository._metric_fields_from_payload(vitals_payload)
+        vital_signs = VisitVitalSigns.objects.create(
             id_visit=visit,
-            defaults=defaults,
+            reused_from_visit=reused_from,
+            captured_by=captured_by,
+            **fields,
         )
 
-        # Espejo "ultima captura por paciente": se sobreescribe a proposito
-        # (a diferencia de `VisitVitalSigns`, que jamas se sobreescribe). Es
-        # solo para precargar la siguiente consulta, no forma parte del
-        # historial clinico. La clave efectiva es SIEMPRE (no_exp, pk_num)
-        # -- ver docstring de `PatientLatestVitals` -- por eso el lookup y
-        # el upsert usan ambos campos, nunca solo `no_exp`.
-        if visit.no_exp:
-            latest_defaults = dict(defaults)
-            latest_defaults.pop("notes", None)
-            latest_defaults.pop("reused_from_visit", None)
-            latest_defaults["id_visit_origen"] = visit
-            PatientLatestVitals.objects.update_or_create(
-                no_exp=visit.no_exp,
-                pk_num=visit.pk_num,
-                defaults=latest_defaults,
-            )
+        VitalsRepository._sync_latest_vitals(visit, fields)
 
         return vital_signs
+
+    @staticmethod
+    def update_for_visit(vital_signs, vitals_payload, *, updated_by):
+        """
+        Corrige una fila YA existente (Fase 3, edicion auditada). NUNCA
+        toca `captured_by` ni `reused_from_visit` -- una correccion no
+        reescribe quien tomo la medicion original ni de donde vino un
+        reuso.
+        """
+        fields = VitalsRepository._metric_fields_from_payload(vitals_payload)
+        for field_name, value in fields.items():
+            setattr(vital_signs, field_name, value)
+        vital_signs.updated_by = updated_by
+        vital_signs.save(update_fields=[*fields.keys(), "updated_by", "fch_modf"])
+
+        # Gotcha (design D2): si esta sincronizacion no corre tambien en el
+        # camino de UPDATE, la proxima consulta precarga el valor viejo
+        # (no corregido) desde `PatientLatestVitals`.
+        VitalsRepository._sync_latest_vitals(vital_signs.id_visit, fields)
+
+        return vital_signs
+
+    @staticmethod
+    def _sync_latest_vitals(visit, fields):
+        """
+        Espejo "ultima captura por paciente": se sobreescribe a proposito
+        (a diferencia de `VisitVitalSigns`, que jamas se sobreescribe). Es
+        solo para precargar la siguiente consulta, no forma parte del
+        historial clinico. La clave efectiva es SIEMPRE (no_exp, pk_num)
+        -- ver docstring de `PatientLatestVitals` -- por eso el lookup y
+        el upsert usan ambos campos, nunca solo `no_exp`.
+
+        Llamado por AMBOS `create_for_visit` y `update_for_visit`: una
+        correccion que no re-espeje este cache dejaria la proxima consulta
+        precargada con el valor NO corregido.
+        """
+        if not visit.no_exp:
+            return
+        latest_defaults = dict(fields)
+        latest_defaults.pop("notes", None)
+        latest_defaults["id_visit_origen"] = visit
+        PatientLatestVitals.objects.update_or_create(
+            no_exp=visit.no_exp,
+            pk_num=visit.pk_num,
+            defaults=latest_defaults,
+        )
 
     @staticmethod
     def get_latest_for_patient(no_exp, pk_num):
@@ -132,14 +185,77 @@ class VitalsRepository:
         }
 
     @staticmethod
-    def to_contract(vital_signs):
+    def _lookup_user_nombres(user_ids):
+        """
+        Batch lookup de `DetUsuario.nombre_completo` (mismo patron que
+        `doctor_nombres` en `visit_repository.py:165-169`) -- a proposito
+        SIN `select_related`: `nombre_completo` vive en `DetUsuario`, no en
+        `SyUsuario`, asi que un `select_related("captured_by")` no lo
+        traeria igual.
+        """
+        ids = {user_id for user_id in user_ids if user_id}
+        if not ids:
+            return {}
+        from apps.authentication.models import DetUsuario
+
+        dets = DetUsuario.objects.filter(id_usuario_id__in=ids)
+        return {det.id_usuario_id: det.nombre_completo for det in dets}
+
+    @staticmethod
+    def _user_ref_contract(user_id, user_nombres):
+        if user_id is None:
+            return None
+        return {"id": user_id, "nombre": user_nombres.get(user_id)}
+
+    @staticmethod
+    def to_contract(vital_signs, user_nombres=None):
         contract = VitalsRepository._metrics_contract(vital_signs)
         contract["capturedAt"] = vital_signs.fch_alta.isoformat()
+        # `fch_modf` (auto_now) es DISTINTO de `capturedAt` (fch_alta,
+        # auto_now_add, jamas cambia): sin este campo separado, el
+        # frontend no tiene forma de mostrar CUANDO se corrigio una
+        # edicion sin confundirlo con el momento de la captura original
+        # (Fase 3, spec `consulta-medica/vitals-display`).
+        contract["updatedAt"] = vital_signs.fch_modf.isoformat()
         contract["reusedFromVisitId"] = vital_signs.reused_from_visit_id
         contract["reusedFrom"] = VitalsRepository._reused_from_contract(
             vital_signs.reused_from_visit
         )
+        contract["hasVitals"] = True
+
+        # `user_nombres` es opcional: si el caller ya tiene un batch
+        # precalculado (ej. una lista de visitas) lo pasa y evitamos N+1;
+        # si no, resolvemos aca mismo el batch de a lo sumo 2 ids (captura
+        # + edicion) de ESTA fila puntual.
+        if user_nombres is None:
+            user_nombres = VitalsRepository._lookup_user_nombres(
+                [vital_signs.captured_by_id, vital_signs.updated_by_id]
+            )
+        contract["capturedBy"] = VitalsRepository._user_ref_contract(
+            vital_signs.captured_by_id, user_nombres
+        )
+        contract["updatedBy"] = VitalsRepository._user_ref_contract(
+            vital_signs.updated_by_id, user_nombres
+        )
         return contract
+
+    @staticmethod
+    def to_status_contract(vital_signs):
+        """
+        Contrato narrowed (D3, somatometria-modulo-integral) para callers
+        SIN capability de lectura de metricas (ej. recepcion). Expone
+        UNICAMENTE estado -- jamas peso/talla/presion/glucosa ni ningun
+        otro valor numerico. Usado por `VisitRepository.to_contract`
+        cuando `include_vitals_values=False`, solo en el LIST de visitas.
+        """
+        return {
+            "hasVitals": True,
+            "capturedAt": vital_signs.fch_alta.isoformat(),
+            "reusedFromVisitId": vital_signs.reused_from_visit_id,
+            "reusedFrom": VitalsRepository._reused_from_contract(
+                vital_signs.reused_from_visit
+            ),
+        }
 
     @staticmethod
     def latest_to_contract(latest):

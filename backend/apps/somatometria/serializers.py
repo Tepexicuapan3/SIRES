@@ -81,3 +81,21 @@ class CaptureVitalsSerializer(serializers.Serializer):
             )
 
         return attrs
+
+
+class EditVitalsSerializer(CaptureVitalsSerializer):
+    """
+    Serializer de la edicion auditada (Fase 3, D8). Hereda TODA la
+    validacion de `CaptureVitalsSerializer` (rangos, TA sistolica >
+    diastolica) y agrega `motivo` REQUERIDO (min 5 caracteres) -- una
+    correccion sin justificacion no se acepta. `reusedFromVisitId` no
+    tiene sentido en una edicion (esto corrige la MISMA fila, no crea una
+    nueva por reuso), se elimina del serializer para que ni siquiera
+    aparezca como campo aceptado.
+    """
+
+    motivo = serializers.CharField(min_length=5, max_length=255)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop("reusedFromVisitId", None)

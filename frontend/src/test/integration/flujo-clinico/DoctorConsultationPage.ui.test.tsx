@@ -768,6 +768,90 @@ describe("DoctorConsultationPage UI", () => {
     );
   });
 
+  it("muestra aviso de correccion cuando los vitales fueron editados (Fase 3)", () => {
+    const capturedAt = "2026-08-26T09:14:00Z";
+    const updatedAt = "2026-08-26T10:30:00Z";
+
+    vi.mocked(useDoctorQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            status: "en_consulta",
+            vitals: {
+              weightKg: 72,
+              heightCm: 172,
+              temperatureC: 36.8,
+              oxygenSaturationPct: 97,
+              notes: "Correccion por bascula mal calibrada.",
+              bmi: 24.3,
+              capturedAt,
+              updatedAt,
+              reusedFromVisitId: null,
+              reusedFrom: null,
+              capturedBy: { id: 10, nombre: "Enfermera A" },
+              updatedBy: { id: 11, nombre: "Enfermera B" },
+            },
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    renderDoctorPage("/clinico/consultas/doctor/1");
+
+    // Spec `consulta-medica/vitals-display`: un valor corregido NUNCA se
+    // presenta como si fuera el original -- se avisa quien corrigio y
+    // cuando, usando `updatedAt` (fch_modf), NO `capturedAt` (fch_alta,
+    // que nunca cambia).
+    const updatedByIndicator = screen.getByTestId("vitals-updated-by");
+    expect(updatedByIndicator).toHaveTextContent("Corregido por Enfermera B");
+    expect(updatedByIndicator).toHaveTextContent(
+      formatCapturedAtTime(updatedAt),
+    );
+  });
+
+  it("no muestra aviso de correccion cuando updatedBy es null", () => {
+    vi.mocked(useDoctorQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            status: "en_consulta",
+            vitals: {
+              weightKg: 70,
+              heightCm: 172,
+              temperatureC: 36.6,
+              oxygenSaturationPct: 98,
+              bmi: 23.7,
+              capturedAt: "2026-08-26T09:14:00Z",
+              updatedAt: "2026-08-26T09:14:00Z",
+              reusedFromVisitId: null,
+              reusedFrom: null,
+              capturedBy: { id: 10, nombre: "Enfermera A" },
+              updatedBy: null,
+            },
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    renderDoctorPage("/clinico/consultas/doctor/1");
+
+    expect(screen.queryByTestId("vitals-updated-by")).not.toBeInTheDocument();
+  });
+
   it("muestra fallback claro cuando faltan signos vitales", () => {
     vi.mocked(useDoctorQueue).mockReturnValue({
       data: {

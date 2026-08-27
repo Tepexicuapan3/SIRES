@@ -95,6 +95,10 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     "admin.catalogs.escolaridad.create": {"allOf": ["admin:catalogos:escolaridad:create"]},
     "admin.catalogs.escolaridad.update": {"allOf": ["admin:catalogos:escolaridad:update"]},
     "admin.catalogs.escolaridad.delete": {"allOf": ["admin:catalogos:escolaridad:delete"]},
+    "admin.catalogs.discapacidades.read": {"allOf": ["admin:catalogos:discapacidades:read"]},
+    "admin.catalogs.discapacidades.create": {"allOf": ["admin:catalogos:discapacidades:create"]},
+    "admin.catalogs.discapacidades.update": {"allOf": ["admin:catalogos:discapacidades:update"]},
+    "admin.catalogs.discapacidades.delete": {"allOf": ["admin:catalogos:discapacidades:delete"]},
     "admin.catalogs.calidadLaboral.read": {"allOf": ["admin:catalogos:calidad_laboral:read"]},
     "admin.catalogs.calidadLaboral.create": {"allOf": ["admin:catalogos:calidad_laboral:create"]},
     "admin.catalogs.calidadLaboral.update": {"allOf": ["admin:catalogos:calidad_laboral:update"]},
@@ -239,6 +243,15 @@ CAPABILITY_REQUIREMENTS: Dict[str, PermissionRequirement] = {
     },
     "flow.somatometria.capture": {
         "allOf": ["clinico:somatometria:read"]
+    },
+    # D6 (change `somatometria-modulo-integral`): permiso base
+    # `clinico:somatometria:update`, NO `:edit` -- "edit" no esta en
+    # `WRITE_ACTIONS`, y usar `:update` deja que `_infer_read_dependency`
+    # derive automaticamente `clinico:somatometria:read` sin tocar ese set
+    # global (que afecta a TODOS los permisos del sistema). La capability
+    # conserva el verbo de UI ("edit").
+    "flow.somatometria.edit": {
+        "allOf": ["clinico:somatometria:update"]
     },
     "flow.doctor.queue.read": {
         "allOf": ["clinico:consultas:read"]

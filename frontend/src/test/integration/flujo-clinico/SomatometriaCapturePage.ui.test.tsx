@@ -5,9 +5,13 @@ import { ApiError } from "@api/utils/errors";
 import { toast } from "sonner";
 import SomatometriaCapturePage from "@features/somatometria/modules/captura/pages/SomatometriaCapturePage";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
+import { useSomatometriaWaitingQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaWaitingQueue";
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
 import { useLatestVitals } from "@features/somatometria/modules/captura/queries/useLatestVitals";
+import { useSomatometriaHistorial } from "@features/somatometria/modules/captura/queries/useSomatometriaHistorial";
+import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
+import { usePatientLookupHistorico } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
 import type { TodayCapturePayload, VisitQueueItem } from "@api/types";
 
 vi.mock("sonner", () => ({
@@ -25,6 +29,13 @@ vi.mock(
 );
 
 vi.mock(
+  "@features/somatometria/modules/captura/queries/useSomatometriaWaitingQueue",
+  () => ({
+    useSomatometriaWaitingQueue: vi.fn(),
+  }),
+);
+
+vi.mock(
   "@features/somatometria/modules/captura/mutations/useCaptureVitals",
   () => ({
     useCaptureVitals: vi.fn(),
@@ -38,9 +49,30 @@ vi.mock(
   }),
 );
 
+vi.mock(
+  "@features/somatometria/modules/captura/queries/useSomatometriaHistorial",
+  () => ({
+    useSomatometriaHistorial: vi.fn(),
+  }),
+);
+
+vi.mock(
+  "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList",
+  () => ({
+    useCentrosAtencionList: vi.fn(),
+  }),
+);
+
 vi.mock("@/domains/auth-access/hooks/usePermissionDependencies", () => ({
   usePermissionDependencies: vi.fn(),
 }));
+
+vi.mock(
+  "@features/recepcion/modules/checkin/queries/usePatientLookup",
+  () => ({
+    usePatientLookupHistorico: vi.fn(),
+  }),
+);
 
 const createVisit = (
   overrides: Partial<VisitQueueItem> = {},
@@ -93,6 +125,13 @@ describe("SomatometriaCapturePage UI", () => {
       error: null,
     } as unknown as ReturnType<typeof useSomatometriaQueue>);
 
+    vi.mocked(useSomatometriaWaitingQueue).mockReturnValue({
+      data: { items: [], page: 1, pageSize: 20, total: 0, totalPages: 0 },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useSomatometriaWaitingQueue>);
+
     vi.mocked(useCaptureVitals).mockReturnValue({
       mutateAsync: captureMutateAsync,
       isPending: false,
@@ -103,6 +142,25 @@ describe("SomatometriaCapturePage UI", () => {
       isLoading: false,
       isSuccess: true,
     } as unknown as ReturnType<typeof useLatestVitals>);
+
+    vi.mocked(useCentrosAtencionList).mockReturnValue({
+      data: { items: [], page: 1, pageSize: 500, total: 0, totalPages: 1 },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useCentrosAtencionList>);
+
+    vi.mocked(useSomatometriaHistorial).mockReturnValue({
+      data: { items: [], page: 1, pageSize: 50, total: 0, totalPages: 1 },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSomatometriaHistorial>);
+
+    // Default: SERMED disponible, sin dato de paciente cargado todavia --
+    // los tests que necesitan edad/fecha nac. concretas sobreescriben esto.
+    vi.mocked(usePatientLookupHistorico).mockReturnValue({
+      data: undefined,
+      isFetching: false,
+    } as unknown as ReturnType<typeof usePatientLookupHistorico>);
 
     captureMutateAsync.mockResolvedValue({
       visitId: 1,
@@ -495,5 +553,170 @@ describe("SomatometriaCapturePage UI", () => {
     const savedPayload = captureMutateAsync.mock.calls[0][0].data;
     expect(savedPayload.weightKg).not.toBe(70);
     expect(savedPayload.weightKg).toBe(72);
+  });
+
+  describe("cola de espera (en_espera)", () => {
+    it("muestra nombre y hora de llegada de los pacientes esperando pasar a somatometria", () => {
+      vi.mocked(useSomatometriaWaitingQueue).mockReturnValue({
+        data: {
+          items: [
+            createVisit({
+              id: 99,
+              folio: "VST-000099",
+              nombrePaciente: "Carlos Ramirez",
+              status: "en_espera",
+              fechaAlta: "2026-08-26T08:15:00.000Z",
+            }),
+          ],
+          page: 1,
+          pageSize: 20,
+          total: 1,
+          totalPages: 1,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as unknown as ReturnType<typeof useSomatometriaWaitingQueue>);
+
+      render(<SomatometriaCapturePage />);
+
+      expect(screen.getByText("Esperando pasar a somatometría")).toBeVisible();
+      const waitingCard = screen.getByTestId("somato-waiting-card-99");
+      expect(waitingCard).toHaveTextContent("Carlos Ramirez");
+      expect(waitingCard).toHaveTextContent("Llegó a recepción:");
+    });
+
+    it("se muestra aunque no haya nadie en somatometria todavia (secciones independientes)", () => {
+      vi.mocked(useSomatometriaQueue).mockReturnValue({
+        data: { items: [], page: 1, pageSize: 20, total: 0, totalPages: 0 },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as unknown as ReturnType<typeof useSomatometriaQueue>);
+
+      vi.mocked(useSomatometriaWaitingQueue).mockReturnValue({
+        data: {
+          items: [createVisit({ id: 5, status: "en_espera" })],
+          page: 1,
+          pageSize: 20,
+          total: 1,
+          totalPages: 1,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as unknown as ReturnType<typeof useSomatometriaWaitingQueue>);
+
+      render(<SomatometriaCapturePage />);
+
+      expect(screen.getByText("No hay pacientes en somatometria.")).toBeVisible();
+      expect(screen.getByTestId("somato-waiting-card-5")).toBeVisible();
+    });
+
+    it("muestra estado vacio cuando no hay nadie esperando", () => {
+      render(<SomatometriaCapturePage />);
+
+      expect(
+        screen.getByText("No hay pacientes esperando pasar a somatometria."),
+      ).toBeVisible();
+    });
+  });
+
+  // Task 2.11 (P2, somatometria-modulo-integral) + design D5: la edad y la
+  // fecha de nacimiento se leen EN VIVO de SERMED (`usePatientLookupHistorico`)
+  // en cada render de la ficha, nunca se congelan en el check-in. No hay
+  // cambio de codigo en el componente -- este bloque solo verifica el
+  // comportamiento ya existente.
+  describe("edad en vivo desde SERMED (D5)", () => {
+    it("muestra la edad resuelta por SERMED para el integrante seleccionado", () => {
+      vi.mocked(usePatientLookupHistorico).mockReturnValue({
+        data: {
+          titular: {
+            noExp:      "10001",
+            pkNum:      0,
+            nombre:     "Paciente Uno",
+            edad:       34,
+            fechaNac:   "1992-01-15",
+            parentesco: null,
+            estatus:    "activo",
+            cdClinica:  null,
+          },
+          dependientes: [],
+        },
+        isFetching: false,
+      } as unknown as ReturnType<typeof usePatientLookupHistorico>);
+
+      render(<SomatometriaCapturePage />);
+
+      expect(screen.getByText("34 años")).toBeVisible();
+      expect(screen.getByText("15/01/1992")).toBeVisible();
+    });
+
+    it("degrada la edad sin bloquear el resto de la ficha cuando SERMED falla o no responde", () => {
+      vi.mocked(usePatientLookupHistorico).mockReturnValue({
+        data: undefined,
+        isFetching: false,
+      } as unknown as ReturnType<typeof usePatientLookupHistorico>);
+
+      render(<SomatometriaCapturePage />);
+
+      // Nunca muestra una edad -- ni la real ni una stale -- cuando SERMED
+      // no respondio.
+      expect(screen.queryByText(/\d+ años/)).not.toBeInTheDocument();
+
+      // El resto de la ficha (datos de la visita + formulario de captura)
+      // sigue siendo completamente funcional: la falla de SERMED es
+      // aislada, no bloquea nada mas.
+      expect(screen.getByTestId("somato-weightKg-input")).toBeEnabled();
+      expect(screen.getByTestId("somato-save-button")).toBeVisible();
+    });
+
+    it("no bloquea el render mientras SERMED todavia esta resolviendo (isFetching)", () => {
+      vi.mocked(usePatientLookupHistorico).mockReturnValue({
+        data: undefined,
+        isFetching: true,
+      } as unknown as ReturnType<typeof usePatientLookupHistorico>);
+
+      render(<SomatometriaCapturePage />);
+
+      // Estado transitorio explicito ("...") -- no un crash ni un valor
+      // adivinado -- y el formulario de captura sigue disponible.
+      expect(screen.getByTestId("somato-weightKg-input")).toBeVisible();
+      expect(screen.getByTestId("somato-save-button")).toBeVisible();
+    });
+  });
+
+  describe("tab switcher (Cola / Historial)", () => {
+    it("muestra la cola por defecto (cola de espera + formulario de captura)", () => {
+      render(<SomatometriaCapturePage />);
+
+      expect(screen.getByText("Esperando pasar a somatometría")).toBeVisible();
+      expect(screen.getByText("En somatometría")).toBeVisible();
+      expect(screen.queryByTestId("somato-historial-view")).not.toBeInTheDocument();
+    });
+
+    it("cambia a la vista de historial al hacer click en la pestana Historial y oculta la cola", async () => {
+      const user = userEvent.setup();
+      render(<SomatometriaCapturePage />);
+
+      await user.click(screen.getByTestId("somato-tab-historial"));
+
+      expect(screen.getByTestId("somato-historial-view")).toBeVisible();
+      expect(screen.queryByText("Esperando pasar a somatometría")).not.toBeInTheDocument();
+      expect(screen.queryByText("En somatometría")).not.toBeInTheDocument();
+    });
+
+    it("vuelve a mostrar la cola al hacer click de nuevo en la pestana Cola", async () => {
+      const user = userEvent.setup();
+      render(<SomatometriaCapturePage />);
+
+      await user.click(screen.getByTestId("somato-tab-historial"));
+      expect(screen.getByTestId("somato-historial-view")).toBeVisible();
+
+      await user.click(screen.getByTestId("somato-tab-cola"));
+
+      expect(screen.queryByTestId("somato-historial-view")).not.toBeInTheDocument();
+      expect(screen.getByText("Esperando pasar a somatometría")).toBeVisible();
+    });
   });
 });

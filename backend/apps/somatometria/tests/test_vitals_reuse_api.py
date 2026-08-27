@@ -41,7 +41,7 @@ class VitalsReuseApiTests(APITestCase):
             status="lista_para_doctor",
             service_type=Visit.ServiceType.MEDICINA_GENERAL,
         )
-        VitalsRepository.upsert_for_visit(
+        VitalsRepository.create_for_visit(
             self.source_visit,
             {
                 "weightKg": 70,
@@ -50,6 +50,7 @@ class VitalsReuseApiTests(APITestCase):
                 "oxygenSaturationPct": 97,
                 "bmi": 22.86,
             },
+            captured_by=None,
         )
 
         self.current_visit = Visit.objects.create(

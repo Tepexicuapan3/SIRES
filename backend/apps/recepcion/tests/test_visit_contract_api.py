@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from rest_framework import status
@@ -258,7 +260,7 @@ class VisitContractsApiTests(APITestCase):
         from apps.recepcion.models import Visit
 
         visit = Visit.objects.get(id_visit=visit_with_vitals["id"])
-        VitalsRepository.upsert_for_visit(
+        VitalsRepository.create_for_visit(
             visit,
             {
                 "weightKg": 70,
@@ -267,6 +269,7 @@ class VisitContractsApiTests(APITestCase):
                 "oxygenSaturationPct": 98,
                 "bmi": 22.86,
             },
+            captured_by=None,
         )
 
         response = self.client.get(
@@ -296,15 +299,64 @@ class VisitContractsApiTests(APITestCase):
 
         items_by_patient = {item["noExp"]: item for item in response.data["items"]}
         self.assertIsNone(items_by_patient[visit_without_vitals["noExp"]]["vitals"])
-        self.assertEqual(
-            items_by_patient[visit_with_vitals["noExp"]]["vitals"]["weightKg"],
-            70.0,
-        )
+
+        # Narrowing de recepcion (D3, somatometria-modulo-integral):
+        # `recepcion_user` solo tiene `recepcion:fichas:*:create`, sin
+        # `flow.somatometria.queue.read` ni `flow.doctor.queue.read` --> el
+        # LIST NO expone valores numericos, solo estado.
+        vitals_contract = items_by_patient[visit_with_vitals["noExp"]]["vitals"]
+        self.assertNotIn("weightKg", vitals_contract)
+        self.assertNotIn("heightCm", vitals_contract)
+        self.assertNotIn("bmi", vitals_contract)
+        self.assertNotIn("bloodPressureSystolic", vitals_contract)
+        self.assertNotIn("glucosaCapilarMgdl", vitals_contract)
+        self.assertTrue(vitals_contract["hasVitals"])
+        self.assertIsNotNone(vitals_contract["capturedAt"])
         # Retrocompatibilidad: sin reuso, `reusedFromVisitId` y el nuevo
         # `reusedFrom` (folio/servicio/hora de origen) son ambos None.
-        vitals_without_reuse = items_by_patient[visit_with_vitals["noExp"]]["vitals"]
-        self.assertIsNone(vitals_without_reuse["reusedFromVisitId"])
-        self.assertIsNone(vitals_without_reuse["reusedFrom"])
+        self.assertIsNone(vitals_contract["reusedFromVisitId"])
+        self.assertIsNone(vitals_contract["reusedFrom"])
+
+    def test_list_visits_shows_full_vitals_values_for_somatometria_reader(self):
+        """
+        Contraparte de `test_list_visits_happy_path_contract` (D3): un
+        caller CON `flow.somatometria.queue.read` (derivado de
+        `clinico:somatometria:read`) sigue viendo el contrato COMPLETO de
+        vitals en el LIST -- el narrowing es exclusivo de recepcion.
+        """
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit_with_vitals = self._create_visit(
+            patient_id=2004,
+            arrival_type="walk_in",
+            serviceType="urgencias",
+        )
+        from apps.recepcion.models import Visit
+
+        visit = Visit.objects.get(id_visit=visit_with_vitals["id"])
+        VitalsRepository.create_for_visit(
+            visit,
+            {
+                "weightKg": 70,
+                "heightCm": 175,
+                "temperatureC": 36.6,
+                "oxygenSaturationPct": 98,
+                "bmi": 22.86,
+            },
+            captured_by=None,
+        )
+
+        self._login_as("clinico_user", "Clinico_123456")
+        response = self.client.get(
+            "/api/v1/visits?page=1&pageSize=20",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        items_by_patient = {item["noExp"]: item for item in response.data["items"]}
+        vitals_contract = items_by_patient[visit_with_vitals["noExp"]]["vitals"]
+        self.assertEqual(vitals_contract["weightKg"], 70.0)
+        self.assertEqual(vitals_contract["heightCm"], 175.0)
+        self.assertTrue(vitals_contract["hasVitals"])
 
     def test_list_visits_filters_by_service_type(self):
         self._login_as("recepcion_user", self.recepcion_password)
@@ -389,6 +441,51 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(response.data["total"], 1)
 
+    def test_list_visits_filters_by_fecha_desde_and_fecha_hasta(self):
+        # Regresion: VisitListView.get() validaba fechaDesde/fechaHasta (y
+        # folio) via ListVisitsQuerySerializer pero nunca los pasaba a
+        # list_visits(), por lo que el filtro de rango de fecha era un no-op
+        # silencioso -- el backend aceptaba el parametro, lo validaba, y lo
+        # ignoraba al armar la query.
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit_old = self._create_visit(patient_id=2601)
+        visit_recent = self._create_visit(patient_id=2602)
+
+        from apps.recepcion.models import Visit
+
+        old_date = timezone.localdate() - timedelta(days=10)
+        Visit.objects.filter(id_visit=visit_old["id"]).update(
+            fch_alta=timezone.make_aware(datetime.combine(old_date, datetime.min.time()))
+        )
+
+        today = timezone.localdate().isoformat()
+        response = self.client.get(
+            f"/api/v1/visits?page=1&pageSize=20&fechaDesde={today}&fechaHasta={today}",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        returned_no_exp = {item["noExp"] for item in response.data["items"]}
+        self.assertIn(visit_recent["noExp"], returned_no_exp)
+        self.assertNotIn(visit_old["noExp"], returned_no_exp)
+
+    def test_list_visits_filters_by_folio(self):
+        # Mismo bug que arriba tambien afectaba a `folio` -- confirmamos que
+        # ahora se pasa correctamente al use case.
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit_a = self._create_visit(patient_id=2701)
+        self._create_visit(patient_id=2702)
+
+        response = self.client.get(
+            f"/api/v1/visits?page=1&pageSize=20&folio={visit_a['folio']}",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(response.data["total"], 1)
+        for item in response.data["items"]:
+            self.assertEqual(item["folio"], visit_a["folio"])
+
     def test_list_visits_role_not_allowed(self):
         self._login_as("medico_user", self.medico_password)
 
@@ -449,6 +546,94 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], visit["id"])
         self.assertEqual(response.data["status"], "en_somatometria")
+
+    def test_visit_en_espera_has_null_en_somatometria_at(self):
+        """Una visita que nunca paso por somatometria no tiene ese timestamp."""
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit = self._create_visit(patient_id=3101)
+
+        response = self.client.get(
+            "/api/v1/visits?page=1&pageSize=20",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        items_by_id = {item["id"]: item for item in response.data["items"]}
+        self.assertIn("enSomatometriaAt", items_by_id[visit["id"]])
+        self.assertIsNone(items_by_id[visit["id"]]["enSomatometriaAt"])
+
+    def test_visit_transitioned_to_en_somatometria_exposes_timestamp(self):
+        """El PATCH que transiciona a en_somatometria devuelve el changed_at del log NOM-024."""
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit = self._create_visit(patient_id=3102)
+
+        patch_response = self.client.patch(
+            f"/api/v1/visits/{visit['id']}/status",
+            {"targetStatus": "en_somatometria"},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+        self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(patch_response.data["enSomatometriaAt"])
+
+        from apps.recepcion.models import VisitStatusLog
+        log_entry = VisitStatusLog.objects.get(
+            visit_id=visit["id"], to_status="en_somatometria"
+        )
+        self.assertEqual(
+            patch_response.data["enSomatometriaAt"],
+            log_entry.changed_at.isoformat(),
+        )
+
+        # Tambien debe reflejarse via GET (list_paginated), no solo en la
+        # respuesta directa del PATCH.
+        list_response = self.client.get(
+            "/api/v1/visits?page=1&pageSize=20",
+            HTTP_X_REQUEST_ID=self.request_id,
+        )
+        items_by_id = {item["id"]: item for item in list_response.data["items"]}
+        self.assertEqual(
+            items_by_id[visit["id"]]["enSomatometriaAt"],
+            log_entry.changed_at.isoformat(),
+        )
+
+    def test_en_somatometria_at_persists_when_visit_advances_further(self):
+        """El timestamp de somatometria no se pierde al avanzar de estado."""
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit = self._create_visit(patient_id=3103, doctorId=self.medico_user_id)
+
+        self.client.patch(
+            f"/api/v1/visits/{visit['id']}/status",
+            {"targetStatus": "en_somatometria"},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        from apps.recepcion.models import Visit, VisitStatusLog
+        log_entry = VisitStatusLog.objects.get(
+            visit_id=visit["id"], to_status="en_somatometria"
+        )
+
+        # Avanza el estado directamente en el modelo (simula el flujo real
+        # de somatometria -> lista_para_doctor -> en_consulta -> cerrada,
+        # sin depender de los endpoints de otro dominio).
+        visit_obj = Visit.objects.get(id_visit=visit["id"])
+        for next_status in ("lista_para_doctor", "en_consulta", "cerrada"):
+            visit_obj.status = next_status
+            visit_obj.save(update_fields=["status", "fch_modf"])
+
+            response = self.client.get(
+                "/api/v1/visits?page=1&pageSize=20",
+                HTTP_X_REQUEST_ID=self.request_id,
+            )
+            items_by_id = {item["id"]: item for item in response.data["items"]}
+            self.assertEqual(
+                items_by_id[visit["id"]]["enSomatometriaAt"],
+                log_entry.changed_at.isoformat(),
+                f"se perdio el timestamp al avanzar a {next_status}",
+            )
 
     def test_patch_visit_status_invalid_payload_returns_validation_error(self):
         self._login_as("recepcion_user", self.recepcion_password)

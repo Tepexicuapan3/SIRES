@@ -11,6 +11,7 @@ import AutorizadoresPage from "@features/admin/modules/catalogos/autorizadores/p
 import BajasPage from "@features/admin/modules/catalogos/bajas/pages/BajasPage";
 import CalidadLaboralPage from "@features/admin/modules/catalogos/calidad-laboral/pages/CalidadLaboralPage";
 import EdoCivilPage from "@features/admin/modules/catalogos/edo-civil/pages/EdoCivilPage";
+import DiscapacidadesPage from "@features/admin/modules/catalogos/discapacidades/pages/DiscapacidadesPage";
 import EnfermedadesPage from "@features/admin/modules/catalogos/enfermedades/pages/EnfermedadesPage";
 import EscolaridadPage from "@features/admin/modules/catalogos/escolaridad/pages/EscolaridadPage";
 import TipoPersonalPage from "@features/admin/modules/catalogos/tipo-personal/pages/TipoPersonalPage";
@@ -227,6 +228,14 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:escuelas:read">
             <EscuelasPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "discapacidades",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:discapacidades:read">
+            <DiscapacidadesPage />
           </ProtectedRoute>
         ),
       },

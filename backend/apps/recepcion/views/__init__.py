@@ -34,6 +34,7 @@ from apps.recepcion.uses_case.visit_queue_usecase import (
     get_visit_status_log,
     list_visits,
     lookup_patient,
+    resolve_vitals_visibility,
 )
 
 logger = logging.getLogger(__name__)
@@ -202,6 +203,12 @@ class VisitsView(APIView):
                                   status.HTTP_422_UNPROCESSABLE_ENTITY,
                                   details=serializer.errors, request_id=get_request_id(request))
 
+        # Narrowing de contrato (D3, somatometria-modulo-integral): recepcion
+        # NO recibe valores numericos de vitals en el LIST, solo estado.
+        # Rollback de emergencia (1 linea): reemplazar por `True` fijo.
+        auth_user = UserRepository.build_auth_user(user)
+        include_vitals_values = resolve_vitals_visibility(auth_user.get("permissions", []))
+
         payload = list_visits(
             page=serializer.validated_data["page"],
             page_size=serializer.validated_data["pageSize"],
@@ -214,6 +221,9 @@ class VisitsView(APIView):
             fecha_desde=serializer.validated_data.get("fechaDesde"),
             fecha_hasta=serializer.validated_data.get("fechaHasta"),
             folio=serializer.validated_data.get("folio"),
+            q=serializer.validated_data.get("q"),
+            pk_num=serializer.validated_data.get("pkNum"),
+            include_vitals_values=include_vitals_values,
         )
         return Response(payload, status=status.HTTP_200_OK)
 

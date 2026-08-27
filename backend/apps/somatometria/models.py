@@ -69,6 +69,32 @@ class VisitVitalSigns(models.Model):
             "aca son siempre los que vienen en el payload de esta captura."
         ),
     )
+    captured_by = models.ForeignKey(
+        "authentication.SyUsuario",
+        db_column="captured_by",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="vitals_capturados",
+        help_text=(
+            "Usuario que tomo la medicion original (atribucion NOM-024). "
+            "Nunca se reasigna en una correccion posterior -- ver "
+            "`updated_by`."
+        ),
+    )
+    updated_by = models.ForeignKey(
+        "authentication.SyUsuario",
+        db_column="updated_by",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="vitals_editados",
+        help_text=(
+            "Usuario que corrigio la medicion via edicion auditada "
+            "(Fase 3). `null` mientras la fila nunca fue corregida -- "
+            "nunca pisa a `captured_by`."
+        ),
+    )
     fch_alta = models.DateTimeField(auto_now_add=True, db_column="fch_alta")
     fch_modf = models.DateTimeField(auto_now=True, db_column="fch_modf")
 

@@ -40,6 +40,7 @@ const buildVisit = (
   turnoNombre:   "Matutino",
   status:        VISIT_STATUS.EN_ESPERA,
   fechaAlta:     null,
+  enSomatometriaAt: null,
   createdById:   null,
   vitals:        null,
   ...overrides,

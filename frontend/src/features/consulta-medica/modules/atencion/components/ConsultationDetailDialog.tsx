@@ -256,6 +256,22 @@ export function ConsultationDetailDialog({
                     </p>
                   ) : null}
                 </div>
+                {selectedVitals?.updatedBy ? (
+                  // Fase 3 (edicion auditada, spec `consulta-medica/vitals-display`):
+                  // un valor corregido NUNCA debe presentarse como si fuera
+                  // el original -- se avisa explicitamente quien corrigio y
+                  // cuando (`updatedAt` = `fch_modf`, DISTINTO de
+                  // `capturedAt` = `fch_alta`, que nunca cambia).
+                  <p
+                    className="text-xs font-medium text-status-alert"
+                    data-testid="vitals-updated-by"
+                  >
+                    Corregido por {selectedVitals.updatedBy.nombre ?? "usuario desconocido"}
+                    {selectedVitals.updatedAt
+                      ? ` el ${formatCapturedAtTime(selectedVitals.updatedAt)}`
+                      : ""}
+                  </p>
+                ) : null}
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                   <VitalMetric
                     label="Peso"

@@ -16,7 +16,7 @@ from apps.catalogos.uses_case.upload_cies_use_case import PreviewCiesUseCase
 from .models import (
     Areas, Autorizadores, Bajas, CalidadLaboral, CatAreaClinica, CatCentroAtencion,
     CatCentroAtencionHorario, CatCentroAtencionExcepcion, CentroAreaClinica, Consultorios,
-    EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, Estudios, EstudiosMed,
+    Discapacidades, EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, EstudiosMed,
     GruposDeMedicamentos, Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
     Roles, CatSucursal, TipoDeCitas, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
     Vacunas, CatTipoPersonal,
@@ -37,6 +37,7 @@ from .serializers import (
     CatCentroAtencionExcepcionWriteSerializer,
     CodigoPostalResultSerializer, ConsultoriosDetailSerializer,
     ConsultoriosListSerializer, ConsultoriosWriteSerializer,
+    DiscapacidadesDetailSerializer, DiscapacidadesListSerializer, DiscapacidadesWriteSerializer,
     EdoCivilDetailSerializer, EdoCivilListSerializer, EdoCivilWriteSerializer,
     EnfermedadesDetailSerializer, EnfermedadesListSerializer, EnfermedadesWriteSerializer,
     EscolaridadDetailSerializer, EscolaridadListSerializer, EscolaridadWriteSerializer,
@@ -44,7 +45,6 @@ from .serializers import (
     EscuelasDetailSerializer, EscuelasListSerializer, EscuelasWriteSerializer,
     EspecialidadesDetailSerializer, EspecialidadesListSerializer, EspecialidadesWriteSerializer,
     EstudiosMedDetailSerializer, EstudiosMedListSerializer, EstudiosMedWriteSerializer,
-    EstudiosDetailSerializer, EstudiosListSerializer, EstudiosWriteSerializer,
     GruposDeMedicamentosDetailSerializer, GruposDeMedicamentosListSerializer, GruposDeMedicamentosWriteSerializer,
     LicenciasDetailSerializer, LicenciasListSerializer, LicenciasWriteSerializer,
     OcupacionesDetailSerializer, OcupacionesListSerializer, OcupacionesWriteSerializer,
@@ -812,6 +812,22 @@ class CalidadLaboralDetailView(CatalogBaseDetailView):
     error_codes = MappingProxyType({"not_found": "LABOR_QUALITY_NOT_FOUND", "exists": "LABOR_QUALITY_EXISTS"})
 
 
+class DiscapacidadesListCreateView(CatalogBaseListCreateView):
+    catalog = "discapacidades"
+    model = Discapacidades
+    list_serializer = DiscapacidadesListSerializer
+    write_serializer = DiscapacidadesWriteSerializer
+    error_codes = MappingProxyType({"exists": "DISABILITY_EXISTS"})
+
+class DiscapacidadesDetailView(CatalogBaseDetailView):
+    catalog = "discapacidades"
+    model = Discapacidades
+    detail_serializer = DiscapacidadesDetailSerializer
+    write_serializer = DiscapacidadesWriteSerializer
+    wrapper_key = "disability"
+    error_codes = MappingProxyType({"not_found": "DISABILITY_NOT_FOUND", "exists": "DISABILITY_EXISTS"})
+
+
 class EdoCivilListCreateView(CatalogBaseListCreateView):
     catalog = "edo_civil"
     model = EdoCivil
@@ -938,122 +954,6 @@ class EstudiosMedDetailView(CatalogBaseDetailView):
     write_serializer = EstudiosMedWriteSerializer
     wrapper_key = "medicalStudy"
     error_codes = MappingProxyType({"not_found": "MEDICAL_STUDIES_NOT_FOUND", "exists": "MEDICAL_STUDIES_EXISTS"})
-
-
-# ---------------------------------------------------------------------------
-# Estudios (cat_estudios, sin auditoria, status como char flag -> vistas propias)
-# ---------------------------------------------------------------------------
-
-class EstudiosListCreateView(PaginationMixin, CatalogPermissionMixin, ErrorMixin, APIView):
-    catalog = "estudios"
-
-    def get_queryset(self):
-        qs = Estudios.objects.all()
-        params = self.request.query_params
-
-        if search := params.get("search"):
-            qs = qs.filter(name__icontains=search)
-
-        is_active_raw = params.get("isActive")
-        if is_active_raw is not None:
-            is_active = _parse_bool_param(is_active_raw)
-            if is_active is not None:
-                qs = qs.filter(status=Estudios.ACTIVE_FLAG if is_active else Estudios.INACTIVE_FLAG)
-
-        return qs.order_by("name")
-
-    def get(self, request):
-        try:
-            page, page_size = self._parse_pagination(request)
-        except _PaginationError as exc:
-            return exc.response
-
-        qs = self.get_queryset()
-        items, total, total_pages = self._paginate_queryset(qs, page, page_size)
-        serializer = EstudiosListSerializer(items, many=True)
-        return self._paginated_response(serializer.data, page, page_size, total, total_pages)
-
-    def post(self, request):
-        serializer = EstudiosWriteSerializer(data=request.data)
-        if not serializer.is_valid():
-            return self._error(
-                request,
-                code="VALIDATION_ERROR",
-                message="Datos de entrada inválidos",
-                http_status=status.HTTP_400_BAD_REQUEST,
-                details=serializer.errors,
-            )
-
-        name = serializer.validated_data.get("name")
-        if name and Estudios.objects.filter(name=name).exists():
-            return self._error(
-                request,
-                code="STUDY_EXISTS",
-                message="Ya existe un estudio con ese nombre",
-                http_status=status.HTTP_409_CONFLICT,
-                details={"name": ["Duplicado"]},
-            )
-
-        item = serializer.save()
-        return Response({"id": item.id, "name": item.name}, status=status.HTTP_201_CREATED)
-
-
-class EstudiosDetailView(CatalogPermissionMixin, ErrorMixin, APIView):
-    catalog = "estudios"
-
-    def get_object(self, pk):
-        return Estudios.objects.filter(pk=pk).first()
-
-    def get(self, request, pk):
-        item = self.get_object(pk)
-        if not item:
-            return self._error(
-                request, code="STUDY_NOT_FOUND", message="No encontrado",
-                http_status=status.HTTP_404_NOT_FOUND,
-            )
-        return Response({"estudio": EstudiosDetailSerializer(item).data})
-
-    def put(self, request, pk):
-        item = self.get_object(pk)
-        if not item:
-            return self._error(
-                request, code="STUDY_NOT_FOUND", message="No encontrado",
-                http_status=status.HTTP_404_NOT_FOUND,
-            )
-
-        serializer = EstudiosWriteSerializer(item, data=request.data, partial=True)
-        if not serializer.is_valid():
-            return self._error(
-                request,
-                code="VALIDATION_ERROR",
-                message="Datos de entrada inválidos",
-                http_status=status.HTTP_400_BAD_REQUEST,
-                details=serializer.errors,
-            )
-
-        name = serializer.validated_data.get("name")
-        if name and Estudios.objects.filter(name=name).exclude(pk=item.pk).exists():
-            return self._error(
-                request,
-                code="STUDY_EXISTS",
-                message="Ya existe un estudio con ese nombre",
-                http_status=status.HTTP_409_CONFLICT,
-                details={"name": ["Duplicado"]},
-            )
-
-        updated = serializer.save()
-        return Response({"estudio": EstudiosDetailSerializer(updated).data})
-
-    def delete(self, request, pk):
-        item = self.get_object(pk)
-        if not item:
-            return self._error(
-                request, code="STUDY_NOT_FOUND", message="No encontrado",
-                http_status=status.HTTP_404_NOT_FOUND,
-            )
-        item.status = Estudios.INACTIVE_FLAG
-        item.save(update_fields=["status"])
-        return Response({"success": True})
 
 
 class GruposDeMedicamentosListCreateView(CatalogBaseListCreateView):

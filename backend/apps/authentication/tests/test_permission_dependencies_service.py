@@ -157,3 +157,59 @@ class PermissionDependenciesServiceTests(SimpleTestCase):
                         }
                     ),
                 )
+
+    def test_clinico_somatometria_update_infers_read_dependency(self):
+        """
+        D6 (change `somatometria-modulo-integral`): `clinico:somatometria:update`
+        no tiene entrada explicita en EXPLICIT_PERMISSION_DEPENDENCIES --
+        `_infer_read_dependency` debe derivar `clinico:somatometria:read`
+        solo porque `update` esta en WRITE_ACTIONS, sin tocar ese set
+        global. Si esto se rompe, un usuario con `:update` pero sin
+        `:read` quedaria con la capability `flow.somatometria.edit`
+        otorgada pero sin poder leer -- inconsistente.
+        """
+        closure = get_permission_dependency_closure("clinico:somatometria:update")
+
+        self.assertEqual(
+            closure,
+            sorted({"clinico:somatometria:read", "clinico:somatometria:update"}),
+        )
+
+    def test_flow_somatometria_edit_capability_requires_update_permission(self):
+        """
+        D6: `flow.somatometria.edit` esta sobre `clinico:somatometria:update`
+        (NO `:edit`, ese verbo no existe en WRITE_ACTIONS). Con solo
+        `:read` (captura) la capability de edicion NO debe otorgarse;
+        agregando `:update` si.
+        """
+        capture_only_context = build_permission_context(["clinico:somatometria:read"])
+        self.assertFalse(
+            capture_only_context["capabilities"]["flow.somatometria.edit"]["granted"]
+        )
+        # La capability de captura sigue intacta (D6: no se toca).
+        self.assertTrue(
+            capture_only_context["capabilities"]["flow.somatometria.capture"]["granted"]
+        )
+
+        with_update_context = build_permission_context(
+            ["clinico:somatometria:read", "clinico:somatometria:update"]
+        )
+        self.assertTrue(
+            with_update_context["capabilities"]["flow.somatometria.edit"]["granted"]
+        )
+
+    def test_flow_somatometria_edit_capability_denied_with_update_alone(self):
+        """
+        D6/gotcha confirmado: `_infer_read_dependency` agrega
+        `clinico:somatometria:read` a la CLAUSURA DE REQUISITOS de
+        `:update` (ver `test_clinico_somatometria_update_infers_read_dependency`),
+        pero eso NO implica que otorgar solo `:update` alcance -- el
+        usuario/rol debe tener AMBOS permisos efectivamente concedidos
+        (`granted_permissions`). Es el mismo patron que
+        `admin:gestion:usuarios:update` (requiere `roles:read` +
+        `permisos:read` concedidos aparte). El rol real (`seed_e2e.py`
+        CLINICO) por eso otorga `clinico:somatometria:read` Y
+        `clinico:somatometria:update` juntos, nunca solo el segundo.
+        """
+        context = build_permission_context(["clinico:somatometria:update"])
+        self.assertFalse(context["capabilities"]["flow.somatometria.edit"]["granted"])

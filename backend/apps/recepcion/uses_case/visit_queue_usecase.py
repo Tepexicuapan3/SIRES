@@ -16,6 +16,8 @@ _ACTIVE_VISIT_STATUSES = (
 
 RECEPCION_WRITE_CAPABILITY = "flow.recepcion.queue.write"
 VISIT_QUEUE_READ_CAPABILITY = "flow.visits.queue.read"
+SOMATOMETRIA_QUEUE_READ_CAPABILITY = "flow.somatometria.queue.read"
+DOCTOR_QUEUE_READ_CAPABILITY = "flow.doctor.queue.read"
 
 
 # ── Autorización ──────────────────────────────────────────────────────────────
@@ -32,6 +34,32 @@ def ensure_visit_queue_access(roles, permissions):
     if has_capability(permissions or [], VISIT_QUEUE_READ_CAPABILITY):
         return
     raise VisitDomainError("ROLE_NOT_ALLOWED", "No tienes permiso para esta acción.", 403)
+
+
+def resolve_vitals_visibility(permissions) -> bool:
+    """
+    Narrowing de contrato (D3, somatometria-modulo-integral): decide si
+    `GET /visits` (LIST) devuelve los VALORES numericos de signos vitales
+    o solo el estado narrowed ({hasVitals, capturedAt, reusedFrom}).
+
+    Enfermeria/somatometria (`flow.somatometria.queue.read`) y medico
+    (`flow.doctor.queue.read`) siguen viendo metricas completas;
+    cualquier otro caller (ej. recepcion, que solo tiene
+    `recepcion:fichas:*:create`) recibe unicamente el estado.
+
+    Solo afecta el LIST -- el detalle de una visita individual
+    (`get_by_id` / `change_visit_status`) no pasa por aca y sigue en
+    `include_vitals_values=True` siempre.
+
+    Rollback de emergencia (1 linea): en `VisitsView.get`, reemplazar
+    `include_vitals_values=resolve_vitals_visibility(...)` por
+    `include_vitals_values=True` fijo.
+    """
+    permissions = permissions or []
+    return (
+        has_capability(permissions, SOMATOMETRIA_QUEUE_READ_CAPABILITY)
+        or has_capability(permissions, DOCTOR_QUEUE_READ_CAPABILITY)
+    )
 
 
 # ── Pacientes ─────────────────────────────────────────────────────────────────
@@ -269,6 +297,10 @@ def list_visits(
     fecha_desde=None,
     fecha_hasta=None,
     folio: str | None = None,
+    q: str | None = None,
+    pk_num: int | None = None,
+    *,
+    include_vitals_values: bool = True,
 ) -> dict:
     visits, total, total_pages, doctor_nombres, cita_fechas = VisitRepository.list_paginated(
         page=page,
@@ -283,9 +315,17 @@ def list_visits(
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
         folio=folio,
+        q=q,
+        pk_num=pk_num,
     )
     return {
-        "items":      [VisitRepository.to_contract(v, doctor_nombres, cita_fechas) for v in visits],
+        "items":      [
+            VisitRepository.to_contract(
+                v, doctor_nombres, cita_fechas,
+                include_vitals_values=include_vitals_values,
+            )
+            for v in visits
+        ],
         "page":       page,
         "pageSize":   page_size,
         "total":      total,
@@ -307,12 +347,21 @@ def change_visit_status(
     visit           = VisitRepository.update_status(visit, next_state)
 
     # Log de auditoría NOM-024
-    VisitRepository.log_status_change(
+    status_log = VisitRepository.log_status_change(
         visit=visit,
         from_status=previous_status,
         to_status=next_state,
         changed_by_id=changed_by_id,
     )
+
+    # `visit` fue obtenida con `get_by_id` ANTES de crear el log de arriba,
+    # asi que su anotacion `en_somatometria_at` (resuelta en el SELECT
+    # original) no ve todavia esta transicion. Si la transicion actual ES
+    # hacia `en_somatometria`, parcheamos el valor en memoria para que
+    # `to_contract` no devuelva null por una carrera de timing entre la
+    # lectura y la escritura del log.
+    if next_state == "en_somatometria":
+        visit.en_somatometria_at = status_log.changed_at
 
     # Liberar el slot si la visita se cancela o marca como no-show
     if next_state in ("cancelada", "no_show") and visit.doctor_id and visit.hora_consulta:

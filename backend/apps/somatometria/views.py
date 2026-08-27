@@ -13,16 +13,19 @@ from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
 from apps.realtime.events import publish_visit_status_changed
-from apps.somatometria.serializers import CaptureVitalsSerializer
+from apps.somatometria.serializers import CaptureVitalsSerializer, EditVitalsSerializer
 from apps.somatometria.services.visit_flow_service import (
     VisitFlowError,
     get_visit_flow_service,
 )
 from apps.somatometria.uses_case.capture_vitals_usecase import (
+    SOMATOMETRIA_EDIT_CAPABILITY,
     capture_vitals,
+    ensure_somatometria_capability,
     ensure_somatometria_role,
     get_latest_vitals_for_visit,
 )
+from apps.somatometria.uses_case.edit_vitals_usecase import edit_vitals
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,18 @@ def _require_somatometria_role(user):
     ensure_somatometria_role(
         auth_user.get("roles", []),
         auth_user.get("permissions", []),
+    )
+
+
+def _require_somatometria_edit_capability(user):
+    # D6/D7: la edicion auditada exige `flow.somatometria.edit`
+    # (allOf clinico:somatometria:update), una capability SEPARADA y
+    # ADITIVA de `flow.somatometria.capture` -- un usuario con captura
+    # pero sin edicion sigue pudiendo capturar, nunca corregir.
+    auth_user = UserRepository.build_auth_user(user)
+    ensure_somatometria_capability(
+        auth_user.get("permissions", []),
+        SOMATOMETRIA_EDIT_CAPABILITY,
     )
 
 
@@ -154,6 +169,7 @@ class VisitVitalsView(APIView):
             result = capture_vitals(
                 visit_id,
                 serializer.validated_data,
+                actor=user,
                 visit_flow_service=visit_flow,
             )
         except VisitFlowError as exc:
@@ -178,5 +194,73 @@ class VisitVitalsView(APIView):
             status=result.get("status"),
             previous_status=previous_status,
         )
+
+        return Response(result, status=status.HTTP_200_OK)
+
+    def patch(self, request, visit_id):
+        """
+        Edicion auditada de una captura YA existente (Fase 3, D8). NO crea
+        fila nueva, NO cambia `status`, NO acepta `reusedFromVisitId`, y
+        NO emite `visit_status_changed` -- es una correccion de la MISMA
+        fila, no un paso mas del flujo de captura.
+        """
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        try:
+            _require_somatometria_edit_capability(user)
+        except VisitFlowError as exc:
+            return _domain_error_response(request, exc)
+
+        serializer = EditVitalsSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_400_BAD_REQUEST,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        payload = dict(serializer.validated_data)
+        motivo = payload.pop("motivo")
+
+        def audit_hook(*, vitals_id, datos_antes, datos_despues):
+            # D10: `raise_on_error=True` -- si esto falla, la excepcion se
+            # propaga y `edit_vitals_usecase.edit_vitals` revierte todo el
+            # `transaction.atomic()`, incluida la escritura de
+            # `update_for_visit` que ya habia corrido antes del hook.
+            log_event(
+                request,
+                "VitalsEdited",
+                "SUCCESS",
+                actor_user=user,
+                resource_type="vitals",
+                resource_id=vitals_id,
+                datos_antes=datos_antes,
+                datos_despues=datos_despues,
+                meta={
+                    "module": "somatometria",
+                    "endpoint": request.path,
+                    "visitId": visit_id,
+                    "motivo": motivo,
+                },
+                raise_on_error=True,
+            )
+
+        try:
+            result = edit_vitals(
+                visit_id,
+                payload,
+                actor=user,
+                audit_hook=audit_hook,
+            )
+        except VisitFlowError as exc:
+            return _domain_error_response(request, exc)
 
         return Response(result, status=status.HTTP_200_OK)

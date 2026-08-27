@@ -91,3 +91,14 @@ export const captureVitalsFormSchema = z
 
 export type CaptureVitalsFormValues = z.infer<typeof captureVitalsFormSchema>;
 export type CaptureVitalsFormInput = z.input<typeof captureVitalsFormSchema>;
+
+/** Edicion auditada (Fase 3.9, change `somatometria-modulo-integral`): mismo
+ * shape que la captura, mas `motivo` OBLIGATORIO. `motivo` se valida a mano
+ * en `EditVitalsDialog` (no via este schema) -- intentar componerlo con
+ * `captureVitalsFormSchema` via `.and()`/`.extend()` sobre un schema que ya
+ * tiene `.superRefine()` aplicado resulto poco confiable con el resolver de
+ * react-hook-form en la practica. El minimo de 5 caracteres solo da
+ * feedback temprano en el cliente; el backend es quien rechaza de verdad
+ * con 400 si falta o es muy corto. */
+export type EditVitalsFormInput = CaptureVitalsFormInput & { motivo: string };
+export type EditVitalsFormValues = CaptureVitalsFormValues & { motivo: string };

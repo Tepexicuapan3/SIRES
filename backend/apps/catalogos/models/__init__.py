@@ -10,13 +10,13 @@ from .centro_atencion_horario import CatCentroAtencionHorario
 from .centro_atencion_excepcion import CatCentroAtencionExcepcion
 from .cies import CatCies
 from .consultorios import Consultorios
+from .discapacidades import Discapacidades
 from .edo_civil import EdoCivil
 from .enfermedades import Enfermedades
 from .escolaridad import Escolaridad
 from .escuelas import Escuelas
 from .tipo_personal import CatTipoPersonal
 from .especialidades import Especialidades
-from .estudios import Estudios
 from .estudios_medicos import EstudiosMed
 from .grupos_medicamentos import GruposDeMedicamentos
 from .ocupaciones import Ocupaciones
@@ -54,12 +54,12 @@ __all__ = [
     "CatCentroAtencionExcepcion",
     "CatCies",
     "Consultorios",
+    "Discapacidades",
     "EdoCivil",
     "Enfermedades",
     "Escolaridad",
     "Escuelas",
     "Especialidades",
-    "Estudios",
     "EstudiosMed",
     "GruposDeMedicamentos",
     "Ocupaciones",

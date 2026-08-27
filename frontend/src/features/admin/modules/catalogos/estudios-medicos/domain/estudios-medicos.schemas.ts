@@ -11,6 +11,11 @@ export const estudioMedicoDetailsSchema = z.object({
   name: requiredText("Nombre", 255),
   studyType: requiredText("Tipo de estudio", 20),
   indication: requiredText("Indicacion clinica", 700),
+  precio: z.union([z.number(), z.nan()]).optional(),
+  isGeneral: z.boolean().optional(),
+  isAuthorized: z.boolean().optional(),
+  groupType: z.union([z.number(), z.nan()]).optional(),
+  providerId: z.union([z.number(), z.nan()]).optional(),
 });
 
 export const createEstudioMedicoSchema = estudioMedicoDetailsSchema;

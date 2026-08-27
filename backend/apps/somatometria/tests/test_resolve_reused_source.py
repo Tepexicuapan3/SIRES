@@ -65,7 +65,7 @@ class ResolveReusedSourceTests(TestCase):
         other_patient_visit = _create_visit(
             folio="V-RS-MISMATCH-SRC", no_exp="EXP-RS-OTHER", status="lista_para_doctor",
         )
-        VitalsRepository.upsert_for_visit(other_patient_visit, _payload())
+        VitalsRepository.create_for_visit(other_patient_visit, _payload(), captured_by=None)
 
         with self.assertRaises(VisitFlowError) as ctx:
             _resolve_reused_source(visit, other_patient_visit.id_visit)
@@ -80,7 +80,7 @@ class ResolveReusedSourceTests(TestCase):
         other_member_visit = _create_visit(
             folio="V-RS-FAM-SRC", no_exp="EXP-RS-FAM", pk_num=2, status="lista_para_doctor",
         )
-        VitalsRepository.upsert_for_visit(other_member_visit, _payload())
+        VitalsRepository.create_for_visit(other_member_visit, _payload(), captured_by=None)
 
         with self.assertRaises(VisitFlowError) as ctx:
             _resolve_reused_source(visit, other_member_visit.id_visit)
@@ -95,7 +95,7 @@ class ResolveReusedSourceTests(TestCase):
 
         yesterday_utc = datetime(2026, 8, 25, 18, 0, 0, tzinfo=dt_timezone.utc)
         with mock.patch("django.utils.timezone.now", return_value=yesterday_utc):
-            VitalsRepository.upsert_for_visit(source_visit, _payload())
+            VitalsRepository.create_for_visit(source_visit, _payload(), captured_by=None)
 
         today_utc = datetime(2026, 8, 26, 18, 0, 0, tzinfo=dt_timezone.utc)
         with mock.patch("django.utils.timezone.now", return_value=today_utc):
@@ -110,7 +110,7 @@ class ResolveReusedSourceTests(TestCase):
         source_visit = _create_visit(
             folio="V-RS-OK-SRC", no_exp="EXP-RS-6", status="lista_para_doctor",
         )
-        VitalsRepository.upsert_for_visit(source_visit, _payload())
+        VitalsRepository.create_for_visit(source_visit, _payload(), captured_by=None)
 
         resolved = _resolve_reused_source(visit, source_visit.id_visit)
 

@@ -1,5 +1,6 @@
 import { VISIT_SERVICE, type VisitQueueItem } from "@api/types";
 import { Badge } from "@shared/ui/badge";
+import { useRelativeChangeTracker } from "@shared/hooks/useRelativeChangeTracker";
 
 /** Duplicado deliberado (y minimo) del label de servicio -- no se extrae un
  * helper compartido con `consulta-medica`/`recepcion` para esta feature
@@ -13,14 +14,24 @@ const SOMATO_SERVICE_LABEL: Record<string, string> = {
 const formatServiceLabel = (serviceType: string): string =>
   SOMATO_SERVICE_LABEL[serviceType] ?? serviceType;
 
-const formatArrivalTime = (iso: string | null): string =>
+/** Fecha+hora legible -- mismo criterio de formato que `formatCapturedAtDateTime`
+ * en `TodayCaptureBanner.tsx` (dia/mes/año + hora:minuto, 24h, es-MX), para
+ * mantener consistencia visual entre los distintos "momentos" que se
+ * muestran en el modulo. NO se exporta (el linter de fast-refresh no
+ * permite mezclar exports de componente + funcion en el mismo archivo);
+ * `SomatometriaHistorialView.tsx` duplica esta misma logica de formato de
+ * forma deliberada y minima, con el mismo criterio documentado aca. */
+const formatDateTime = (iso: string | null): string =>
   iso
-    ? new Date(iso).toLocaleTimeString("es-MX", {
+    ? new Date(iso).toLocaleString("es-MX", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
       })
-    : "--:--";
+    : "—";
 
 interface SomatometriaQueueCardsProps {
   visits: VisitQueueItem[];
@@ -38,6 +49,14 @@ export function SomatometriaQueueCards({
   selectedVisitId,
   onSelectVisit,
 }: SomatometriaQueueCardsProps) {
+  /** Badge 100% client-side de "Nuevo"/"Hace N min" -- ver
+   * `useRelativeChangeTracker` (shared/hooks). NO depende de ningun evento
+   * de realtime nuevo: el bridge actual (`useVisitRealtimeBridge.ts`) sigue
+   * haciendo refetch completo, sin cambios. */
+  const relativeLabels = useRelativeChangeTracker(
+    visits.map((visit) => ({ id: visit.id, changeKey: visit.fechaModf })),
+  );
+
   return (
     <div
       className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
@@ -45,6 +64,7 @@ export function SomatometriaQueueCards({
     >
       {visits.map((visit) => {
         const isSelected = visit.id === selectedVisitId;
+        const relativeLabel = relativeLabels.get(visit.id);
 
         return (
           <button
@@ -99,10 +119,30 @@ export function SomatometriaQueueCards({
                 )}
               </p>
               <p className="mt-1.5 text-xs text-txt-muted">
-                Ingreso a cola:{" "}
+                En somatometría desde:{" "}
                 <span className="font-mono font-semibold text-txt-body">
-                  {formatArrivalTime(visit.fechaAlta)}
+                  {formatDateTime(visit.enSomatometriaAt)}
                 </span>
+              </p>
+              <p className="mt-1.5 flex flex-wrap gap-1.5">
+                <Badge
+                  variant="outline"
+                  className={
+                    visit.vitals
+                      ? "border-status-success/40 text-status-success"
+                      : "border-status-alert/40 text-status-alert"
+                  }
+                >
+                  {visit.vitals ? "Vitales capturados" : "Vitales pendientes"}
+                </Badge>
+                {relativeLabel ? (
+                  <Badge
+                    variant={relativeLabel === "Nuevo" ? "brand" : "secondary"}
+                    data-testid={`somato-visit-card-${visit.id}-relative-badge`}
+                  >
+                    {relativeLabel}
+                  </Badge>
+                ) : null}
               </p>
             </div>
           </button>

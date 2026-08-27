@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useForm, useWatch, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ClipboardList, ListChecks } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
 import { ApiError } from "@api/utils/errors";
 import { Badge } from "@shared/ui/badge";
@@ -22,8 +23,11 @@ import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermis
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
 import { useLatestVitals } from "@features/somatometria/modules/captura/queries/useLatestVitals";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
+import { useSomatometriaWaitingQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaWaitingQueue";
 import { usePatientLookupHistorico } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
 import { SomatometriaQueueCards } from "@features/somatometria/modules/captura/components/SomatometriaQueueCards";
+import { SomatometriaWaitingCards } from "@features/somatometria/modules/captura/components/SomatometriaWaitingCards";
+import { SomatometriaHistorialView } from "@features/somatometria/modules/captura/components/SomatometriaHistorialView";
 import {
   TodayCaptureBanner,
   type TodayCaptureDecision,
@@ -39,7 +43,10 @@ type QueueVisit = NonNullable<
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const CAPTURE_VITALS_DOMAIN_ERROR_MESSAGE: Record<
-  "VITALS_INCOMPLETE" | "ROLE_NOT_ALLOWED" | "VISIT_STATE_INVALID",
+  | "VITALS_INCOMPLETE"
+  | "ROLE_NOT_ALLOWED"
+  | "VISIT_STATE_INVALID"
+  | "VITALS_ALREADY_CAPTURED",
   string
 > = {
   VITALS_INCOMPLETE:
@@ -47,6 +54,12 @@ const CAPTURE_VITALS_DOMAIN_ERROR_MESSAGE: Record<
   ROLE_NOT_ALLOWED: "No tenes permiso para capturar vitales en esta visita.",
   VISIT_STATE_INVALID:
     "La visita ya no esta en un estado valido para somatometria. Actualiza la bandeja.",
+  // D8/task 3.6 (change `somatometria-modulo-integral`): un 409 sobre el
+  // POST de captura significa que esta visita YA tiene vitales -- nunca
+  // se sobreescriben en silencio. El mensaje redirige a la edicion
+  // auditada en vez de mostrar un error crudo.
+  VITALS_ALREADY_CAPTURED:
+    "Ya capturado — usa Corregir para modificar los signos vitales de esta visita.",
 };
 
 type CaptureVitalsDomainErrorCode =
@@ -567,10 +580,15 @@ export const SomatometriaCapturePage = () => {
   );
 
   const queueQuery = useSomatometriaQueue({ enabled: canReadSomatometriaQueue });
+  const waitingQueueQuery = useSomatometriaWaitingQueue({
+    enabled: canReadSomatometriaQueue,
+  });
 
+  const [view, setView] = useState<"cola" | "historial">("cola");
   const [selectedVisitIdState, setSelectedVisitIdState] = useState<number | null>(null);
 
   const visits = queueQuery.data?.items ?? [];
+  const waitingVisits = waitingQueueQuery.data?.items ?? [];
 
   const selectedVisitId =
     selectedVisitIdState !== null && visits.some((v) => v.id === selectedVisitIdState)
@@ -600,138 +618,208 @@ export const SomatometriaCapturePage = () => {
 
   return (
     <section className="space-y-6 p-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-txt-body">
-          Somatometría
-        </h1>
-        <p className="text-sm text-txt-muted">
-          Captura los signos vitales de la visita activa.
-        </p>
+      <header className="flex flex-col gap-3 rounded-xl border border-line-struct bg-paper p-5 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-txt-body">
+            Somatometría
+          </h1>
+          <p className="text-sm text-txt-muted">
+            Captura los signos vitales de la visita activa.
+          </p>
+        </div>
+
+        {/* Tab switcher */}
+        <div className="flex items-center gap-1 rounded-xl border border-line-struct bg-subtle/20 p-1">
+          <button
+            type="button"
+            data-testid="somato-tab-cola"
+            onClick={() => setView("cola")}
+            className={[
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              view === "cola"
+                ? "bg-paper text-txt-body shadow-sm"
+                : "text-txt-muted hover:text-txt-body",
+            ].join(" ")}
+          >
+            <ListChecks className="size-3.5" /> Cola
+          </button>
+          <button
+            type="button"
+            data-testid="somato-tab-historial"
+            onClick={() => setView("historial")}
+            className={[
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              view === "historial"
+                ? "bg-paper text-txt-body shadow-sm"
+                : "text-txt-muted hover:text-txt-body",
+            ].join(" ")}
+          >
+            <ClipboardList className="size-3.5" /> Historial
+          </button>
+        </div>
       </header>
 
-      {!canReadSomatometriaQueue ? (
-        <p className="text-sm text-txt-muted" role="status">
-          No tenes permisos completos para cargar la bandeja de somatometria.
-        </p>
-      ) : null}
+      {view === "historial" ? <SomatometriaHistorialView /> : null}
 
-      {canReadSomatometriaQueue && queueQuery.isLoading ? (
-        <p className="text-sm text-txt-muted">Cargando bandeja...</p>
-      ) : null}
-
-      {canReadSomatometriaQueue && queueQuery.isError ? (
-        <Alert variant="warning">
-          <AlertTitle>Error al cargar</AlertTitle>
-          <AlertDescription>
-            No se pudo cargar la bandeja de somatometria.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {canReadSomatometriaQueue &&
-      !queueQuery.isLoading &&
-      !queueQuery.isError &&
-      visits.length === 0 ? (
-        <p className="text-sm text-txt-muted">No hay pacientes en somatometria.</p>
-      ) : null}
-
-      {canReadSomatometriaQueue &&
-      !queueQuery.isLoading &&
-      !queueQuery.isError &&
-      visits.length > 0 ? (
-        <section className="space-y-5 rounded-xl border border-line-hairline bg-paper p-5">
-
-          {/* ── Cola de somatometria (tarjetas) ─────────────────── */}
-          <div className="space-y-2">
-            <Label>Cola de somatometria</Label>
-            <SomatometriaQueueCards
-              visits={visits}
-              selectedVisitId={selectedVisitId}
-              onSelectVisit={setSelectedVisitIdState}
-            />
-          </div>
-
-          {selectedVisit ? (
-            <div className="flex items-center justify-between gap-2 rounded-xl border border-line-struct/60 bg-subtle/20 px-4 py-2">
-              <div>
-                <p className="text-xs text-txt-muted">Visita seleccionada · Folio</p>
-                <p className="text-sm font-medium font-mono text-txt-body">
-                  {selectedVisit.folio}
-                </p>
-              </div>
-              <Badge variant="outline" className="uppercase">
-                {formatStatusLabel(currentStatus)}
-              </Badge>
-            </div>
-          ) : null}
-
-          {/* ── Datos del paciente ─────────────────────────────── */}
-          {selectedVisit ? (
-            <div className="rounded-xl border border-line-struct/60 bg-subtle/20 px-4 py-3">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-txt-muted">
-                Datos del paciente
-              </p>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
-                <PatientInfoRow
-                  label="Nombre"
-                  value={selectedVisit.nombrePaciente}
-                />
-                <PatientInfoRow
-                  label="Expediente"
-                  value={
-                    selectedVisit.noExp ? (
-                      <span className="font-mono">
-                        {selectedVisit.noExp}
-                        {selectedVisit.pkNum > 0 ? (
-                          <span className="ml-1 text-xs font-sans text-txt-muted">
-                            Fam. #{selectedVisit.pkNum}
-                          </span>
-                        ) : null}
-                      </span>
-                    ) : "Sin expediente"
-                  }
-                />
-                <PatientInfoRow
-                  label="Edad"
-                  value={
-                    loadingPatient
-                      ? "..."
-                      : paciente?.edad != null
-                      ? `${paciente.edad} años`
-                      : null
-                  }
-                />
-                <PatientInfoRow
-                  label="Fecha nac."
-                  value={
-                    loadingPatient ? "..." : formatFechaNac(paciente?.fechaNac)
-                  }
-                />
-              </div>
-            </div>
-          ) : null}
-
-          {selectedVisit ? (
-            <VitalsCaptureLoader
-              key={selectedVisit.id}
-              visit={selectedVisit}
-              canCaptureSomatometriaVitals={canCaptureSomatometriaVitals}
-              canCaptureSelectedVisit={canCaptureSelectedVisit}
-            />
-          ) : null}
-
-          {!canCaptureSomatometriaVitals ? (
+      {view === "cola" ? (
+        <>
+          {!canReadSomatometriaQueue ? (
             <p className="text-sm text-txt-muted" role="status">
-              No tenes permisos completos para guardar vitales.
+              No tenes permisos completos para cargar la bandeja de somatometria.
             </p>
           ) : null}
 
-          {canCaptureSomatometriaVitals && !canCaptureSelectedVisit ? (
-            <p className="text-sm text-status-alert" role="status">
-              Selecciona una visita en somatometria para capturar vitales.
-            </p>
+          {canReadSomatometriaQueue && queueQuery.isLoading ? (
+            <p className="text-sm text-txt-muted">Cargando bandeja...</p>
           ) : null}
-        </section>
+
+          {canReadSomatometriaQueue && queueQuery.isError ? (
+            <Alert variant="warning">
+              <AlertTitle>Error al cargar</AlertTitle>
+              <AlertDescription>
+                No se pudo cargar la bandeja de somatometria.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {canReadSomatometriaQueue &&
+          !queueQuery.isLoading &&
+          !queueQuery.isError &&
+          visits.length === 0 ? (
+            <p className="text-sm text-txt-muted">No hay pacientes en somatometria.</p>
+          ) : null}
+
+          {/* ── Cola de espera: independiente de la cola de somatometria --
+              se muestra aunque no haya nadie EN somatometria todavia, porque
+              justamente informa quien viene despues. ──────────────────── */}
+          {canReadSomatometriaQueue ? (
+            <section className="space-y-2 rounded-xl border border-line-hairline bg-paper p-5">
+              <Label>Esperando pasar a somatometría</Label>
+              {waitingQueueQuery.isLoading ? (
+                <p className="text-sm text-txt-muted">Cargando cola de espera...</p>
+              ) : null}
+              {waitingQueueQuery.isError ? (
+                <Alert variant="warning">
+                  <AlertTitle>Error al cargar</AlertTitle>
+                  <AlertDescription>
+                    No se pudo cargar la cola de espera.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {!waitingQueueQuery.isLoading &&
+              !waitingQueueQuery.isError &&
+              waitingVisits.length === 0 ? (
+                <p className="text-sm text-txt-muted">
+                  No hay pacientes esperando pasar a somatometria.
+                </p>
+              ) : null}
+              {!waitingQueueQuery.isLoading &&
+              !waitingQueueQuery.isError &&
+              waitingVisits.length > 0 ? (
+                <SomatometriaWaitingCards visits={waitingVisits} />
+              ) : null}
+            </section>
+          ) : null}
+
+          {canReadSomatometriaQueue &&
+          !queueQuery.isLoading &&
+          !queueQuery.isError &&
+          visits.length > 0 ? (
+            <section className="space-y-5 rounded-xl border border-line-hairline bg-paper p-5">
+
+              {/* ── Cola de somatometria (tarjetas) ─────────────────── */}
+              <div className="space-y-2">
+                <Label>En somatometría</Label>
+                <SomatometriaQueueCards
+                  visits={visits}
+                  selectedVisitId={selectedVisitId}
+                  onSelectVisit={setSelectedVisitIdState}
+                />
+              </div>
+
+              {selectedVisit ? (
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-line-struct/60 bg-subtle/20 px-4 py-2">
+                  <div>
+                    <p className="text-xs text-txt-muted">Visita seleccionada · Folio</p>
+                    <p className="text-sm font-medium font-mono text-txt-body">
+                      {selectedVisit.folio}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="uppercase">
+                    {formatStatusLabel(currentStatus)}
+                  </Badge>
+                </div>
+              ) : null}
+
+              {/* ── Datos del paciente ─────────────────────────────── */}
+              {selectedVisit ? (
+                <div className="rounded-xl border border-line-struct/60 bg-subtle/20 px-4 py-3">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-txt-muted">
+                    Datos del paciente
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                    <PatientInfoRow
+                      label="Nombre"
+                      value={selectedVisit.nombrePaciente}
+                    />
+                    <PatientInfoRow
+                      label="Expediente"
+                      value={
+                        selectedVisit.noExp ? (
+                          <span className="font-mono">
+                            {selectedVisit.noExp}
+                            {selectedVisit.pkNum > 0 ? (
+                              <span className="ml-1 text-xs font-sans text-txt-muted">
+                                Fam. #{selectedVisit.pkNum}
+                              </span>
+                            ) : null}
+                          </span>
+                        ) : "Sin expediente"
+                      }
+                    />
+                    <PatientInfoRow
+                      label="Edad"
+                      value={
+                        loadingPatient
+                          ? "..."
+                          : paciente?.edad != null
+                          ? `${paciente.edad} años`
+                          : null
+                      }
+                    />
+                    <PatientInfoRow
+                      label="Fecha nac."
+                      value={
+                        loadingPatient ? "..." : formatFechaNac(paciente?.fechaNac)
+                      }
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedVisit ? (
+                <VitalsCaptureLoader
+                  key={selectedVisit.id}
+                  visit={selectedVisit}
+                  canCaptureSomatometriaVitals={canCaptureSomatometriaVitals}
+                  canCaptureSelectedVisit={canCaptureSelectedVisit}
+                />
+              ) : null}
+
+              {!canCaptureSomatometriaVitals ? (
+                <p className="text-sm text-txt-muted" role="status">
+                  No tenes permisos completos para guardar vitales.
+                </p>
+              ) : null}
+
+              {canCaptureSomatometriaVitals && !canCaptureSelectedVisit ? (
+                <p className="text-sm text-status-alert" role="status">
+                  Selecciona una visita en somatometria para capturar vitales.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+        </>
       ) : null}
     </section>
   );

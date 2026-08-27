@@ -44,10 +44,57 @@ export const buildEstudiosMedicosTableColumns = ({
       cellContentClassName: "max-w-[160px]",
     },
     {
-      key: "code",
-      header: "Valor",
+      key: "precio",
+      header: "Precio",
       className: "w-[130px]",
-      render: (row) => row.code ?? "-",
+      render: (row) => row.precio ?? "-",
+    },
+    {
+      key: "indication",
+      header: "Indicacion",
+      className: "w-[220px]",
+      cellContentClassName: "max-w-[220px] truncate",
+      render: (row) => row.indication || "-",
+    },
+    {
+      key: "groupType",
+      header: "Grupo",
+      align: "center",
+      className: "w-[100px]",
+      render: (row) => row.groupType ?? "-",
+    },
+    {
+      key: "providerId",
+      header: "Proveedor",
+      align: "center",
+      className: "w-[110px]",
+      render: (row) => row.providerId ?? "-",
+    },
+    {
+      key: "isGeneral",
+      header: "General",
+      align: "center",
+      className: "w-[100px]",
+      render: (row) => (
+        <CatalogStatusBadge
+          isActive={row.isGeneral}
+          activeLabel="Si"
+          inactiveLabel="No"
+        />
+      ),
+    },
+    {
+      key: "isAuthorized",
+      header: "Autorizacion",
+      align: "center",
+      className: "w-[120px]",
+      render: (row) => (
+        <CatalogStatusBadge
+          isActive={row.isAuthorized}
+          activeLabel="Si"
+          inactiveLabel="No"
+        />
+      ),
     },
     {
       key: "isActive",
@@ -140,7 +187,12 @@ export const buildEstudiosMedicosVisibilityOptions = (
   const options: TableColumnVisibilityItem[] = [
     { key: "name", label: "Nombre" },
     { key: "studyType", label: "Tipo de estudio" },
-    { key: "code", label: "Valor" },
+    { key: "precio", label: "Precio" },
+    { key: "indication", label: "Indicacion" },
+    { key: "groupType", label: "Grupo" },
+    { key: "providerId", label: "Proveedor" },
+    { key: "isGeneral", label: "General" },
+    { key: "isAuthorized", label: "Autorizacion" },
     { key: "isActive", label: "Estado" },
   ];
 

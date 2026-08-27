@@ -14,6 +14,11 @@ export const mapEstudioMedicoDetailToFormValues = (
   name: detail?.name ?? "",
   studyType: detail?.studyType ?? "",
   indication: detail?.indication ?? "",
+  precio: detail?.precio != null ? Number(detail.precio) : undefined,
+  isGeneral: detail?.isGeneral ?? false,
+  isAuthorized: detail?.isAuthorized ?? false,
+  groupType: detail?.groupType ?? undefined,
+  providerId: detail?.providerId ?? undefined,
 });
 
 export const buildCreateEstudioMedicoPayload = (
@@ -22,6 +27,11 @@ export const buildCreateEstudioMedicoPayload = (
   name: values.name.trim(),
   studyType: values.studyType.trim(),
   indication: values.indication.trim(),
+  precio: values.precio != null ? String(values.precio) : null,
+  isGeneral: values.isGeneral,
+  isAuthorized: values.isAuthorized,
+  groupType: values.groupType ?? null,
+  providerId: values.providerId ?? null,
 });
 
 export const buildUpdateEstudioMedicoPayload = (
@@ -38,6 +48,21 @@ export const buildUpdateEstudioMedicoPayload = (
   }
   if (dirtyFields.indication && values.indication !== undefined) {
     payload.indication = values.indication.trim();
+  }
+  if (dirtyFields.precio) {
+    payload.precio = values.precio != null ? String(values.precio) : null;
+  }
+  if (dirtyFields.isGeneral) {
+    payload.isGeneral = values.isGeneral;
+  }
+  if (dirtyFields.isAuthorized) {
+    payload.isAuthorized = values.isAuthorized;
+  }
+  if (dirtyFields.groupType) {
+    payload.groupType = values.groupType ?? null;
+  }
+  if (dirtyFields.providerId) {
+    payload.providerId = values.providerId ?? null;
   }
 
   return payload;
