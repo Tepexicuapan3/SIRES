@@ -152,10 +152,36 @@ export interface CaptureVitalsRequest {
   waistCircumferenceCm?: number;
   glucosaCapilarMgdl?: number;
   notes?: string;
+  /** Visita origen cuando la enfermera elige reusar una captura del mismo
+   * dia (`todayCapture`). El servidor NUNCA copia los valores de esa
+   * visita: siempre guarda lo que viaja en este payload. Este campo es
+   * solo un sello de auditoria (NOM-024). */
+  reusedFromVisitId?: number;
 }
 
-export interface VisitVitalsPayload extends CaptureVitalsRequest {
+/** Detalle de la visita ORIGEN cuando `VisitVitalsPayload.reusedFromVisitId`
+ * no es `null` -- mismos nombres de campo que `TodayCapturePayload`
+ * (`sourceFolio`, `sourceServiceType`, `capturedAt`) para consistencia del
+ * contrato. Permite al medico ver folio/especialidad/hora de origen, no
+ * solo un id crudo. */
+export interface ReusedFromPayload {
+  sourceVisitId: number;
+  sourceFolio: string;
+  sourceServiceType: VisitService;
+  /** Momento en que se tomo la captura EN LA VISITA ORIGEN (no en esta). */
+  capturedAt: string;
+}
+
+export interface VisitVitalsPayload extends Omit<CaptureVitalsRequest, "reusedFromVisitId"> {
   bmi: number;
+  /** Momento de captura (`VisitVitalSigns.fch_alta`) -- visible tanto para
+   * la enfermera (bandeja) como para el medico (`ConsultationDetailDialog`). */
+  capturedAt: string;
+  /** Visita origen si esta captura fue un reuso; `null` si se tomo de cero. */
+  reusedFromVisitId: number | null;
+  /** Folio/especialidad/hora de la visita origen del reuso; `null` cuando
+   * `reusedFromVisitId` tambien es `null` (retrocompatible). */
+  reusedFrom: ReusedFromPayload | null;
 }
 
 export interface CaptureVitalsResponse {
@@ -183,8 +209,21 @@ export interface LatestPatientVitals {
   capturedAt: string;
 }
 
+/** Captura de signos vitales YA tomada HOY (dia calendario local) a la
+ * misma persona (mismo `no_exp`+`pk_num`) en OTRA visita -- permite a la
+ * enfermera reusarla sin repetir la toma. `null` cuando no existe ninguna
+ * (o cuando la unica captura de hoy es la de la propia visita). */
+export interface TodayCapturePayload {
+  sourceVisitId: number;
+  sourceFolio: string;
+  sourceServiceType: VisitService;
+  capturedAt: string;
+  values: Omit<LatestPatientVitals, "capturedAt">;
+}
+
 export interface LatestVitalsResponse {
   vitals: LatestPatientVitals | null;
+  todayCapture: TodayCapturePayload | null;
 }
 
 export interface SaveDiagnosisRequest {

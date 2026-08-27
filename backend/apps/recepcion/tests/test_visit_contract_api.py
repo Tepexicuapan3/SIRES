@@ -300,6 +300,11 @@ class VisitContractsApiTests(APITestCase):
             items_by_patient[visit_with_vitals["noExp"]]["vitals"]["weightKg"],
             70.0,
         )
+        # Retrocompatibilidad: sin reuso, `reusedFromVisitId` y el nuevo
+        # `reusedFrom` (folio/servicio/hora de origen) son ambos None.
+        vitals_without_reuse = items_by_patient[visit_with_vitals["noExp"]]["vitals"]
+        self.assertIsNone(vitals_without_reuse["reusedFromVisitId"])
+        self.assertIsNone(vitals_without_reuse["reusedFrom"])
 
     def test_list_visits_filters_by_service_type(self):
         self._login_as("recepcion_user", self.recepcion_password)

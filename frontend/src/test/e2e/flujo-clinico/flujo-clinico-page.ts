@@ -4,6 +4,12 @@ import type { HttpJsonResponse } from "../shared/http-json-response";
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DOCTOR_QUEUE_KEY = "doctor-open-consultations";
 const DOCTOR_VISIT_CARD_TESTID_PREFIX = "doctor-visit-card-";
+/** Sentinel (no es un selector CSS real) para la cola de somatometria --
+ * desde `somatometria-reuso-signos-mismo-dia` el `<Select>` fue reemplazado
+ * por tarjetas (`SomatometriaQueueCards`), imitando el mismo patron ya
+ * usado para la cola del doctor (`DOCTOR_QUEUE_KEY`). */
+export const SOMATO_QUEUE_KEY = "somato-visit-queue";
+const SOMATO_VISIT_CARD_TESTID_PREFIX = "somato-visit-card-";
 
 export const FLUJO_CLINICO_USERS = {
   recepcion: { username: "recepcion", password: "Sisem_123456" },
@@ -541,8 +547,8 @@ export class FlujoClinicoPage {
 
   async captureVitals(folio: string): Promise<void> {
     await this.gotoSomatometriaQueue();
-    await this.waitForVisitOption("#visit-selector", folio);
-    await this.selectVisitByFolio("#visit-selector", folio);
+    await this.waitForVisitOption(SOMATO_QUEUE_KEY, folio);
+    await this.selectVisitByFolio(SOMATO_QUEUE_KEY, folio);
 
     await this.page
       .getByTestId("somato-weightKg-input")
@@ -574,7 +580,77 @@ export class FlujoClinicoPage {
     await this.expectSuccessToast(/Signos vitales guardados/i);
   }
 
-  async startConsultation(folio: string): Promise<void> {
+  /**
+   * Captura de signos vitales cuando `todayCapture` ya esta disponible
+   * (misma persona, otra visita, mismo dia calendario local). El aviso de
+   * reuso NUNCA viene preseleccionado: valida que aparezca antes de decidir,
+   * y que la decision ("Reusar" o "Capturar nuevos") sea un click explicito
+   * de la enfermera, separado del boton "Guardar signos vitales".
+   */
+  async captureVitalsWithReuseDecision(
+    folio: string,
+    decision: "reuse" | "fresh",
+  ): Promise<HttpJsonResponse> {
+    await this.gotoSomatometriaQueue();
+    await this.waitForVisitOption(SOMATO_QUEUE_KEY, folio);
+    await this.selectVisitByFolio(SOMATO_QUEUE_KEY, folio);
+
+    const banner = this.page.getByTestId("today-capture-banner");
+    await expect(
+      banner,
+      "No aparecio el aviso de reuso de signos vitales del mismo dia",
+    ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+
+    if (decision === "reuse") {
+      await this.page.getByTestId("today-capture-reuse-button").click();
+      await expect(
+        this.page.getByTestId("today-capture-decision-label"),
+      ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+
+      // Reusar precarga el formulario pero los valores siguen siendo
+      // editables -- nada se envia hasta el click explicito en "Guardar".
+      await expect(
+        this.page.getByTestId("somato-weightKg-input"),
+      ).not.toHaveValue("");
+    } else {
+      await this.page.getByTestId("today-capture-fresh-button").click();
+      await this.page
+        .getByTestId("somato-weightKg-input")
+        .fill(DEFAULT_VITALS_INPUT.weightKg);
+      await this.page
+        .getByTestId("somato-heightCm-input")
+        .fill(DEFAULT_VITALS_INPUT.heightCm);
+      await this.page
+        .getByTestId("somato-temperatureC-input")
+        .fill(DEFAULT_VITALS_INPUT.temperatureC);
+      await this.page
+        .getByTestId("somato-oxygenSaturationPct-input")
+        .fill(DEFAULT_VITALS_INPUT.oxygenSaturationPct);
+    }
+
+    const [captureResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes("/vitals") &&
+          response.request().method() === "POST",
+      ),
+      this.page.getByTestId("somato-save-button").click(),
+    ]);
+
+    let body: unknown = null;
+    try {
+      body = await captureResponse.json();
+    } catch {
+      body = null;
+    }
+
+    return {
+      status: captureResponse.status(),
+      body,
+    } satisfies HttpJsonResponse;
+  }
+
+  async openDoctorConsultationModal(folio: string): Promise<void> {
     await this.gotoDoctorQueue();
     await this.waitForDoctorVisitOption(folio);
     await this.selectVisitByFolio(DOCTOR_QUEUE_KEY, folio);
@@ -584,6 +660,10 @@ export class FlujoClinicoPage {
     await expect(
       this.page.getByTestId("doctor-consultation-modal"),
     ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+  }
+
+  async startConsultation(folio: string): Promise<void> {
+    await this.openDoctorConsultationModal(folio);
 
     const [startResponse] = await Promise.all([
       this.page.waitForResponse(
@@ -709,6 +789,27 @@ export class FlujoClinicoPage {
     expect(visit?.status).toBe("lista_para_doctor");
   }
 
+  /**
+   * Requiere que `openDoctorConsultationModal` ya haya abierto el modal.
+   * Valida que el medico vea el momento de captura de los signos vitales
+   * (`capturedAt`) y, cuando corresponda, el aviso de que la captura fue
+   * un reuso de otra visita del mismo dia -- incluyendo folio/especialidad/
+   * hora de la visita ORIGEN (`VisitVitalsPayload.reusedFrom`, cerrado en
+   * Fase 3.9).
+   */
+  async assertVitalsCapturedAtIndicatesReuse(
+    expectReuse: boolean,
+  ): Promise<void> {
+    const indicator = this.page.getByTestId("vitals-captured-at");
+    await expect(indicator).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+
+    if (expectReuse) {
+      await expect(indicator).toContainText(/reusados de la visita/i);
+    } else {
+      await expect(indicator).not.toContainText(/reusados/i);
+    }
+  }
+
   async waitForVisitOption(
     selectId: string,
     folio: string,
@@ -766,6 +867,12 @@ export class FlujoClinicoPage {
         .count();
     }
 
+    if (selectId === SOMATO_QUEUE_KEY) {
+      return this.page
+        .locator(`[data-testid^="${SOMATO_VISIT_CARD_TESTID_PREFIX}"]`)
+        .count();
+    }
+
     const queueStatuses = this.resolveQueueStatuses(selectId);
     const queueItems = await Promise.all(
       queueStatuses.map((status) => this.listVisitsByStatus(status)),
@@ -792,6 +899,22 @@ export class FlujoClinicoPage {
 
       const firstCardFolio = await this.page
         .locator(`[data-testid^="${DOCTOR_VISIT_CARD_TESTID_PREFIX}"]`)
+        .first()
+        .getAttribute("data-visit-folio");
+      expect(firstCardFolio).toBeTruthy();
+      return firstCardFolio as string;
+    }
+
+    if (selectId === SOMATO_QUEUE_KEY) {
+      await expect
+        .poll(async () => this.getOptionCount(selectId), {
+          timeout: DEFAULT_TIMEOUT_MS,
+          intervals: [200, 350, 500],
+        })
+        .toBeGreaterThan(0);
+
+      const firstCardFolio = await this.page
+        .locator(`[data-testid^="${SOMATO_VISIT_CARD_TESTID_PREFIX}"]`)
         .first()
         .getAttribute("data-visit-folio");
       expect(firstCardFolio).toBeTruthy();
@@ -856,6 +979,26 @@ export class FlujoClinicoPage {
       return;
     }
 
+    if (selectId === SOMATO_QUEUE_KEY) {
+      const cardByFolio = this.page
+        .locator(
+          `[data-testid^="${SOMATO_VISIT_CARD_TESTID_PREFIX}"][data-visit-folio="${folio}"]`,
+        )
+        .first();
+
+      if ((await cardByFolio.count()) > 0) {
+        await cardByFolio.click();
+        return;
+      }
+
+      await this.page
+        .locator(`[data-testid^="${SOMATO_VISIT_CARD_TESTID_PREFIX}"]`)
+        .filter({ hasText: folio })
+        .first()
+        .click();
+      return;
+    }
+
     const nativeOptionLocator = this.page
       .locator(`${selectId} option`, {
         hasText: folio,
@@ -894,6 +1037,16 @@ export class FlujoClinicoPage {
         .first();
 
       return doctorCard.isVisible().catch(() => false);
+    }
+
+    if (selectId === SOMATO_QUEUE_KEY) {
+      const somatoCard = this.page
+        .locator(
+          `[data-testid^="${SOMATO_VISIT_CARD_TESTID_PREFIX}"][data-visit-folio="${folio}"]`,
+        )
+        .first();
+
+      return somatoCard.isVisible().catch(() => false);
     }
 
     const nativeOption = this.page

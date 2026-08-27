@@ -9,16 +9,9 @@ import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Separator } from "@shared/ui/separator";
 import { Textarea } from "@shared/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@shared/ui/select";
 import { toast } from "sonner";
 import { VISIT_STATUS } from "@api/types";
-import type { LatestPatientVitals } from "@api/types";
+import type { CaptureVitalsRequest, LatestPatientVitals, TodayCapturePayload } from "@api/types";
 import { canCaptureVitals } from "@features/operativo/shared/domain/visit-flow.constants";
 import {
   captureVitalsFormSchema,
@@ -30,6 +23,11 @@ import { useCaptureVitals } from "@features/somatometria/modules/captura/mutatio
 import { useLatestVitals } from "@features/somatometria/modules/captura/queries/useLatestVitals";
 import { useSomatometriaQueue } from "@features/somatometria/modules/captura/queries/useSomatometriaQueue";
 import { usePatientLookupHistorico } from "@features/recepcion/modules/checkin/queries/usePatientLookup";
+import { SomatometriaQueueCards } from "@features/somatometria/modules/captura/components/SomatometriaQueueCards";
+import {
+  TodayCaptureBanner,
+  type TodayCaptureDecision,
+} from "@features/somatometria/modules/captura/components/TodayCaptureBanner";
 
 /** Item de la bandeja tal cual lo devuelve `useSomatometriaQueue` -- se
  * infiere del propio hook en vez de importar un tipo aparte para no
@@ -114,6 +112,27 @@ const formatCapturedAt = (iso: string): string =>
     year: "numeric",
   });
 
+/** Metricas puras (sin `capturedAt`) -- forma comun entre `LatestPatientVitals`
+ * (ultima captura del paciente, cualquier dia) y `TodayCapturePayload.values`
+ * (captura de hoy en otra visita, candidata a reuso). */
+type VitalsMetricsInput = Omit<LatestPatientVitals, "capturedAt">;
+
+const metricsToFormValues = (
+  metrics: VitalsMetricsInput,
+): CaptureVitalsFormInput => ({
+  weightKg: numberOrEmpty(metrics.weightKg),
+  heightCm: numberOrEmpty(metrics.heightCm),
+  temperatureC: numberOrEmpty(metrics.temperatureC),
+  oxygenSaturationPct: numberOrEmpty(metrics.oxygenSaturationPct),
+  heartRateBpm: numberOrEmpty(metrics.heartRateBpm),
+  respiratoryRateBpm: numberOrEmpty(metrics.respiratoryRateBpm),
+  bloodPressureSystolic: numberOrEmpty(metrics.bloodPressureSystolic),
+  bloodPressureDiastolic: numberOrEmpty(metrics.bloodPressureDiastolic),
+  glucosaCapilarMgdl: numberOrEmpty(metrics.glucosaCapilarMgdl),
+  waistCircumferenceCm: numberOrEmpty(metrics.waistCircumferenceCm),
+  observations: "",
+});
+
 /** Convierte la ultima captura del paciente (si existe) en los valores
  * iniciales del formulario -- se usa SOLO como `defaultValues` de
  * `useForm`, nunca via `form.reset()` en un efecto: este componente se
@@ -121,24 +140,12 @@ const formatCapturedAt = (iso: string): string =>
  * arranca con el valor correcto sin necesitar sincronizarlo despues. */
 const buildDefaultValues = (
   latest: LatestPatientVitals | null,
-): CaptureVitalsFormInput =>
-  latest
-    ? {
-        weightKg: numberOrEmpty(latest.weightKg),
-        heightCm: numberOrEmpty(latest.heightCm),
-        temperatureC: numberOrEmpty(latest.temperatureC),
-        oxygenSaturationPct: numberOrEmpty(latest.oxygenSaturationPct),
-        heartRateBpm: numberOrEmpty(latest.heartRateBpm),
-        respiratoryRateBpm: numberOrEmpty(latest.respiratoryRateBpm),
-        bloodPressureSystolic: numberOrEmpty(latest.bloodPressureSystolic),
-        bloodPressureDiastolic: numberOrEmpty(latest.bloodPressureDiastolic),
-        glucosaCapilarMgdl: numberOrEmpty(latest.glucosaCapilarMgdl),
-        waistCircumferenceCm: numberOrEmpty(latest.waistCircumferenceCm),
-        observations: "",
-      }
-    : DEFAULT_FORM_VALUES;
+): CaptureVitalsFormInput => (latest ? metricsToFormValues(latest) : DEFAULT_FORM_VALUES);
 
-const buildCaptureVitalsPayload = (values: CaptureVitalsFormValues) => ({
+const buildCaptureVitalsPayload = (
+  values: CaptureVitalsFormValues,
+  reusedFromVisitId: number | null,
+): CaptureVitalsRequest => ({
   weightKg:              values.weightKg,
   heightCm:              values.heightCm,
   temperatureC:          values.temperatureC,
@@ -150,6 +157,7 @@ const buildCaptureVitalsPayload = (values: CaptureVitalsFormValues) => ({
   glucosaCapilarMgdl:    values.glucosaCapilarMgdl,
   waistCircumferenceCm:  values.waistCircumferenceCm,
   notes:                 values.observations,
+  reusedFromVisitId:     reusedFromVisitId ?? undefined,
 });
 
 const resolveCaptureVitalsErrorMessage = (error: unknown): string => {
@@ -229,6 +237,7 @@ function PatientInfoRow({ label, value }: { label: string; value: React.ReactNod
 interface VitalsCaptureFormProps {
   visit: QueueVisit;
   initialVitals: LatestPatientVitals | null;
+  todayCapture: TodayCapturePayload | null;
   canCaptureSomatometriaVitals: boolean;
   canCaptureSelectedVisit: boolean;
 }
@@ -236,16 +245,25 @@ interface VitalsCaptureFormProps {
 function VitalsCaptureForm({
   visit,
   initialVitals,
+  todayCapture,
   canCaptureSomatometriaVitals,
   canCaptureSelectedVisit,
 }: VitalsCaptureFormProps) {
   const captureVitals = useCaptureVitals();
   const [capturedBmi, setCapturedBmi] = useState<number | null>(null);
 
+  // El reuso NUNCA viene preseleccionado: si hay `todayCapture` disponible,
+  // la decision arranca en "pending" y el formulario arranca VACIO (no con
+  // `initialVitals`) hasta que la enfermera elija explicitamente Reusar o
+  // Capturar nuevos -- de lo contrario estariamos precargando en silencio
+  // los mismos valores que el reuso ofrece de forma explicita.
+  const [reuseDecision, setReuseDecision] = useState<TodayCaptureDecision>("pending");
+  const [reusedFromVisitId, setReusedFromVisitId] = useState<number | null>(null);
+
   const form = useForm<CaptureVitalsFormInput, unknown, CaptureVitalsFormValues>({
     resolver: zodResolver(captureVitalsFormSchema),
     mode: "onChange",
-    defaultValues: buildDefaultValues(initialVitals),
+    defaultValues: todayCapture ? DEFAULT_FORM_VALUES : buildDefaultValues(initialVitals),
   });
 
   const [watchedWeightKg, watchedHeightCm] = useWatch({
@@ -261,13 +279,26 @@ function VitalsCaptureForm({
       : null;
   const visibleBmi = bmiPreview ?? capturedBmi;
 
+  const handleReuseTodayCapture = () => {
+    if (!todayCapture) return;
+    form.reset(metricsToFormValues(todayCapture.values));
+    setReusedFromVisitId(todayCapture.sourceVisitId);
+    setReuseDecision("reused");
+  };
+
+  const handleCaptureFresh = () => {
+    form.reset(DEFAULT_FORM_VALUES);
+    setReusedFromVisitId(null);
+    setReuseDecision("fresh");
+  };
+
   const handleCaptureVitals = async (values: CaptureVitalsFormValues) => {
     if (!canCaptureSomatometriaVitals || !canCaptureSelectedVisit) return;
 
     try {
       await captureVitals.mutateAsync({
         visitId: visit.id,
-        data: buildCaptureVitalsPayload(values),
+        data: buildCaptureVitalsPayload(values, reusedFromVisitId),
       });
 
       toast.success("Signos vitales guardados correctamente.", {
@@ -275,6 +306,8 @@ function VitalsCaptureForm({
       });
       form.reset(DEFAULT_FORM_VALUES);
       setCapturedBmi(null);
+      setReusedFromVisitId(null);
+      setReuseDecision("pending");
     } catch (error) {
       setCapturedBmi(null);
       toast.error("No se pudo guardar", {
@@ -287,7 +320,17 @@ function VitalsCaptureForm({
 
   return (
     <>
-      {initialVitals ? (
+      {todayCapture ? (
+        <TodayCaptureBanner
+          todayCapture={todayCapture}
+          decision={reuseDecision}
+          onReuse={handleReuseTodayCapture}
+          onCaptureFresh={handleCaptureFresh}
+          disabled={isFormDisabled}
+        />
+      ) : null}
+
+      {initialVitals && !todayCapture ? (
         <Alert>
           <AlertTitle>Valores precargados</AlertTitle>
           <AlertDescription>
@@ -503,6 +546,7 @@ function VitalsCaptureLoader({
     <VitalsCaptureForm
       visit={visit}
       initialVitals={latestVitalsQuery.data?.vitals ?? null}
+      todayCapture={latestVitalsQuery.data?.todayCapture ?? null}
       canCaptureSomatometriaVitals={canCaptureSomatometriaVitals}
       canCaptureSelectedVisit={canCaptureSelectedVisit}
     />
@@ -597,43 +641,29 @@ export const SomatometriaCapturePage = () => {
       visits.length > 0 ? (
         <section className="space-y-5 rounded-xl border border-line-hairline bg-paper p-5">
 
-          {/* ── Selector de visita ─────────────────────────────── */}
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
-            <div className="space-y-2">
-              <Label htmlFor="visit-selector">Visita activa</Label>
-              <Select
-                value={selectedVisitId?.toString() ?? ""}
-                onValueChange={(value) => setSelectedVisitIdState(Number(value))}
-              >
-                <SelectTrigger
-                  id="visit-selector"
-                  className="w-full"
-                  data-testid="somato-visit-selector"
-                >
-                  <SelectValue placeholder="Selecciona una visita" />
-                </SelectTrigger>
-                <SelectContent>
-                  {visits.map((visit) => (
-                    <SelectItem key={visit.id} value={visit.id.toString()}>
-                      {visit.folio} — {visit.nombrePaciente ?? formatStatusLabel(visit.status)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <p className="text-xs text-txt-muted">Folio</p>
-              <p className="text-sm font-medium font-mono text-txt-body">
-                {selectedVisit?.folio}
-              </p>
-            </div>
-            <Badge
-              variant="outline"
-              className="justify-self-start uppercase md:justify-self-end"
-            >
-              {formatStatusLabel(currentStatus)}
-            </Badge>
+          {/* ── Cola de somatometria (tarjetas) ─────────────────── */}
+          <div className="space-y-2">
+            <Label>Cola de somatometria</Label>
+            <SomatometriaQueueCards
+              visits={visits}
+              selectedVisitId={selectedVisitId}
+              onSelectVisit={setSelectedVisitIdState}
+            />
           </div>
+
+          {selectedVisit ? (
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-line-struct/60 bg-subtle/20 px-4 py-2">
+              <div>
+                <p className="text-xs text-txt-muted">Visita seleccionada · Folio</p>
+                <p className="text-sm font-medium font-mono text-txt-body">
+                  {selectedVisit.folio}
+                </p>
+              </div>
+              <Badge variant="outline" className="uppercase">
+                {formatStatusLabel(currentStatus)}
+              </Badge>
+            </div>
+          ) : null}
 
           {/* ── Datos del paciente ─────────────────────────────── */}
           {selectedVisit ? (

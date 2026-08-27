@@ -57,6 +57,11 @@ class CaptureVitalsSerializer(serializers.Serializer):
         allow_null=True,
     )
     notes = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=255)
+    reusedFromVisitId = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        min_value=1,
+    )
 
     def validate(self, attrs):
         systolic = attrs.get("bloodPressureSystolic")

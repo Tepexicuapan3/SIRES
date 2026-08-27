@@ -135,6 +135,27 @@ export const formatServiceTypeLabel = (serviceType: string): string => {
   return SERVICE_TYPE_LABEL[serviceType] ?? serviceType;
 };
 
+/** Fecha/hora legible del momento de captura de los signos vitales
+ * (`VisitVitalsPayload.capturedAt`), para que el medico vea cuando se
+ * tomaron -- no solo el dato crudo. */
+export const formatCapturedAtTime = (
+  capturedAt: string | null | undefined,
+): string => {
+  if (!capturedAt) return MISSING_VITAL_VALUE;
+
+  const date = new Date(capturedAt);
+  if (Number.isNaN(date.getTime())) return MISSING_VITAL_VALUE;
+
+  return date.toLocaleString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
 export const formatArrivalTypeLabel = (arrivalType: string): string => {
   return ARRIVAL_LABEL[arrivalType] ?? arrivalType;
 };

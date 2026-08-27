@@ -593,6 +593,27 @@ export type {
 } from "@api/types/catalogos/parentesco.types";
 
 // =============================================================================
+// DISCAPACIDADES TYPES (CRUD)
+// =============================================================================
+export type {
+  // Entidades
+  DiscapacidadListItem,
+  DiscapacidadDetail,
+  // CRUD Requests
+  CreateDiscapacidadRequest,
+  UpdateDiscapacidadRequest,
+  // CRUD Responses
+  CreateDiscapacidadResponse,
+  UpdateDiscapacidadResponse,
+  DeleteDiscapacidadResponse,
+  // Listados
+  DiscapacidadesListParams,
+  DiscapacidadesListResponse,
+  // Detalle
+  DiscapacidadDetailResponse,
+} from "@api/types/catalogos/discapacidades.types";
+
+// =============================================================================
 // ESCUELAS TYPES (CRUD)
 // =============================================================================
 export type {
@@ -633,27 +654,6 @@ export type {
   // Detalle
   EstudioMedicoDetailResponse,
 } from "@api/types/catalogos/estudios-medicos.types";
-
-// =============================================================================
-// ESTUDIOS TYPES (CRUD)
-// =============================================================================
-export type {
-  // Entidades
-  EstudioListItem,
-  EstudioDetail,
-  // CRUD Requests
-  CreateEstudioRequest,
-  UpdateEstudioRequest,
-  // CRUD Responses
-  CreateEstudioResponse,
-  UpdateEstudioResponse,
-  DeleteEstudioResponse,
-  // Listados
-  EstudiosListParams,
-  EstudiosListResponse,
-  // Detalle
-  EstudioDetailResponse,
-} from "@api/types/catalogos/estudios.types";
 
 // =============================================================================
 // CATÁLOGO ESTADO CIVIL
@@ -827,8 +827,10 @@ export type {
   CaptureVitalsRequest,
   CaptureVitalsResponse,
   VisitVitalsPayload,
+  ReusedFromPayload,
   LatestPatientVitals,
   LatestVitalsResponse,
+  TodayCapturePayload,
   SaveDiagnosisRequest,
   SaveDiagnosisResponse,
   CieSearchParams,

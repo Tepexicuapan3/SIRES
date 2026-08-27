@@ -281,6 +281,10 @@ class Visit(models.Model):
         indexes = [
             models.Index(fields=["doctor", "status"], name="rcp_visits_doc_status_idx"),
             models.Index(fields=["fch_alta"], name="rcp_visits_fch_alta_idx"),
+            # Soporta el lookup de "signos vitales de hoy" por integrante
+            # familiar (join VisitVitalSigns -> Visit filtrando por
+            # no_exp+pk_num) usado por el reuso mismo dia (Fase 2).
+            models.Index(fields=["no_exp", "pk_num"], name="rcp_visits_noexp_pknum_idx"),
         ]
         constraints = [
             models.CheckConstraint(

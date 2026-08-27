@@ -75,7 +75,15 @@ class VisitRepository:
     def get_by_id(visit_id: int) -> Visit | None:
         return (
             Visit.objects
-            .select_related("consultorio__id_center", "vital_signs")
+            .select_related(
+                "consultorio__id_center",
+                "vital_signs",
+                # Detalle de la visita ORIGEN cuando `vital_signs` es un
+                # reuso (`reused_from_visit`), + los vitales DE ESA visita
+                # origen (su propio `fch_alta`) -- evita 2 queries extra
+                # por visita al armar `reusedFrom` en `to_contract`.
+                "vital_signs__reused_from_visit__vital_signs",
+            )
             .filter(id_visit=visit_id)
             .first()
         )
@@ -113,7 +121,14 @@ class VisitRepository:
     ) -> tuple[list[Visit], int, int]:
         queryset = (
             Visit.objects
-            .select_related("consultorio__id_center", "vital_signs")
+            .select_related(
+                "consultorio__id_center",
+                "vital_signs",
+                # Ver comentario en `get_by_id`: precarga la visita origen
+                # del reuso + sus propios vitales para toda la pagina de la
+                # cola, sin N+1 por fila.
+                "vital_signs__reused_from_visit__vital_signs",
+            )
             .order_by("-id_visit")
         )
 

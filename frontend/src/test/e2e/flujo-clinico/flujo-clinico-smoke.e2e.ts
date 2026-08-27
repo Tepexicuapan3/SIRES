@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "@playwright/test";
 
-import { FLUJO_CLINICO_USERS, FlujoClinicoPage } from "./flujo-clinico-page";
+import {
+  FLUJO_CLINICO_USERS,
+  FlujoClinicoPage,
+  SOMATO_QUEUE_KEY,
+} from "./flujo-clinico-page";
 
 const createNoExp = (): string => {
   return String(900000 + (Date.now() % 90000));
@@ -65,7 +69,7 @@ test.describe("Flujo clinico smoke", () => {
           .poll(
             async () =>
               recepcionPage.isVisitVisible(
-                "#visit-selector",
+                SOMATO_QUEUE_KEY,
                 createdVisit.folio,
               ),
             {
@@ -178,7 +182,7 @@ test.describe("Flujo clinico smoke", () => {
         ).toBe(200);
 
         await actorB.waitForVisitOption(
-          "#visit-selector",
+          SOMATO_QUEUE_KEY,
           createdVisit.folio,
           5_000,
         );

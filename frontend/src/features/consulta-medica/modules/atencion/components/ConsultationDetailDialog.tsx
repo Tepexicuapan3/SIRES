@@ -29,6 +29,7 @@ import { AppointmentAlertBadge, ConsultationElapsedBadge } from "./ConsultationB
 import {
   formatArrivalTypeLabel,
   formatBloodPressure,
+  formatCapturedAtTime,
   formatMetricWithUnit,
   formatOptionalMetric,
   formatServiceTypeLabel,
@@ -233,9 +234,28 @@ export function ConsultationDetailDialog({
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
-                  Signos vitales
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-txt-muted">
+                    Signos vitales
+                  </p>
+                  {selectedVitals ? (
+                    <p
+                      className="text-xs text-txt-muted"
+                      data-testid="vitals-captured-at"
+                    >
+                      Tomados {formatCapturedAtTime(selectedVitals.capturedAt)}
+                      {selectedVitals.reusedFrom
+                        ? ` · reusados de la visita ${selectedVitals.reusedFrom.sourceFolio} (${formatServiceTypeLabel(
+                            selectedVitals.reusedFrom.sourceServiceType,
+                          )}), tomados ${formatCapturedAtTime(
+                            selectedVitals.reusedFrom.capturedAt,
+                          )}`
+                        : selectedVitals.reusedFromVisitId != null
+                        ? " · reusados de otra visita del mismo dia"
+                        : ""}
+                    </p>
+                  ) : null}
+                </div>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                   <VitalMetric
                     label="Peso"

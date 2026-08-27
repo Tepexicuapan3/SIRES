@@ -14,6 +14,10 @@ import { useSavePrescriptions } from "@features/consulta-medica/modules/atencion
 import { useStartConsultation } from "@features/consulta-medica/modules/atencion/mutations/useStartConsultation";
 import { useCieSearch } from "@features/consulta-medica/modules/atencion/queries/useCieSearch";
 import { useDoctorQueue } from "@features/consulta-medica/modules/atencion/queries/useDoctorQueue";
+import {
+  formatCapturedAtTime,
+  formatServiceTypeLabel,
+} from "@features/consulta-medica/modules/atencion/pages/DoctorConsultationPage.helpers";
 import type { VisitQueueItem } from "@api/types";
 
 vi.mock(
@@ -673,6 +677,9 @@ describe("DoctorConsultationPage UI", () => {
               oxygenSaturationPct: 98,
               notes: "Paciente con ayuno de 8 horas.",
               bmi: 23.7,
+              capturedAt: "2026-08-26T09:14:00Z",
+              reusedFromVisitId: null,
+              reusedFrom: null,
             },
           }),
         ],
@@ -694,6 +701,71 @@ describe("DoctorConsultationPage UI", () => {
     expect(screen.getByText("98 %")).toBeVisible();
     expect(screen.getByText("23.7")).toBeVisible();
     expect(screen.getByText("Paciente con ayuno de 8 horas.")).toBeVisible();
+
+    // Regresion del WARNING de sdd-verify: el momento de captura debe
+    // mostrarse correctamente (antes solo estaba implementado, sin test).
+    const capturedAtIndicator = screen.getByTestId("vitals-captured-at");
+    expect(capturedAtIndicator).toHaveTextContent(
+      `Tomados ${formatCapturedAtTime("2026-08-26T09:14:00Z")}`,
+    );
+    // Sin reuso (`reusedFromVisitId`/`reusedFrom` en null) no debe
+    // aparecer ningun aviso de reuso.
+    expect(capturedAtIndicator).not.toHaveTextContent(/reusados/i);
+  });
+
+  it("muestra folio, especialidad y hora de origen cuando los vitales fueron reusados", () => {
+    const capturedAt = "2026-08-26T09:14:00Z";
+    const sourceCapturedAt = "2026-08-26T07:05:00Z";
+
+    vi.mocked(useDoctorQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            status: "en_consulta",
+            vitals: {
+              weightKg: 70,
+              heightCm: 172,
+              temperatureC: 36.6,
+              oxygenSaturationPct: 98,
+              notes: "Paciente con ayuno de 8 horas.",
+              bmi: 23.7,
+              capturedAt,
+              reusedFromVisitId: 555,
+              reusedFrom: {
+                sourceVisitId: 555,
+                sourceFolio: "VST-000555",
+                sourceServiceType: "urgencias",
+                capturedAt: sourceCapturedAt,
+              },
+            },
+          }),
+        ],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    renderDoctorPage("/clinico/consultas/doctor/1");
+
+    // Gap cerrado por Fase 3.9: la UI ya no solo avisa que hubo reuso --
+    // muestra folio, especialidad y hora de la visita ORIGEN, no solo un
+    // id crudo (`reused_from_visit`).
+    const capturedAtIndicator = screen.getByTestId("vitals-captured-at");
+    expect(capturedAtIndicator).toHaveTextContent(
+      `Tomados ${formatCapturedAtTime(capturedAt)}`,
+    );
+    expect(capturedAtIndicator).toHaveTextContent("VST-000555");
+    expect(capturedAtIndicator).toHaveTextContent(
+      formatServiceTypeLabel("urgencias"),
+    );
+    expect(capturedAtIndicator).toHaveTextContent(
+      formatCapturedAtTime(sourceCapturedAt),
+    );
   });
 
   it("muestra fallback claro cuando faltan signos vitales", () => {

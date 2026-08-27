@@ -8,7 +8,7 @@ import { useSomatometriaQueue } from "@features/somatometria/modules/captura/que
 import { useCaptureVitals } from "@features/somatometria/modules/captura/mutations/useCaptureVitals";
 import { useLatestVitals } from "@features/somatometria/modules/captura/queries/useLatestVitals";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
-import type { VisitQueueItem } from "@api/types";
+import type { TodayCapturePayload, VisitQueueItem } from "@api/types";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -323,6 +323,9 @@ describe("SomatometriaCapturePage UI", () => {
               oxygenSaturationPct: 99,
               notes: "historial previo",
               bmi: 22.53,
+              capturedAt: "2026-08-01T00:00:00Z",
+              reusedFromVisitId: null,
+              reusedFrom: null,
             },
           }),
         ],
@@ -426,5 +429,71 @@ describe("SomatometriaCapturePage UI", () => {
       ),
     ).toBeVisible();
     expect(screen.getByTestId("somato-save-button")).toBeDisabled();
+  });
+
+  it("precarga el formulario al reusar pero sigue siendo editable -- nunca clona a ciegas", async () => {
+    const todayCapture: TodayCapturePayload = {
+      sourceVisitId: 42,
+      sourceFolio: "VST-000042",
+      sourceServiceType: "medicina_general",
+      capturedAt: "2026-08-26T08:00:00Z",
+      values: {
+        weightKg: 70,
+        heightCm: 175,
+        temperatureC: 36.5,
+        oxygenSaturationPct: 97,
+        heartRateBpm: 72,
+        respiratoryRateBpm: 16,
+        bloodPressureSystolic: 120,
+        bloodPressureDiastolic: 80,
+        waistCircumferenceCm: 90,
+        glucosaCapilarMgdl: 95,
+        bmi: 22.86,
+      },
+    };
+
+    vi.mocked(useLatestVitals).mockReturnValue({
+      data: { vitals: null, todayCapture },
+      isLoading: false,
+      isSuccess: true,
+    } as unknown as ReturnType<typeof useLatestVitals>);
+
+    const user = userEvent.setup();
+    render(<SomatometriaCapturePage />);
+
+    // El reuso no viene preseleccionado: el formulario arranca vacio hasta
+    // que la enfermera hace click en "Reusar estos valores".
+    expectVitalsFormReset();
+
+    await user.click(screen.getByTestId("today-capture-reuse-button"));
+
+    // Al reusar, el formulario se precarga con los valores de `todayCapture`.
+    expect(getVitalsInput("weightKg")).toHaveValue(70);
+    expect(getVitalsInput("heightCm")).toHaveValue(175);
+    expect(getVitalsInput("temperatureC")).toHaveValue(36.5);
+    expect(getVitalsInput("oxygenSaturationPct")).toHaveValue(97);
+
+    // Pero sigue siendo editable: la enfermera corrige el peso antes de
+    // guardar (el servidor/cliente nunca "clona ciegamente" el origen).
+    await user.clear(getVitalsInput("weightKg"));
+    await user.type(getVitalsInput("weightKg"), "72");
+
+    await user.click(screen.getByTestId("somato-save-button"));
+
+    await waitFor(() => {
+      expect(captureMutateAsync).toHaveBeenCalledWith({
+        visitId: 1,
+        data: expect.objectContaining({
+          weightKg: 72,
+          reusedFromVisitId: 42,
+        }),
+      });
+    });
+
+    // El valor guardado es el EDITADO -- nunca el 70 original de
+    // `todayCapture.values`.
+    const savedPayload = captureMutateAsync.mock.calls[0][0].data;
+    expect(savedPayload.weightKg).not.toBe(70);
+    expect(savedPayload.weightKg).toBe(72);
   });
 });

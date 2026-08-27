@@ -94,10 +94,15 @@ class VisitVitalsView(APIView):
 
     def get(self, request, visit_id):
         """
-        Ultima captura de signos vitales del PACIENTE de esta visita (no de
+        `{"vitals": ..., "todayCapture": ...}` para la visita.
+
+        `vitals` es la ultima captura de signos vitales del PACIENTE (no de
         la visita en si) -- la usa el formulario para precargar valores por
-        default. Devuelve `{"vitals": null}` si el paciente nunca tuvo una
-        captura previa (paciente nuevo).
+        default; `null` si el paciente nunca tuvo una captura previa.
+
+        `todayCapture` es una captura YA tomada HOY (dia calendario local)
+        a la misma persona en OTRA visita -- permite a la enfermera reusar
+        signos vitales sin repetir la toma; `null` si no existe ninguna.
         """
         user, error = _auth_or_error(request)
         if error:
@@ -109,11 +114,11 @@ class VisitVitalsView(APIView):
             return _domain_error_response(request, exc)
 
         try:
-            latest = get_latest_vitals_for_visit(visit_id)
+            result = get_latest_vitals_for_visit(visit_id)
         except VisitFlowError as exc:
             return _domain_error_response(request, exc)
 
-        return Response({"vitals": latest}, status=status.HTTP_200_OK)
+        return Response(result, status=status.HTTP_200_OK)
 
     def post(self, request, visit_id):
         user, error = _auth_or_error(request)
@@ -163,6 +168,7 @@ class VisitVitalsView(APIView):
                 "module": "somatometria",
                 "endpoint": request.path,
                 "visitId": result.get("visitId"),
+                "reusedFromVisitId": serializer.validated_data.get("reusedFromVisitId"),
             },
         )
 

@@ -55,25 +55,50 @@ class VisitVitalSigns(models.Model):
         blank=True,
     )
     notes = models.CharField(max_length=255, db_column="notes", null=True, blank=True)
+    reused_from_visit = models.ForeignKey(
+        "recepcion.Visit",
+        db_column="reused_from_visit",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reused_vital_signs",
+        help_text=(
+            "Visita origen cuando esta captura reusa signos vitales tomados "
+            "hoy en otra visita del mismo paciente (trazabilidad NOM-024). "
+            "El servidor NUNCA copia valores del origen: los que se guardan "
+            "aca son siempre los que vienen en el payload de esta captura."
+        ),
+    )
     fch_alta = models.DateTimeField(auto_now_add=True, db_column="fch_alta")
     fch_modf = models.DateTimeField(auto_now=True, db_column="fch_modf")
 
     class Meta:
         db_table = "smt_visit_vitals"
+        indexes = [
+            models.Index(fields=["fch_alta"], name="smt_visit_vitals_fchalta_idx"),
+        ]
 
 
 class PatientLatestVitals(models.Model):
     """
-    Ultima captura de signos vitales POR PACIENTE (`no_exp`) -- una sola
-    fila que se sobreescribe en cada consulta nueva. Es un espejo/cache de
-    conveniencia para precargar el formulario de la siguiente consulta,
-    NUNCA la fuente de verdad del expediente: esa sigue siendo
-    `VisitVitalSigns`, con una fila por visita, que jamas se sobreescribe
-    (perder esa historia rompe la trazabilidad clinica que exige la
-    NOM-024/NOM-004).
+    Ultima captura de signos vitales POR INTEGRANTE DEL NUCLEO FAMILIAR
+    (`no_exp` + `pk_num`) -- una sola fila que se sobreescribe en cada
+    consulta nueva. Es un espejo/cache de conveniencia para precargar el
+    formulario de la siguiente consulta, NUNCA la fuente de verdad del
+    expediente: esa sigue siendo `VisitVitalSigns`, con una fila por
+    visita, que jamas se sobreescribe (perder esa historia rompe la
+    trazabilidad clinica que exige la NOM-024/NOM-004).
+
+    IMPORTANTE: `no_exp` es compartido por todo el nucleo familiar
+    (titular + derechohabientes); la clave efectiva de esta fila es
+    SIEMPRE el par (`no_exp`, `pk_num`) -- ver `Meta.constraints`. Filtrar
+    o hacer upsert usando solo `no_exp` mezcla el cache entre personas
+    distintas de la misma familia.
     """
 
-    no_exp = models.CharField(max_length=20, primary_key=True, db_column="no_exp")
+    id_latest = models.BigAutoField(primary_key=True, db_column="id_latest")
+    no_exp = models.CharField(max_length=20, db_column="no_exp", db_index=True)
+    pk_num = models.IntegerField(db_column="pk_num", default=0)
     weight_kg = models.DecimalField(max_digits=6, decimal_places=2, db_column="weight_kg")
     height_cm = models.DecimalField(max_digits=6, decimal_places=2, db_column="height_cm")
     temperature_c = models.DecimalField(
@@ -131,3 +156,9 @@ class PatientLatestVitals(models.Model):
 
     class Meta:
         db_table = "smt_patient_latest_vitals"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["no_exp", "pk_num"],
+                name="smt_latest_vitals_noexp_pknum_uq",
+            ),
+        ]

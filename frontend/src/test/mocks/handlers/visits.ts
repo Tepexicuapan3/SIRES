@@ -181,6 +181,9 @@ export const visitsHandlers = [
         vitals: {
           ...payload,
           bmi,
+          capturedAt: new Date().toISOString(),
+          reusedFromVisitId: null,
+          reusedFrom: null,
         },
       };
       state.visitsStore[visitIndex] = nextVisit;

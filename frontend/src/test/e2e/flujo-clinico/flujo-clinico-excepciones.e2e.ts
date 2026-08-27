@@ -1,7 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
-import { FLUJO_CLINICO_USERS, FlujoClinicoPage } from "./flujo-clinico-page";
+import {
+  FLUJO_CLINICO_USERS,
+  FlujoClinicoPage,
+  SOMATO_QUEUE_KEY,
+} from "./flujo-clinico-page";
 
 const createNoExp = (): string => {
   return String(910000 + ((Date.now() + Math.floor(Math.random() * 1000)) % 80000));
@@ -83,7 +87,7 @@ test.describe("Flujo clinico excepciones", () => {
         await expect
           .poll(
             async () =>
-              clinicoPage.isVisitVisible("#visit-selector", visit.folio),
+              clinicoPage.isVisitVisible(SOMATO_QUEUE_KEY, visit.folio),
             VISIBILITY_TIMEOUT,
           )
           .toBe(false);
@@ -156,7 +160,7 @@ test.describe("Flujo clinico excepciones", () => {
         await expect
           .poll(
             async () =>
-              clinicoPage.isVisitVisible("#visit-selector", visit.folio),
+              clinicoPage.isVisitVisible(SOMATO_QUEUE_KEY, visit.folio),
             VISIBILITY_TIMEOUT,
           )
           .toBe(false);
