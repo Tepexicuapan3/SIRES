@@ -15,6 +15,7 @@ import { setReservaDraft } from "@/api/reservaDraftStore";
 import ErrorAlert from "@/components/ErrorAlert";
 import SlotsMonthCalendar from "@/components/SlotsMonthCalendar";
 import { ParticlesBackground } from "@/components/ParticlesBackground";
+import AnunciosBanner from "@/components/AnunciosBanner";
 
 type Step = "miembro" | "horario";
 
@@ -185,6 +186,8 @@ export default function HomePage() {
             </button>
           </div>
         </header>
+
+        <AnunciosBanner />
 
         {step === "miembro" && (
           <section className="flex flex-col gap-4 rounded-2xl border border-line-struct bg-paper/85 p-4 shadow-sm backdrop-blur-md sm:p-6">

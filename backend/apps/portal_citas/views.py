@@ -21,6 +21,7 @@ Fase 7.
 
 import logging
 
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import serializers, status
@@ -28,6 +29,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authentication.services.response_service import error_response, get_request_id
+from apps.comunicados.serializers import AnuncioPortalSerializer
+from apps.comunicados.uses_case.listar_anuncios_vigentes_use_case import (
+    ListarAnunciosVigentesUseCase,
+)
 from apps.portal_citas.authentication import PortalTokenAuthentication
 from apps.portal_citas.errors import PortalAuthError, PortalCancelacionError, PortalReservaError
 from apps.portal_citas.permissions import IsPortalUser
@@ -251,6 +256,25 @@ class EspecialidadesPortalView(APIView):
 
     def get(self, request):
         return Response({"especialidades": listar_especialidades()})
+
+
+class AnunciosPortalView(APIView):
+    """
+    GET /portal/anuncios — anuncios/flyers vigentes (módulo Comunicados,
+    change `anuncios-portal-citas`) para el banner del portal de citas.
+    Requiere sesión de portal válida, mismo molde que
+    ``EspecialidadesPortalView`` (decisión 9 del índice de arquitectura
+    `architecture/anuncios-portal-citas`: NO es un endpoint público sin
+    sesión). Nunca responde 404 -- lista vacía si no hay anuncios vigentes.
+    """
+
+    authentication_classes = [PortalTokenAuthentication]
+    permission_classes = [IsPortalUser]
+
+    def get(self, request):
+        anuncios = ListarAnunciosVigentesUseCase.execute(hoy=timezone.localdate())
+        serializer = AnuncioPortalSerializer(anuncios, many=True)
+        return Response({"anuncios": serializer.data})
 
 
 class CentrosPortalView(APIView):

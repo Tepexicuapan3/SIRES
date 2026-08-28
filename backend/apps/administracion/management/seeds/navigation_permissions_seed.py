@@ -94,3 +94,13 @@ NAVIGATION_PERMISSIONS_SEED += [
     ("almacen:inventario:read", "Ver inventario de almacen"),
     ("servicios:contratos_oxigeno:read", "Ver contratos de oxigeno"),
 ]
+
+# Tercera tanda (change `anuncios-portal-citas`, 2026-08-28): permisos del
+# módulo nuevo Comunicados/Anuncios (banner del portal de citas). Sin
+# prefijo `admin:` -- decisión 10 del índice `architecture/anuncios-portal-citas`.
+NAVIGATION_PERMISSIONS_SEED += [
+    ("comunicados:anuncios:read", "Ver anuncios del portal de citas"),
+    ("comunicados:anuncios:create", "Crear anuncios del portal de citas"),
+    ("comunicados:anuncios:update", "Editar anuncios del portal de citas"),
+    ("comunicados:anuncios:delete", "Eliminar anuncios del portal de citas"),
+]

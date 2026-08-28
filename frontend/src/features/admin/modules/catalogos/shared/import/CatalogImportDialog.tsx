@@ -152,8 +152,8 @@ export function CatalogImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="w-[95vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[92vw] lg:w-215 xl:w-235">
-        <div className="flex max-h-[88vh] flex-col">
+      <DialogContent className="w-[95vw] max-w-none rounded-3xl bg-paper p-0 sm:w-[92vw] sm:max-w-[92vw] lg:w-215 lg:max-w-215 xl:w-235 xl:max-w-235">
+        <div className="flex min-w-0 max-h-[88vh] flex-col">
           <DialogHeader className="px-8 pt-8">
             <DialogTitle>Importar {config.catalogLabel} desde Excel</DialogTitle>
             <DialogDescription>

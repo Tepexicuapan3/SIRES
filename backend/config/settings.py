@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     "apps.contratos_oxigeno",
     "apps.almacen_insumos",
     "apps.portal_citas",
+    "apps.comunicados",
 ]
 
 MIDDLEWARE = [
@@ -279,6 +280,14 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+
+# ── Media (módulo Comunicados) ──────────────────────────────────────────────
+# Archivos subidos desde SISEM (flyers/anuncios del portal de citas). Servido
+# por nginx vía `alias` en `nginx/proxy.conf` (ver `apps.comunicados`), NO por
+# Django -- greenfield, no existía ninguna clave MEDIA_* antes de este change.
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {

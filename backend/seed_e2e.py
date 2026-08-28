@@ -133,6 +133,10 @@ PERMISSIONS = [
     ("farmacia:vacunas:update", "Farmacia - Actualizar inventario de vacunas"),
     ("farmacia:vacunas:delete", "Farmacia - Dar de baja inventario de vacunas"),
     ("urgencias:triage:read", "Urgencias - Ver triage"),
+    ("comunicados:anuncios:read", "Comunicados - Ver anuncios del portal de citas"),
+    ("comunicados:anuncios:create", "Comunicados - Crear anuncios del portal de citas"),
+    ("comunicados:anuncios:update", "Comunicados - Editar anuncios del portal de citas"),
+    ("comunicados:anuncios:delete", "Comunicados - Eliminar anuncios del portal de citas"),
 ]
 
 
@@ -203,6 +207,17 @@ ROLE_DEFS = [
             "admin:catalogos:especialidades:create",
             "admin:catalogos:especialidades:update",
             "admin:catalogos:especialidades:delete",
+        ],
+    },
+    {
+        "code": "ADMIN_COMUNICADOS",
+        "desc": "Admin Comunicados",
+        "landing": "/comunicados/anuncios",
+        "perms": [
+            "comunicados:anuncios:read",
+            "comunicados:anuncios:create",
+            "comunicados:anuncios:update",
+            "comunicados:anuncios:delete",
         ],
     },
     {

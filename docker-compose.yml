@@ -69,6 +69,8 @@ services:
     # y solo lo resuelves por IP fija en el host, descomenta y ajusta:
     # extra_hosts:
     #   - "oracle-host:10.0.0.5"
+    volumes:
+      - media_data:/app/media
     depends_on:
       auth-db:
         condition: service_healthy
@@ -174,6 +176,7 @@ services:
     # hasta acá por nombre de contenedor a través de "proxy_network".
     volumes:
       - ./nginx/proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - media_data:/app/media:ro
     networks:
       - default
       - proxy_network
@@ -187,6 +190,7 @@ volumes:
   expedientes_db_data:
   redis_data:            # ← NUEVO
   celery_beat_data:      # ← NUEVO
+  media_data:            # ← NUEVO (anuncios-portal-citas): flyers subidos, compartido backend(rw)/proxy(ro)
 
 networks:
   default: {}

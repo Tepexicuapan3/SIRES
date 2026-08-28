@@ -59,8 +59,8 @@ def _parse_int_id(raw) -> tuple:
     if not as_float.is_integer():
         return None, "ID debe ser un número entero. "
     value = int(as_float)
-    if value <= 0:
-        return None, "ID debe ser mayor a cero. "
+    if value < 0:
+        return None, "ID no puede ser negativo. "
     return value, ""
 
 

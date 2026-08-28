@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.portal_citas.views import (
+    AnunciosPortalView,
     CancelarCitaView,
     CapturarCorreoView,
     CentrosPortalView,
@@ -35,6 +36,7 @@ urlpatterns = [
     # ── Núcleo familiar y disponibilidad (Fase 3) ───────────────────────────────
     path("portal/nucleo", NucleoView.as_view(), name="portal-nucleo"),
     path("portal/especialidades", EspecialidadesPortalView.as_view(), name="portal-especialidades"),
+    path("portal/anuncios", AnunciosPortalView.as_view(), name="portal-anuncios"),
     path("portal/centros", CentrosPortalView.as_view(), name="portal-centros"),
     path("portal/consultorios", ConsultoriosPortalView.as_view(), name="portal-consultorios"),
     path(

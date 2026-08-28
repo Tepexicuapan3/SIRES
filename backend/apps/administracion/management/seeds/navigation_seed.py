@@ -939,6 +939,31 @@ NAV_SEED = [
         "permisos": [],
     },
     # ── NAV_SECONDARY (acciones globales, sin sección padre) ────────────
+    # ── Comunicados (change `anuncios-portal-citas`) ────────────────────
+    {
+        "clave": "comunicados",
+        "titulo": "Comunicados",
+        "icono": None,
+        "url": None,
+        "badge": None,
+        "orden": 8,
+        "es_seccion": True,
+        "grupo": "primary",
+        "parent_clave": None,
+        "permisos": [],
+    },
+    {
+        "clave": "comunicados.anuncios",
+        "titulo": "Anuncios",
+        "icono": "bell",
+        "url": "/comunicados/anuncios",
+        "badge": None,
+        "orden": 0,
+        "es_seccion": False,
+        "grupo": "primary",
+        "parent_clave": "comunicados",
+        "permisos": ["comunicados:anuncios:read"],
+    },
     {
         "clave": "secondary.soporte",
         "titulo": "Soporte",

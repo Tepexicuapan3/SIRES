@@ -144,14 +144,14 @@ class ParseAndValidateIdTests(TestCase):
         result = parse_and_validate(SPECIALTIES_SPEC, file)
 
         self.assertEqual(result["total_errores"], 1)
-        self.assertIn("ID debe ser mayor a cero", result["rows"][0]["ERROR"])
+        self.assertIn("ID no puede ser negativo", result["rows"][0]["ERROR"])
 
-    def test_zero_id_is_error(self):
+    def test_zero_id_is_valid(self):
         file = _xlsx_upload(SPECIALTIES_HEADERS, [["0", "Cardiología", "Si"]])
         result = parse_and_validate(SPECIALTIES_SPEC, file)
 
-        self.assertEqual(result["total_errores"], 1)
-        self.assertIn("ID debe ser mayor a cero", result["rows"][0]["ERROR"])
+        self.assertEqual(result["total_errores"], 0)
+        self.assertEqual(result["rows"][0]["ERROR"], "")
 
     def test_duplicate_id_within_file_flags_both_rows(self):
         file = _xlsx_upload(
