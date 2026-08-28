@@ -29,6 +29,7 @@ import { CatalogDialogHeader } from "@features/admin/modules/catalogos/shared/co
 import { CatalogCreateResultCard } from "@features/admin/modules/catalogos/shared/components/CatalogCreateResultCard";
 import {
   createAnuncioSchema,
+  type CreateAnuncioFormInput,
   type CreateAnuncioFormValues,
   type CreateAnuncioResponse,
 } from "@features/comunicados/modules/anuncios/domain/anuncios.schemas";
@@ -52,7 +53,7 @@ export function AnuncioCreateDialog({
     useState<CreateAnuncioResponse | null>(null);
   const createAnuncio = useCreateAnuncio();
 
-  const form = useForm<CreateAnuncioFormValues>({
+  const form = useForm<CreateAnuncioFormInput, unknown, CreateAnuncioFormValues>({
     resolver: zodResolver(createAnuncioSchema),
     defaultValues: ANUNCIO_DEFAULT_VALUES,
   });

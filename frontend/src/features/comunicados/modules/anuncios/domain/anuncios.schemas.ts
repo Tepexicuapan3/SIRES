@@ -79,7 +79,7 @@ export const anuncioFormSchema = z
       .default(""),
     vigenciaDesde: requiredText("Vigencia desde", 10),
     vigenciaHasta: z.string().optional().default(""),
-    orden: z.coerce.number().int().min(0).default(0),
+    orden: z.number().int().min(0).default(0),
     activo: z.boolean().default(true),
     imagen: z
       .instanceof(File)
@@ -118,5 +118,7 @@ export const createAnuncioSchema = anuncioFormSchema.refine(
   { error: "La imagen es obligatoria", path: ["imagen"] },
 );
 
+export type AnuncioFormInput = z.input<typeof anuncioFormSchema>;
 export type AnuncioFormValues = z.infer<typeof anuncioFormSchema>;
+export type CreateAnuncioFormInput = z.input<typeof createAnuncioSchema>;
 export type CreateAnuncioFormValues = z.infer<typeof createAnuncioSchema>;

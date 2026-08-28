@@ -22,6 +22,7 @@ import { CatalogDetailsFooter } from "@features/admin/modules/catalogos/shared/c
 import { CatalogStatusBadge } from "@features/admin/modules/catalogos/shared/components/CatalogStatusBadge";
 import {
   anuncioFormSchema,
+  type AnuncioFormInput,
   type AnuncioFormValues,
 } from "@features/comunicados/modules/anuncios/domain/anuncios.schemas";
 import { useUpdateAnuncio } from "@features/comunicados/modules/anuncios/mutations/useUpdateAnuncio";
@@ -70,7 +71,7 @@ export function AnuncioDetailsDialog({
   const anuncioDetail = anuncioDetailResponse?.anuncio;
   const updateAnuncio = useUpdateAnuncio();
 
-  const form = useForm<AnuncioFormValues>({
+  const form = useForm<AnuncioFormInput, unknown, AnuncioFormValues>({
     resolver: zodResolver(anuncioFormSchema),
     defaultValues: ANUNCIO_DEFAULT_VALUES,
   });
