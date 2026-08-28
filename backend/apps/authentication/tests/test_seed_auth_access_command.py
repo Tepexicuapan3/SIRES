@@ -3,7 +3,13 @@ from django.test import TestCase
 
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.models import SyUsuario
-from apps.catalogos.models import CatCentroAtencion, Permisos, Roles
+from apps.catalogos.models import (
+    CatCentroAtencion,
+    CatCentroAtencionHorario,
+    Permisos,
+    Roles,
+    Turnos,
+)
 
 
 class SeedAuthAccessCommandTests(TestCase):
@@ -64,14 +70,29 @@ class SeedAuthAccessCommandTests(TestCase):
         center = CatCentroAtencion.objects.create(
             name="Centro Contrato",
             code="CTR-CONTRACT-001",
+            center_type=CatCentroAtencion.TipoCentro.CLINICA,
             is_external=False,
             address="Calle Contrato 123",
-            schedule={"mon": "08:00-14:00"},
+        )
+        shift = Turnos.objects.create(name="Matutino")
+        schedule = CatCentroAtencionHorario.objects.create(
+            center=center,
+            shift=shift,
+            week_day=CatCentroAtencionHorario.DiaSemana.LUNES,
+            is_open=True,
+            is_24_hours=False,
+            opening_time="08:00",
+            closing_time="14:00",
         )
 
-        before_snapshot = list(
+        before_centers_snapshot = list(
             CatCentroAtencion.objects.order_by("id").values_list(
                 "id", "name", "code", "is_external", "address"
+            )
+        )
+        before_schedules_snapshot = list(
+            CatCentroAtencionHorario.objects.order_by("id").values_list(
+                "id", "center_id", "shift_id", "week_day", "opening_time", "closing_time"
             )
         )
 
@@ -84,11 +105,18 @@ class SeedAuthAccessCommandTests(TestCase):
             "2",
         )
 
-        after_snapshot = list(
+        after_centers_snapshot = list(
             CatCentroAtencion.objects.order_by("id").values_list(
                 "id", "name", "code", "is_external", "address"
             )
         )
+        after_schedules_snapshot = list(
+            CatCentroAtencionHorario.objects.order_by("id").values_list(
+                "id", "center_id", "shift_id", "week_day", "opening_time", "closing_time"
+            )
+        )
 
-        self.assertEqual(before_snapshot, after_snapshot)
+        self.assertEqual(before_centers_snapshot, after_centers_snapshot)
+        self.assertEqual(before_schedules_snapshot, after_schedules_snapshot)
         self.assertTrue(CatCentroAtencion.objects.filter(id=center.id).exists())
+        self.assertTrue(CatCentroAtencionHorario.objects.filter(id=schedule.id).exists())
