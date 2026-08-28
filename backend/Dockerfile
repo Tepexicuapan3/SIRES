@@ -68,7 +68,17 @@ RUN sed -i '/^pywin32==/d' requirements.txt \
 COPY . .
 
 # Usuario no privilegiado
+#
+# /app/media es el mountpoint del volumen nombrado "media_data"
+# (docker-compose.yml, servicio backend) donde se guardan los flyers de
+# comunicados/anuncios. Si ese directorio no existe en la imagen ANTES de
+# que Docker monte el volumen por primera vez, Docker lo crea como
+# root:root con 755 -> appuser (no-root) no puede escribir ahí y
+# Django tira [Errno 13] Permission denied al crear la carpeta
+# anuncios/ dentro de /app/media. Por eso se crea aquí, como root,
+# antes de bajar privilegios con USER appuser.
 RUN useradd --create-home --shell /bin/sh appuser \
+    && mkdir -p /app/media \
     && chown -R appuser:appuser /app \
     && mkdir -p /data \
     && chown -R appuser:appuser /data
