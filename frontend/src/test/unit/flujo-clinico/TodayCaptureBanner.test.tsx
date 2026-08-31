@@ -28,30 +28,11 @@ const buildTodayCapture = (
 });
 
 describe("TodayCaptureBanner", () => {
-  it("con decision 'pending' no dispara ninguna accion automaticamente", () => {
-    const onReuse = vi.fn();
-    const onCaptureFresh = vi.fn();
-
-    render(
-      <TodayCaptureBanner
-        todayCapture={buildTodayCapture()}
-        decision="pending"
-        onReuse={onReuse}
-        onCaptureFresh={onCaptureFresh}
-      />,
-    );
-
-    expect(screen.getByTestId("today-capture-banner")).toBeVisible();
-    expect(screen.getByTestId("today-capture-reuse-button")).toBeVisible();
-    expect(screen.getByTestId("today-capture-fresh-button")).toBeVisible();
-    expect(onReuse).not.toHaveBeenCalled();
-    expect(onCaptureFresh).not.toHaveBeenCalled();
-
-    // Sin decision no debe mostrarse ninguna etiqueta de estado.
-    expect(
-      screen.queryByTestId("today-capture-decision-label"),
-    ).not.toBeInTheDocument();
-  });
+  // El formulario de captura (SomatometriaCapturePage.tsx) ya arranca
+  // precargado con los valores de hoy por default -- este banner solo
+  // informa de donde salen esos valores y ofrece el atajo de un solo click
+  // a consulta. Ya no hay decision "pending/reused/fresh" ni botones de
+  // Reusar/Capturar nuevos.
 
   it("muestra folio, servicio y momento de captura de la visita origen", () => {
     render(
@@ -60,9 +41,7 @@ describe("TodayCaptureBanner", () => {
           sourceFolio: "VST-000777",
           sourceServiceType: "urgencias",
         })}
-        decision="pending"
-        onReuse={vi.fn()}
-        onCaptureFresh={vi.fn()}
+        onPasarDirectoAConsulta={vi.fn()}
       />,
     );
 
@@ -71,93 +50,11 @@ describe("TodayCaptureBanner", () => {
     expect(banner).toHaveTextContent("Urgencias");
   });
 
-  it("requiere un click explicito y distinto para reusar", async () => {
-    const user = userEvent.setup();
-    const onReuse = vi.fn();
-    const onCaptureFresh = vi.fn();
-
+  it("muestra los valores de la captura de hoy", () => {
     render(
       <TodayCaptureBanner
         todayCapture={buildTodayCapture()}
-        decision="pending"
-        onReuse={onReuse}
-        onCaptureFresh={onCaptureFresh}
-      />,
-    );
-
-    await user.click(screen.getByTestId("today-capture-reuse-button"));
-
-    expect(onReuse).toHaveBeenCalledTimes(1);
-    expect(onCaptureFresh).not.toHaveBeenCalled();
-  });
-
-  it("requiere un click explicito y distinto para capturar de cero", async () => {
-    const user = userEvent.setup();
-    const onReuse = vi.fn();
-    const onCaptureFresh = vi.fn();
-
-    render(
-      <TodayCaptureBanner
-        todayCapture={buildTodayCapture()}
-        decision="pending"
-        onReuse={onReuse}
-        onCaptureFresh={onCaptureFresh}
-      />,
-    );
-
-    await user.click(screen.getByTestId("today-capture-fresh-button"));
-
-    expect(onCaptureFresh).toHaveBeenCalledTimes(1);
-    expect(onReuse).not.toHaveBeenCalled();
-  });
-
-  it("tras decidir 'reused' oculta los botones y confirma que los valores quedan editables", () => {
-    render(
-      <TodayCaptureBanner
-        todayCapture={buildTodayCapture()}
-        decision="reused"
-        onReuse={vi.fn()}
-        onCaptureFresh={vi.fn()}
-      />,
-    );
-
-    expect(
-      screen.queryByTestId("today-capture-reuse-button"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId("today-capture-fresh-button"),
-    ).not.toBeInTheDocument();
-    expect(screen.getByTestId("today-capture-decision-label")).toHaveTextContent(
-      /Revisalos antes de guardar/i,
-    );
-  });
-
-  it("tras decidir 'fresh' muestra el estado de captura nueva", () => {
-    render(
-      <TodayCaptureBanner
-        todayCapture={buildTodayCapture()}
-        decision="fresh"
-        onReuse={vi.fn()}
-        onCaptureFresh={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByTestId("today-capture-decision-label")).toHaveTextContent(
-      /Capturando signos vitales nuevos/i,
-    );
-  });
-
-  it("muestra los valores de la captura de hoy incluso en estado 'pending', antes de decidir", () => {
-    // La enfermera necesita ver peso/talla/TA/etc. para poder analizarlos
-    // clinicamente ANTES de elegir reusar o volver a tomar -- no recien
-    // despues de hacer click en "Reusar" (que ademas ya los precarga en el
-    // formulario, pero eso es una decision distinta de solo poder verlos).
-    render(
-      <TodayCaptureBanner
-        todayCapture={buildTodayCapture()}
-        decision="pending"
-        onReuse={vi.fn()}
-        onCaptureFresh={vi.fn()}
+        onPasarDirectoAConsulta={vi.fn()}
       />,
     );
 
@@ -174,18 +71,34 @@ describe("TodayCaptureBanner", () => {
     expect(values).toHaveTextContent("88 cm");
   });
 
-  it("deshabilita ambos botones cuando `disabled` es true", () => {
+  it("dispara 'Pasar directo a consulta' con un click explicito", async () => {
+    const user = userEvent.setup();
+    const onPasarDirectoAConsulta = vi.fn();
+
     render(
       <TodayCaptureBanner
         todayCapture={buildTodayCapture()}
-        decision="pending"
-        onReuse={vi.fn()}
-        onCaptureFresh={vi.fn()}
+        onPasarDirectoAConsulta={onPasarDirectoAConsulta}
+      />,
+    );
+
+    const button = screen.getByTestId("today-capture-direct-button");
+    expect(button).toBeVisible();
+
+    await user.click(button);
+
+    expect(onPasarDirectoAConsulta).toHaveBeenCalledTimes(1);
+  });
+
+  it("deshabilita el boton cuando `disabled` es true", () => {
+    render(
+      <TodayCaptureBanner
+        todayCapture={buildTodayCapture()}
+        onPasarDirectoAConsulta={vi.fn()}
         disabled
       />,
     );
 
-    expect(screen.getByTestId("today-capture-reuse-button")).toBeDisabled();
-    expect(screen.getByTestId("today-capture-fresh-button")).toBeDisabled();
+    expect(screen.getByTestId("today-capture-direct-button")).toBeDisabled();
   });
 });

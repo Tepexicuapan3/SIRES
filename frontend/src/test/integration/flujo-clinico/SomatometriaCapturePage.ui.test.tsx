@@ -489,7 +489,7 @@ describe("SomatometriaCapturePage UI", () => {
     expect(screen.getByTestId("somato-save-button")).toBeDisabled();
   });
 
-  it("precarga el formulario al reusar pero sigue siendo editable -- nunca clona a ciegas", async () => {
+  it("precarga el formulario por default con los valores de hoy pero sigue siendo editable -- nunca clona a ciegas", async () => {
     const todayCapture: TodayCapturePayload = {
       sourceVisitId: 42,
       sourceFolio: "VST-000042",
@@ -519,13 +519,8 @@ describe("SomatometriaCapturePage UI", () => {
     const user = userEvent.setup();
     render(<SomatometriaCapturePage />);
 
-    // El reuso no viene preseleccionado: el formulario arranca vacio hasta
-    // que la enfermera hace click en "Reusar estos valores".
-    expectVitalsFormReset();
-
-    await user.click(screen.getByTestId("today-capture-reuse-button"));
-
-    // Al reusar, el formulario se precarga con los valores de `todayCapture`.
+    // El formulario ya arranca precargado con los valores de hoy por
+    // default -- no hace falta ningun click para verlos/usarlos.
     expect(getVitalsInput("weightKg")).toHaveValue(70);
     expect(getVitalsInput("heightCm")).toHaveValue(175);
     expect(getVitalsInput("temperatureC")).toHaveValue(36.5);
@@ -553,6 +548,55 @@ describe("SomatometriaCapturePage UI", () => {
     const savedPayload = captureMutateAsync.mock.calls[0][0].data;
     expect(savedPayload.weightKg).not.toBe(70);
     expect(savedPayload.weightKg).toBe(72);
+  });
+
+  it("'Pasar directo a consulta' guarda con un solo click los valores ya precargados, sin necesitar el boton Guardar aparte", async () => {
+    const todayCapture: TodayCapturePayload = {
+      sourceVisitId: 42,
+      sourceFolio: "VST-000042",
+      sourceServiceType: "medicina_general",
+      capturedAt: "2026-08-26T08:00:00Z",
+      values: {
+        weightKg: 70,
+        heightCm: 175,
+        temperatureC: 36.5,
+        oxygenSaturationPct: 97,
+        heartRateBpm: 72,
+        respiratoryRateBpm: 16,
+        bloodPressureSystolic: 120,
+        bloodPressureDiastolic: 80,
+        waistCircumferenceCm: 90,
+        glucosaCapilarMgdl: 95,
+        bmi: 22.86,
+      },
+    };
+
+    vi.mocked(useLatestVitals).mockReturnValue({
+      data: { vitals: null, todayCapture },
+      isLoading: false,
+      isSuccess: true,
+    } as unknown as ReturnType<typeof useLatestVitals>);
+
+    const user = userEvent.setup();
+    render(<SomatometriaCapturePage />);
+
+    // El formulario ya arranca precargado -- un unico click en "Pasar
+    // directo a consulta" alcanza, sin tocar ningun campo ni el boton
+    // Guardar por separado.
+    await user.click(screen.getByTestId("today-capture-direct-button"));
+
+    await waitFor(() => {
+      expect(captureMutateAsync).toHaveBeenCalledWith({
+        visitId: 1,
+        data: expect.objectContaining({
+          weightKg: 70,
+          heightCm: 175,
+          temperatureC: 36.5,
+          oxygenSaturationPct: 97,
+          reusedFromVisitId: 42,
+        }),
+      });
+    });
   });
 
   describe("cola de espera (en_espera)", () => {

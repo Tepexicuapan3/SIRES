@@ -28,10 +28,7 @@ import { usePatientLookupHistorico } from "@features/recepcion/modules/checkin/q
 import { SomatometriaQueueCards } from "@features/somatometria/modules/captura/components/SomatometriaQueueCards";
 import { SomatometriaWaitingCards } from "@features/somatometria/modules/captura/components/SomatometriaWaitingCards";
 import { SomatometriaHistorialView } from "@features/somatometria/modules/captura/components/SomatometriaHistorialView";
-import {
-  TodayCaptureBanner,
-  type TodayCaptureDecision,
-} from "@features/somatometria/modules/captura/components/TodayCaptureBanner";
+import { TodayCaptureBanner } from "@features/somatometria/modules/captura/components/TodayCaptureBanner";
 
 /** Item de la bandeja tal cual lo devuelve `useSomatometriaQueue` -- se
  * infiere del propio hook en vez de importar un tipo aparte para no
@@ -265,18 +262,21 @@ function VitalsCaptureForm({
   const captureVitals = useCaptureVitals();
   const [capturedBmi, setCapturedBmi] = useState<number | null>(null);
 
-  // El reuso NUNCA viene preseleccionado: si hay `todayCapture` disponible,
-  // la decision arranca en "pending" y el formulario arranca VACIO (no con
-  // `initialVitals`) hasta que la enfermera elija explicitamente Reusar o
-  // Capturar nuevos -- de lo contrario estariamos precargando en silencio
-  // los mismos valores que el reuso ofrece de forma explicita.
-  const [reuseDecision, setReuseDecision] = useState<TodayCaptureDecision>("pending");
-  const [reusedFromVisitId, setReusedFromVisitId] = useState<number | null>(null);
+  // El formulario arranca precargado por default con los valores de hoy
+  // cuando existe `todayCapture` -- ya no hace falta un click explicito de
+  // "Reusar" para verlos: son el punto de partida de la captura, editables
+  // como siempre. `reusedFromVisitId` es un valor derivado (no estado): se
+  // marca la trazabilidad de reuso apenas existe una captura de hoy, sin
+  // importar si la enfermera termina editando los valores o no -- siempre
+  // partio de ahi.
+  const reusedFromVisitId = todayCapture ? todayCapture.sourceVisitId : null;
 
   const form = useForm<CaptureVitalsFormInput, unknown, CaptureVitalsFormValues>({
     resolver: zodResolver(captureVitalsFormSchema),
     mode: "onChange",
-    defaultValues: todayCapture ? DEFAULT_FORM_VALUES : buildDefaultValues(initialVitals),
+    defaultValues: todayCapture
+      ? metricsToFormValues(todayCapture.values)
+      : buildDefaultValues(initialVitals),
   });
 
   const [watchedWeightKg, watchedHeightCm] = useWatch({
@@ -292,19 +292,6 @@ function VitalsCaptureForm({
       : null;
   const visibleBmi = bmiPreview ?? capturedBmi;
 
-  const handleReuseTodayCapture = () => {
-    if (!todayCapture) return;
-    form.reset(metricsToFormValues(todayCapture.values));
-    setReusedFromVisitId(todayCapture.sourceVisitId);
-    setReuseDecision("reused");
-  };
-
-  const handleCaptureFresh = () => {
-    form.reset(DEFAULT_FORM_VALUES);
-    setReusedFromVisitId(null);
-    setReuseDecision("fresh");
-  };
-
   const handleCaptureVitals = async (values: CaptureVitalsFormValues) => {
     if (!canCaptureSomatometriaVitals || !canCaptureSelectedVisit) return;
 
@@ -319,14 +306,19 @@ function VitalsCaptureForm({
       });
       form.reset(DEFAULT_FORM_VALUES);
       setCapturedBmi(null);
-      setReusedFromVisitId(null);
-      setReuseDecision("pending");
     } catch (error) {
       setCapturedBmi(null);
       toast.error("No se pudo guardar", {
         description: resolveCaptureVitalsErrorMessage(error),
       });
     }
+  };
+
+  // Atajo de un solo click: envia la visita a consulta con los valores que
+  // ya estan en el formulario (precargados con los de hoy por default, pero
+  // editables si la enfermera llego a corregir algo antes de apretarlo).
+  const handlePasarDirectoAConsulta = () => {
+    void form.handleSubmit(handleCaptureVitals)();
   };
 
   const isFormDisabled = !canCaptureSelectedVisit || captureVitals.isPending;
@@ -336,9 +328,7 @@ function VitalsCaptureForm({
       {todayCapture ? (
         <TodayCaptureBanner
           todayCapture={todayCapture}
-          decision={reuseDecision}
-          onReuse={handleReuseTodayCapture}
-          onCaptureFresh={handleCaptureFresh}
+          onPasarDirectoAConsulta={handlePasarDirectoAConsulta}
           disabled={isFormDisabled}
         />
       ) : null}

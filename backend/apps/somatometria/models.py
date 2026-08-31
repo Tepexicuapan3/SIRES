@@ -9,6 +9,14 @@ class VisitVitalSigns(models.Model):
         on_delete=models.CASCADE,
         related_name="vital_signs",
     )
+    # Denormalizado desde `id_visit.no_exp`/`id_visit.pk_num` al crear la
+    # fila (ver `VitalsRepository.create_for_visit`). El JOIN contra Visit ya
+    # esta indexado y cubre los casos de uso actuales -- esto es solo para
+    # que reportes/consultas directas sobre esta tabla no necesiten el JOIN.
+    # Nunca se reescribe despues de creada: no_exp/pk_num de una visita no
+    # cambian una vez que existe.
+    no_exp = models.CharField(max_length=20, db_column="no_exp")
+    pk_num = models.IntegerField(db_column="pk_num", default=0)
     weight_kg = models.DecimalField(max_digits=6, decimal_places=2, db_column="weight_kg")
     height_cm = models.DecimalField(max_digits=6, decimal_places=2, db_column="height_cm")
     temperature_c = models.DecimalField(
@@ -102,6 +110,10 @@ class VisitVitalSigns(models.Model):
         db_table = "smt_visit_vitals"
         indexes = [
             models.Index(fields=["fch_alta"], name="smt_visit_vitals_fchalta_idx"),
+            models.Index(
+                fields=["no_exp", "pk_num"],
+                name="smt_vitals_noexp_pknum_idx",
+            ),
         ]
 
 

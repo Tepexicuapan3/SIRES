@@ -597,10 +597,12 @@ export class FlujoClinicoPage {
 
   /**
    * Captura de signos vitales cuando `todayCapture` ya esta disponible
-   * (misma persona, otra visita, mismo dia calendario local). El aviso de
-   * reuso NUNCA viene preseleccionado: valida que aparezca antes de decidir,
-   * y que la decision ("Reusar" o "Capturar nuevos") sea un click explicito
-   * de la enfermera, separado del boton "Guardar signos vitales".
+   * (misma persona, otra visita, mismo dia calendario local). El formulario
+   * ya arranca precargado por default con esos valores -- ya no hay botones
+   * "Reusar"/"Capturar nuevos" ni una decision explicita separada: si
+   * `decision` es "reuse" se guarda tal cual viene precargado; si es
+   * "fresh" se sobreescriben los campos a mano antes de guardar (recaptura
+   * manual, sin ningun boton dedicado).
    */
   async captureVitalsWithReuseDecision(
     folio: string,
@@ -616,19 +618,14 @@ export class FlujoClinicoPage {
       "No aparecio el aviso de reuso de signos vitales del mismo dia",
     ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
 
-    if (decision === "reuse") {
-      await this.page.getByTestId("today-capture-reuse-button").click();
-      await expect(
-        this.page.getByTestId("today-capture-decision-label"),
-      ).toBeVisible({ timeout: DEFAULT_TIMEOUT_MS });
+    // El formulario ya arranca precargado con los valores de hoy por
+    // default -- sin necesitar ningun click.
+    await expect(
+      this.page.getByTestId("somato-weightKg-input"),
+    ).not.toHaveValue("");
 
-      // Reusar precarga el formulario pero los valores siguen siendo
-      // editables -- nada se envia hasta el click explicito en "Guardar".
-      await expect(
-        this.page.getByTestId("somato-weightKg-input"),
-      ).not.toHaveValue("");
-    } else {
-      await this.page.getByTestId("today-capture-fresh-button").click();
+    if (decision === "fresh") {
+      // Recaptura manual: la enfermera sobreescribe los campos precargados.
       await this.page
         .getByTestId("somato-weightKg-input")
         .fill(DEFAULT_VITALS_INPUT.weightKg);

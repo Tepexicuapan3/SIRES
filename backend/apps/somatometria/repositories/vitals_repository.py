@@ -43,6 +43,11 @@ class VitalsRepository:
         fields = VitalsRepository._metric_fields_from_payload(vitals_payload)
         vital_signs = VisitVitalSigns.objects.create(
             id_visit=visit,
+            # Denormalizado desde la visita al crear -- no_exp/pk_num de una
+            # visita no cambian despues de creada, asi que esta copia nunca
+            # se desincroniza en el uso normal del sistema.
+            no_exp=visit.no_exp,
+            pk_num=visit.pk_num,
             reused_from_visit=reused_from,
             captured_by=captured_by,
             **fields,

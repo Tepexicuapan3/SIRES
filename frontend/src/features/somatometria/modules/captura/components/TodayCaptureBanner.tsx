@@ -23,25 +23,28 @@ const formatCapturedAtDateTime = (iso: string): string =>
     hour12: false,
   });
 
-export type TodayCaptureDecision = "pending" | "reused" | "fresh";
-
 interface TodayCaptureBannerProps {
   todayCapture: TodayCapturePayload;
-  decision: TodayCaptureDecision;
-  onReuse: () => void;
-  onCaptureFresh: () => void;
+  /** Reusa los valores de hoy Y avanza la visita a consulta en un solo
+   * click. El formulario de captura ya arranca precargado con estos mismos
+   * valores (editable) -- este boton es el atajo para cuando no hace falta
+   * revisar nada antes de enviar. */
+  onPasarDirectoAConsulta: () => void;
   disabled?: boolean;
 }
 
-/** Aviso de reuso de signos vitales del mismo dia. La decision NUNCA viene
- * preseleccionada: arranca en `"pending"` y exige un click explicito de la
- * enfermera (Reusar / Capturar nuevos), distinto del boton "Guardar" del
- * formulario -- ninguna accion se dispara automaticamente. */
+/**
+ * Aviso de reuso de signos vitales del mismo dia. El formulario de captura
+ * (`SomatometriaCapturePage.tsx`) ya arranca precargado con estos valores
+ * por default -- este banner es informativo (de donde salen los datos que
+ * ve prellenados) mas el atajo de un solo click a consulta. Ya no hay
+ * decision explicita "Reusar/Capturar nuevos": el formulario prellenado Y
+ * editable ES la captura por default; si la enfermera necesita valores
+ * distintos, los edita/borra directo en el formulario.
+ */
 export function TodayCaptureBanner({
   todayCapture,
-  decision,
-  onReuse,
-  onCaptureFresh,
+  onPasarDirectoAConsulta,
   disabled,
 }: TodayCaptureBannerProps) {
   return (
@@ -51,12 +54,9 @@ export function TodayCaptureBanner({
         Folio {todayCapture.sourceFolio} ·{" "}
         {formatServiceLabel(todayCapture.sourceServiceType)} ·{" "}
         {formatCapturedAtDateTime(todayCapture.capturedAt)}
+        {" · "}Estos valores ya estan precargados en el formulario de abajo.
       </AlertDescription>
 
-      {/* Valores visibles SIEMPRE, sin importar la decision -- la enfermera
-       * necesita verlos para poder analizarlos clinicamente ANTES de
-       * decidir si reusar o volver a tomar, no recien despues de elegir
-       * "Reusar" (que ademas ya los precarga en el formulario). */}
       <dl
         className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-3"
         data-testid="today-capture-values"
@@ -139,38 +139,17 @@ export function TodayCaptureBanner({
         ) : null}
       </dl>
 
-      {decision === "pending" ? (
-        <div className="flex flex-wrap gap-2 pt-3">
-          <Button
-            type="button"
-            size="sm"
-            data-testid="today-capture-reuse-button"
-            disabled={disabled}
-            onClick={onReuse}
-          >
-            Reusar estos valores
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            data-testid="today-capture-fresh-button"
-            disabled={disabled}
-            onClick={onCaptureFresh}
-          >
-            Capturar nuevos
-          </Button>
-        </div>
-      ) : (
-        <p
-          className="pt-3 text-xs text-txt-muted"
-          data-testid="today-capture-decision-label"
+      <div className="flex flex-wrap gap-2 pt-3">
+        <Button
+          type="button"
+          size="sm"
+          data-testid="today-capture-direct-button"
+          disabled={disabled}
+          onClick={onPasarDirectoAConsulta}
         >
-          {decision === "reused"
-            ? "Reusando los valores de hoy. Revisalos antes de guardar."
-            : "Capturando signos vitales nuevos para esta visita."}
-        </p>
-      )}
+          Pasar directo a consulta
+        </Button>
+      </div>
     </Alert>
   );
 }
