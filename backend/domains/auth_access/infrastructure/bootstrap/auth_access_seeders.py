@@ -240,7 +240,7 @@ def seed_auth_access_base(*, admin_password: str) -> SeedSummary:
 
     admin_user, created_admin_user = _upsert_user(
         username="admin",
-        email="admin@example.com",
+        email="tepexicuapandavid3@gmail.com",
         raw_password=admin_password,
         force_change_password=False,
     )

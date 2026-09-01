@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlarmClock } from "lucide-react";
+import { AlarmClock, ClipboardList, Stethoscope } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -56,6 +56,7 @@ import {
 } from "./DoctorConsultationPage.helpers";
 import { OpenConsultationsGrid } from "@features/consulta-medica/modules/atencion/components/OpenConsultationsGrid";
 import { ConsultationDetailDialog } from "@features/consulta-medica/modules/atencion/components/ConsultationDetailDialog";
+import { DoctorPipelineView } from "@features/consulta-medica/modules/atencion/components/DoctorPipelineView";
 
 export const DoctorConsultationPage = () => {
   const navigate = useNavigate();
@@ -98,6 +99,8 @@ export const DoctorConsultationPage = () => {
   const [selectedCieByVisitId, setSelectedCieByVisitId] = useState<
     Record<number, CieSearchItem>
   >({});
+
+  const [view, setView] = useState<"consulta" | "pipeline">("consulta");
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -529,27 +532,60 @@ export const DoctorConsultationPage = () => {
 
   return (
     <section className="space-y-6 p-6">
-      <header className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight text-brand">
-          Consulta medica
-        </h1>
-        <p className="text-sm text-txt-muted">
-          Flujo clinico lineal: inicia consulta, registra diagnostico y finaliza
-          la atencion.
-        </p>
+      <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold tracking-tight text-brand">
+            Consulta medica
+          </h1>
+          <p className="text-sm text-txt-muted">
+            Flujo clinico lineal: inicia consulta, registra diagnostico y
+            finaliza la atencion.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1 rounded-xl border border-line-struct bg-subtle/20 p-1">
+          <button
+            type="button"
+            data-testid="doctor-tab-consulta"
+            onClick={() => setView("consulta")}
+            className={[
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              view === "consulta"
+                ? "bg-paper text-txt-body shadow-sm"
+                : "text-txt-muted hover:text-txt-body",
+            ].join(" ")}
+          >
+            <Stethoscope className="size-3.5" /> Consulta
+          </button>
+          <button
+            type="button"
+            data-testid="doctor-tab-pipeline"
+            onClick={() => setView("pipeline")}
+            className={[
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              view === "pipeline"
+                ? "bg-paper text-txt-body shadow-sm"
+                : "text-txt-muted hover:text-txt-body",
+            ].join(" ")}
+          >
+            <ClipboardList className="size-3.5" /> Pacientes en proceso
+          </button>
+        </div>
       </header>
 
-      {!canReadDoctorQueue ? (
+      {view === "pipeline" ? <DoctorPipelineView /> : null}
+
+      {view === "consulta" && !canReadDoctorQueue ? (
         <p className="text-sm text-txt-muted" role="status">
           No tenes permisos completos para cargar la bandeja del doctor.
         </p>
       ) : null}
 
-      {canReadDoctorQueue && queueQuery.isLoading ? (
+      {view === "consulta" && canReadDoctorQueue && queueQuery.isLoading ? (
         <p className="text-sm text-txt-muted">Cargando bandeja del doctor...</p>
       ) : null}
 
-      {canReadDoctorQueue && queueQuery.isError ? (
+      {view === "consulta" && canReadDoctorQueue && queueQuery.isError ? (
         <Alert variant="warning">
           <AlertTitle>Error al cargar</AlertTitle>
           <AlertDescription>
@@ -558,7 +594,8 @@ export const DoctorConsultationPage = () => {
         </Alert>
       ) : null}
 
-      {canReadDoctorQueue &&
+      {view === "consulta" &&
+      canReadDoctorQueue &&
       !queueQuery.isLoading &&
       !queueQuery.isError &&
       visits.length === 0 ? (
@@ -567,7 +604,8 @@ export const DoctorConsultationPage = () => {
         </p>
       ) : null}
 
-      {canReadDoctorQueue &&
+      {view === "consulta" &&
+      canReadDoctorQueue &&
       !queueQuery.isLoading &&
       !queueQuery.isError &&
       (visits.length > 0 || isDetailRoute) ? (

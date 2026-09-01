@@ -22,7 +22,7 @@ class SeedAuthAccessCommandTests(TestCase):
         admin_role = Roles.objects.get(rol="admin")
         admin_user = SyUsuario.objects.get(usuario="admin")
 
-        self.assertEqual(admin_user.correo, "admin@example.com")
+        self.assertEqual(admin_user.correo, "tepexicuapandavid3@gmail.com")
         self.assertTrue(
             RelUsuarioRol.objects.filter(
                 id_usuario=admin_user, id_rol=admin_role, is_primary=True

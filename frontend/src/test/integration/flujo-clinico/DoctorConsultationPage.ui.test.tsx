@@ -14,6 +14,7 @@ import { useSavePrescriptions } from "@features/consulta-medica/modules/atencion
 import { useStartConsultation } from "@features/consulta-medica/modules/atencion/mutations/useStartConsultation";
 import { useCieSearch } from "@features/consulta-medica/modules/atencion/queries/useCieSearch";
 import { useDoctorQueue } from "@features/consulta-medica/modules/atencion/queries/useDoctorQueue";
+import { useDoctorPipelineQueue } from "@features/consulta-medica/modules/atencion/queries/useDoctorPipelineQueue";
 import {
   formatCapturedAtTime,
   formatServiceTypeLabel,
@@ -24,6 +25,13 @@ vi.mock(
   "@features/consulta-medica/modules/atencion/queries/useDoctorQueue",
   () => ({
     useDoctorQueue: vi.fn(),
+  }),
+);
+
+vi.mock(
+  "@features/consulta-medica/modules/atencion/queries/useDoctorPipelineQueue",
+  () => ({
+    useDoctorPipelineQueue: vi.fn(),
   }),
 );
 
@@ -146,6 +154,13 @@ describe("DoctorConsultationPage UI", () => {
       isError: false,
       error: null,
     } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    vi.mocked(useDoctorPipelineQueue).mockReturnValue({
+      data: { items: [], page: 1, pageSize: 50, total: 0, totalPages: 0 },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorPipelineQueue>);
 
     vi.mocked(useCieSearch).mockReturnValue({
       data: {
@@ -475,6 +490,13 @@ describe("DoctorConsultationPage UI", () => {
       isError: false,
       error: null,
     } as unknown as ReturnType<typeof useDoctorQueue>);
+
+    vi.mocked(useDoctorPipelineQueue).mockReturnValue({
+      data: { items: [], page: 1, pageSize: 50, total: 0, totalPages: 0 },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorPipelineQueue>);
 
     vi.mocked(useCieSearch).mockReturnValue({
       data: {
@@ -879,5 +901,53 @@ describe("DoctorConsultationPage UI", () => {
     expect(
       screen.getByText("Sin observaciones de somatometria registradas."),
     ).toBeVisible();
+  });
+
+  it("la pestana 'Pacientes en proceso' muestra el pipeline completo, sin filtrar por medico", async () => {
+    vi.mocked(useDoctorPipelineQueue).mockReturnValue({
+      data: {
+        items: [
+          createVisit({
+            id: 501,
+            folio: "VST-0501",
+            status: "en_espera",
+            doctorId: null,
+            doctorNombre: null,
+          }),
+          createVisit({
+            id: 502,
+            folio: "VST-0502",
+            status: "en_somatometria",
+            doctorId: null,
+            doctorNombre: null,
+          }),
+        ],
+        page: 1,
+        pageSize: 50,
+        total: 2,
+        totalPages: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDoctorPipelineQueue>);
+
+    const user = userEvent.setup();
+    renderDoctorPage();
+
+    // Por default se ve la cola de consulta, no el pipeline.
+    expect(
+      screen.queryByTestId("doctor-pipeline-view"),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("doctor-tab-pipeline"));
+
+    expect(screen.getByTestId("doctor-pipeline-view")).toBeVisible();
+    // Se ven visitas SIN medico asignado (doctorId null) en etapas
+    // tempranas -- confirma que no se filtra por medico.
+    expect(screen.getByTestId("doctor-pipeline-card-501")).toBeVisible();
+    expect(screen.getByTestId("doctor-pipeline-card-502")).toBeVisible();
+    expect(screen.getByText("VST-0501")).toBeVisible();
+    expect(screen.getByText("VST-0502")).toBeVisible();
   });
 });
