@@ -95,7 +95,7 @@ export function ConsumosPage() {
 
       {viewItem && (
         <Dialog open onOpenChange={() => setViewItem(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Consumo — {viewItem.paciente || "Sin paciente"}</DialogTitle>
             </DialogHeader>

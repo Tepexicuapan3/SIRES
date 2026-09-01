@@ -121,7 +121,7 @@ export function EntradasPage() {
 
       {viewItem && (
         <Dialog open={Boolean(viewItem)} onOpenChange={(v) => { if (!v) setViewItem(null); }}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Entrada #{viewItem.id} — {viewItem.almacenNombre}</DialogTitle>
             </DialogHeader>

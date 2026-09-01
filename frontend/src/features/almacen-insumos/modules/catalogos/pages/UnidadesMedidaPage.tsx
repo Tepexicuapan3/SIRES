@@ -214,7 +214,7 @@ export function UnidadesMedidaPage() {
       />
 
       <Dialog open={createOpen} onOpenChange={(v) => { setCreateOpen(v); if (!v) setEditingItem(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle>{editingItem ? "Editar unidad de medida" : "Nueva unidad de medida"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">

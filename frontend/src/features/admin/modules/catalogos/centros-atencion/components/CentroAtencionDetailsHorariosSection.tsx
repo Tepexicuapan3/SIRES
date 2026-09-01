@@ -357,9 +357,12 @@ export function CentroAtencionDetailsHorariosSection({
                 )}
               />
 
-              {/* 7-day grid */}
+              {/* 7-day grid -- en mobile cada dia es una tarjeta apilada
+                  (el grid de 5 columnas fijas no deja espacio real para los
+                  <input type="time"> en una pantalla angosta); desde `sm:`
+                  se vuelve el grid de columnas original via `contents`. */}
               <div className="overflow-hidden rounded-xl border border-line-struct">
-                <div className="grid grid-cols-[7rem_2.5rem_2.5rem_1fr_1fr] gap-x-3 bg-surface-subtle px-4 py-2 text-xs font-medium uppercase tracking-wide text-txt-muted">
+                <div className="hidden gap-x-3 bg-surface-subtle px-4 py-2 text-xs font-medium uppercase tracking-wide text-txt-muted sm:grid sm:grid-cols-[7rem_2.5rem_2.5rem_minmax(0,1fr)_minmax(0,1fr)]">
                   <span>Día</span>
                   <span className="text-center">Abierto</span>
                   <span className="text-center">24h</span>
@@ -375,93 +378,115 @@ export function CentroAtencionDetailsHorariosSection({
                     return (
                       <div
                         key={field.id}
-                        className="grid grid-cols-[7rem_2.5rem_2.5rem_1fr_1fr] items-center gap-x-3 px-4 py-2.5"
+                        className="flex flex-col gap-3 px-4 py-3 sm:grid sm:grid-cols-[7rem_2.5rem_2.5rem_minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-x-3 sm:py-2.5"
                       >
-                        <span className="text-sm font-medium text-txt-body">
-                          {DIA_LABELS[field.weekDay as DiaSemana]}
-                        </span>
+                        <div className="flex items-center justify-between gap-3 sm:contents">
+                          <span className="text-sm font-medium text-txt-body">
+                            {DIA_LABELS[field.weekDay as DiaSemana]}
+                          </span>
 
-                        <div className="flex justify-center">
+                          <div className="flex items-center gap-4 sm:contents">
+                            <div className="flex flex-col items-center gap-1 sm:block">
+                              <span className="text-[10px] uppercase text-txt-muted sm:hidden">
+                                Abierto
+                              </span>
+                              <div className="flex justify-center">
+                                <FormField
+                                  control={form.control}
+                                  name={`days.${index}.isOpen`}
+                                  render={({ field: f }) => (
+                                    <Switch
+                                      checked={f.value}
+                                      onCheckedChange={(checked) => {
+                                        f.onChange(checked);
+                                        if (!checked) {
+                                          form.setValue(`days.${index}.is24Hours`, false);
+                                          form.setValue(`days.${index}.openingTime`, null);
+                                          form.setValue(`days.${index}.closingTime`, null);
+                                        }
+                                      }}
+                                    />
+                                  )}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-1 sm:block">
+                              <span className="text-[10px] uppercase text-txt-muted sm:hidden">
+                                24h
+                              </span>
+                              <div className="flex justify-center">
+                                <FormField
+                                  control={form.control}
+                                  name={`days.${index}.is24Hours`}
+                                  render={({ field: f }) => (
+                                    <Switch
+                                      checked={f.value}
+                                      disabled={!dayIsOpen}
+                                      onCheckedChange={(checked) => {
+                                        f.onChange(checked);
+                                        if (checked) {
+                                          form.setValue(`days.${index}.openingTime`, null);
+                                          form.setValue(`days.${index}.closingTime`, null);
+                                        }
+                                      }}
+                                    />
+                                  )}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 sm:contents">
                           <FormField
                             control={form.control}
-                            name={`days.${index}.isOpen`}
+                            name={`days.${index}.openingTime`}
                             render={({ field: f }) => (
-                              <Switch
-                                checked={f.value}
-                                onCheckedChange={(checked) => {
-                                  f.onChange(checked);
-                                  if (!checked) {
-                                    form.setValue(`days.${index}.is24Hours`, false);
-                                    form.setValue(`days.${index}.openingTime`, null);
-                                    form.setValue(`days.${index}.closingTime`, null);
-                                  }
-                                }}
-                              />
+                              <FormItem className="space-y-1 sm:space-y-0">
+                                <span className="text-[10px] uppercase text-txt-muted sm:hidden">
+                                  Apertura
+                                </span>
+                                <FormControl>
+                                  <Input
+                                    type="time"
+                                    value={f.value ?? ""}
+                                    onChange={(e) =>
+                                      f.onChange(e.target.value || null)
+                                    }
+                                    disabled={!dayIsOpen || dayIs24h}
+                                    className="h-8 text-sm"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-xs" />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`days.${index}.closingTime`}
+                            render={({ field: f }) => (
+                              <FormItem className="space-y-1 sm:space-y-0">
+                                <span className="text-[10px] uppercase text-txt-muted sm:hidden">
+                                  Cierre
+                                </span>
+                                <FormControl>
+                                  <Input
+                                    type="time"
+                                    value={f.value ?? ""}
+                                    onChange={(e) =>
+                                      f.onChange(e.target.value || null)
+                                    }
+                                    disabled={!dayIsOpen || dayIs24h}
+                                    className="h-8 text-sm"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-xs" />
+                              </FormItem>
                             )}
                           />
                         </div>
-
-                        <div className="flex justify-center">
-                          <FormField
-                            control={form.control}
-                            name={`days.${index}.is24Hours`}
-                            render={({ field: f }) => (
-                              <Switch
-                                checked={f.value}
-                                disabled={!dayIsOpen}
-                                onCheckedChange={(checked) => {
-                                  f.onChange(checked);
-                                  if (checked) {
-                                    form.setValue(`days.${index}.openingTime`, null);
-                                    form.setValue(`days.${index}.closingTime`, null);
-                                  }
-                                }}
-                              />
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={form.control}
-                          name={`days.${index}.openingTime`}
-                          render={({ field: f }) => (
-                            <FormItem className="space-y-0">
-                              <FormControl>
-                                <Input
-                                  type="time"
-                                  value={f.value ?? ""}
-                                  onChange={(e) =>
-                                    f.onChange(e.target.value || null)
-                                  }
-                                  disabled={!dayIsOpen || dayIs24h}
-                                  className="h-8 text-sm"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-xs" />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name={`days.${index}.closingTime`}
-                          render={({ field: f }) => (
-                            <FormItem className="space-y-0">
-                              <FormControl>
-                                <Input
-                                  type="time"
-                                  value={f.value ?? ""}
-                                  onChange={(e) =>
-                                    f.onChange(e.target.value || null)
-                                  }
-                                  disabled={!dayIsOpen || dayIs24h}
-                                  className="h-8 text-sm"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-xs" />
-                            </FormItem>
-                          )}
-                        />
                       </div>
                     );
                   })}

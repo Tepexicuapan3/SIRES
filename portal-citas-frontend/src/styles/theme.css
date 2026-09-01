@@ -89,6 +89,11 @@
      (el 100% del keyframe ya termina en opacity:0, así que al cortar la
      iteración no queda ningún "salto" visual). */
   --animate-network-pulse-once: network-pulse 1.6s ease-in-out 3 forwards;
+
+  /* Apertura del modal de detalle de anuncios: fade + escala corta.
+     Se aplica solo bajo `motion-safe:` (ver AnuncioModal.tsx) para
+     respetar `prefers-reduced-motion`. */
+  --animate-modal-in: modal-in 180ms ease-out;
 }
 
 /* ============================================
@@ -117,5 +122,16 @@
     left: 100%;
     opacity: 0;
     transform: translateY(-50%) scale(0.5);
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }

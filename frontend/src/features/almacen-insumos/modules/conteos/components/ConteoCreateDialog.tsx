@@ -54,7 +54,7 @@ export function ConteoCreateDialog({ open, onOpenChange, onSuccess }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>Nuevo conteo físico</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">
           El sistema precargará las existencias actuales del almacén. Luego podrás ajustar las cantidades físicas antes de cerrar.

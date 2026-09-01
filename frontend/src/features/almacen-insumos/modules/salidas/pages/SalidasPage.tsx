@@ -106,7 +106,7 @@ export function SalidasPage() {
 
       {viewItem && (
         <Dialog open onOpenChange={() => setViewItem(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Detalle — {TIPO_SALIDA_LABELS[viewItem.tipoSalida]} {viewItem.numFolio && `(${viewItem.numFolio})`}</DialogTitle>
             </DialogHeader>

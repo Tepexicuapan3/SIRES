@@ -118,7 +118,7 @@ export function SalidaCreateDialog({ open, onOpenChange, onSuccess }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Nueva salida de inventario</DialogTitle></DialogHeader>
 
         <div className="grid grid-cols-2 gap-3">

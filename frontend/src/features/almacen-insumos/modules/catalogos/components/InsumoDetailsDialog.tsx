@@ -19,7 +19,7 @@ export function InsumoDetailsDialog({ open, onOpenChange, item }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{item.nombre}</DialogTitle>
         </DialogHeader>
