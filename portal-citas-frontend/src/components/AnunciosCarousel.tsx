@@ -40,25 +40,25 @@ export default function AnunciosCarousel({ anuncios }: AnunciosCarouselProps) {
 
   const prefersReducedMotion = usePrefersReducedMotion();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(!prefersReducedMotion && anuncios.length > 1);
   const [modalIndex, setModalIndex] = useState<number | null>(null);
 
   const total = anuncios.length;
 
+  // Autoplay corre siempre (salvo `prefers-reduced-motion`) y nunca se
+  // detiene por interacción del usuario -- pedido explícito: "automático,
+  // sin botón". El intervalo es estable, ajeno a re-renders de activeIndex
+  // (evita que cada scroll "reinicie" el conteo de 6s).
+  useEffect(() => {
+    if (prefersReducedMotion || total <= 1) return;
+    const id = window.setInterval(() => {
+      scrollToIndex((activeIndexRef.current + 1) % total, true);
+    }, AUTOPLAY_MS);
+    return () => window.clearInterval(id);
+  }, [total, prefersReducedMotion]);
+
   useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
-
-  // Autoplay: intervalo estable, ajeno a re-renders de activeIndex (evita
-  // que cada scroll "reinicie" el conteo de 6s).
-  useEffect(() => {
-    if (!isPlaying || total <= 1) return;
-    const id = window.setInterval(() => {
-      scrollToIndex((activeIndexRef.current + 1) % total, !prefersReducedMotion);
-    }, AUTOPLAY_MS);
-    return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, total, prefersReducedMotion]);
 
   function scrollToIndex(index: number, smooth: boolean) {
     const container = scrollRef.current;
@@ -71,7 +71,6 @@ export default function AnunciosCarousel({ anuncios }: AnunciosCarouselProps) {
   }
 
   function handleUserNavigate(index: number) {
-    setIsPlaying(false);
     scrollToIndex(index, !prefersReducedMotion);
   }
 
@@ -124,9 +123,6 @@ export default function AnunciosCarousel({ anuncios }: AnunciosCarouselProps) {
   }
 
   function endDrag() {
-    if (dragState.current.isDown && dragState.current.moved) {
-      setIsPlaying(false);
-    }
     dragState.current.isDown = false;
   }
 
@@ -246,39 +242,20 @@ export default function AnunciosCarousel({ anuncios }: AnunciosCarouselProps) {
       </div>
 
       {total > 1 && (
-        <div className="flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsPlaying((p) => !p)}
-            aria-label={isPlaying ? "Pausar avance automático" : "Reanudar avance automático"}
-            className="flex size-6 items-center justify-center rounded-full text-txt-muted hover:bg-subtle hover:text-txt-body"
-          >
-            {isPlaying ? (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">
-                <path d="M6 4h3v12H6zM11 4h3v12h-3z" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5" aria-hidden="true">
-                <path d="M6 4l10 6-10 6z" />
-              </svg>
-            )}
-          </button>
-
-          <div className="flex gap-1.5" role="tablist" aria-label="Seleccionar anuncio">
-            {anuncios.map((anuncio, i) => (
-              <button
-                key={anuncio.id}
-                type="button"
-                role="tab"
-                aria-selected={i === activeIndex}
-                aria-label={`Ir al anuncio ${i + 1}`}
-                onClick={() => handleUserNavigate(i)}
-                className={`h-2 rounded-full transition-all duration-300 motion-reduce:transition-none ${
-                  i === activeIndex ? "w-5 bg-status-info" : "w-2 bg-line-struct hover:bg-txt-hint"
-                }`}
-              />
-            ))}
-          </div>
+        <div className="flex justify-center gap-1.5" role="tablist" aria-label="Seleccionar anuncio">
+          {anuncios.map((anuncio, i) => (
+            <button
+              key={anuncio.id}
+              type="button"
+              role="tab"
+              aria-selected={i === activeIndex}
+              aria-label={`Ir al anuncio ${i + 1}`}
+              onClick={() => handleUserNavigate(i)}
+              className={`h-2 rounded-full transition-all duration-300 motion-reduce:transition-none ${
+                i === activeIndex ? "w-5 bg-status-info" : "w-2 bg-line-struct hover:bg-txt-hint"
+              }`}
+            />
+          ))}
         </div>
       )}
 
