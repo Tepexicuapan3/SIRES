@@ -4,6 +4,7 @@ import type {
   CSSProperties,
 } from "react";
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
@@ -112,6 +113,16 @@ function Sidebar({
   ...props
 }: SidebarProps) {
   const { isMobile, state, isOpenMobile, setOpenMobile } = useSidebar();
+  const location = useLocation();
+
+  // Al navegar en mobile, el drawer debe cerrarse solo: ningun Link individual
+  // (NavMain, NavSecondary, NavUser) sabe que esta dentro de un overlay.
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   if (collapsible === "none") {
     return (
@@ -215,7 +226,8 @@ function SidebarTrigger({
   ref,
   ...props
 }: ComponentPropsWithRef<typeof Button>) {
-  const { toggleSidebar } = useSidebar();
+  const { isMobile, isOpenMobile, setOpenMobile, toggleSidebar } =
+    useSidebar();
 
   return (
     <Button
@@ -226,7 +238,13 @@ function SidebarTrigger({
       className={cn("h-7 w-7", className)}
       onClick={(event) => {
         onClick?.(event);
-        toggleSidebar();
+        // En mobile el sidebar es un overlay controlado por isOpenMobile,
+        // no por el estado "expanded/collapsed" de desktop (isOpen).
+        if (isMobile) {
+          setOpenMobile(!isOpenMobile);
+        } else {
+          toggleSidebar();
+        }
       }}
       {...props}
     >

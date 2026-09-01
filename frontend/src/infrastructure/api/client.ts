@@ -29,6 +29,7 @@ import type { AxiosInstance } from "axios";
 import { env } from "@app/config/env";
 import { setupRequestInterceptor } from "@api/interceptors/request.interceptor";
 import { setupErrorInterceptor } from "@api/interceptors/error.interceptor";
+import { setupServerTimeInterceptor } from "@api/interceptors/server-time.interceptor";
 
 const normalizeApiBaseUrl = (url: string): string => {
   if (/^https?:\/\//i.test(url)) {
@@ -73,6 +74,9 @@ setupRequestInterceptor(apiClient);
 
 // Response/Error: Maneja 401 con refresh + transforma errores a ApiError
 setupErrorInterceptor(apiClient);
+
+// Response: Sincroniza el reloj de la app con la hora del servidor
+setupServerTimeInterceptor(apiClient);
 
 // ==========================================
 // EXPORT
