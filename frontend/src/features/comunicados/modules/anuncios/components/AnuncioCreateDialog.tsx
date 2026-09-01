@@ -146,7 +146,7 @@ export function AnuncioCreateDialog({
                         render={({ field, fieldState }) => (
                           <AnuncioImagePicker
                             label="Imagen"
-                            hint="JPG, PNG o WEBP · máximo 1 MB"
+                            hint="JPG, PNG o WEBP · máximo 3 MB"
                             accept="image/jpeg,image/png,image/webp"
                             kind="image"
                             value={field.value}

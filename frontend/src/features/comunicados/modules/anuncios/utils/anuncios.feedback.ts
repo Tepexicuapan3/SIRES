@@ -4,7 +4,7 @@ const ANUNCIOS_ERROR_MESSAGES: Record<string, string> = {
   ANUNCIO_NOT_FOUND: "El anuncio ya no existe o fue eliminado.",
   VALIDATION_ERROR: "Revisa los datos capturados antes de guardar.",
   INVALID_IMAGE_FORMAT: "La imagen debe ser JPG, PNG o WEBP.",
-  IMAGE_TOO_LARGE: "La imagen no puede superar 1 MB.",
+  IMAGE_TOO_LARGE: "La imagen no puede superar 3 MB.",
   INVALID_ATTACHMENT: "El adjunto debe ser un PDF de máximo 5 MB.",
   INVALID_DATE_RANGE:
     "La vigencia hasta no puede ser anterior a la vigencia desde.",

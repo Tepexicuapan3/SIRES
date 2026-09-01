@@ -65,7 +65,7 @@ const requiredText = (label: string, maxLength: number) =>
     .min(1, { error: `${label} requerido` })
     .max(maxLength, { error: `${label} demasiado largo` });
 
-const MAX_IMAGE_BYTES = 1 * 1024 * 1024; // 1 MB
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 3 MB
 const MAX_PDF_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -89,7 +89,7 @@ export const anuncioFormSchema = z
         { error: "La imagen debe ser JPG, PNG o WEBP" },
       )
       .refine((file) => !file || file.size <= MAX_IMAGE_BYTES, {
-        error: "La imagen no puede superar 1 MB",
+        error: "La imagen no puede superar 3 MB",
       }),
     adjuntoPdf: z
       .instanceof(File)

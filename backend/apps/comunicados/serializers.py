@@ -4,7 +4,8 @@ apps/comunicados/serializers.py
 Serializers del módulo Comunicados. Las validaciones de archivo (formato
 y tamaño) viven en ``AnuncioWriteSerializer`` -- ver spec
 `sdd/anuncios-portal-citas/spec`, dominio `comunicados/media-validation`:
-imagen JPG/PNG/WEBP <= 1MB, adjunto PDF <= 5MB opcional.
+imagen JPG/PNG/WEBP <= 3MB (subido desde 1MB, ver decisión en engram
+`sdd/anuncios-portal-citas/spec`), adjunto PDF <= 5MB opcional.
 
 Contrato de campos: camelCase en el wire, ``source=`` hacia los campos
 snake_case del modelo -- misma convención que ``apps.catalogos.serializers``
@@ -19,7 +20,7 @@ from rest_framework import serializers
 
 from apps.comunicados.models import Anuncio
 
-IMAGE_MAX_BYTES = 1 * 1024 * 1024  # 1 MB
+IMAGE_MAX_BYTES = 3 * 1024 * 1024  # 3 MB
 PDF_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
 
 _ALLOWED_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
@@ -127,7 +128,7 @@ class AnuncioWriteSerializer(serializers.ModelSerializer):
 
         if value.size > IMAGE_MAX_BYTES:
             raise serializers.ValidationError(
-                "La imagen excede el tamaño máximo permitido (1 MB).",
+                "La imagen excede el tamaño máximo permitido (3 MB).",
                 code="image_too_large",
             )
 
