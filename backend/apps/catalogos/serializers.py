@@ -32,6 +32,7 @@ from apps.catalogos.models import (
     Roles,
     CatSucursal,
     TipoDeCitas,
+    TipoConsulta,
     TiposAreas,
     TiposSanguineo,
     TpAutorizacion,
@@ -689,6 +690,19 @@ class TipoDeCitasDetailSerializer(CatalogDetailSerializer):
 class TipoDeCitasWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = TipoDeCitas
+
+
+class TipoConsultaListSerializer(CatalogListSerializer):
+    class Meta(CatalogListSerializer.Meta):
+        model = TipoConsulta
+
+class TipoConsultaDetailSerializer(CatalogDetailSerializer):
+    class Meta(CatalogDetailSerializer.Meta):
+        model = TipoConsulta
+
+class TipoConsultaWriteSerializer(CatalogWriteSerializer):
+    class Meta(CatalogWriteSerializer.Meta):
+        model = TipoConsulta
 
 
 class TiposSanguineoListSerializer(CatalogListSerializer):

@@ -21,20 +21,19 @@ Flujo (validaciones en este orden):
    ``settings.PORTAL_CANCELACION_VENTANA_HORAS`` para ``fecha_hora`` -> 409.
 5. Transacción atómica (mismo patrón que
    ``reservar_cita_usecase.reservar_cita``, con ``select_for_update()``):
-   se bloquea la ``CitaMedica`` y su ``HorarioDisponible`` asociado (acceso
-   vía ``HorarioDisponible.objects.filter(cita=cita)`` -- el
-   ``related_name`` inverso ``cita.slot`` no sirve acá porque necesitamos
-   ``select_for_update()`` sobre el queryset, no sobre el objeto ya
-   cacheado). Se re-valida el estatus DESPUÉS de tomar el lock (defensa
-   contra una carrera entre el chequeo del paso 3, sin lock, y este punto
-   -- ej. dos pestañas cancelando la misma cita al mismo tiempo). Se marca
-   ``estatus="cancelada"``, ``cancelado_en=now()``,
-   ``cancelado_por_id=None`` (autogestionado -- no hay usuario de staff
-   detrás, mismo criterio que ``created_by_id=None`` en la reserva de Fase
-   4) y ``motivo_cancelacion`` (opcional, del body). El slot se libera por
-   completo: ``cita=None`` + ``disponible=True`` (nunca queda
-   ``disponible=True`` apuntando todavía a la cita cancelada -- sería un
-   estado inconsistente que un doble-booking podría explotar).
+   se bloquea la ``CitaMedica`` con ``select_for_update()`` y se re-valida
+   el estatus DESPUÉS de tomar el lock (defensa contra una carrera entre
+   el chequeo del paso 3, sin lock, y este punto -- ej. dos pestañas
+   cancelando la misma cita al mismo tiempo). El cambio de estatus en sí
+   se delega en ``CitasRepository.update_estatus`` (mismo camino que usa
+   recepción) dentro de un savepoint anidado -- eso deja
+   ``cancelado_en``/``motivo_cancelacion``, libera el
+   ``HorarioDisponible`` asociado, y escribe el registro en
+   ``CitaEstatusLog`` (bitácora NOM-024). ``changed_by_id=None`` porque es
+   autogestionado por el paciente -- no hay usuario de staff detrás
+   (mismo criterio que ``created_by_id=None`` en la reserva de Fase 4). Si
+   el paciente no escribió un motivo, se usa uno por defecto (la máquina
+   de estados exige motivo para cancelar, igual que para recepción).
 6. (Fase 6) Ya confirmada la transacción anterior, se encola
    ``tasks.enviar_cancelacion_portal_task`` con ``.delay(...)`` para
    mandar el correo de cancelación en background -- este endpoint NO
@@ -58,7 +57,9 @@ from apps.portal_citas.errors import PortalCancelacionError
 from apps.portal_citas.models import PortalMiembro
 from apps.portal_citas.services.nucleo_service import puede_gestionar_miembro
 from apps.portal_citas.tasks import enviar_cancelacion_portal_task
-from apps.recepcion.models import CitaMedica, EstatusCita, HorarioDisponible
+from apps.recepcion.models import CitaMedica, EstatusCita
+from apps.recepcion.repositories.citas_repository import CitasRepository
+from apps.recepcion.services.errors import VisitDomainError
 
 logger = logging.getLogger(__name__)
 
@@ -121,37 +122,28 @@ def cancelar_cita(
         # cita primero.
         _validar_estatus_cancelable(cita.estatus)
 
-        slot = (
-            HorarioDisponible.objects.select_for_update()
-            .filter(cita=cita)
-            .first()
-        )
-
-        cita.estatus = EstatusCita.CANCELADA
-        cita.cancelado_en = timezone.now()
-        # Autogestionado por el propio paciente/derechohabiente desde el
-        # portal -- no hay un usuario de staff detrás, por eso queda en
-        # None (mismo criterio que created_by_id=None en la reserva de
-        # Fase 4).
-        cita.cancelado_por_id = None
-        cita.motivo_cancelacion = motivo or None
-        cita.save(
-            update_fields=[
-                "estatus",
-                "cancelado_en",
-                "cancelado_por_id",
-                "motivo_cancelacion",
-                "updated_at",
-            ]
-        )
-
-        if slot is not None:
-            # Se deja el slot completamente libre para que cualquiera lo
-            # pueda re-reservar -- nunca disponible=True todavía apuntando
-            # a la cita ya cancelada.
-            slot.cita = None
-            slot.disponible = True
-            slot.save(update_fields=["cita", "disponible"])
+        # Delega en CitasRepository.update_estatus (mismo camino que usa
+        # recepción) en vez de duplicar acá el guardado de
+        # cancelado_en/motivo_cancelacion y la liberación del slot -- así la
+        # cancelación desde el portal también queda en CitaEstatusLog
+        # (bitácora NOM-024), cosa que antes de este cambio no pasaba.
+        # transaction.atomic() es reentrante: esto abre un savepoint dentro
+        # de la transacción ya iniciada arriba, no una transacción nueva.
+        # Autogestionado por el propio paciente/derechohabiente -- no hay
+        # usuario de staff detrás, por eso changed_by_id=None (mismo
+        # criterio que created_by_id=None en la reserva de Fase 4). Si el
+        # paciente no escribió un motivo, se deja uno por defecto: el
+        # motivo es obligatorio en la máquina de estados (mismo requisito
+        # que para recepción) y no queremos forzar al paciente a escribirlo.
+        try:
+            CitasRepository.update_estatus(
+                cita,
+                EstatusCita.CANCELADA,
+                motivo=motivo or "Cancelada por el paciente desde el portal.",
+                changed_by_id=None,
+            )
+        except VisitDomainError as exc:
+            raise PortalCancelacionError(exc.code, exc.message, exc.status_code) from exc
 
     # La cancelación ya quedó confirmada (transacción cerrada arriba) -- el
     # envío del correo se dispara async y nunca debe tumbar la respuesta si

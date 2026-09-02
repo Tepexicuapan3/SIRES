@@ -58,7 +58,19 @@ class SavePrescriptionsSerializer(serializers.Serializer):
 
 
 class CloseConsultationSerializer(SaveDiagnosisSerializer):
-    pass
+    # CIE-10 obligatorio para CERRAR la consulta (NOM-024-SSA3-2012). En
+    # SaveDiagnosisSerializer (guardado de avance, todavía en consulta) se
+    # deja opcional a propósito -- el doctor puede ir guardando antes de
+    # definir el código.
+    cieCode = serializers.CharField(max_length=8, allow_blank=False)
+
+    def validate_cieCode(self, value):
+        normalized = value.strip().upper()
+        if not normalized:
+            raise serializers.ValidationError(
+                "cieCode es obligatorio para cerrar la consulta."
+            )
+        return normalized
 
 
 class SearchCieSerializer(serializers.Serializer):

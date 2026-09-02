@@ -34,6 +34,7 @@ from .sucursales import CatSucursal
 from .tipos_areas import TiposAreas
 from .tipos_autorizacion import TpAutorizacion
 from .tipos_citas import TipoDeCitas
+from .tipo_consulta import TipoConsulta
 from .tipos_licencias import Licencias
 from .tipos_sanguineo import TiposSanguineo
 from .turnos import Turnos
@@ -74,6 +75,7 @@ __all__ = [
     "TiposAreas",
     "TpAutorizacion",
     "TipoDeCitas",
+    "TipoConsulta",
     "Licencias",
     "TiposSanguineo",
     "Turnos",

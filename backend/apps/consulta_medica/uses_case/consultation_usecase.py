@@ -203,6 +203,13 @@ def close_consultation(
     normalized_primary_diagnosis = (primary_diagnosis or "").strip()
     normalized_final_note = (final_note or "").strip()
     normalized_cie_code = _resolve_cie_code_or_error(cie_code)
+    if not normalized_cie_code:
+        raise VisitDomainError(
+            "VALIDATION_ERROR",
+            "Hay errores en el formulario",
+            422,
+            details={"cieCode": ["El código CIE-10 es obligatorio para cerrar la consulta."]},
+        )
 
     visit = _get_visit_or_error(visit_id)
 

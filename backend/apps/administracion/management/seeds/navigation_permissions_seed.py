@@ -32,6 +32,7 @@ NAVIGATION_PERMISSIONS_SEED: list[tuple[str, str]] = [
         "Ver catalogo de centros de atencion",
     ),
     ("admin:catalogos:especialidades:read", "Ver catalogo de especialidades"),
+    ("admin:catalogos:tipo_consulta:read", "Ver catalogo de tipos de consulta"),
     ("admin:catalogos:vacunas:read", "Ver catalogo administrativo de vacunas"),
     ("admin:gestion:expedientes:read", "Ver expedientes clinicos"),
     ("admin:gestion:medicos:read", "Ver catalogo de medicos"),

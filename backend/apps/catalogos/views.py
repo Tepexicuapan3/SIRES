@@ -24,7 +24,7 @@ from .models import (
     CatCentroAtencionHorario, CatCentroAtencionExcepcion, CentroAreaClinica, Consultorios,
     Discapacidades, EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, EstudiosMed,
     GruposDeMedicamentos, Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
-    Roles, CatSucursal, TipoDeCitas, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
+    Roles, CatSucursal, TipoDeCitas, TipoConsulta, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
     Vacunas, CatTipoPersonal,
 )
 from .permissions import CatalogPermissionMixin, HasAnyOfPermissions
@@ -61,6 +61,7 @@ from .serializers import (
     RolesDetailSerializer, RolesListSerializer, RolesWriteSerializer,
     SucursalDetailSerializer, SucursalListSerializer, SucursalWriteSerializer,
     TipoDeCitasDetailSerializer, TipoDeCitasListSerializer, TipoDeCitasWriteSerializer,
+    TipoConsultaDetailSerializer, TipoConsultaListSerializer, TipoConsultaWriteSerializer,
     TiposAreasDetailSerializer, TiposAreasListSerializer, TiposAreasWriteSerializer,
     TiposSanguineoDetailSerializer, TiposSanguineoListSerializer, TiposSanguineoWriteSerializer,
     TpAutorizacionDetailSerializer, TpAutorizacionListSerializer, TpAutorizacionWriteSerializer,
@@ -1128,6 +1129,22 @@ class TipoDeCitasDetailView(CatalogBaseDetailView):
     write_serializer = TipoDeCitasWriteSerializer
     wrapper_key = "appointmentType"
     error_codes = MappingProxyType({"not_found": "APPOINTMENT_TYPE_NOT_FOUND", "exists": "APPOINTMENT_TYPE_EXISTS"})
+
+
+class TipoConsultaListCreateView(CatalogBaseListCreateView):
+    catalog = "tipo_consulta"
+    model = TipoConsulta
+    list_serializer = TipoConsultaListSerializer
+    write_serializer = TipoConsultaWriteSerializer
+    error_codes = MappingProxyType({"exists": "CONSULTATION_TYPE_EXISTS"})
+
+class TipoConsultaDetailView(CatalogBaseDetailView):
+    catalog = "tipo_consulta"
+    model = TipoConsulta
+    detail_serializer = TipoConsultaDetailSerializer
+    write_serializer = TipoConsultaWriteSerializer
+    wrapper_key = "consultationType"
+    error_codes = MappingProxyType({"not_found": "CONSULTATION_TYPE_NOT_FOUND", "exists": "CONSULTATION_TYPE_EXISTS"})
 
 
 class TiposSanguineoListCreateView(CatalogBaseListCreateView):

@@ -26,6 +26,7 @@ import PasesPage from "@features/admin/modules/catalogos/pases/pages/PasesPage";
 import TiposAreasPage from "@features/admin/modules/catalogos/tipos-areas/pages/TiposAreasPage";
 import TiposAutorizacionPage from "@features/admin/modules/catalogos/tipos-autorizacion/pages/TiposAutorizacionPage";
 import TiposCitasPage from "@features/admin/modules/catalogos/tipos-citas/pages/TiposCitasPage";
+import TiposConsultaPage from "@features/admin/modules/catalogos/tipos-consulta/pages/TiposConsultaPage";
 import LicenciasPage from "@features/admin/modules/catalogos/licencias/pages/LicenciasPage";
 import TiposSanguineoPage from "@features/admin/modules/catalogos/tipos-sanguineo/pages/TiposSanguineoPage";
 import TurnosPage from "@features/admin/modules/catalogos/turnos/pages/TurnosPage";
@@ -244,6 +245,14 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:especialidades:read">
             <EspecialidadesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "tipos-consulta",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:tipo_consulta:read">
+            <TiposConsultaPage />
           </ProtectedRoute>
         ),
       },

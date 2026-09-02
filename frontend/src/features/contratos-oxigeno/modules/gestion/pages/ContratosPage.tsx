@@ -46,7 +46,6 @@ function formDataToPayload(data: ContratoFormData) {
     servicio2:     data.servicio2 || null,
     servicio3:     data.servicio3 || null,
     telefono:      data.telefono  || "",
-    direccion:     data.direccion || "",
     fechaSoporte:  data.fechaSoporte  || null,
     vigenciaMeses: data.vigenciaMeses ? Number(data.vigenciaMeses) : null,
     vigenciaDias:  data.vigenciaDias  ? Number(data.vigenciaDias)  : null,

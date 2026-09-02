@@ -98,7 +98,7 @@ class ContratoOxigenoSerializer(serializers.ModelSerializer):
             "id", "sucursal", "numContrato", "nombre", "expediente", "pkNum",
             "fechaNacimiento",
             "tpDer", "tpDerLabel", "clinica", "servicio", "servicio2", "servicio3",
-            "telefono", "direccion",
+            "telefono",
             "fechaSoporte", "vigenciaMeses", "vigenciaDias",
             "fechaRenovar", "diasFaltan", "status", "statusLabel",
             "diagnostico", "fchAlta", "fchModf",

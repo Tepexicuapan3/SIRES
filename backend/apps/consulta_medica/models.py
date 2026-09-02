@@ -41,6 +41,44 @@ class VisitConsultation(models.Model):
         ]
 
 
+class VisitConsultationRevision(models.Model):
+    """
+    Snapshot del valor de ``VisitConsultation`` justo ANTES de que se
+    sobrescriba (ver ``ConsultationRepository.upsert_for_visit``).
+    Versionado real requerido por NOM-024-SSA3-2012 -- reemplaza el
+    anti-patron del legado de pisar el campo in-place sin dejar rastro del
+    valor anterior.
+    """
+
+    consultation = models.ForeignKey(
+        VisitConsultation,
+        db_column="id_consulta",
+        on_delete=models.CASCADE,
+        related_name="revisions",
+    )
+    previous_primary_diagnosis = models.CharField(
+        max_length=255, db_column="diagnostico_primario_anterior"
+    )
+    previous_cie = models.ForeignKey(
+        "catalogos.CatCies",
+        db_column="clave_cie_anterior",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    previous_final_note = models.TextField(db_column="nota_final_anterior")
+    changed_by_id = models.BigIntegerField(db_column="usr_modf", null=True, blank=True)
+    changed_at = models.DateTimeField(db_column="fch_modf", auto_now_add=True)
+
+    class Meta:
+        db_table = "cns_visit_consultation_revision"
+        ordering = ["changed_at"]
+
+    def __str__(self) -> str:
+        return f"Consulta {self.consultation_id} — revision {self.changed_at}"
+
+
 class VisitPrescription(models.Model):
     id_prescription = models.BigAutoField(primary_key=True, db_column="id_receta")
     id_visit = models.OneToOneField(

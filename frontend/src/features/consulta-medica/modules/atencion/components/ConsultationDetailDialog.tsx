@@ -391,7 +391,10 @@ export function ConsultationDetailDialog({
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor="cieSearch">Buscar CIE (opcional)</Label>
+              <Label htmlFor="cieSearch">
+                Buscar CIE (opcional para guardar avance, obligatorio para
+                finalizar)
+              </Label>
               <Input
                 id="cieSearch"
                 value={cieSearchTerm}

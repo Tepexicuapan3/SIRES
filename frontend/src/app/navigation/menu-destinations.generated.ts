@@ -55,6 +55,7 @@ export const MENU_DESTINATIONS: MenuDestination[] = [
   {"path":"/admin/catalogos/tipos-areas","permissions":["admin:catalogos:tipos_areas:read"]},
   {"path":"/admin/catalogos/tipos-autorizacion","permissions":["admin:catalogos:tp_autorizacion:read"]},
   {"path":"/admin/catalogos/tipos-citas","permissions":["admin:catalogos:tipo_citas:read"]},
+  {"path":"/admin/catalogos/tipos-consulta","permissions":["admin:catalogos:tipo_consulta:read"]},
   {"path":"/admin/catalogos/tipos-sanguineo","permissions":["admin:catalogos:tipos_sanguineo:read"]},
   {"path":"/admin/catalogos/turnos","permissions":["admin:catalogos:turnos:read"],"capability":"admin.catalogs.turnos.read"},
   {"path":"/admin/catalogos/vacunas","permissions":["admin:catalogos:vacunas:read"],"capability":"admin.catalogs.vacunas.read"},

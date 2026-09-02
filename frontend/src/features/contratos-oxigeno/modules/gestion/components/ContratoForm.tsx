@@ -36,7 +36,6 @@ interface FormData {
   servicio2:     string;
   servicio3:     string;
   telefono:      string;
-  direccion:     string;
   fechaSoporte:  string;
   vigenciaMeses: string;
   vigenciaDias:  string;
@@ -66,7 +65,7 @@ interface FormData {
 const EMPTY_FORM: FormData = {
   sucursal: "", numContrato: "", nombre: "",
   expediente: "", pkNum: 0, fechaNacimiento: "", tpDer: "T", clinica: "", servicio: "",
-  servicio2: "", servicio3: "", telefono: "", direccion: "",
+  servicio2: "", servicio3: "", telefono: "",
   fechaSoporte: "", vigenciaMeses: "", vigenciaDias: "",
   fechaRenovar: "", diagnostico: "",
   calle: "", numExt: "", numInt: "", colonia: "", alcaldia: "", cp: "",
@@ -89,7 +88,6 @@ function toFormData(c: ContratoOxigeno): FormData {
     servicio2:     c.servicio2 ?? "",
     servicio3:     c.servicio3 ?? "",
     telefono:      c.telefono  ?? "",
-    direccion:     c.direccion ?? "",
     fechaSoporte:  c.fechaSoporte  ?? "",
     vigenciaMeses: c.vigenciaMeses != null ? String(c.vigenciaMeses) : "",
     vigenciaDias:  c.vigenciaDias  != null ? String(c.vigenciaDias)  : "",
@@ -470,23 +468,6 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
             </div>
           </section>
 
-          {/* Contacto */}
-          <section className="space-y-3 border-t border-line-struct/50 pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
-              Contacto
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="cf-telefono">Teléfono</Label>
-                <Input id="cf-telefono" className={inputCls} value={form.telefono} onChange={set("telefono")} placeholder="Ej. 5512345678" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="cf-direccion">Dirección</Label>
-                <Input id="cf-direccion" className={inputCls} value={form.direccion} onChange={set("direccion")} placeholder="Calle, número, colonia..." />
-              </div>
-            </div>
-          </section>
-
           {/* Domicilio desglosado y teléfonos — formato de oxígeno */}
           <section className="space-y-3 border-t border-line-struct/50 pt-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-txt-muted">
@@ -524,6 +505,10 @@ export function ContratoForm({ open, onOpenChange, editing, isSaving, onSave }: 
               <div className="space-y-1">
                 <Label htmlFor="cf-entreCalle2">Y calle</Label>
                 <Input id="cf-entreCalle2" className={inputCls} value={form.entreCalle2} onChange={set("entreCalle2")} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cf-telefono">Tel. domicilio</Label>
+                <Input id="cf-telefono" className={inputCls} value={form.telefono} onChange={set("telefono")} placeholder="Ej. 5512345678" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="cf-telOficina">Tel. oficina</Label>

@@ -352,3 +352,31 @@ class VisitStatusLog(models.Model):
 
     def __str__(self) -> str:
         return f"Visit {self.visit_id}: {self.from_status} → {self.to_status}"
+
+
+class CitaEstatusLog(models.Model):
+    """
+    Registro inmutable de cada cambio de estado de una cita agendada.
+    Mismo patrón que VisitStatusLog — requerido por NOM-024-SSA3-2012.
+    Cubre el tramo AGENDADA→...→(confirmada/atendida/cancelada/no_asistio)
+    que ocurre antes de que la cita se convierta en Visit (check-in).
+    """
+
+    cita          = models.ForeignKey(
+        CitaMedica,
+        on_delete=models.CASCADE,
+        related_name="estatus_logs",
+        db_column="cita_id",
+    )
+    from_status   = models.CharField(max_length=20, null=True, blank=True, db_column="from_status")
+    to_status     = models.CharField(max_length=20, db_column="to_status")
+    changed_by_id = models.BigIntegerField(null=True, blank=True, db_column="changed_by_id")
+    changed_at    = models.DateTimeField(auto_now_add=True, db_column="changed_at")
+    notes         = models.CharField(max_length=255, null=True, blank=True, db_column="notes")
+
+    class Meta:
+        db_table = "citas_estatus_log"
+        ordering = ["changed_at"]
+
+    def __str__(self) -> str:
+        return f"Cita {self.cita_id}: {self.from_status} → {self.to_status}"

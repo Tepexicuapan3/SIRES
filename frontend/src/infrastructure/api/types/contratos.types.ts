@@ -53,7 +53,6 @@ export interface ContratoOxigeno {
   servicio2:     string | null;
   servicio3:     string | null;
   telefono:      string;
-  direccion:     string;
   fechaSoporte:  string | null;   // YYYY-MM-DD
   vigenciaMeses: number | null;
   vigenciaDias:  number | null;
@@ -103,7 +102,6 @@ export interface CreateContratoRequest {
   servicio2?:    string | null;
   servicio3?:    string | null;
   telefono?:     string;
-  direccion?:    string;
   fechaSoporte?:  string | null;
   vigenciaMeses?: number | null;
   vigenciaDias?:  number | null;

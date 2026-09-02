@@ -518,7 +518,7 @@ describe("DoctorConsultationPage UI", () => {
     const user = userEvent.setup();
     renderDoctorPage("/clinico/consultas/doctor/1");
 
-    await user.type(screen.getByLabelText("Buscar CIE (opcional)"), "A0");
+    await user.type(screen.getByLabelText(/Buscar CIE/i), "A0");
     await user.click(await screen.findByRole("button", { name: /A090/i }));
 
     await user.clear(screen.getByLabelText("Diagnostico principal"));
@@ -587,7 +587,20 @@ describe("DoctorConsultationPage UI", () => {
     expect(toast.success).toHaveBeenCalledWith("Receta guardada");
   });
 
-  it("bloquea cierre hasta iniciar consulta y completar diagnostico + nota final", async () => {
+  it("bloquea cierre hasta iniciar consulta, completar diagnostico + nota final y elegir CIE", async () => {
+    vi.mocked(useCieSearch).mockReturnValue({
+      data: {
+        items: [
+          { code: "A090", description: "GASTROENTERITIS", version: "CIE-10" },
+        ],
+        total: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useCieSearch>);
+
     const user = userEvent.setup();
     renderDoctorPage("/clinico/consultas/doctor/1");
 
@@ -604,12 +617,32 @@ describe("DoctorConsultationPage UI", () => {
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(screen.getByLabelText("Nota final"), "Nota clinica");
 
+    // cieCode obligatorio para cerrar (NOM-024) -- el boton sigue
+    // deshabilitado hasta elegir un CIE, aunque diagnostico/nota ya esten.
+    expect(closeButton).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/Buscar CIE/i), "A0");
+    await user.click(await screen.findByRole("button", { name: /A090/i }));
+
     await waitFor(() => {
       expect(closeButton).toBeEnabled();
     });
   });
 
   it("sincroniza diagnostico antes de cierre y luego cierra consulta", async () => {
+    vi.mocked(useCieSearch).mockReturnValue({
+      data: {
+        items: [
+          { code: "A090", description: "GASTROENTERITIS", version: "CIE-10" },
+        ],
+        total: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useCieSearch>);
+
     const user = userEvent.setup();
     renderDoctorPage("/clinico/consultas/doctor/1");
 
@@ -623,6 +656,9 @@ describe("DoctorConsultationPage UI", () => {
       screen.getByLabelText("Nota final"),
       "Nota final de egreso",
     );
+    await user.type(screen.getByLabelText(/Buscar CIE/i), "A0");
+    await user.click(await screen.findByRole("button", { name: /A090/i }));
+
     await user.click(
       screen.getByRole("button", { name: "Finalizar consulta" }),
     );
@@ -633,6 +669,7 @@ describe("DoctorConsultationPage UI", () => {
         data: {
           primaryDiagnosis: "Dx final",
           finalNote: "Nota final de egreso",
+          cieCode: "A090",
         },
       });
     });
@@ -643,6 +680,7 @@ describe("DoctorConsultationPage UI", () => {
         data: {
           primaryDiagnosis: "Dx final",
           finalNote: "Nota final de egreso",
+          cieCode: "A090",
         },
       });
     });
@@ -661,6 +699,19 @@ describe("DoctorConsultationPage UI", () => {
       ),
     );
 
+    vi.mocked(useCieSearch).mockReturnValue({
+      data: {
+        items: [
+          { code: "A090", description: "GASTROENTERITIS", version: "CIE-10" },
+        ],
+        total: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useCieSearch>);
+
     const user = userEvent.setup();
     renderDoctorPage("/clinico/consultas/doctor/1");
 
@@ -671,6 +722,8 @@ describe("DoctorConsultationPage UI", () => {
 
     await user.type(screen.getByLabelText("Diagnostico principal"), "Dx");
     await user.type(screen.getByLabelText("Nota final"), "Nota");
+    await user.type(screen.getByLabelText(/Buscar CIE/i), "A0");
+    await user.click(await screen.findByRole("button", { name: /A090/i }));
     await user.click(
       screen.getByRole("button", { name: "Finalizar consulta" }),
     );

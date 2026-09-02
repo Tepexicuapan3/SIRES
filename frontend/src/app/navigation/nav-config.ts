@@ -216,6 +216,11 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["admin:catalogos:tipo_citas:read"],
           },
           {
+            title: "Tipos de consulta",
+            url: "/admin/catalogos/tipos-consulta",
+            permissions: ["admin:catalogos:tipo_consulta:read"],
+          },
+          {
             title: "Licencias",
             url: "/admin/catalogos/licencias",
             permissions: ["admin:catalogos:licencias:read"],

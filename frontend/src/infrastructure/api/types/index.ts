@@ -320,6 +320,22 @@ export type {
 } from "@api/types/catalogos/tipos-citas.types";
 
 // =============================================================================
+// TIPOS DE CONSULTA TYPES (CRUD)
+// =============================================================================
+export type {
+  TipoConsultaListItem,
+  TipoConsultaDetail,
+  CreateTipoConsultaRequest,
+  UpdateTipoConsultaRequest,
+  CreateTipoConsultaResponse,
+  UpdateTipoConsultaResponse,
+  DeleteTipoConsultaResponse,
+  TiposConsultaListParams,
+  TiposConsultaListResponse,
+  TipoConsultaDetailResponse,
+} from "@api/types/catalogos/tipos-consulta.types";
+
+// =============================================================================
 // TIPO PERSONAL TYPES (CRUD)
 // =============================================================================
 export type {

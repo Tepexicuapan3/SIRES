@@ -8,8 +8,10 @@ import math
 from datetime import date, timedelta
 
 from django.db import transaction
+from django.utils import timezone
 
-from apps.recepcion.models import CitaMedica, EstatusCita, HorarioDisponible
+from apps.recepcion.models import CitaEstatusLog, CitaMedica, EstatusCita, HorarioDisponible
+from apps.recepcion.uses_case.cita_state_machine_usecase import transition_cita_state
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -216,16 +218,45 @@ class CitasRepository:
         return _serialize_cita(cita)
 
     @staticmethod
-    def update_estatus(cita: CitaMedica, estatus: str) -> dict:
+    def update_estatus(
+        cita: CitaMedica,
+        estatus: str,
+        *,
+        motivo: str | None = None,
+        changed_by_id: int | None = None,
+    ) -> dict:
+        estatus_anterior = cita.estatus
+        # Valida que la transición sea una de las permitidas (ver
+        # cita_state_machine_usecase) antes de tocar la fila — evita dejar
+        # un log de una transición que después se rechaza.
+        transition_cita_state(estatus_anterior, estatus, motivo=motivo)
+
         with transaction.atomic():
             cita.estatus = estatus
-            cita.save(update_fields=["estatus", "updated_at"])
+            update_fields = ["estatus", "updated_at"]
+
+            if estatus == EstatusCita.CANCELADA:
+                cita.cancelado_en = timezone.now()
+                cita.cancelado_por_id = changed_by_id
+                cita.motivo_cancelacion = motivo
+                update_fields += ["cancelado_en", "cancelado_por_id", "motivo_cancelacion"]
+
+            cita.save(update_fields=update_fields)
 
             # Liberar slot si se cancela o no asistió — dentro de la misma transacción
             if estatus in (EstatusCita.CANCELADA, EstatusCita.NO_ASISTIO):
                 HorarioDisponible.objects.filter(cita=cita).update(
                     disponible=True, cita=None
                 )
+
+            # Bitácora NOM-024 — mismo patrón que VisitStatusLog.
+            CitaEstatusLog.objects.create(
+                cita=cita,
+                from_status=estatus_anterior,
+                to_status=estatus,
+                changed_by_id=changed_by_id,
+                notes=motivo,
+            )
 
         cita = CitaMedica.objects.select_related(
             "medico__id_usuario__detalle", "consultorio"

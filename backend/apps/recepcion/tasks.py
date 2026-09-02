@@ -145,13 +145,32 @@ def marcar_no_asistio():
     ahora = timezone.now()
     limite = ahora - timedelta(hours=2)
 
-    actualizadas = CitaMedica.objects.filter(
+    citas = CitaMedica.objects.filter(
         fecha_hora__lte=limite,
         estatus__in=[EstatusCita.AGENDADA, EstatusCita.CONFIRMADA],
-    ).update(
-        estatus=EstatusCita.NO_ASISTIO,
-        updated_at=ahora,
     )
 
-    logger.info("Citas marcadas como no_asistio: %s (limite=%s)", actualizadas, limite)
-    return {"actualizadas": actualizadas}
+    actualizadas = 0
+    errores = 0
+    # Se recorre una por una (en vez de un .update() masivo) para pasar por
+    # CitasRepository.update_estatus(), que libera el slot de HorarioDisponible
+    # en la misma transacción — un .update() directo sobre el queryset deja el
+    # slot marcado como ocupado para siempre.
+    for cita in citas:
+        try:
+            CitasRepository.update_estatus(
+                cita,
+                EstatusCita.NO_ASISTIO,
+                motivo="Automático: sin confirmación 2 horas después de la hora de la cita.",
+                changed_by_id=None,
+            )
+            actualizadas += 1
+        except Exception as exc:
+            errores += 1
+            logger.exception("Error marcando no_asistio para cita %s: %s", cita.id, exc)
+
+    logger.info(
+        "Citas marcadas como no_asistio: %s errores=%s (limite=%s)",
+        actualizadas, errores, limite,
+    )
+    return {"actualizadas": actualizadas, "errores": errores}

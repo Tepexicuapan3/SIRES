@@ -153,6 +153,9 @@ class UpdateEstatusSerializer(serializers.Serializer):
     estatus = serializers.ChoiceField(
         choices=("confirmada", "atendida", "cancelada", "no_asistio")
     )
+    # Obligatorio para cancelada/no_asistio — lo exige
+    # cita_state_machine_usecase.transition_cita_state (CITA_MOTIVO_REQUERIDO).
+    motivo  = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
 class SlotsQuerySerializer(serializers.Serializer):
@@ -321,7 +324,17 @@ class CitaEstatusView(APIView):
                                   status.HTTP_422_UNPROCESSABLE_ENTITY,
                                   details=s.errors, request_id=get_request_id(request))
 
-        result = CitasRepository.update_estatus(cita, s.validated_data["estatus"])
+        auth_user = UserRepository.build_auth_user(user)
+        try:
+            result = CitasRepository.update_estatus(
+                cita,
+                s.validated_data["estatus"],
+                motivo=s.validated_data.get("motivo") or None,
+                changed_by_id=auth_user.get("id"),
+            )
+        except VisitDomainError as exc:
+            return _domain_error(request, exc)
+
         return Response(result)
 
 

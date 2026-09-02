@@ -317,6 +317,18 @@ NAV_SEED = [
         "permisos": ["admin:catalogos:especialidades:read"],
     },
     {
+        "clave": "administracion.catalogos.tipo_consulta",
+        "titulo": "Tipos de consulta",
+        "icono": None,
+        "url": "/admin/catalogos/tipos-consulta",
+        "badge": None,
+        "orden": 12,
+        "es_seccion": False,
+        "grupo": "primary",
+        "parent_clave": "administracion.catalogos",
+        "permisos": ["admin:catalogos:tipo_consulta:read"],
+    },
+    {
         "clave": "administracion.catalogos.estudios_medicos",
         "titulo": "Estudios medicos",
         "icono": None,

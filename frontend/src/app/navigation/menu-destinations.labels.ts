@@ -125,6 +125,10 @@ export const MENU_DESTINATION_LABELS: Record<
     label: "Tipos de Citas",
     grupo: "Catálogos",
   },
+  "/admin/catalogos/tipos-consulta": {
+    label: "Tipos de Consulta",
+    grupo: "Catálogos",
+  },
   "/admin/catalogos/tipos-sanguineo": {
     label: "Tipos Sanguíneos",
     grupo: "Catálogos",

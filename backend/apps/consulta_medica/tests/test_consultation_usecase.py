@@ -2,7 +2,7 @@ from django.test import TestCase
 
 from apps.authentication.models import SyUsuario
 from apps.catalogos.models import CatCies
-from apps.consulta_medica.models import VisitConsultation
+from apps.consulta_medica.models import VisitConsultation, VisitConsultationRevision
 from apps.consulta_medica.uses_case.consultation_usecase import (
     close_consultation,
     save_diagnosis,
@@ -24,6 +24,15 @@ class ConsultationUseCaseTests(TestCase):
         self.doctor_id_2 = SyUsuario.objects.create(
             usuario="doctor_test_2", correo="doctor2@example.com", clave_hash="x",
         ).id_usuario
+        # cieCode es obligatorio para cerrar una consulta (NOM-024) --
+        # fixture compartida para los tests de close_consultation.
+        self.cie_code = "I10"
+        CatCies.objects.create(
+            code=self.cie_code,
+            description="HIPERTENSION ESENCIAL (PRIMARIA)",
+            version="CIE-10",
+            is_active=True,
+        )
 
     def _visit(self, status):
         return Visit.objects.create(
@@ -82,6 +91,7 @@ class ConsultationUseCaseTests(TestCase):
             primary_diagnosis="Hipertension arterial",
             final_note="Paciente estable y con tratamiento inicial.",
             doctor_id=self.doctor_id,
+            cie_code=self.cie_code,
         )
 
         self.assertEqual(payload["visit"]["status"], "cerrada")
@@ -105,6 +115,7 @@ class ConsultationUseCaseTests(TestCase):
             final_note="Paciente con manejo sintomatico.",
             doctor_id=self.doctor_id,
             permissions=["clinico:consultas:read"],
+            cie_code=self.cie_code,
         )
 
         self.assertEqual(payload["visit"]["status"], "cerrada")
@@ -119,10 +130,27 @@ class ConsultationUseCaseTests(TestCase):
                 primary_diagnosis="  ",
                 final_note="",
                 doctor_id=self.doctor_id,
+                cie_code=self.cie_code,
             )
 
         self.assertEqual(raised.exception.code, "VISIT_STATE_INVALID")
         self.assertEqual(raised.exception.status_code, 409)
+
+    def test_close_consultation_requires_cie_code(self):
+        visit = self._visit("en_consulta")
+
+        with self.assertRaises(VisitDomainError) as raised:
+            close_consultation(
+                visit_id=visit.id_visit,
+                roles=["DOCTOR"],
+                primary_diagnosis="Dx",
+                final_note="Nota",
+                doctor_id=self.doctor_id,
+            )
+
+        self.assertEqual(raised.exception.code, "VALIDATION_ERROR")
+        self.assertEqual(raised.exception.status_code, 422)
+        self.assertIn("cieCode", raised.exception.details)
 
     def test_close_consultation_upserts_same_visit_record(self):
         visit = self._visit("en_consulta")
@@ -132,6 +160,7 @@ class ConsultationUseCaseTests(TestCase):
             "Dx inicial",
             "Nota inicial",
             self.doctor_id,
+            cie_code=self.cie_code,
         )
 
         visit.status = "en_consulta"
@@ -143,6 +172,7 @@ class ConsultationUseCaseTests(TestCase):
             "Dx final",
             "Nota final",
             self.doctor_id_2,
+            cie_code=self.cie_code,
         )
 
         self.assertEqual(VisitConsultation.objects.filter(id_visit=visit).count(), 1)
@@ -195,6 +225,56 @@ class ConsultationUseCaseTests(TestCase):
 
         consultation = VisitConsultation.objects.get(id_visit=visit)
         self.assertEqual(consultation.cie_id, "A090")
+
+    def test_save_diagnosis_twice_with_different_values_creates_revision(self):
+        visit = self._visit("en_consulta")
+
+        save_diagnosis(
+            visit_id=visit.id_visit,
+            roles=["DOCTOR"],
+            primary_diagnosis="Dx borrador",
+            final_note="Nota borrador",
+            doctor_id=self.doctor_id,
+        )
+
+        save_diagnosis(
+            visit_id=visit.id_visit,
+            roles=["DOCTOR"],
+            primary_diagnosis="Dx corregido",
+            final_note="Nota corregida",
+            doctor_id=self.doctor_id,
+            cie_code=self.cie_code,
+        )
+
+        consultation = VisitConsultation.objects.get(id_visit=visit)
+        # El valor actual es el ultimo -- pero el anterior no se pierde,
+        # queda versionado en vez de pisado in-place (NOM-024).
+        self.assertEqual(consultation.primary_diagnosis, "Dx corregido")
+
+        revisions = VisitConsultationRevision.objects.filter(consultation=consultation)
+        self.assertEqual(revisions.count(), 1)
+        revision = revisions.first()
+        self.assertEqual(revision.previous_primary_diagnosis, "Dx borrador")
+        self.assertEqual(revision.previous_final_note, "Nota borrador")
+        self.assertIsNone(revision.previous_cie_id)
+
+    def test_save_diagnosis_twice_with_identical_values_does_not_create_revision(self):
+        visit = self._visit("en_consulta")
+
+        for _ in range(2):
+            save_diagnosis(
+                visit_id=visit.id_visit,
+                roles=["DOCTOR"],
+                primary_diagnosis="Dx estable",
+                final_note="Nota estable",
+                doctor_id=self.doctor_id,
+            )
+
+        consultation = VisitConsultation.objects.get(id_visit=visit)
+        self.assertEqual(
+            VisitConsultationRevision.objects.filter(consultation=consultation).count(),
+            0,
+        )
 
     def test_save_diagnosis_invalid_cie_code_raises_validation_error(self):
         visit = self._visit("en_consulta")
@@ -265,6 +345,7 @@ class ConsultationUseCaseTests(TestCase):
             primary_diagnosis="Dx estable",
             final_note="Nota estable",
             doctor_id=self.doctor_id,
+            cie_code=self.cie_code,
         )
 
         second_payload = close_consultation(
@@ -273,6 +354,7 @@ class ConsultationUseCaseTests(TestCase):
             primary_diagnosis="Dx estable",
             final_note="Nota estable",
             doctor_id=self.doctor_id,
+            cie_code=self.cie_code,
         )
 
         self.assertEqual(first_payload["visit"]["status"], "cerrada")

@@ -206,6 +206,7 @@ class ConsultationContractsApiTests(APITestCase):
             {
                 "primaryDiagnosis": "Gastroenteritis aguda",
                 "finalNote": "Reposo, hidratacion y seguimiento en 48h.",
+                "cieCode": "A090",
             },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
@@ -381,6 +382,7 @@ class ConsultationContractsApiTests(APITestCase):
             {
                 "primaryDiagnosis": "Dx alias",
                 "finalNote": "Nota alias",
+                "cieCode": "A090",
             },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
@@ -396,6 +398,7 @@ class ConsultationContractsApiTests(APITestCase):
         payload = {
             "primaryDiagnosis": "Dx de egreso",
             "finalNote": "Nota final idempotente",
+            "cieCode": "A090",
         }
 
         first_response = self.client.post(
@@ -430,6 +433,7 @@ class ConsultationContractsApiTests(APITestCase):
             {
                 "primaryDiagnosis": "Infeccion de vias respiratorias",
                 "finalNote": "Alta con recomendaciones generales.",
+                "cieCode": "A090",
             },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
@@ -464,6 +468,7 @@ class ConsultationContractsApiTests(APITestCase):
             {
                 "primaryDiagnosis": "Dx",
                 "finalNote": "Nota",
+                "cieCode": "A090",
             },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,

@@ -26,6 +26,7 @@ routes = [
     ("area-types", TiposAreasListCreateView, TiposAreasDetailView, "int"),
     ("auth-types", TpAutorizacionListCreateView, TpAutorizacionDetailView, "int"),
     ("appointment-types", TipoDeCitasListCreateView, TipoDeCitasDetailView, "int"),
+    ("consultation-types", TipoConsultaListCreateView, TipoConsultaDetailView, "int"),
     ("licenses", LicenciasListCreateView, LicenciasDetailView, "int"),
     ("blood-type", TiposSanguineoListCreateView, TiposSanguineoDetailView, "int"),
     ("shifts", TurnosListCreateView, TurnosDetailView, "int"),

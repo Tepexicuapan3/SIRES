@@ -40,8 +40,9 @@ class ContratoOxigeno(models.Model):
     servicio      = models.CharField(max_length=100)
     servicio_2    = models.CharField(max_length=100, blank=True, null=True)
     servicio_3    = models.CharField(max_length=100, blank=True, null=True)
+    # Teléfono de domicilio (tel_domicilio en formato_oxigeno.docx), distinto
+    # de tel_oficina/celular de abajo.
     telefono      = models.CharField(max_length=20, blank=True)
-    direccion     = models.CharField(max_length=255, blank=True)
     fecha_soporte  = models.DateField(null=True, blank=True)
     vigencia_meses = models.IntegerField(null=True, blank=True)
     vigencia_dias  = models.IntegerField(null=True, blank=True)

@@ -209,7 +209,10 @@ export const DoctorConsultationPage = () => {
   const canCloseSelectedVisit =
     Boolean(selectedVisit) &&
     canCloseDoctorConsultation &&
-    canCloseConsultation(selectedVisitStatus);
+    canCloseConsultation(selectedVisitStatus) &&
+    // cieCode es obligatorio para CERRAR (NOM-024) aunque siga opcional
+    // para el guardado de avance -- ver consultation_usecase.close_consultation.
+    Boolean(selectedCieCode);
 
   const selectedSavedPrescriptions = selectedVisit
     ? (prescriptionsDraftByVisitId[selectedVisit.id] ?? [])
