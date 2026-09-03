@@ -221,6 +221,16 @@ export const NAV_CONFIG: NavSection[] = [
             permissions: ["admin:catalogos:tipo_consulta:read"],
           },
           {
+            title: "Religiones",
+            url: "/admin/catalogos/religiones",
+            permissions: ["admin:catalogos:religion:read"],
+          },
+          {
+            title: "Tipos de residencia",
+            url: "/admin/catalogos/tipos-residencia",
+            permissions: ["admin:catalogos:tipo_residencia:read"],
+          },
+          {
             title: "Licencias",
             url: "/admin/catalogos/licencias",
             permissions: ["admin:catalogos:licencias:read"],

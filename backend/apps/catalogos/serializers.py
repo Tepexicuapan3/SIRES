@@ -30,10 +30,12 @@ from apps.catalogos.models import (
     Parentesco,
     Pases,
     Permisos,
+    Religion,
     Roles,
     CatSucursal,
     TipoDeCitas,
     TipoConsulta,
+    TipoResidencia,
     TiposAreas,
     TiposSanguineo,
     TpAutorizacion,
@@ -704,6 +706,32 @@ class TipoConsultaDetailSerializer(CatalogDetailSerializer):
 class TipoConsultaWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = TipoConsulta
+
+
+class ReligionListSerializer(CatalogListSerializer):
+    class Meta(CatalogListSerializer.Meta):
+        model = Religion
+
+class ReligionDetailSerializer(CatalogDetailSerializer):
+    class Meta(CatalogDetailSerializer.Meta):
+        model = Religion
+
+class ReligionWriteSerializer(CatalogWriteSerializer):
+    class Meta(CatalogWriteSerializer.Meta):
+        model = Religion
+
+
+class TipoResidenciaListSerializer(CatalogListSerializer):
+    class Meta(CatalogListSerializer.Meta):
+        model = TipoResidencia
+
+class TipoResidenciaDetailSerializer(CatalogDetailSerializer):
+    class Meta(CatalogDetailSerializer.Meta):
+        model = TipoResidencia
+
+class TipoResidenciaWriteSerializer(CatalogWriteSerializer):
+    class Meta(CatalogWriteSerializer.Meta):
+        model = TipoResidencia
 
 
 class MotivoCitaListSerializer(CatalogListSerializer):

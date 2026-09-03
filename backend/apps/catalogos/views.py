@@ -24,8 +24,8 @@ from .models import (
     CatCentroAtencionHorario, CatCentroAtencionExcepcion, CentroAreaClinica, Consultorios,
     Discapacidades, EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, EstudiosMed,
     GruposDeMedicamentos, Licencias, MotivoCita, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
-    Roles, CatSucursal, TipoDeCitas, TipoConsulta, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
-    Vacunas, CatTipoPersonal,
+    Religion, Roles, CatSucursal, TipoDeCitas, TipoConsulta, TipoResidencia, TiposAreas, TiposSanguineo,
+    TpAutorizacion, Turnos, Vacunas, CatTipoPersonal,
 )
 from .permissions import CatalogPermissionMixin, HasAnyOfPermissions
 from .repositories.consultorios_repository import ConsultoriosRepository
@@ -59,10 +59,12 @@ from .serializers import (
     ParentescoDetailSerializer, ParentescoListSerializer, ParentescoWriteSerializer,
     PasesDetailSerializer, PasesListSerializer, PasesWriteSerializer,
     PermisosDetailSerializer, PermisosListSerializer, PermisosWriteSerializer,
+    ReligionDetailSerializer, ReligionListSerializer, ReligionWriteSerializer,
     RolesDetailSerializer, RolesListSerializer, RolesWriteSerializer,
     SucursalDetailSerializer, SucursalListSerializer, SucursalWriteSerializer,
     TipoDeCitasDetailSerializer, TipoDeCitasListSerializer, TipoDeCitasWriteSerializer,
     TipoConsultaDetailSerializer, TipoConsultaListSerializer, TipoConsultaWriteSerializer,
+    TipoResidenciaDetailSerializer, TipoResidenciaListSerializer, TipoResidenciaWriteSerializer,
     TiposAreasDetailSerializer, TiposAreasListSerializer, TiposAreasWriteSerializer,
     TiposSanguineoDetailSerializer, TiposSanguineoListSerializer, TiposSanguineoWriteSerializer,
     TpAutorizacionDetailSerializer, TpAutorizacionListSerializer, TpAutorizacionWriteSerializer,
@@ -1146,6 +1148,38 @@ class TipoConsultaDetailView(CatalogBaseDetailView):
     write_serializer = TipoConsultaWriteSerializer
     wrapper_key = "consultationType"
     error_codes = MappingProxyType({"not_found": "CONSULTATION_TYPE_NOT_FOUND", "exists": "CONSULTATION_TYPE_EXISTS"})
+
+
+class ReligionListCreateView(CatalogBaseListCreateView):
+    catalog = "religion"
+    model = Religion
+    list_serializer = ReligionListSerializer
+    write_serializer = ReligionWriteSerializer
+    error_codes = MappingProxyType({"exists": "RELIGION_EXISTS"})
+
+class ReligionDetailView(CatalogBaseDetailView):
+    catalog = "religion"
+    model = Religion
+    detail_serializer = ReligionDetailSerializer
+    write_serializer = ReligionWriteSerializer
+    wrapper_key = "religion"
+    error_codes = MappingProxyType({"not_found": "RELIGION_NOT_FOUND", "exists": "RELIGION_EXISTS"})
+
+
+class TipoResidenciaListCreateView(CatalogBaseListCreateView):
+    catalog = "tipo_residencia"
+    model = TipoResidencia
+    list_serializer = TipoResidenciaListSerializer
+    write_serializer = TipoResidenciaWriteSerializer
+    error_codes = MappingProxyType({"exists": "RESIDENCE_TYPE_EXISTS"})
+
+class TipoResidenciaDetailView(CatalogBaseDetailView):
+    catalog = "tipo_residencia"
+    model = TipoResidencia
+    detail_serializer = TipoResidenciaDetailSerializer
+    write_serializer = TipoResidenciaWriteSerializer
+    wrapper_key = "residenceType"
+    error_codes = MappingProxyType({"not_found": "RESIDENCE_TYPE_NOT_FOUND", "exists": "RESIDENCE_TYPE_EXISTS"})
 
 
 class MotivoCitaListCreateView(CatalogBaseListCreateView):

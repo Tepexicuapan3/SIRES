@@ -24,6 +24,7 @@ from .ocupaciones import Ocupaciones
 from .origen_consulta import OrigenCons
 from .parentescos import Parentesco
 from .pases import Pases
+from .religion import Religion
 
 # ALIAS IMPORTANTES
 from .roles import Roles
@@ -37,6 +38,7 @@ from .tipos_autorizacion import TpAutorizacion
 from .tipos_citas import TipoDeCitas
 from .tipo_consulta import TipoConsulta
 from .tipos_licencias import Licencias
+from .tipo_residencia import TipoResidencia
 from .tipos_sanguineo import TiposSanguineo
 from .turnos import Turnos
 from .vacunas import Vacunas
@@ -69,6 +71,7 @@ __all__ = [
     "OrigenCons",
     "Parentesco",
     "Pases",
+    "Religion",
     "Roles",
     "Permisos",
     "CatRol",
@@ -78,6 +81,7 @@ __all__ = [
     "TpAutorizacion",
     "TipoDeCitas",
     "TipoConsulta",
+    "TipoResidencia",
     "Licencias",
     "TiposSanguineo",
     "Turnos",

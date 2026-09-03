@@ -27,6 +27,8 @@ import TiposAreasPage from "@features/admin/modules/catalogos/tipos-areas/pages/
 import TiposAutorizacionPage from "@features/admin/modules/catalogos/tipos-autorizacion/pages/TiposAutorizacionPage";
 import TiposCitasPage from "@features/admin/modules/catalogos/tipos-citas/pages/TiposCitasPage";
 import TiposConsultaPage from "@features/admin/modules/catalogos/tipos-consulta/pages/TiposConsultaPage";
+import ReligionesPage from "@features/admin/modules/catalogos/religiones/pages/ReligionesPage";
+import TiposResidenciaPage from "@features/admin/modules/catalogos/tipos-residencia/pages/TiposResidenciaPage";
 import LicenciasPage from "@features/admin/modules/catalogos/licencias/pages/LicenciasPage";
 import TiposSanguineoPage from "@features/admin/modules/catalogos/tipos-sanguineo/pages/TiposSanguineoPage";
 import TurnosPage from "@features/admin/modules/catalogos/turnos/pages/TurnosPage";
@@ -253,6 +255,22 @@ export const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredPermission="admin:catalogos:tipo_consulta:read">
             <TiposConsultaPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "religiones",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:religion:read">
+            <ReligionesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "tipos-residencia",
+        element: (
+          <ProtectedRoute requiredPermission="admin:catalogos:tipo_residencia:read">
+            <TiposResidenciaPage />
           </ProtectedRoute>
         ),
       },

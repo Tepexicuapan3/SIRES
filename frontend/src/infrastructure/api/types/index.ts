@@ -336,6 +336,38 @@ export type {
 } from "@api/types/catalogos/tipos-consulta.types";
 
 // =============================================================================
+// RELIGIONES TYPES (CRUD)
+// =============================================================================
+export type {
+  ReligionListItem,
+  ReligionDetail,
+  CreateReligionRequest,
+  UpdateReligionRequest,
+  CreateReligionResponse,
+  UpdateReligionResponse,
+  DeleteReligionResponse,
+  ReligionesListParams,
+  ReligionesListResponse,
+  ReligionDetailResponse,
+} from "@api/types/catalogos/religiones.types";
+
+// =============================================================================
+// TIPOS DE RESIDENCIA TYPES (CRUD)
+// =============================================================================
+export type {
+  TipoResidenciaListItem,
+  TipoResidenciaDetail,
+  CreateTipoResidenciaRequest,
+  UpdateTipoResidenciaRequest,
+  CreateTipoResidenciaResponse,
+  UpdateTipoResidenciaResponse,
+  DeleteTipoResidenciaResponse,
+  TiposResidenciaListParams,
+  TiposResidenciaListResponse,
+  TipoResidenciaDetailResponse,
+} from "@api/types/catalogos/tipos-residencia.types";
+
+// =============================================================================
 // TIPO PERSONAL TYPES (CRUD)
 // =============================================================================
 export type {
