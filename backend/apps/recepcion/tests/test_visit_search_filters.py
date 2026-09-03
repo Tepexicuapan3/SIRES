@@ -1,5 +1,8 @@
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
+from apps.catalogos.models import TipoDeCitas
 from apps.recepcion.models import Visit
 from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.serializers import ListVisitsQuerySerializer
@@ -144,3 +147,46 @@ class VisitRepositorySearchFilterTests(TestCase):
         )
 
         self.assertEqual(total, 2)
+
+
+class VisitRepositoryTipoCitaQueryTests(TestCase):
+    """Tarea 3.4: `select_related('tipo_cita')` no debe introducir N+1."""
+
+    def _make_visit_with_tipo_cita(self, *, no_exp, tipo_cita):
+        return VisitRepository.create(
+            no_exp=no_exp,
+            pk_num=0,
+            arrival_type=Visit.ArrivalType.WALK_IN,
+            tipo_cita_id=tipo_cita.id,
+        )
+
+    def _fetch_and_serialize(self):
+        visits, total, total_pages, doctor_nombres, cita_fechas = VisitRepository.list_paginated(
+            page=1, page_size=20,
+        )
+        for visit in visits:
+            VisitRepository.to_contract(visit, doctor_nombres, cita_fechas)
+
+    def test_list_paginated_resolves_tipo_cita_nombre_without_extra_queries_per_row(self):
+        tipo_a = TipoDeCitas.objects.create(name="Consulta general")
+        tipo_b = TipoDeCitas.objects.create(name="Especialidad")
+        self._make_visit_with_tipo_cita(no_exp="TC001", tipo_cita=tipo_a)
+
+        with CaptureQueriesContext(connection) as one_visit_ctx:
+            self._fetch_and_serialize()
+        baseline_queries = len(one_visit_ctx.captured_queries)
+
+        # 3 visitas mas, alternando tipo_cita -- si `select_related` faltara,
+        # cada fila dispararia una query extra para resolver `tipo_cita.name`.
+        self._make_visit_with_tipo_cita(no_exp="TC002", tipo_cita=tipo_b)
+        self._make_visit_with_tipo_cita(no_exp="TC003", tipo_cita=tipo_a)
+        self._make_visit_with_tipo_cita(no_exp="TC004", tipo_cita=tipo_b)
+
+        with CaptureQueriesContext(connection) as many_visits_ctx:
+            self._fetch_and_serialize()
+
+        self.assertEqual(
+            len(many_visits_ctx.captured_queries),
+            baseline_queries,
+            "el numero de queries no debe crecer con mas visitas con tipo_cita seteado (N+1)",
+        )

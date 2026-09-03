@@ -248,6 +248,18 @@ class Visit(models.Model):
         blank=True,
         related_name="visitas",
     )
+    # Tipo de cita seleccionado en el check-in (FK a cat_tpcitas.id_tpcita).
+    # Mismo patron que `consultorio`: sin constraint fisica, se valida
+    # existencia (no is_active) en CreateVisitSerializer.validate_tipoCitaId.
+    tipo_cita = models.ForeignKey(
+        "catalogos.TipoDeCitas",
+        db_column="tipo_cita_id",
+        db_constraint=False,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="visitas",
+    )
     # Nombre del paciente capturado en el check-in (desnormalizado para la ficha).
     nombre_paciente = models.CharField(
         max_length=255,
@@ -275,6 +287,10 @@ class Visit(models.Model):
     fch_baja = models.DateTimeField(db_column="fch_baja", null=True, blank=True)
     # id del usuario de recepción que registró la visita
     created_by_id = models.BigIntegerField(db_column="created_by_id", null=True, blank=True)
+    # Motivo capturado al cancelar la visita (mismo patron que
+    # CitaMedica.motivo_cancelacion). Solo se llena en la transicion
+    # en_espera -> cancelada, exigida por VisitStatusView/change_visit_status.
+    motivo_cancelacion = models.TextField(db_column="motivo_cancelacion", null=True, blank=True)
 
     class Meta:
         db_table = "rcp_visits"

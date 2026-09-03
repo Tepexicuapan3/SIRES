@@ -28,6 +28,7 @@ export const mapCheckinFormToCreateVisitRequest = (
       : undefined,
   doctorId:      values.doctorId,
   consultorioId: values.consultorioId,
+  tipoCitaId:    values.tipoCitaId,
   notes:          values.notes?.trim() || undefined,
   horaConsulta:   values.horaConsulta?.trim() || undefined,
   fechaConsulta:  values.fechaConsulta || undefined,
@@ -42,6 +43,7 @@ export const mapVisitToCheckinDefaults = (
     | "arrivalType"
     | "appointmentId"
     | "doctorId"
+    | "tipoCitaId"
     | "notes"
   >,
 ): Partial<CheckinFormInput> => {
@@ -58,6 +60,7 @@ export const mapVisitToCheckinDefaults = (
     arrivalType:   visit.arrivalType,
     appointmentId: visit.appointmentId ?? "",
     doctorId:      visit.doctorId ?? undefined,
+    tipoCitaId:    visit.tipoCitaId ?? undefined,
     notes:         stripRecepcionServiceTag(visit.notes),
   };
 };

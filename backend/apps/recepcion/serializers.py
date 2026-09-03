@@ -16,9 +16,23 @@ class CreateVisitSerializer(serializers.Serializer):
     appointmentId  = serializers.CharField(required=False, allow_blank=True, max_length=64)
     doctorId       = serializers.IntegerField(min_value=1, required=False)
     consultorioId  = serializers.IntegerField(min_value=1, required=False)
+    tipoCitaId     = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     notes          = serializers.CharField(required=False, allow_blank=True, max_length=255)
     horaConsulta   = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None, max_length=8)
     fechaConsulta  = serializers.DateField(required=False, allow_null=True, default=None, input_formats=["%Y-%m-%d"])
+
+    def validate_tipoCitaId(self, value):
+        # Se valida SOLO existencia, nunca `is_active`: un TipoDeCitas
+        # soft-deleted (CatalogBase.delete nunca borra la fila) debe seguir
+        # aceptandose para no romper un check-in por una tarea de
+        # mantenimiento de catalogo hecha en paralelo (Decision 2, design).
+        if value is None:
+            return None
+        from apps.catalogos.models import TipoDeCitas
+
+        if not TipoDeCitas.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("El tipo de cita no existe.")
+        return value
 
     def validate(self, attrs):
         arrival_type   = attrs.get("arrivalType")
@@ -82,6 +96,9 @@ class UpdateVisitStatusSerializer(serializers.Serializer):
     targetStatus = serializers.ChoiceField(
         choices=("en_somatometria", "cancelada", "no_show")
     )
+    # Requerido por la maquina de estados solo para en_espera -> cancelada
+    # (VISIT_MOTIVO_REQUERIDO); las demas transiciones lo ignoran si llega.
+    motivo = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
 class PatientLookupQuerySerializer(serializers.Serializer):

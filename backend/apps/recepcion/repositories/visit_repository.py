@@ -22,6 +22,7 @@ class VisitRepository:
         appointment_id: str | None = None,
         doctor_id: int | None = None,
         consultorio_id: int | None = None,
+        tipo_cita_id: int | None = None,
         notes: str | None = None,
         hora_consulta=None,
         fecha_consulta=None,
@@ -39,6 +40,7 @@ class VisitRepository:
             appointment_id=appointment_id,
             doctor_id=doctor_id,
             consultorio_id=consultorio_id,
+            tipo_cita_id=tipo_cita_id,
             notes=notes,
             hora_consulta=hora_consulta,
             fecha_consulta=fecha_consulta,
@@ -78,6 +80,7 @@ class VisitRepository:
             Visit.objects
             .select_related(
                 "consultorio__id_center",
+                "tipo_cita",
                 "vital_signs",
                 # Detalle de la visita ORIGEN cuando `vital_signs` es un
                 # reuso (`reused_from_visit`), + los vitales DE ESA visita
@@ -101,9 +104,13 @@ class VisitRepository:
         ).exists()
 
     @staticmethod
-    def update_status(visit: Visit, status_value: str) -> Visit:
+    def update_status(visit: Visit, status_value: str, motivo: str | None = None) -> Visit:
         visit.status = status_value
-        visit.save(update_fields=["status", "fch_modf"])
+        update_fields = ["status", "fch_modf"]
+        if motivo is not None:
+            visit.motivo_cancelacion = motivo
+            update_fields.append("motivo_cancelacion")
+        visit.save(update_fields=update_fields)
         return visit
 
     @staticmethod
@@ -127,6 +134,7 @@ class VisitRepository:
             Visit.objects
             .select_related(
                 "consultorio__id_center",
+                "tipo_cita",
                 "vital_signs",
                 # Ver comentario en `get_by_id`: precarga la visita origen
                 # del reuso + sus propios vitales para toda la pagina de la
@@ -237,6 +245,14 @@ class VisitRepository:
             except Exception:
                 pass
 
+        tipo_cita_nombre = None
+        if visit.tipo_cita_id:
+            try:
+                if visit.tipo_cita:
+                    tipo_cita_nombre = visit.tipo_cita.name
+            except Exception:
+                pass
+
         return {
             "id":                visit.id_visit,
             "folio":             visit.folio,
@@ -251,6 +267,8 @@ class VisitRepository:
             "doctorNombre":      doctor_nombre,
             "consultorioId":     visit.consultorio_id,
             "consultorioNombre": consultorio_nombre,
+            "tipoCitaId":        visit.tipo_cita_id,
+            "tipoCitaNombre":    tipo_cita_nombre,
             "centroId":          centro_id,
             "centroNombre":      centro_nombre,
             "notes":             visit.notes,

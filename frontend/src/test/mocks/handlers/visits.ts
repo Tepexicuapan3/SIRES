@@ -30,6 +30,8 @@ const buildVisit = (
   doctorNombre:  null,
   consultorioId: null,
   consultorioNombre: null,
+  tipoCitaId:    null,
+  tipoCitaNombre: null,
   centroId:      null,
   centroNombre:  null,
   notes:         "mock visit",

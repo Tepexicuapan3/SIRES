@@ -174,6 +174,7 @@ class VisitsView(APIView):
                 appointment_id=serializer.validated_data.get("appointmentId"),
                 doctor_id=serializer.validated_data.get("doctorId"),
                 consultorio_id=serializer.validated_data.get("consultorioId"),
+                tipo_cita_id=serializer.validated_data.get("tipoCitaId"),
                 notes=serializer.validated_data.get("notes"),
                 hora_consulta=hora_consulta,
                 fecha_consulta=serializer.validated_data.get("fechaConsulta"),
@@ -261,6 +262,7 @@ class VisitStatusView(APIView):
                 visit_id,
                 target_status,
                 changed_by_id=getattr(user, "id_usuario", None),
+                motivo=serializer.validated_data.get("motivo") or None,
             )
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)

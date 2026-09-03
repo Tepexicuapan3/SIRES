@@ -66,6 +66,12 @@ export interface CreateCitaRequest {
 
 export interface UpdateEstatusCitaRequest {
   estatus: "confirmada" | "atendida" | "cancelada" | "no_asistio";
+  /**
+   * Obligatorio para "cancelada" y "no_asistio" — la máquina de estados del
+   * backend (cita_state_machine_usecase.transition_cita_state) lo exige y
+   * responde 422 CITA_MOTIVO_REQUERIDO si viene vacío.
+   */
+  motivo?: string;
 }
 
 // ─── Params ───────────────────────────────────────────────────────────────────

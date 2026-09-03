@@ -247,10 +247,7 @@ export function FichaModal({ open, onOpenChange, visit }: FichaModalProps) {
             <InfoRow label="Médico"      value={visit.doctorNombre} />
             <InfoRow label="Consultorio" value={visit.consultorioNombre} />
             <InfoRow label="Servicio"    value={SERVICE_LABEL[visit.serviceType] ?? visit.serviceType} />
-            <InfoRow
-              label="Tipo llegada"
-              value={visit.arrivalType === "appointment" ? "Con cita" : "Sin cita"}
-            />
+            <InfoRow label="Tipo de cita" value={visit.tipoCitaNombre ?? "—"} />
             <InfoRow
               label="Hora registro"
               value={

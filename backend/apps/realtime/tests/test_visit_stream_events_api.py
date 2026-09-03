@@ -257,7 +257,7 @@ class VisitStreamRealtimeEventsApiTests(APITestCase):
 
         response = self.client.patch(
             f"/api/v1/visits/{self.visit_recepcion.id_visit}/status",
-            {"targetStatus": "cancelada"},
+            {"targetStatus": "cancelada", "motivo": "El paciente solicito cancelar."},
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
             **self._csrf_headers(),

@@ -180,6 +180,7 @@ def create_visit(
     appointment_id: str | None = None,
     doctor_id: int | None = None,
     consultorio_id: int | None = None,
+    tipo_cita_id: int | None = None,
     notes: str | None = None,
     hora_consulta=None,
     fecha_consulta=None,
@@ -208,6 +209,7 @@ def create_visit(
         appointment_id=appointment_id,
         doctor_id=doctor_id,
         consultorio_id=consultorio_id,
+        tipo_cita_id=tipo_cita_id,
         notes=notes,
         hora_consulta=hora_consulta,
         fecha_consulta=fecha_consulta,
@@ -337,14 +339,22 @@ def change_visit_status(
     visit_id: int,
     target_status: str,
     changed_by_id: int | None = None,
+    motivo: str | None = None,
 ) -> dict:
     visit = VisitRepository.get_by_id(visit_id)
     if not visit:
         raise VisitDomainError("VISIT_NOT_FOUND", "Visita no encontrada.", 404)
 
     previous_status = visit.status
-    next_state      = transition_visit_state(previous_status, target_status, ROLE_RECEPCION)
-    visit           = VisitRepository.update_status(visit, next_state)
+    next_state      = transition_visit_state(
+        previous_status, target_status, ROLE_RECEPCION, motivo=motivo,
+    )
+    # Solo persistimos motivo_cancelacion cuando la transicion es a
+    # "cancelada" -- las demas transiciones (no_show, en_somatometria) no
+    # aceptan/usan motivo, aunque llegue en el payload.
+    visit = VisitRepository.update_status(
+        visit, next_state, motivo=motivo if next_state == "cancelada" else None,
+    )
 
     # Log de auditoría NOM-024
     status_log = VisitRepository.log_status_change(

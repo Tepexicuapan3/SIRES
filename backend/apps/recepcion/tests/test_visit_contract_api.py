@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Permisos, Roles
+from apps.catalogos.models import Permisos, Roles, TipoDeCitas
 from apps.somatometria.repositories.vitals_repository import VitalsRepository
 
 
@@ -505,7 +505,7 @@ class VisitContractsApiTests(APITestCase):
 
         response = self.client.patch(
             f"/api/v1/visits/{visit['id']}/status",
-            {"targetStatus": "cancelada"},
+            {"targetStatus": "cancelada", "motivo": "El paciente solicito reagendar."},
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
             **self._csrf_headers(),
@@ -514,6 +514,32 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], visit["id"])
         self.assertEqual(response.data["status"], "cancelada")
+
+        from apps.recepcion.models import Visit
+        visit_obj = Visit.objects.get(id_visit=visit["id"])
+        self.assertEqual(visit_obj.motivo_cancelacion, "El paciente solicito reagendar.")
+
+    def test_patch_visit_status_cancelada_without_motivo_returns_422(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+        visit = self._create_visit(patient_id=3008)
+
+        response = self.client.patch(
+            f"/api/v1/visits/{visit['id']}/status",
+            {"targetStatus": "cancelada"},
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VISIT_MOTIVO_REQUERIDO")
+        self.assertEqual(response.data["status"], 422)
+        self.assertEqual(response.data["requestId"], self.request_id)
+
+        from apps.recepcion.models import Visit
+        visit_obj = Visit.objects.get(id_visit=visit["id"])
+        self.assertEqual(visit_obj.status, "en_espera")
+        self.assertIsNone(visit_obj.motivo_cancelacion)
 
     def test_patch_visit_status_no_show_happy_path(self):
         self._login_as("recepcion_user", self.recepcion_password)
@@ -679,7 +705,7 @@ class VisitContractsApiTests(APITestCase):
         self._login_as("admin_user", self.admin_password)
         response = self.client.patch(
             f"/api/v1/visits/{visit['id']}/status",
-            {"targetStatus": "cancelada"},
+            {"targetStatus": "cancelada", "motivo": "Cancelacion administrativa."},
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
             **self._csrf_headers(),
@@ -695,7 +721,7 @@ class VisitContractsApiTests(APITestCase):
 
         first_patch = self.client.patch(
             f"/api/v1/visits/{visit['id']}/status",
-            {"targetStatus": "cancelada"},
+            {"targetStatus": "cancelada", "motivo": "El paciente ya no puede asistir."},
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
             **self._csrf_headers(),
@@ -779,3 +805,67 @@ class VisitContractsApiTests(APITestCase):
         self.assertEqual(second.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(second.data["code"], "VISIT_DUPLICATE_SUBMIT")
         self.assertEqual(second.data["requestId"], self.request_id)
+
+    def test_create_visit_with_invalid_tipo_cita_id_returns_validation_error(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "noExp": "EXP6001",
+                "arrivalType": "walk_in",
+                "tipoCitaId": 999999,
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["code"], "VALIDATION_ERROR")
+        self.assertIn("details", response.data)
+        self.assertIn("tipoCitaId", response.data["details"])
+
+    def test_create_visit_with_soft_deleted_tipo_cita_id_persists_and_exposes_name(self):
+        # Decision 2 del design: se valida EXISTENCIA, nunca `is_active` --
+        # un tipo de cita desactivado en el catalogo mientras la
+        # recepcionista tenia el dialog abierto no debe romper el check-in.
+        tipo_cita = TipoDeCitas.objects.create(name="Consulta general")
+        tipo_cita.is_active = False
+        tipo_cita.save(update_fields=["is_active"])
+
+        self._login_as("recepcion_user", self.recepcion_password)
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "noExp": "EXP6002",
+                "arrivalType": "walk_in",
+                "tipoCitaId": tipo_cita.id,
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["tipoCitaId"], tipo_cita.id)
+        self.assertEqual(response.data["tipoCitaNombre"], "Consulta general")
+
+    def test_create_visit_without_tipo_cita_id_returns_null(self):
+        self._login_as("recepcion_user", self.recepcion_password)
+
+        response = self.client.post(
+            "/api/v1/visits",
+            {
+                "noExp": "EXP6003",
+                "arrivalType": "walk_in",
+            },
+            format="json",
+            HTTP_X_REQUEST_ID=self.request_id,
+            **self._csrf_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data["tipoCitaId"])
+        self.assertIsNone(response.data["tipoCitaNombre"])

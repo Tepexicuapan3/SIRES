@@ -40,6 +40,8 @@ export interface VisitQueueItem {
   doctorNombre:       string | null;
   consultorioId:      number | null;
   consultorioNombre:  string | null;
+  tipoCitaId:         number | null;
+  tipoCitaNombre:     string | null;
   centroId:           number | null;
   centroNombre:       string | null;
   notes:              string | null;
@@ -88,6 +90,7 @@ export interface CreateVisitRequest {
   appointmentId?:  string;
   doctorId?:       number;
   consultorioId?:  number;
+  tipoCitaId?:     number | null;
   notes?:          string;
   horaConsulta?:   string;  // HH:mm
   fechaConsulta?:  string;  // YYYY-MM-DD — fecha elegida por recepcionista
@@ -143,6 +146,9 @@ export type RecepcionStatusAction =
 
 export interface UpdateVisitStatusRequest {
   targetStatus: RecepcionStatusAction;
+  /** Requerido por el backend solo para `targetStatus: "cancelada"`
+   * (VISIT_MOTIVO_REQUERIDO); las demas transiciones lo ignoran si llega. */
+  motivo?: string;
 }
 
 export interface UpdateVisitStatusResponse {

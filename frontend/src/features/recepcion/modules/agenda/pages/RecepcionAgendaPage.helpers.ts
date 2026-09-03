@@ -126,7 +126,8 @@ export const VISIT_STATUS_DOMAIN_ERROR_MESSAGE: Record<
   | "VISIT_STATE_INVALID"
   | "VISIT_NOT_FOUND"
   | "VALIDATION_ERROR"
-  | "PERMISSION_DENIED",
+  | "PERMISSION_DENIED"
+  | "VISIT_MOTIVO_REQUERIDO",
   string
 > = {
   ROLE_NOT_ALLOWED: "No tenes permiso para actualizar estados en recepcion.",
@@ -135,6 +136,7 @@ export const VISIT_STATUS_DOMAIN_ERROR_MESSAGE: Record<
   VISIT_NOT_FOUND: "La visita ya no existe o fue cerrada por otro usuario.",
   VALIDATION_ERROR: "No se pudo procesar la accion solicitada.",
   PERMISSION_DENIED: "No tenes permiso para ejecutar esta accion.",
+  VISIT_MOTIVO_REQUERIDO: "Se requiere un motivo para cancelar la visita.",
 };
 
 export const FALLBACK_VISIT_STATUS_ERROR_MESSAGE =

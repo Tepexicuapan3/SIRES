@@ -23,6 +23,7 @@ class TransitionRule:
     allowed_roles: frozenset
     requires_complete_vitals: bool = False
     requires_close_fields: bool = False
+    requires_motivo: bool = False
 
 
 TRANSITION_RULES = {
@@ -33,6 +34,7 @@ TRANSITION_RULES = {
     ("en_espera", "cancelada"): TransitionRule(
         action="cancelar_visita",
         allowed_roles=frozenset({ROLE_RECEPCION}),
+        requires_motivo=True,
     ),
     ("en_espera", "no_show"): TransitionRule(
         action="marcar_no_show",
@@ -63,6 +65,7 @@ def transition_visit_state(
     vitals_complete=False,
     primary_diagnosis=None,
     final_note=None,
+    motivo=None,
 ):
     if not _is_known_state(current_state) or not _is_known_state(target_state):
         raise _invalid_state_error(current_state, target_state)
@@ -94,6 +97,13 @@ def transition_visit_state(
             "VISIT_STATE_INVALID",
             "No se puede cerrar consulta: falta diagnostico o nota final.",
             409,
+        )
+
+    if rule.requires_motivo and not _has_content(motivo):
+        raise VisitDomainError(
+            "VISIT_MOTIVO_REQUERIDO",
+            "Se requiere un motivo para cancelar la visita.",
+            422,
         )
 
     return target_state

@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@shared/ui/alert-dialog";
 import { Button } from "@shared/ui/button";
+import { Textarea } from "@shared/ui/textarea";
 import {
   ARRIVAL_TYPE,
   VISIT_STATUS,
@@ -197,6 +198,9 @@ export const RecepcionAgendaPage = () => {
   >(undefined);
   const [pendingStatusAction, setPendingStatusAction] =
     useState<PendingStatusAction | null>(null);
+  // Solo se usa cuando pendingStatusAction.targetStatus === CANCELADA -- el
+  // backend exige motivo unicamente para esa transicion (VISIT_MOTIVO_REQUERIDO).
+  const [cancelMotivo, setCancelMotivo] = useState("");
 
   const visits = bandejaIsHistorical
     ? (historicalData?.items ?? [])
@@ -298,6 +302,9 @@ export const RecepcionAgendaPage = () => {
   const pendingActionCopy = pendingStatusAction
     ? RECEPCION_ACTION_COPY[pendingStatusAction.targetStatus]
     : null;
+  const pendingActionRequiresMotivo =
+    pendingStatusAction?.targetStatus === RECEPCION_ACTION.CANCELADA;
+  const cancelMotivoValido = cancelMotivo.trim().length > 0;
 
   const handleOpenQuickCheckin = (defaults?: Partial<CheckinFormInput>) => {
     setQuickCheckinDefaults(defaults);
@@ -313,6 +320,7 @@ export const RecepcionAgendaPage = () => {
       return;
     }
 
+    setCancelMotivo("");
     setPendingStatusAction({ visitId, folio, targetStatus });
   };
 
@@ -355,10 +363,16 @@ export const RecepcionAgendaPage = () => {
       return;
     }
 
+    const requiresMotivo = pendingStatusAction.targetStatus === RECEPCION_ACTION.CANCELADA;
+    if (requiresMotivo && !cancelMotivoValido) {
+      return;
+    }
+
     try {
       await visitStatusAction.mutateAsync({
         visitId: pendingStatusAction.visitId,
         targetStatus: pendingStatusAction.targetStatus,
+        motivo: requiresMotivo ? cancelMotivo.trim() : undefined,
       });
 
       toast.success(
@@ -378,6 +392,7 @@ export const RecepcionAgendaPage = () => {
       });
     } finally {
       setPendingStatusAction(null);
+      setCancelMotivo("");
     }
   };
 
@@ -579,6 +594,7 @@ export const RecepcionAgendaPage = () => {
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
             setPendingStatusAction(null);
+            setCancelMotivo("");
           }
         }}
       >
@@ -592,12 +608,39 @@ export const RecepcionAgendaPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
 
+          {pendingActionRequiresMotivo ? (
+            <div className="space-y-1.5">
+              <label
+                htmlFor="motivo-cancelacion-visita"
+                className="text-sm font-medium text-txt-body"
+              >
+                Motivo de la cancelacion <span className="text-status-critical">*</span>
+              </label>
+              <Textarea
+                id="motivo-cancelacion-visita"
+                rows={3}
+                maxLength={255}
+                value={cancelMotivo}
+                onChange={(e) => setCancelMotivo(e.target.value)}
+                disabled={visitStatusAction.isPending}
+                placeholder="Ej. el paciente se retiro, se resolvio por otro medio..."
+                aria-invalid={!cancelMotivoValido}
+              />
+              <p className="text-xs text-txt-muted">
+                Obligatorio para cancelar una visita.
+              </p>
+            </div>
+          ) : null}
+
           <AlertDialogFooter>
             <AlertDialogCancel>Volver</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               className="whitespace-nowrap"
-              disabled={visitStatusAction.isPending}
+              disabled={
+                visitStatusAction.isPending ||
+                (pendingActionRequiresMotivo && !cancelMotivoValido)
+              }
               onClick={() => {
                 void handleConfirmStatusAction();
               }}

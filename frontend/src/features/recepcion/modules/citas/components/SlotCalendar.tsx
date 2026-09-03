@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
-import { Globe, Loader2, Plus } from "lucide-react";
+import { Globe, Loader2, Plus, X } from "lucide-react";
 import type { AgendaSlot } from "@api/types/agenda.types";
 import { useAgendaSemanal } from "@features/recepcion/modules/citas/queries/useAgendaSemanal";
 import { addDays } from "@features/recepcion/modules/citas/utils/dates";
 import { cn } from "@shared/utils/styling/cn";
+import {
+  CancelarCitaDialog,
+  type CitaACancelar,
+} from "@features/recepcion/modules/citas/components/CancelarCitaDialog";
+import { CITA_ESTATUS_CANCELABLE } from "@features/recepcion/modules/citas/domain/citaEstatus.errors";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,16 +56,17 @@ interface SlotCalendarProps {
 // ─── Subcomponente: celda de slot ─────────────────────────────────────────────
 
 interface SlotCellProps {
-  dateStr:  string;
-  hora:     string;
-  slot:     AgendaSlot | undefined;
-  today:    string;
-  now:      Date;
-  isToday:  boolean;
-  onClick:  (dateStr: string, slot: AgendaSlot) => void;
+  dateStr:         string;
+  hora:            string;
+  slot:            AgendaSlot | undefined;
+  today:           string;
+  now:             Date;
+  isToday:         boolean;
+  onClick:         (dateStr: string, slot: AgendaSlot) => void;
+  onCancelarCita:  (cita: CitaACancelar) => void;
 }
 
-function SlotCell({ dateStr, hora, slot, today, now, isToday, onClick }: SlotCellProps) {
+function SlotCell({ dateStr, hora, slot, today, now, isToday, onClick, onCancelarCita }: SlotCellProps) {
   if (!slot) {
     return (
       <div
@@ -99,14 +105,34 @@ function SlotCell({ dateStr, hora, slot, today, now, isToday, onClick }: SlotCel
     // para el slot todavía libre, así el vocabulario visual es consistente
     // antes y después de reservarse.
     const esPortal = slot.cita?.origenCanal === "PORTAL";
+    const esCancelable = !!slot.cita && CITA_ESTATUS_CANCELABLE.has(slot.cita.estatus);
     return (
       <div
         className={cn(
-          "h-16 rounded-lg border border-amber-200 bg-amber-50/60 px-2 py-2 flex flex-col justify-center gap-0.5",
+          "group/cell relative h-16 rounded-lg border border-amber-200 bg-amber-50/60 px-2 py-2 flex flex-col justify-center gap-0.5",
           isToday && "border-amber-300 bg-amber-50",
         )}
         title={`${hora} — Ocupado${slot.cita ? ` · Exp. ${slot.cita.noExp}` : ""}${esPortal ? " · Reservada en línea" : ""}`}
       >
+        {esCancelable && slot.cita && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancelarCita({
+                id:    slot.cita!.id,
+                folio: slot.cita!.folio,
+                noExp: slot.cita!.noExp,
+                fecha: dateStr,
+                hora,
+              });
+            }}
+            title="Cancelar cita"
+            className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-amber-200/80 text-amber-700 opacity-0 transition-opacity hover:bg-status-critical hover:text-white group-hover/cell:opacity-100"
+          >
+            <X className="size-2.5" />
+          </button>
+        )}
         <div className="flex items-center justify-center gap-1">
           <span className="size-1.5 rounded-full bg-amber-400 shrink-0" />
           <p className="text-[11px] font-semibold text-amber-700">Agendado</p>
@@ -179,6 +205,8 @@ export function SlotCalendar({ medicoId, medicoNombre, weekStart, onSlotClick }:
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  const [citaACancelar, setCitaACancelar] = useState<CitaACancelar | null>(null);
 
   const today   = nowToday();
   const weekEnd = addDays(weekStart, 6);
@@ -355,6 +383,7 @@ export function SlotCalendar({ medicoId, medicoNombre, weekStart, onSlotClick }:
                       now={now}
                       isToday={dateStr === today}
                       onClick={onSlotClick}
+                      onCancelarCita={setCitaACancelar}
                     />
                   ))}
                 </div>
@@ -364,6 +393,13 @@ export function SlotCalendar({ medicoId, medicoNombre, weekStart, onSlotClick }:
 
         </div>
       </div>
+
+      <CancelarCitaDialog
+        cita={citaACancelar}
+        onOpenChange={(open) => {
+          if (!open) setCitaACancelar(null);
+        }}
+      />
     </div>
   );
 }

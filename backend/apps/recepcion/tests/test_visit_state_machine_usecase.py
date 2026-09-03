@@ -32,6 +32,7 @@ class VisitStateMachineUseCaseTests(SimpleTestCase):
                 "current_state": "en_espera",
                 "target_state": "cancelada",
                 "role": ROLE_RECEPCION,
+                "motivo": "El paciente solicito reagendar.",
             },
             {
                 "current_state": "en_espera",
@@ -67,6 +68,7 @@ class VisitStateMachineUseCaseTests(SimpleTestCase):
                     vitals_complete=case.get("vitals_complete", False),
                     primary_diagnosis=case.get("primary_diagnosis"),
                     final_note=case.get("final_note"),
+                    motivo=case.get("motivo"),
                 )
 
                 self.assertEqual(result, case["target_state"])
@@ -208,6 +210,30 @@ class VisitStateMachineUseCaseTests(SimpleTestCase):
 
                 self.assertEqual(raised.exception.code, "VISIT_STATE_INVALID")
                 self.assertEqual(raised.exception.status_code, 409)
+
+    def test_guard_clause_requires_motivo_to_cancel(self):
+        for motivo_invalido in (None, "", "   "):
+            with self.subTest(motivo=motivo_invalido):
+                with self.assertRaises(VisitDomainError) as raised:
+                    transition_visit_state(
+                        "en_espera",
+                        "cancelada",
+                        ROLE_RECEPCION,
+                        motivo=motivo_invalido,
+                    )
+
+                self.assertEqual(raised.exception.code, "VISIT_MOTIVO_REQUERIDO")
+                self.assertEqual(raised.exception.status_code, 422)
+
+    def test_cancelar_visita_con_motivo_retorna_target_state(self):
+        result = transition_visit_state(
+            "en_espera",
+            "cancelada",
+            ROLE_RECEPCION,
+            motivo="El paciente ya no puede asistir.",
+        )
+
+        self.assertEqual(result, "cancelada")
 
     def test_transition_matrix_covers_all_official_states(self):
         matrix = get_transition_matrix()

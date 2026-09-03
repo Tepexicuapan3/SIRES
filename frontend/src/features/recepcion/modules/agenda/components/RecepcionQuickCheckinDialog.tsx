@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, Stethoscope } from "lucide-react";
@@ -187,7 +187,6 @@ export const RecepcionQuickCheckinDialog = ({
   });
 
   const serviceTypeField    = form.register("serviceType");
-  const [tipoCitaId, setTipoCitaId] = useState<string>("");
   const { data: tiposCitasData } = useTiposCitasList({
     pageSize: 100,
     isActive: true,
@@ -470,22 +469,28 @@ export const RecepcionQuickCheckinDialog = ({
 
             <div className="space-y-2">
               <Label htmlFor="quick-tipoCita">Tipo de cita</Label>
-              <Select
-                value={tipoCitaId}
-                onValueChange={setTipoCitaId}
-                disabled={!canWrite || createVisit.isPending}
-              >
-                <SelectTrigger id="quick-tipoCita" className="w-full">
-                  <SelectValue placeholder="Selecciona un tipo de cita" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tiposCitas.map((tipoCita) => (
-                    <SelectItem key={tipoCita.id} value={String(tipoCita.id)}>
-                      {tipoCita.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={form.control}
+                name="tipoCitaId"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ? String(field.value) : ""}
+                    onValueChange={field.onChange}
+                    disabled={!canWrite || createVisit.isPending}
+                  >
+                    <SelectTrigger id="quick-tipoCita" className="w-full">
+                      <SelectValue placeholder="Selecciona un tipo de cita" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposCitas.map((tipoCita) => (
+                        <SelectItem key={tipoCita.id} value={String(tipoCita.id)}>
+                          {tipoCita.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
 

@@ -243,12 +243,12 @@ export function LicenciasPage() {
 
   return (
     <CatalogModuleLayout
-      title="Licencias"
-      description="Catalogo de tipos de licencias administrativas."
+      title="Licencias Médicas"
+      description="Catálogo de tipos de licencias médicas."
       icon={<FileBadge className="size-12" />}
     >
       {!canRead ? (
-        <AdminReadOnlyNotice message="No tienes acceso para consultar este catalogo." />
+        <AdminReadOnlyNotice message="No tienes acceso para consultar este catálogo." />
       ) : null}
 
       <TableHeaderBar

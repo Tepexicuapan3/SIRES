@@ -6,14 +6,18 @@ import { visitFlowKeys } from "@features/recepcion/shared/queries/visit-flow.key
 interface VisitStatusActionInput {
   visitId: number;
   targetStatus: RecepcionStatusAction;
+  /** Solo se envia cuando `targetStatus` es "cancelada" -- el backend lo
+   * exige para esa transicion (VISIT_MOTIVO_REQUERIDO) e ignora el campo
+   * para las demas. */
+  motivo?: string;
 }
 
 export const useVisitStatusAction = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ visitId, targetStatus }: VisitStatusActionInput) =>
-      visitsAPI.updateStatus(visitId, { targetStatus }),
+    mutationFn: ({ visitId, targetStatus, motivo }: VisitStatusActionInput) =>
+      visitsAPI.updateStatus(visitId, { targetStatus, motivo }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: visitFlowKeys.lists() });
     },

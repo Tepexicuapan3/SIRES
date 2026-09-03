@@ -15,7 +15,6 @@ import {
 } from "@features/recepcion/shared/domain/recepcion.services";
 import { RecepcionServiceBadge } from "@features/recepcion/shared/components/RecepcionServiceBadge";
 import { RecepcionStatusBadge } from "@features/recepcion/shared/components/RecepcionStatusBadge";
-import { formatArrivalTypeLabel } from "@features/recepcion/shared/utils/recepcion-format";
 import {
   ARRIVAL_TYPE_FILTER,
   BANDEJA_PERIOD_LABEL,
@@ -527,8 +526,8 @@ export function BandejaView({
                         ) : null}
 
                         <div>
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Llegada</p>
-                          <p className="text-xs font-medium text-txt-body">{formatArrivalTypeLabel(visit.arrivalType)}</p>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-txt-muted">Tipo de cita</p>
+                          <p className="text-xs font-medium text-txt-body">{visit.tipoCitaNombre ?? "—"}</p>
                         </div>
 
                         {visit.notes ? (
