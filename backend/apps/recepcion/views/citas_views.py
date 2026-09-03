@@ -16,6 +16,7 @@ from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.repositories.user_repository import UserRepository
 from apps.authentication.services.authorization_service import has_capability
+from apps.catalogos.models import MotivoCita
 from apps.recepcion.models import CitaMedica, EstatusCita
 from apps.recepcion.repositories.citas_repository import CitasRepository, _serialize_cita
 from apps.recepcion.services.errors import VisitDomainError
@@ -153,9 +154,17 @@ class UpdateEstatusSerializer(serializers.Serializer):
     estatus = serializers.ChoiceField(
         choices=("confirmada", "atendida", "cancelada", "no_asistio")
     )
-    # Obligatorio para cancelada/no_asistio — lo exige
-    # cita_state_machine_usecase.transition_cita_state (CITA_MOTIVO_REQUERIDO).
-    motivo  = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    # Motivo tipificado (catálogo) — obligatorio para cancelada/no_asistio,
+    # lo exige cita_state_machine_usecase.transition_cita_state
+    # (CITA_MOTIVO_REQUERIDO). Reemplaza el texto libre original (ver
+    # catálogo MotivoCita); `motivoDetalle` preserva el texto libre
+    # complementario opcional.
+    motivoCancelacionId = serializers.PrimaryKeyRelatedField(
+        queryset=MotivoCita.objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+    )
+    motivoDetalle = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
 class SlotsQuerySerializer(serializers.Serializer):
@@ -329,7 +338,8 @@ class CitaEstatusView(APIView):
             result = CitasRepository.update_estatus(
                 cita,
                 s.validated_data["estatus"],
-                motivo=s.validated_data.get("motivo") or None,
+                motivo_cancelacion=s.validated_data.get("motivoCancelacionId"),
+                motivo_detalle=s.validated_data.get("motivoDetalle") or None,
                 changed_by_id=auth_user.get("id"),
             )
         except VisitDomainError as exc:

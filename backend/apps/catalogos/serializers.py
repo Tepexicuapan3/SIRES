@@ -24,6 +24,7 @@ from apps.catalogos.models import (
     EstudiosMed,
     GruposDeMedicamentos,
     Licencias,
+    MotivoCita,
     Ocupaciones,
     OrigenCons,
     Parentesco,
@@ -703,6 +704,28 @@ class TipoConsultaDetailSerializer(CatalogDetailSerializer):
 class TipoConsultaWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = TipoConsulta
+
+
+class MotivoCitaListSerializer(CatalogListSerializer):
+    aplicaA = serializers.CharField(source="aplica_a")
+
+    class Meta(CatalogListSerializer.Meta):
+        model = MotivoCita
+        fields = CatalogListSerializer.Meta.fields + ("aplicaA",)
+
+class MotivoCitaDetailSerializer(CatalogDetailSerializer):
+    aplicaA = serializers.CharField(source="aplica_a")
+
+    class Meta(CatalogDetailSerializer.Meta):
+        model = MotivoCita
+        fields = CatalogDetailSerializer.Meta.fields + ("aplicaA",)
+
+class MotivoCitaWriteSerializer(CatalogWriteSerializer):
+    aplicaA = serializers.ChoiceField(source="aplica_a", choices=MotivoCita.AplicaA.choices, required=False)
+
+    class Meta(CatalogWriteSerializer.Meta):
+        model = MotivoCita
+        fields = CatalogWriteSerializer.Meta.fields + ("aplicaA",)
 
 
 class TiposSanguineoListSerializer(CatalogListSerializer):

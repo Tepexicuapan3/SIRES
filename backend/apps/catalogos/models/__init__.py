@@ -19,6 +19,7 @@ from .tipo_personal import CatTipoPersonal
 from .especialidades import Especialidades
 from .estudios_medicos import EstudiosMed
 from .grupos_medicamentos import GruposDeMedicamentos
+from .motivos_cita import MotivoCita
 from .ocupaciones import Ocupaciones
 from .origen_consulta import OrigenCons
 from .parentescos import Parentesco
@@ -63,6 +64,7 @@ __all__ = [
     "Especialidades",
     "EstudiosMed",
     "GruposDeMedicamentos",
+    "MotivoCita",
     "Ocupaciones",
     "OrigenCons",
     "Parentesco",

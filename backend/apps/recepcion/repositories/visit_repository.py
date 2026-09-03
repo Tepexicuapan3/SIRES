@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import OuterRef, Q, Subquery
 
 from apps.authentication.models import DetUsuario
+from apps.catalogos.models import MotivoCita
 from apps.recepcion.models import Visit, VisitStatusLog
 from apps.somatometria.repositories.vitals_repository import VitalsRepository
 
@@ -104,12 +105,43 @@ class VisitRepository:
         ).exists()
 
     @staticmethod
-    def update_status(visit: Visit, status_value: str, motivo: str | None = None) -> Visit:
+    def get_for_update(visit_id: int) -> Visit | None:
+        """
+        Lookup mínimo (sin select_related de FKs nullable -- Postgres no
+        permite FOR UPDATE del lado nullable de un outer join) bloqueando
+        la fila con select_for_update(). Debe llamarse DENTRO de un
+        transaction.atomic() ya abierto por el caller -- mismo patrón que
+        ``CitasRepository.update_estatus``/``portal_citas.cancelar_cita_usecase``
+        para evitar una condición de carrera si dos requests concurrentes
+        transicionan la misma visita al mismo tiempo.
+        """
+        return Visit.objects.select_for_update().filter(id_visit=visit_id).first()
+
+    @staticmethod
+    def update_status(
+        visit: Visit,
+        status_value: str,
+        motivo_cancelacion=None,
+        motivo_detalle: str | None = None,
+    ) -> Visit:
+        """
+        ``motivo_cancelacion``: instancia (o PK) de ``catalogos.MotivoCita``
+        -- catálogo tipificado, exigido por la máquina de estados para
+        cancelar (ver visit_state_machine_usecase). El texto libre
+        complementario ahora es ``motivo_detalle`` (antes ocupaba el mismo
+        campo `motivo_cancelacion`, que era un TextField).
+        """
         visit.status = status_value
         update_fields = ["status", "fch_modf"]
-        if motivo is not None:
-            visit.motivo_cancelacion = motivo
+        if motivo_cancelacion is not None:
+            if isinstance(motivo_cancelacion, MotivoCita):
+                visit.motivo_cancelacion = motivo_cancelacion
+            else:
+                visit.motivo_cancelacion_id = motivo_cancelacion
             update_fields.append("motivo_cancelacion")
+        if motivo_detalle is not None:
+            visit.motivo_detalle = motivo_detalle
+            update_fields.append("motivo_detalle")
         visit.save(update_fields=update_fields)
         return visit
 

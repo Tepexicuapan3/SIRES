@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.utils import timezone
 
+from apps.catalogos.models import MotivoCita
 from apps.recepcion.models import CitaEstatusLog, CitaMedica, EstatusCita, HorarioDisponible
 from apps.recepcion.uses_case.cita_state_machine_usecase import transition_cita_state
 
@@ -222,24 +223,68 @@ class CitasRepository:
         cita: CitaMedica,
         estatus: str,
         *,
-        motivo: str | None = None,
+        motivo_cancelacion=None,
+        motivo_detalle: str | None = None,
         changed_by_id: int | None = None,
     ) -> dict:
-        estatus_anterior = cita.estatus
-        # Valida que la transición sea una de las permitidas (ver
-        # cita_state_machine_usecase) antes de tocar la fila — evita dejar
-        # un log de una transición que después se rechaza.
-        transition_cita_state(estatus_anterior, estatus, motivo=motivo)
+        """
+        ``motivo_cancelacion``: instancia (o PK) de ``catalogos.MotivoCita``
+        -- catálogo tipificado, exigido por la máquina de estados para
+        cancelar/marcar no asistió (ver cita_state_machine_usecase). Antes
+        era un ``str`` libre; ese texto libre complementario ahora es
+        ``motivo_detalle`` (opcional, se persiste en ``CitaMedica.motivo_detalle``
+        y también queda en la bitácora NOM-024).
 
+        Toma ``select_for_update()`` sobre la fila DENTRO de la transacción
+        y re-valida el estatus recién ahí -- mismo patrón que
+        ``portal_citas.cancelar_cita_usecase.cancelar_cita`` -- para evitar
+        una condición de carrera si dos requests concurrentes (doble
+        click/doble pestaña) intentan transicionar la misma cita al mismo
+        tiempo. Si el caller (``cancelar_cita_usecase``) ya tomó el lock
+        antes de llamar acá, este ``select_for_update()`` es reentrante
+        (mismo savepoint de la transacción ya abierta), no un lock nuevo.
+
+        IMPORTANTE: el lock se toma con una query aparte (``values_list``),
+        SIN reasignar la variable local ``cita`` a una instancia nueva --
+        varios callers (ej. ``cancelar_cita_usecase``) siguen usando su
+        propia referencia al objeto ``cita`` que pasaron DESPUÉS de este
+        llamado (para leer ``cita.folio``/``cita.estatus`` en la respuesta),
+        confiando en que este método lo mute in-place como siempre hizo.
+        Reasignar ``cita`` acá adentro rompería esa referencia externa.
+        """
         with transaction.atomic():
+            estatus_anterior = (
+                CitaMedica.objects
+                .select_for_update()
+                .values_list("estatus", flat=True)
+                .get(id=cita.id)
+            )
+            # Valida que la transición sea una de las permitidas (ver
+            # cita_state_machine_usecase) DESPUÉS de tomar el lock -- si
+            # otra request ya transicionó la cita entre la lectura sin
+            # lock del caller y este punto, la re-validación lo detecta.
+            transition_cita_state(estatus_anterior, estatus, motivo=motivo_cancelacion)
+
             cita.estatus = estatus
             update_fields = ["estatus", "updated_at"]
 
             if estatus == EstatusCita.CANCELADA:
                 cita.cancelado_en = timezone.now()
                 cita.cancelado_por_id = changed_by_id
-                cita.motivo_cancelacion = motivo
-                update_fields += ["cancelado_en", "cancelado_por_id", "motivo_cancelacion"]
+                update_fields += ["cancelado_en", "cancelado_por_id"]
+
+            if motivo_cancelacion is not None:
+                # Acepta instancia de MotivoCita o PK cruda (int) -- los
+                # callers automáticos (tasks.py, cancelar_cita_usecase) a
+                # veces resuelven solo el id.
+                if isinstance(motivo_cancelacion, MotivoCita):
+                    cita.motivo_cancelacion = motivo_cancelacion
+                else:
+                    cita.motivo_cancelacion_id = motivo_cancelacion
+                update_fields.append("motivo_cancelacion")
+            if motivo_detalle is not None:
+                cita.motivo_detalle = motivo_detalle
+                update_fields.append("motivo_detalle")
 
             cita.save(update_fields=update_fields)
 
@@ -249,13 +294,16 @@ class CitasRepository:
                     disponible=True, cita=None
                 )
 
-            # Bitácora NOM-024 — mismo patrón que VisitStatusLog.
+            # Bitácora NOM-024 — mismo patrón que VisitStatusLog. `notes`
+            # guarda el nombre del motivo tipificado y/o el detalle libre,
+            # lo que haya -- mismo criterio legible que antes.
+            motivo_nombre = getattr(motivo_cancelacion, "name", None)
             CitaEstatusLog.objects.create(
                 cita=cita,
                 from_status=estatus_anterior,
                 to_status=estatus,
                 changed_by_id=changed_by_id,
-                notes=motivo,
+                notes=motivo_detalle or motivo_nombre,
             )
 
         cita = CitaMedica.objects.select_related(

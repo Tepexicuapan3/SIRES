@@ -153,7 +153,11 @@ def _has_required_close_fields(primary_diagnosis, final_note):
 
 
 def _has_content(value):
-    return isinstance(value, str) and bool(value.strip())
+    # Acepta texto libre (uso legado) y cualquier otro valor truthy (FK id
+    # o instancia de catalogos.MotivoCita) -- ver Fase de catálogo MotivoCita.
+    if isinstance(value, str):
+        return bool(value.strip())
+    return value is not None and bool(value)
 
 
 def _invalid_state_error(current_state, target_state):

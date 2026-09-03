@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.catalogos.models import MotivoCita
+
 
 class CreateVisitSerializer(serializers.Serializer):
     """Datos requeridos para registrar la llegada de un paciente (check-in)."""
@@ -96,9 +98,17 @@ class UpdateVisitStatusSerializer(serializers.Serializer):
     targetStatus = serializers.ChoiceField(
         choices=("en_somatometria", "cancelada", "no_show")
     )
-    # Requerido por la maquina de estados solo para en_espera -> cancelada
-    # (VISIT_MOTIVO_REQUERIDO); las demas transiciones lo ignoran si llega.
-    motivo = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    # Motivo tipificado (catálogo) -- requerido por la maquina de estados
+    # solo para en_espera -> cancelada (VISIT_MOTIVO_REQUERIDO); las demas
+    # transiciones lo ignoran si llega. Reemplaza el texto libre original
+    # (ver catálogo MotivoCita); `motivoDetalle` abajo preserva el texto
+    # libre complementario opcional.
+    motivoCancelacionId = serializers.PrimaryKeyRelatedField(
+        queryset=MotivoCita.objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+    )
+    motivoDetalle = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
 class PatientLookupQuerySerializer(serializers.Serializer):

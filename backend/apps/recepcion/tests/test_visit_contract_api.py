@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 from apps.administracion.models import RelRolPermiso, RelUsuarioRol
 from apps.authentication.infrastructure.policy_store import PolicyStore
 from apps.authentication.models import DetUsuario, SyUsuario
-from apps.catalogos.models import Permisos, Roles, TipoDeCitas
+from apps.catalogos.models import MotivoCita, Permisos, Roles, TipoDeCitas
 from apps.somatometria.repositories.vitals_repository import VitalsRepository
 
 
@@ -18,6 +18,12 @@ class VisitContractsApiTests(APITestCase):
         self.recepcion_password = "Recep_123456"
         self.medico_password = "Medico_123456"
         self.admin_password = "Admin_123456"
+        # Motivo tipificado (catálogo cargado por la migración de datos
+        # catalogos/0021_motivos_cita) -- reemplaza el texto libre que
+        # antes viajaba en "motivo".
+        self.motivo_cancelacion_id = MotivoCita.objects.get(
+            name="Cancelada por el paciente"
+        ).id
 
         self._create_user_with_role(
             username="recepcion_user",
@@ -505,7 +511,11 @@ class VisitContractsApiTests(APITestCase):
 
         response = self.client.patch(
             f"/api/v1/visits/{visit['id']}/status",
-            {"targetStatus": "cancelada", "motivo": "El paciente solicito reagendar."},
+            {
+                "targetStatus": "cancelada",
+                "motivoCancelacionId": self.motivo_cancelacion_id,
+                "motivoDetalle": "El paciente solicito reagendar.",
+            },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
             **self._csrf_headers(),
@@ -517,7 +527,8 @@ class VisitContractsApiTests(APITestCase):
 
         from apps.recepcion.models import Visit
         visit_obj = Visit.objects.get(id_visit=visit["id"])
-        self.assertEqual(visit_obj.motivo_cancelacion, "El paciente solicito reagendar.")
+        self.assertEqual(visit_obj.motivo_cancelacion_id, self.motivo_cancelacion_id)
+        self.assertEqual(visit_obj.motivo_detalle, "El paciente solicito reagendar.")
 
     def test_patch_visit_status_cancelada_without_motivo_returns_422(self):
         self._login_as("recepcion_user", self.recepcion_password)
@@ -539,7 +550,7 @@ class VisitContractsApiTests(APITestCase):
         from apps.recepcion.models import Visit
         visit_obj = Visit.objects.get(id_visit=visit["id"])
         self.assertEqual(visit_obj.status, "en_espera")
-        self.assertIsNone(visit_obj.motivo_cancelacion)
+        self.assertIsNone(visit_obj.motivo_cancelacion_id)
 
     def test_patch_visit_status_no_show_happy_path(self):
         self._login_as("recepcion_user", self.recepcion_password)
@@ -705,7 +716,11 @@ class VisitContractsApiTests(APITestCase):
         self._login_as("admin_user", self.admin_password)
         response = self.client.patch(
             f"/api/v1/visits/{visit['id']}/status",
-            {"targetStatus": "cancelada", "motivo": "Cancelacion administrativa."},
+            {
+                "targetStatus": "cancelada",
+                "motivoCancelacionId": self.motivo_cancelacion_id,
+                "motivoDetalle": "Cancelacion administrativa.",
+            },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
             **self._csrf_headers(),
@@ -721,7 +736,11 @@ class VisitContractsApiTests(APITestCase):
 
         first_patch = self.client.patch(
             f"/api/v1/visits/{visit['id']}/status",
-            {"targetStatus": "cancelada", "motivo": "El paciente ya no puede asistir."},
+            {
+                "targetStatus": "cancelada",
+                "motivoCancelacionId": self.motivo_cancelacion_id,
+                "motivoDetalle": "El paciente ya no puede asistir.",
+            },
             format="json",
             HTTP_X_REQUEST_ID=self.request_id,
             **self._csrf_headers(),

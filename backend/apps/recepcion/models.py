@@ -99,7 +99,21 @@ class CitaMedica(models.Model):
     verificado_por_id   = models.BigIntegerField(null=True, blank=True)
     cancelado_en        = models.DateTimeField(null=True, blank=True)
     cancelado_por_id    = models.BigIntegerField(null=True, blank=True)
-    motivo_cancelacion  = models.TextField(null=True, blank=True)
+    # Motivo tipificado (catálogo) — reemplaza el TextField libre original,
+    # que se preserva como `motivo_detalle` para no perder datos existentes
+    # (ver migración 0024, RenameField + AddField, nunca RemoveField+AddField
+    # con el mismo nombre).
+    motivo_cancelacion = models.ForeignKey(
+        "catalogos.MotivoCita",
+        db_column="motivo_cancelacion_id",
+        db_constraint=False,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="citas_canceladas",
+    )
+    # Texto libre complementario/opcional al motivo tipificado de arriba.
+    motivo_detalle      = models.TextField(null=True, blank=True)
 
     # Auditoría
     created_at      = models.DateTimeField(auto_now_add=True)
@@ -287,10 +301,22 @@ class Visit(models.Model):
     fch_baja = models.DateTimeField(db_column="fch_baja", null=True, blank=True)
     # id del usuario de recepción que registró la visita
     created_by_id = models.BigIntegerField(db_column="created_by_id", null=True, blank=True)
-    # Motivo capturado al cancelar la visita (mismo patron que
-    # CitaMedica.motivo_cancelacion). Solo se llena en la transicion
-    # en_espera -> cancelada, exigida por VisitStatusView/change_visit_status.
-    motivo_cancelacion = models.TextField(db_column="motivo_cancelacion", null=True, blank=True)
+    # Motivo tipificado (catálogo) capturado al cancelar la visita (mismo
+    # patron que CitaMedica.motivo_cancelacion). Solo se llena en la
+    # transicion en_espera -> cancelada, exigida por
+    # VisitStatusView/change_visit_status. El TextField libre original se
+    # preserva como `motivo_detalle` (RenameField, no se pierden datos).
+    motivo_cancelacion = models.ForeignKey(
+        "catalogos.MotivoCita",
+        db_column="motivo_cancelacion_id",
+        db_constraint=False,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="visitas_canceladas",
+    )
+    # Texto libre complementario/opcional al motivo tipificado de arriba.
+    motivo_detalle = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = "rcp_visits"

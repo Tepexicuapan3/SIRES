@@ -53,6 +53,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.catalogos.models import MotivoCita
 from apps.portal_citas.errors import PortalCancelacionError
 from apps.portal_citas.models import PortalMiembro
 from apps.portal_citas.services.nucleo_service import puede_gestionar_miembro
@@ -65,6 +66,13 @@ logger = logging.getLogger(__name__)
 
 # Solo se puede cancelar una cita que todavía no ocurrió ni fue resuelta.
 ESTATUS_CANCELABLES = (EstatusCita.AGENDADA, EstatusCita.CONFIRMADA)
+
+# Motivo tipificado (catálogo MotivoCita, ver migración
+# catalogos/0021_motivos_cita) usado cuando el propio paciente cancela
+# desde el portal -- no hay UI ahí para elegir un motivo del catálogo, así
+# que se resuelve siempre a este valor fijo; lo que el paciente haya
+# escrito libremente (si algo) queda como `motivo_detalle`.
+_MOTIVO_CANCELACION_PACIENTE = "Cancelada por el paciente"
 
 
 def _validar_estatus_cancelable(estatus: str) -> None:
@@ -135,11 +143,15 @@ def cancelar_cita(
         # paciente no escribió un motivo, se deja uno por defecto: el
         # motivo es obligatorio en la máquina de estados (mismo requisito
         # que para recepción) y no queremos forzar al paciente a escribirlo.
+        motivo_catalogo = MotivoCita.objects.filter(
+            name=_MOTIVO_CANCELACION_PACIENTE, is_active=True,
+        ).first()
         try:
             CitasRepository.update_estatus(
                 cita,
                 EstatusCita.CANCELADA,
-                motivo=motivo or "Cancelada por el paciente desde el portal.",
+                motivo_cancelacion=motivo_catalogo,
+                motivo_detalle=motivo or "Cancelada por el paciente desde el portal.",
                 changed_by_id=None,
             )
         except VisitDomainError as exc:

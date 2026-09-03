@@ -35,6 +35,14 @@ TRANSITION_RULES = {
 
 
 def transition_cita_state(current_state, target_state, *, motivo=None):
+    """
+    ``motivo`` es el motivo tipificado (instancia/PK de
+    ``catalogos.MotivoCita``, o cualquier valor truthy) requerido para
+    cancelar/marcar no asistió -- ya no un texto libre (ver Fase de
+    catálogo MotivoCita). ``_has_content`` acepta tanto strings (texto
+    libre, uso legado en tests) como cualquier otro valor truthy (FK id o
+    instancia de modelo).
+    """
     if not _is_known_state(current_state) or not _is_known_state(target_state):
         raise _invalid_state_error(current_state, target_state)
 
@@ -81,7 +89,9 @@ def _is_known_state(state):
 
 
 def _has_content(value):
-    return isinstance(value, str) and bool(value.strip())
+    if isinstance(value, str):
+        return bool(value.strip())
+    return value is not None and bool(value)
 
 
 def _invalid_state_error(current_state, target_state):

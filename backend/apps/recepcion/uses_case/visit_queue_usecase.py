@@ -339,51 +339,69 @@ def change_visit_status(
     visit_id: int,
     target_status: str,
     changed_by_id: int | None = None,
-    motivo: str | None = None,
+    motivo_cancelacion=None,
+    motivo_detalle: str | None = None,
 ) -> dict:
-    visit = VisitRepository.get_by_id(visit_id)
-    if not visit:
-        raise VisitDomainError("VISIT_NOT_FOUND", "Visita no encontrada.", 404)
+    """
+    ``motivo_cancelacion``: instancia (o PK) de ``catalogos.MotivoCita`` --
+    catálogo tipificado exigido por la máquina de estados para cancelar
+    (ver visit_state_machine_usecase). ``motivo_detalle`` es el texto libre
+    complementario opcional.
 
-    previous_status = visit.status
-    next_state      = transition_visit_state(
-        previous_status, target_status, ROLE_RECEPCION, motivo=motivo,
-    )
-    # Solo persistimos motivo_cancelacion cuando la transicion es a
-    # "cancelada" -- las demas transiciones (no_show, en_somatometria) no
-    # aceptan/usan motivo, aunque llegue en el payload.
-    visit = VisitRepository.update_status(
-        visit, next_state, motivo=motivo if next_state == "cancelada" else None,
-    )
+    Todo el flujo lectura→validación→escritura corre DENTRO de un único
+    ``transaction.atomic()`` con el lock (``select_for_update``) tomado
+    ANTES de leer el estatus a transicionar -- mismo patrón que
+    ``portal_citas.cancelar_cita_usecase.cancelar_cita`` -- para evitar una
+    condición de carrera si dos requests concurrentes (doble click/doble
+    pestaña) transicionan la misma visita al mismo tiempo.
+    """
+    with transaction.atomic():
+        visit = VisitRepository.get_for_update(visit_id)
+        if not visit:
+            raise VisitDomainError("VISIT_NOT_FOUND", "Visita no encontrada.", 404)
 
-    # Log de auditoría NOM-024
-    status_log = VisitRepository.log_status_change(
-        visit=visit,
-        from_status=previous_status,
-        to_status=next_state,
-        changed_by_id=changed_by_id,
-    )
+        previous_status = visit.status
+        next_state      = transition_visit_state(
+            previous_status, target_status, ROLE_RECEPCION, motivo=motivo_cancelacion,
+        )
+        # Solo persistimos motivo_cancelacion/motivo_detalle cuando la
+        # transicion es a "cancelada" -- las demas transiciones (no_show,
+        # en_somatometria) no aceptan/usan motivo, aunque llegue en el payload.
+        visit = VisitRepository.update_status(
+            visit,
+            next_state,
+            motivo_cancelacion=motivo_cancelacion if next_state == "cancelada" else None,
+            motivo_detalle=motivo_detalle if next_state == "cancelada" else None,
+        )
 
-    # `visit` fue obtenida con `get_by_id` ANTES de crear el log de arriba,
-    # asi que su anotacion `en_somatometria_at` (resuelta en el SELECT
-    # original) no ve todavia esta transicion. Si la transicion actual ES
-    # hacia `en_somatometria`, parcheamos el valor en memoria para que
-    # `to_contract` no devuelva null por una carrera de timing entre la
-    # lectura y la escritura del log.
-    if next_state == "en_somatometria":
-        visit.en_somatometria_at = status_log.changed_at
+        # Log de auditoría NOM-024
+        status_log = VisitRepository.log_status_change(
+            visit=visit,
+            from_status=previous_status,
+            to_status=next_state,
+            changed_by_id=changed_by_id,
+        )
 
-    # Liberar el slot si la visita se cancela o marca como no-show
-    if next_state in ("cancelada", "no_show") and visit.doctor_id and visit.hora_consulta:
-        from django.utils import timezone
-        fecha_slot = visit.fecha_consulta or timezone.localtime(timezone.now()).date()
-        HorarioDisponible.objects.filter(
-            medico_id=visit.doctor_id,
-            fecha=fecha_slot,
-            hora=visit.hora_consulta,
-            disponible=False,
-            cita__isnull=True,  # solo libera slots de fichas, no de CitaMedica formal
-        ).update(disponible=True)
+        # `visit` fue obtenida con `get_for_update` (sin la anotacion
+        # `en_somatometria_at` de `get_by_id`), asi que no ve todavia esta
+        # transicion. Si la transicion actual ES hacia `en_somatometria`,
+        # parcheamos el valor en memoria para que `to_contract` no dispare
+        # una query de fallback innecesaria.
+        if next_state == "en_somatometria":
+            visit.en_somatometria_at = status_log.changed_at
+
+        # Liberar el slot si la visita se cancela o marca como no-show --
+        # dentro de la misma transacción que el cambio de estatus.
+        if next_state in ("cancelada", "no_show") and visit.doctor_id and visit.hora_consulta:
+            from django.utils import timezone
+            fecha_slot = visit.fecha_consulta or timezone.localtime(timezone.now()).date()
+            HorarioDisponible.objects.filter(
+                medico_id=visit.doctor_id,
+                fecha=fecha_slot,
+                hora=visit.hora_consulta,
+                disponible=False,
+                cita__isnull=True,  # solo libera slots de fichas, no de CitaMedica formal
+            ).update(disponible=True)
 
     return VisitRepository.to_contract(visit)
 

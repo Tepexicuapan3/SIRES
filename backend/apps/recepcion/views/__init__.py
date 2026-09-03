@@ -262,7 +262,8 @@ class VisitStatusView(APIView):
                 visit_id,
                 target_status,
                 changed_by_id=getattr(user, "id_usuario", None),
-                motivo=serializer.validated_data.get("motivo") or None,
+                motivo_cancelacion=serializer.validated_data.get("motivoCancelacionId"),
+                motivo_detalle=serializer.validated_data.get("motivoDetalle") or None,
             )
         except VisitDomainError as exc:
             return _visit_error_response(request, exc)

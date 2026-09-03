@@ -23,7 +23,7 @@ from .models import (
     Areas, Autorizadores, Bajas, CalidadLaboral, CatAreaClinica, CatCentroAtencion,
     CatCentroAtencionHorario, CatCentroAtencionExcepcion, CentroAreaClinica, Consultorios,
     Discapacidades, EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, EstudiosMed,
-    GruposDeMedicamentos, Licencias, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
+    GruposDeMedicamentos, Licencias, MotivoCita, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
     Roles, CatSucursal, TipoDeCitas, TipoConsulta, TiposAreas, TiposSanguineo, TpAutorizacion, Turnos,
     Vacunas, CatTipoPersonal,
 )
@@ -53,6 +53,7 @@ from .serializers import (
     EstudiosMedDetailSerializer, EstudiosMedListSerializer, EstudiosMedWriteSerializer,
     GruposDeMedicamentosDetailSerializer, GruposDeMedicamentosListSerializer, GruposDeMedicamentosWriteSerializer,
     LicenciasDetailSerializer, LicenciasListSerializer, LicenciasWriteSerializer,
+    MotivoCitaDetailSerializer, MotivoCitaListSerializer, MotivoCitaWriteSerializer,
     OcupacionesDetailSerializer, OcupacionesListSerializer, OcupacionesWriteSerializer,
     OrigenConsDetailSerializer, OrigenConsListSerializer, OrigenConsWriteSerializer,
     ParentescoDetailSerializer, ParentescoListSerializer, ParentescoWriteSerializer,
@@ -1145,6 +1146,23 @@ class TipoConsultaDetailView(CatalogBaseDetailView):
     write_serializer = TipoConsultaWriteSerializer
     wrapper_key = "consultationType"
     error_codes = MappingProxyType({"not_found": "CONSULTATION_TYPE_NOT_FOUND", "exists": "CONSULTATION_TYPE_EXISTS"})
+
+
+class MotivoCitaListCreateView(CatalogBaseListCreateView):
+    catalog = "motivos_cita"
+    model = MotivoCita
+    list_serializer = MotivoCitaListSerializer
+    write_serializer = MotivoCitaWriteSerializer
+    error_codes = MappingProxyType({"exists": "APPOINTMENT_REASON_EXISTS"})
+    sort_map = MappingProxyType({"name": "name", "isActive": "is_active", "aplicaA": "aplica_a"})
+
+class MotivoCitaDetailView(CatalogBaseDetailView):
+    catalog = "motivos_cita"
+    model = MotivoCita
+    detail_serializer = MotivoCitaDetailSerializer
+    write_serializer = MotivoCitaWriteSerializer
+    wrapper_key = "appointmentReason"
+    error_codes = MappingProxyType({"not_found": "APPOINTMENT_REASON_NOT_FOUND", "exists": "APPOINTMENT_REASON_EXISTS"})
 
 
 class TiposSanguineoListCreateView(CatalogBaseListCreateView):

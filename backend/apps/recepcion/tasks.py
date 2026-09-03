@@ -10,12 +10,18 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
+from apps.catalogos.models import MotivoCita
 from apps.medicos.models import CatMedico
 from .models import CitaMedica, EstatusCita
 from .repositories.citas_repository import CitasRepository
 from .services.notificacion_service import NotificacionCitaService
 
 logger = logging.getLogger(__name__)
+
+# Motivo tipificado (catálogo MotivoCita, ver migración
+# catalogos/0021_motivos_cita) usado por el marcado automático de
+# no_asistio -- mismo texto semilla que carga esa migración.
+_MOTIVO_NO_ASISTIO_AUTOMATICO = "Paciente no se presentó"
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=300)
@@ -150,6 +156,10 @@ def marcar_no_asistio():
         estatus__in=[EstatusCita.AGENDADA, EstatusCita.CONFIRMADA],
     )
 
+    motivo_automatico = MotivoCita.objects.filter(
+        name=_MOTIVO_NO_ASISTIO_AUTOMATICO, is_active=True,
+    ).first()
+
     actualizadas = 0
     errores = 0
     # Se recorre una por una (en vez de un .update() masivo) para pasar por
@@ -161,7 +171,8 @@ def marcar_no_asistio():
             CitasRepository.update_estatus(
                 cita,
                 EstatusCita.NO_ASISTIO,
-                motivo="Automático: sin confirmación 2 horas después de la hora de la cita.",
+                motivo_cancelacion=motivo_automatico,
+                motivo_detalle="Automático: sin confirmación 2 horas después de la hora de la cita.",
                 changed_by_id=None,
             )
             actualizadas += 1
