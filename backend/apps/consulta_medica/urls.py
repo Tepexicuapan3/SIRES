@@ -1,11 +1,20 @@
 from django.urls import path
 
 from apps.consulta_medica.views import (
+    PatientClinicalHistoryView,
+    PatientConsultationsHistoryView,
+    PatientMedicalLeavesHistoryView,
+    PatientOdontogramToothView,
+    PatientOdontogramView,
+    PatientStomatologyHistoryView,
+    PatientStudyResultsHistoryView,
     VisitCieSearchView,
     VisitConsultationCloseView,
     VisitConsultationStartView,
     VisitDiagnosisSaveView,
+    VisitMedicalLeaveCreateView,
     VisitPrescriptionsSaveView,
+    VisitStudyResultCreateView,
 )
 
 
@@ -14,6 +23,51 @@ urlpatterns = [
         "visits/cies/search",
         VisitCieSearchView.as_view(),
         name="visit-cies-search",
+    ),
+    path(
+        "patients/<str:no_exp>/clinical-history",
+        PatientClinicalHistoryView.as_view(),
+        name="patient-clinical-history",
+    ),
+    path(
+        "patients/<str:no_exp>/stomatology-history",
+        PatientStomatologyHistoryView.as_view(),
+        name="patient-stomatology-history",
+    ),
+    path(
+        "patients/<str:no_exp>/odontogram",
+        PatientOdontogramView.as_view(),
+        name="patient-odontogram",
+    ),
+    path(
+        "patients/<str:no_exp>/odontogram/<str:tooth_fdi>",
+        PatientOdontogramToothView.as_view(),
+        name="patient-odontogram-tooth",
+    ),
+    path(
+        "patients/<str:no_exp>/consultations",
+        PatientConsultationsHistoryView.as_view(),
+        name="patient-consultations-history",
+    ),
+    path(
+        "visits/<int:visit_id>/medical-leave",
+        VisitMedicalLeaveCreateView.as_view(),
+        name="visit-medical-leave-create",
+    ),
+    path(
+        "patients/<str:no_exp>/medical-leaves",
+        PatientMedicalLeavesHistoryView.as_view(),
+        name="patient-medical-leaves-history",
+    ),
+    path(
+        "visits/<int:visit_id>/study-results",
+        VisitStudyResultCreateView.as_view(),
+        name="visit-study-result-create",
+    ),
+    path(
+        "patients/<str:no_exp>/study-results",
+        PatientStudyResultsHistoryView.as_view(),
+        name="patient-study-results-history",
     ),
     path(
         "visits/<int:visit_id>/diagnosis",

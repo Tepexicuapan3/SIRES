@@ -3,6 +3,7 @@
  * Expediente clínico completo del paciente
  */
 
+import { useParams } from "react-router-dom";
 import {
   FileText,
   User,
@@ -11,6 +12,10 @@ import {
   History,
   Pill,
   FileSignature,
+  ClipboardList,
+  CalendarOff,
+  Smile,
+  Grid3x3,
   Download,
   Edit,
 } from "lucide-react";
@@ -24,9 +29,22 @@ import {
 import { Button } from "@shared/ui/button";
 import { Badge } from "@shared/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
+import { ExpedienteGeneralesTab } from "@features/expedientes/components/ExpedienteGeneralesTab";
+import { ExpedienteEstomatologiaTab } from "@features/expedientes/components/ExpedienteEstomatologiaTab";
+import { ExpedienteOdontogramaTab } from "@features/expedientes/components/ExpedienteOdontogramaTab";
+import { ExpedienteHistorialTab } from "@features/expedientes/components/ExpedienteHistorialTab";
+import { ExpedienteLicenciasTab } from "@features/expedientes/components/ExpedienteLicenciasTab";
+import { ExpedienteEstudiosTab } from "@features/expedientes/components/ExpedienteEstudiosTab";
 
 export const ExpedienteDetailPage = () => {
-  // Mock data - en producción vendría de useParams() + API
+  // El folio (no_exp) SI es real -- viene de la URL /clinico/expedientes/:folio.
+  // pkNum queda fijo en 0 (titular) hasta que esta ruta soporte tambien
+  // familiares -- ver TODO en clinico.routes.config.tsx.
+  const { folio: folioParam } = useParams<{ folio: string }>();
+  const folioReal = folioParam ?? "";
+
+  // Mock data - el resto de la ficha (nombre, CURP, alergias, etc.) sigue
+  // siendo de ejemplo; solo la pestana "Generales" usa datos reales.
   const mockExpediente = {
     folio: "12345678",
     paciente: "María Guadalupe Hernández Pérez",
@@ -50,30 +68,6 @@ export const ExpedienteDetailPage = () => {
       "Losartán 50mg cada 24 horas",
     ],
   };
-
-  const mockConsultasRecientes = [
-    {
-      id: 1,
-      fecha: "2025-01-03",
-      medico: "Dr. Juan Carlos Pérez",
-      diagnostico: "J00 - Rinofaringitis aguda",
-      tratamiento: "Reposo, paracetamol PRN",
-    },
-    {
-      id: 2,
-      fecha: "2024-11-20",
-      medico: "Dra. María Fernández",
-      diagnostico: "E11.9 - Diabetes mellitus tipo 2 (control)",
-      tratamiento: "Continuar tratamiento actual",
-    },
-    {
-      id: 3,
-      fecha: "2024-08-15",
-      medico: "Dr. Pedro Martínez",
-      diagnostico: "M54.5 - Dolor lumbar bajo",
-      tratamiento: "AINES, reposo relativo",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-app p-6 md:p-10">
@@ -238,11 +232,27 @@ export const ExpedienteDetailPage = () => {
         )}
 
         {/* Tabs de Información */}
-        <Tabs defaultValue="historial" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="generales" className="w-full">
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="generales">
+              <ClipboardList className="mr-2 size-4" />
+              Generales
+            </TabsTrigger>
+            <TabsTrigger value="estomatologia">
+              <Smile className="mr-2 size-4" />
+              Estomatología
+            </TabsTrigger>
+            <TabsTrigger value="odontograma">
+              <Grid3x3 className="mr-2 size-4" />
+              Odontograma
+            </TabsTrigger>
             <TabsTrigger value="historial">
               <History className="mr-2 size-4" />
               Historial
+            </TabsTrigger>
+            <TabsTrigger value="licencias">
+              <CalendarOff className="mr-2 size-4" />
+              Licencias
             </TabsTrigger>
             <TabsTrigger value="recetas">
               <Pill className="mr-2 size-4" />
@@ -258,45 +268,109 @@ export const ExpedienteDetailPage = () => {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="generales" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Historia Clínica General</CardTitle>
+                <CardDescription>
+                  Datos sociodemográficos, antecedentes, exploración física y
+                  manejo del paciente. Se captura de forma incremental — no
+                  hace falta llenar todo de una vez.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {folioReal ? (
+                  <ExpedienteGeneralesTab noExp={folioReal} />
+                ) : (
+                  <p className="text-txt-muted text-sm py-8 text-center">
+                    No se encontró el número de expediente en la URL.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="estomatologia" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Historia Clínica de Estomatología</CardTitle>
+                <CardDescription>
+                  Antecedentes heredofamiliares, patológicos, no
+                  patológicos, quirúrgicos, traumáticos y alérgicos. Se
+                  captura de forma incremental.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {folioReal ? (
+                  <ExpedienteEstomatologiaTab noExp={folioReal} />
+                ) : (
+                  <p className="text-txt-muted text-sm py-8 text-center">
+                    No se encontró el número de expediente en la URL.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="odontograma" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Odontograma</CardTitle>
+                <CardDescription>
+                  Condición por pieza dental — hacé clic en un diente para
+                  editarlo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {folioReal ? (
+                  <ExpedienteOdontogramaTab noExp={folioReal} />
+                ) : (
+                  <p className="text-txt-muted text-sm py-8 text-center">
+                    No se encontró el número de expediente en la URL.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="historial" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>Historial de Consultas</CardTitle>
                 <CardDescription>
-                  Últimas consultas médicas registradas
+                  Consultas médicas cerradas de este paciente, más recientes
+                  primero
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {mockConsultasRecientes.map((consulta) => (
-                    <div
-                      key={consulta.id}
-                      className="p-4 bg-subtle rounded-lg hover:bg-bg-paper transition-colors"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-txt-body">
-                            {consulta.fecha}
-                          </p>
-                          <p className="text-sm text-txt-muted">
-                            {consulta.medico}
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          Ver Detalle
-                        </Button>
-                      </div>
-                      <div className="text-sm">
-                        <p className="text-txt-body">
-                          <strong>Diagnóstico:</strong> {consulta.diagnostico}
-                        </p>
-                        <p className="text-txt-muted mt-1">
-                          <strong>Tratamiento:</strong> {consulta.tratamiento}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {folioReal ? (
+                  <ExpedienteHistorialTab noExp={folioReal} />
+                ) : (
+                  <p className="text-txt-muted text-sm py-8 text-center">
+                    No se encontró el número de expediente en la URL.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="licencias" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Licencias Médicas</CardTitle>
+                <CardDescription>
+                  Incapacidades emitidas a este paciente, más recientes
+                  primero
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {folioReal ? (
+                  <ExpedienteLicenciasTab noExp={folioReal} />
+                ) : (
+                  <p className="text-txt-muted text-sm py-8 text-center">
+                    No se encontró el número de expediente en la URL.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -321,14 +395,17 @@ export const ExpedienteDetailPage = () => {
               <CardHeader>
                 <CardTitle>Estudios y Laboratorios</CardTitle>
                 <CardDescription>
-                  Resultados de estudios clínicos
+                  Resultados de estudios clínicos, más recientes primero
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12 text-txt-muted">
-                  <FileSignature className="size-12 mx-auto mb-4 opacity-50" />
-                  <p>Módulo de estudios en desarrollo</p>
-                </div>
+                {folioReal ? (
+                  <ExpedienteEstudiosTab noExp={folioReal} />
+                ) : (
+                  <p className="text-txt-muted text-sm py-8 text-center">
+                    No se encontró el número de expediente en la URL.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

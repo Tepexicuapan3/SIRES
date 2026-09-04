@@ -7,6 +7,18 @@ class ConsultationRepository:
         return VisitConsultation.objects.filter(id_visit=visit).first()
 
     @staticmethod
+    def list_for_patient(no_exp, pk_num):
+        return (
+            VisitConsultation.objects.filter(
+                id_visit__no_exp=no_exp,
+                id_visit__pk_num=pk_num,
+                is_active=True,
+            )
+            .select_related("id_visit", "doctor", "doctor__detalle", "cie")
+            .order_by("-id_visit__fecha_consulta", "-created_at")
+        )
+
+    @staticmethod
     def upsert_for_visit(
         visit,
         *,

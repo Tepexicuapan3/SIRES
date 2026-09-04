@@ -3,6 +3,7 @@ import logging
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -21,11 +22,20 @@ from apps.realtime.events import (
 from apps.recepcion.services.errors import VisitDomainError
 
 from .serializers import (
+    ClinicalHistoryUpdateSerializer,
     CloseConsultationSerializer,
+    CreateMedicalLeaveSerializer,
+    CreateStudyResultSerializer,
+    OdontogramToothUpdateSerializer,
     SearchCieSerializer,
     SaveDiagnosisSerializer,
     SavePrescriptionsSerializer,
     StartConsultationSerializer,
+    StomatologyHistoryUpdateSerializer,
+)
+from .uses_case.clinical_history_usecase import (
+    get_clinical_history,
+    upsert_clinical_history,
 )
 from .uses_case.consultation_usecase import (
     close_consultation,
@@ -33,6 +43,23 @@ from .uses_case.consultation_usecase import (
     save_prescriptions,
     search_cies,
     start_consultation,
+)
+from .uses_case.medical_leave_usecase import (
+    create_medical_leave,
+    get_patient_medical_leaves,
+)
+from .uses_case.patient_history_usecase import get_patient_consultations_history
+from .uses_case.study_result_usecase import (
+    create_study_result,
+    get_patient_study_results,
+)
+from .uses_case.stomatology_history_usecase import (
+    get_stomatology_history,
+    upsert_stomatology_history,
+)
+from .uses_case.odontogram_usecase import (
+    get_patient_odontogram,
+    upsert_tooth_condition,
 )
 
 logger = logging.getLogger(__name__)
@@ -279,6 +306,527 @@ class VisitDiagnosisSaveView(APIView):
             final_note=payload.get("finalNote"),
             cie_code=payload.get("cieCode"),
         )
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+def _parse_pk_num(request):
+    raw_value = request.query_params.get("pkNum", "0")
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        return None
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PatientClinicalHistoryView(APIView):
+    """
+    Historia Clinica General de un paciente/familiar (no_exp + pk_num).
+    NO cuelga de una visita especifica -- a diferencia del resto de este
+    modulo (diagnostico, receta), es un solo registro por paciente que se
+    consulta/edita desde el Expediente, con o sin visita activa.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, no_exp):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = get_clinical_history(no_exp, pk_num, roles, permissions)
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+    def patch(self, request, no_exp):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        serializer = ClinicalHistoryUpdateSerializer(data=request.data, partial=True)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        actor_id, roles, permissions = _actor_context(user)
+
+        try:
+            payload = upsert_clinical_history(
+                no_exp,
+                pk_num,
+                roles,
+                serializer.validated_data,
+                actor_id,
+                permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "ClinicalHistoryUpdated",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "noExp": no_exp,
+                "pkNum": pk_num,
+                "actorId": actor_id,
+            },
+        )
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VisitMedicalLeaveCreateView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, visit_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        serializer = CreateMedicalLeaveSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        actor_id, roles, permissions = _actor_context(user)
+        data = serializer.validated_data
+
+        try:
+            payload = create_medical_leave(
+                visit_id,
+                roles,
+                leave_type_id=data["leaveTypeId"],
+                days=data["days"],
+                start_date=data["startDate"],
+                is_subsequent=data["isSubsequent"],
+                actor_id=actor_id,
+                permissions=permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "MedicalLeaveCreated",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "visitId": visit_id,
+                "actorId": actor_id,
+            },
+        )
+
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PatientMedicalLeavesHistoryView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, no_exp):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = get_patient_medical_leaves(no_exp, pk_num, roles, permissions)
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PatientConsultationsHistoryView(APIView):
+    """
+    Historial de consultas cerradas de un paciente/familiar (no_exp + pk_num),
+    a traves de todas sus visitas -- no una sola. Complementa a
+    PatientClinicalHistoryView (que es un solo registro, no un historial).
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, no_exp):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = get_patient_consultations_history(no_exp, pk_num, roles, permissions)
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PatientOdontogramView(APIView):
+    """
+    GET devuelve el odontograma completo (todas las piezas FDI del tipo de
+    denticion pedido, rellenando con "sano" las que no tienen registro).
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, no_exp):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        dentition = request.query_params.get("dentition", "permanent")
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = get_patient_odontogram(
+                no_exp, pk_num, roles, permissions, dentition=dentition,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PatientOdontogramToothView(APIView):
+    """PATCH actualiza la condicion de UNA sola pieza dental."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def patch(self, request, no_exp, tooth_fdi):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        serializer = OdontogramToothUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        actor_id, roles, permissions = _actor_context(user)
+        data = serializer.validated_data
+
+        try:
+            payload = upsert_tooth_condition(
+                no_exp,
+                pk_num,
+                tooth_fdi,
+                roles,
+                condition=data["condition"],
+                notes=data.get("notes"),
+                actor_id=actor_id,
+                permissions=permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "OdontogramToothUpdated",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "noExp": no_exp,
+                "pkNum": pk_num,
+                "toothFdi": tooth_fdi,
+                "actorId": actor_id,
+            },
+        )
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PatientStomatologyHistoryView(APIView):
+    """
+    Historia Clinica de Estomatologia de un paciente/familiar. Igual que
+    PatientClinicalHistoryView: un solo registro por paciente, sin visita
+    asociada, editable con o sin consulta activa.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, no_exp):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = get_stomatology_history(no_exp, pk_num, roles, permissions)
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+    def patch(self, request, no_exp):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        serializer = StomatologyHistoryUpdateSerializer(data=request.data, partial=True)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        actor_id, roles, permissions = _actor_context(user)
+
+        try:
+            payload = upsert_stomatology_history(
+                no_exp,
+                pk_num,
+                roles,
+                serializer.validated_data,
+                actor_id,
+                permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "StomatologyHistoryUpdated",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "noExp": no_exp,
+                "pkNum": pk_num,
+                "actorId": actor_id,
+            },
+        )
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VisitStudyResultCreateView(APIView):
+    authentication_classes = []
+    permission_classes = []
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, visit_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        serializer = CreateStudyResultSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        actor_id, roles, permissions = _actor_context(user)
+        data = serializer.validated_data
+
+        try:
+            payload = create_study_result(
+                visit_id,
+                roles,
+                study_type_id=data["studyTypeId"],
+                result_date=data["resultDate"],
+                notes=data.get("notes"),
+                file=data["file"],
+                actor_id=actor_id,
+                permissions=permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "StudyResultCreated",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "visitId": visit_id,
+                "actorId": actor_id,
+            },
+        )
+
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PatientStudyResultsHistoryView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, no_exp):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        pk_num = _parse_pk_num(request)
+        if pk_num is None:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details={"pkNum": ["pkNum debe ser un numero entero."]},
+                request_id=get_request_id(request),
+            )
+
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = get_patient_study_results(
+                no_exp, pk_num, roles, permissions, request=request
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
 
         return Response(payload, status=status.HTTP_200_OK)
 

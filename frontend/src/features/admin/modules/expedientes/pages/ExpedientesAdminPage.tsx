@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Search, RefreshCw, UserCircle, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, RefreshCw, Stethoscope, UserCircle, X } from "lucide-react";
 import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Badge } from "@shared/ui/badge";
@@ -291,17 +292,29 @@ function ExpedienteDetalle({
                 <td className="px-3 py-2">{p.CLINICA ?? "—"}</td>
                 <td className="px-3 py-2">{p.FEC_VIG ?? "--/--"}</td>
                 <td className="px-3 py-2">
-                  {p.FOTO ? (
-                    <img
-                      src={`data:image/jpeg;base64,${p.FOTO}`}
-                      alt="Foto"
-                      className="w-32 h-auto border rounded"
-                    />
-                  ) : (
-                    <div className="w-14 h-16 border rounded flex items-center justify-center bg-muted">
-                      <UserCircle className="w-6 h-6 text-txt-hint" />
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {p.FOTO ? (
+                      <img
+                        src={`data:image/jpeg;base64,${p.FOTO}`}
+                        alt="Foto"
+                        className="w-32 h-auto border rounded"
+                      />
+                    ) : (
+                      <div className="w-14 h-16 border rounded flex items-center justify-center bg-muted">
+                        <UserCircle className="w-6 h-6 text-txt-hint" />
+                      </div>
+                    )}
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="icon-sm"
+                      title="Ver expediente clínico"
+                    >
+                      <Link to={`/clinico/expedientes/${p.NO_EXP}`}>
+                        <Stethoscope className="w-4 h-4" />
+                      </Link>
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

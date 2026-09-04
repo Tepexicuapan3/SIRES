@@ -11,6 +11,8 @@ import { Button } from "@shared/ui/button";
 import { Input } from "@shared/ui/input";
 import { Label } from "@shared/ui/label";
 import { Textarea } from "@shared/ui/textarea";
+import { EmitirIncapacidadButton } from "@features/consulta-medica/modules/atencion/components/EmitirIncapacidadButton";
+import { SubirResultadoEstudioButton } from "@features/consulta-medica/modules/atencion/components/SubirResultadoEstudioButton";
 import {
   VISIT_STATUS,
   type CieSearchItem,
@@ -596,6 +598,20 @@ export function ConsultationDetailDialog({
               >
                 Guardar receta
               </Button>
+
+              {selectedVisit ? (
+                <EmitirIncapacidadButton
+                  visitId={selectedVisit.id}
+                  disabled={!canSaveClinicalData}
+                />
+              ) : null}
+
+              {selectedVisit ? (
+                <SubirResultadoEstudioButton
+                  visitId={selectedVisit.id}
+                  disabled={!canSaveClinicalData}
+                />
+              ) : null}
 
               <Button
                 type="button"

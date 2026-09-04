@@ -368,6 +368,59 @@ export type {
 } from "@api/types/catalogos/tipos-residencia.types";
 
 // =============================================================================
+// HISTORIA CLINICA GENERAL (ClinicalHistory)
+// =============================================================================
+export type {
+  ClinicalHistory,
+  UpdateClinicalHistoryRequest,
+} from "@api/types/clinical-history.types";
+
+// =============================================================================
+// HISTORIAL DE CONSULTAS DEL PACIENTE
+// =============================================================================
+export type {
+  PatientConsultationHistoryItem,
+  PatientConsultationsHistoryResponse,
+} from "@api/types/patient-consultations.types";
+
+// =============================================================================
+// LICENCIAS MEDICAS (MedicalLeave)
+// =============================================================================
+export type {
+  MedicalLeaveItem,
+  PatientMedicalLeavesResponse,
+  CreateMedicalLeaveRequest,
+} from "@api/types/medical-leave.types";
+
+// =============================================================================
+// RESULTADOS DE ESTUDIOS (StudyResult)
+// =============================================================================
+export type {
+  StudyResultItem,
+  PatientStudyResultsResponse,
+  CreateStudyResultRequest,
+} from "@api/types/study-result.types";
+
+// =============================================================================
+// HISTORIA CLINICA DE ESTOMATOLOGIA (StomatologyHistory)
+// =============================================================================
+export type {
+  StomatologyHistory,
+  UpdateStomatologyHistoryRequest,
+} from "@api/types/stomatology-history.types";
+
+// =============================================================================
+// ODONTOGRAMA (OdontogramTooth)
+// =============================================================================
+export type {
+  ToothCondition,
+  OdontogramToothItem,
+  PatientOdontogramResponse,
+  UpdateOdontogramToothRequest,
+  OdontogramDentition,
+} from "@api/types/odontogram.types";
+
+// =============================================================================
 // TIPO PERSONAL TYPES (CRUD)
 // =============================================================================
 export type {
