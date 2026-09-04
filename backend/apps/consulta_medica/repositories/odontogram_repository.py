@@ -24,9 +24,11 @@ class OdontogramRepository:
                 "notes": notes,
                 "is_active": True,
                 "updated_by_id": updated_by_id,
-                **({"created_by_id": updated_by_id} if created else {}),
             },
         )
+        if created:
+            tooth.created_by_id = updated_by_id
+            tooth.save(update_fields=["created_by_id"])
         return tooth
 
     @staticmethod
