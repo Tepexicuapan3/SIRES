@@ -59,6 +59,7 @@ export interface DataTableProps<T> {
   pagination?: TablePaginationProps;
   footerNote?: ReactNode;
   getRowKey?: (row: T, index: number) => string;
+  getRowClassName?: (row: T, index: number) => string | undefined;
   className?: string;
 }
 
@@ -91,6 +92,7 @@ export function DataTable<T>({
   pagination,
   footerNote,
   getRowKey,
+  getRowClassName,
   className,
 }: DataTableProps<T>) {
   const tableClassName = "min-w-[720px] table-fixed";
@@ -240,6 +242,7 @@ export function DataTable<T>({
                     onClick={() => onRowClick?.(row)}
                     className={cn(
                       hasRowClick && "cursor-pointer hover:bg-subtle/50",
+                      getRowClassName?.(row, rowIndex),
                     )}
                   >
                     {columns.map((column) => {

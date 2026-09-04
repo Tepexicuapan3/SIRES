@@ -22,8 +22,42 @@ describe("users.schemas", () => {
       expect(messages).toContain("Usuario requerido");
       expect(messages).toContain("Nombre requerido");
       expect(messages).toContain("Apellido paterno requerido");
-      expect(messages).toContain("Correo invalido");
       expect(messages).toContain("Selecciona un rol");
+    }
+  });
+
+  it("allows creating a user without email", () => {
+    const result = createUserSchema.safeParse({
+      username: "jperez",
+      firstName: "Juan",
+      paternalName: "Perez",
+      maternalName: "",
+      email: "",
+      clinicId: null,
+      primaryRoleId: 2,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.email).toBe("");
+    }
+  });
+
+  it("still validates email format when the user provides one", () => {
+    const result = createUserSchema.safeParse({
+      username: "jperez",
+      firstName: "Juan",
+      paternalName: "Perez",
+      maternalName: "",
+      email: "not-an-email",
+      clinicId: null,
+      primaryRoleId: 2,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((issue) => issue.message);
+      expect(messages).toContain("Correo invalido");
     }
   });
 

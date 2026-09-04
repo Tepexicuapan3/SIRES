@@ -415,7 +415,6 @@ export const usersHandlers = [
     if (!body.firstName) details.firstName = ["Nombre requerido"];
     if (!body.paternalName)
       details.paternalName = ["Apellido paterno requerido"];
-    if (!body.email) details.email = ["Correo requerido"];
     if (!body.primaryRoleId) details.primaryRoleId = ["Selecciona un rol"];
 
     if (Object.keys(details).length > 0) {
@@ -429,7 +428,8 @@ export const usersHandlers = [
       );
     }
 
-    if (!/\S+@\S+\.\S+/.test(body.email)) {
+    // Correo opcional: solo se valida el formato cuando el usuario lo capturo.
+    if (body.email && !/\S+@\S+\.\S+/.test(body.email)) {
       return HttpResponse.json(
         { code: "INVALID_EMAIL", message: "Correo invalido" },
         { status: 400 },
@@ -439,7 +439,8 @@ export const usersHandlers = [
     const alreadyExists = usersDB.some(
       (user) =>
         user.username.toLowerCase() === body.username.toLowerCase() ||
-        user.email.toLowerCase() === body.email.toLowerCase(),
+        (Boolean(body.email) &&
+          user.email.toLowerCase() === body.email?.toLowerCase()),
     );
 
     if (alreadyExists) {
@@ -481,7 +482,7 @@ export const usersHandlers = [
       id: usersDB.length + 1000,
       username: body.username,
       fullname: fullname || body.username,
-      email: body.email,
+      email: body.email ?? "",
       clinic: body.clinicId
         ? { id: body.clinicId, name: clinicName ?? "Centro de atencion" }
         : null,

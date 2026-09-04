@@ -151,7 +151,7 @@ export function UserCreateDialog({
           firstName: values.firstName,
           paternalName: values.paternalName,
           maternalName: values.maternalName,
-          email: values.email,
+          email: values.email || undefined,
           clinicId: values.clinicId ?? null,
           primaryRoleId: values.primaryRoleId,
           noExp: values.noExp ?? null,

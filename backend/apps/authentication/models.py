@@ -44,7 +44,7 @@ class SyUsuario(models.Model):
     # Usuario principal para autenticacion.
     id_usuario = models.BigAutoField(primary_key=True, db_column="id_usuario")
     usuario = models.CharField(max_length=50, unique=True)
-    correo = models.CharField(max_length=255, unique=True)
+    correo = models.CharField(max_length=255, unique=True, null=True, blank=True)
     clave_hash = models.CharField(max_length=255)
     est_activo = models.BooleanField(db_index=True, default=True)
     est_bloqueado = models.BooleanField(db_index=True, default=False)

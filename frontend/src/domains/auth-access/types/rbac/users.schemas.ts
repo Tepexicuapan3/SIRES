@@ -17,6 +17,10 @@ const emailSchema = z
   .trim()
   .email({ error: "Correo invalido" });
 
+// Correo opcional: si el usuario no lo captura se omite (string vacio o
+// ausente), pero si escribe algo se sigue validando el formato de email.
+const optionalEmailSchema = emailSchema.optional().or(z.literal(""));
+
 const optionalNumber = z.preprocess(
   (value) => {
     if (
@@ -71,7 +75,7 @@ export const userDetailsSchema = z
     firstName: requiredText("Nombre"),
     paternalName: requiredText("Apellido paterno"),
     maternalName: optionalText,
-    email: emailSchema,
+    email: optionalEmailSchema,
     clinicId: optionalNumber,
     noExp: z.string().trim().max(20).nullable().default(null),
     cdLaboral: z.string().trim().max(100).nullable().default(null),
@@ -102,7 +106,7 @@ export const createUserSchema = z
     firstName: requiredText("Nombre"),
     paternalName: requiredText("Apellido paterno"),
     maternalName: optionalText,
-    email: emailSchema,
+    email: optionalEmailSchema,
     clinicId: optionalNumber,
     primaryRoleId: requiredNumber,
     noExp: z.string().trim().max(20).nullable().default(null),

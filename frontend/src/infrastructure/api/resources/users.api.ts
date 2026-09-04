@@ -13,6 +13,7 @@
  */
 
 import apiClient from "@api/client";
+import { ApiError } from "@api/utils/errors";
 import type {
   CreateUserRequest,
   CreateUserResponse,
@@ -34,7 +35,20 @@ import type {
   NotifyUsersRequest,
   NotifyUsersResponse,
   NotifyUsersPreviewResponse,
+  UserImportResult,
 } from "@api/types";
+
+const waitForTokenRefresh = (): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, 800));
+
+const isApiError = (error: unknown): error is ApiError =>
+  error instanceof ApiError;
+
+const buildImportFormData = (file: File): FormData => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return formData;
+};
 
 export const usersAPI = {
   // ==========================================
@@ -203,7 +217,97 @@ export const usersAPI = {
   },
 
   // ==========================================
-  // 2. SUB-RECURSO: ROLES
+  // 2. SUB-RECURSO: IMPORTACION MASIVA (EXCEL)
+  // ==========================================
+  import: {
+    /**
+     * Descargar plantilla .xlsx para carga masiva de usuarios.
+     * @endpoint GET /api/v1/users/import/template
+     * @permission admin:gestion:usuarios:create
+     */
+    downloadTemplate: async (): Promise<Blob> => {
+      const response = await apiClient.get("/users/import/template", {
+        responseType: "blob",
+      });
+      return response.data as Blob;
+    },
+
+    /**
+     * PASO 1 - Preview: valida el Excel y devuelve las filas con sus errores.
+     * NO persiste nada en la base de datos.
+     *
+     * NOTA SOBRE UPLOAD Y FORMDATA:
+     * El interceptor global refresca el token en 401 pero no puede reenviar
+     * el mismo FormData (stream consumido). Reconstruimos el FormData en
+     * cada intento (mismo patron que `catalog-import.api.ts`).
+     *
+     * @endpoint POST /api/v1/users/import/preview
+     * @permission admin:gestion:usuarios:create
+     */
+    preview: async (file: File, _retry = false): Promise<UserImportResult> => {
+      try {
+        const response = await apiClient.post<UserImportResult>(
+          "/users/import/preview",
+          buildImportFormData(file),
+          {
+            // Elimina Content-Type: application/json del cliente base.
+            // Axios genera multipart/form-data con boundary correcto.
+            headers: { "Content-Type": undefined },
+          },
+        );
+        return response.data;
+      } catch (err: unknown) {
+        if (!_retry && isApiError(err) && err.status === 401) {
+          await waitForTokenRefresh();
+          return usersAPI.import.preview(file, true);
+        }
+        throw err;
+      }
+    },
+
+    /**
+     * PASO 2 - Confirm: crea todos los usuarios SOLO SI no hay ningun error
+     * (todo-o-nada). Reenvia el MISMO archivo; el servidor re-valida como
+     * unica autoridad.
+     *
+     * NOTA SOBRE CONFIRM Y 409:
+     * El backend responde 409 con `{ totalRecords, totalErrores, inserted: 0,
+     * rows, code: "IMPORT_HAS_ERRORS" }` cuando el todo-o-nada rechaza el
+     * lote. El interceptor global normaliza cualquier error 4xx/5xx a
+     * `ApiError` (solo conserva code/message/status/details) y ese cuerpo
+     * (rows) se pierde. Como preview y confirm validan el MISMO archivo,
+     * ante un 409 reconstruimos las filas re-llamando a `preview` en vez de
+     * propagar un error vacio de contenido (mismo patron que
+     * `catalog-import.api.ts`).
+     *
+     * @endpoint POST /api/v1/users/import/confirm
+     * @permission admin:gestion:usuarios:create
+     */
+    confirm: async (file: File, _retry = false): Promise<UserImportResult> => {
+      try {
+        const response = await apiClient.post<UserImportResult>(
+          "/users/import/confirm",
+          buildImportFormData(file),
+          {
+            headers: { "Content-Type": undefined },
+          },
+        );
+        return response.data;
+      } catch (err: unknown) {
+        if (!_retry && isApiError(err) && err.status === 401) {
+          await waitForTokenRefresh();
+          return usersAPI.import.confirm(file, true);
+        }
+        if (isApiError(err) && err.status === 409) {
+          return usersAPI.import.preview(file);
+        }
+        throw err;
+      }
+    },
+  },
+
+  // ==========================================
+  // 3. SUB-RECURSO: ROLES
   // ==========================================
   roles: {
     /**

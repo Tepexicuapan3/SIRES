@@ -22,6 +22,11 @@ from .views.rbac_views import (
 )
 
 from .views.expediente_view import ExpedienteView, ActualizarExpedienteView, BuscarPorNombreView
+from .views.user_import_views import (
+    UserImportConfirmView,
+    UserImportPreviewView,
+    UserImportTemplateView,
+)
 from .views.navigation_menu_views import ModuleCatalogView, NavigationMenuView
 from .views.navigation_module_mutation_views import (
     CreateModuleView,
@@ -68,6 +73,9 @@ urlpatterns = [
         name="rbac-role-permission-revoke",
     ),
     path("users", UsersListCreateView.as_view(), name="rbac-users-list-create"),
+    path("users/import/template", UserImportTemplateView.as_view(), name="rbac-users-import-template"),
+    path("users/import/preview", UserImportPreviewView.as_view(), name="rbac-users-import-preview"),
+    path("users/import/confirm", UserImportConfirmView.as_view(), name="rbac-users-import-confirm"),
     path("users/<int:user_id>", UserDetailView.as_view(), name="rbac-user-detail-update"),
     path("users/<int:user_id>/activate", UserActivateView.as_view(), name="rbac-user-activate"),
     path("users/<int:user_id>/deactivate", UserDeactivateView.as_view(), name="rbac-user-deactivate"),

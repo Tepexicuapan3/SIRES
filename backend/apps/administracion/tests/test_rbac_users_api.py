@@ -1,7 +1,10 @@
+import io
 from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 
+import openpyxl
 from django.contrib.auth.hashers import make_password
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
@@ -227,7 +230,7 @@ class RbacUsersApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["code"], "INVALID_FORMAT")
 
-    @patch("apps.administracion.views.rbac_views.send_user_credentials_email")
+    @patch("apps.administracion.use_cases.users.create_user.send_user_credentials_email")
     def test_create_user_success_contract(self, send_email_mock):
         send_email_mock.return_value = True
 
@@ -262,7 +265,7 @@ class RbacUsersApiTests(APITestCase):
         self.assertTrue(created_user.cambiar_clave)
         self.assertFalse(created_user.terminos_acept)
 
-    @patch("apps.administracion.views.rbac_views.send_user_credentials_email")
+    @patch("apps.administracion.use_cases.users.create_user.send_user_credentials_email")
     @override_settings(ALLOW_USER_CREATE_WITHOUT_EMAIL=True)
     def test_create_user_email_failure_tolerated_when_flag_enabled(
         self, send_email_mock
@@ -292,7 +295,7 @@ class RbacUsersApiTests(APITestCase):
             SyUsuario.objects.filter(usuario="new_user_email_tolerated").exists()
         )
 
-    @patch("apps.administracion.views.rbac_views.send_user_credentials_email")
+    @patch("apps.administracion.use_cases.users.create_user.send_user_credentials_email")
     @override_settings(ALLOW_USER_CREATE_WITHOUT_EMAIL=False)
     def test_create_user_email_failure_rolls_back_creation_in_strict_mode(
         self, send_email_mock
@@ -390,6 +393,89 @@ class RbacUsersApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["code"], "CLINIC_NOT_FOUND")
+
+    @patch("apps.administracion.use_cases.users.create_user.send_user_credentials_email")
+    def test_create_user_without_email_success(self, send_email_mock):
+        response = self.client.post(
+            "/api/v1/users",
+            {
+                "username": "user_no_email",
+                "firstName": "Sin",
+                "paternalName": "Correo",
+                "primaryRoleId": self.role_recepcion.id_rol,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(response.data["credentialsEmailSent"])
+        send_email_mock.assert_not_called()
+
+        created_user = SyUsuario.objects.get(id_usuario=response.data["id"])
+        self.assertIsNone(created_user.correo)
+
+    def test_create_two_users_without_email_do_not_collide(self):
+        first = self.client.post(
+            "/api/v1/users",
+            {
+                "username": "no_email_one",
+                "firstName": "Uno",
+                "paternalName": "SinCorreo",
+                "primaryRoleId": self.role_recepcion.id_rol,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+        second = self.client.post(
+            "/api/v1/users",
+            {
+                "username": "no_email_two",
+                "firstName": "Dos",
+                "paternalName": "SinCorreo",
+                "primaryRoleId": self.role_recepcion.id_rol,
+            },
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            SyUsuario.objects.filter(
+                usuario__in=["no_email_one", "no_email_two"], correo__isnull=True
+            ).count(),
+            2,
+        )
+
+    def test_users_list_filters_by_no_exp(self):
+        self.target_user.detalle.no_exp = "SERMED-12345"
+        self.target_user.detalle.save()
+
+        response = self.client.get("/api/v1/users?noExp=12345")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        usernames = [item["username"] for item in response.data["items"]]
+        self.assertIn("target_user", usernames)
+
+    def test_users_list_no_exp_filter_excludes_non_matching(self):
+        self.target_user.detalle.no_exp = "SERMED-12345"
+        self.target_user.detalle.save()
+
+        response = self.client.get("/api/v1/users?noExp=NOPE")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        usernames = [item["username"] for item in response.data["items"]]
+        self.assertNotIn("target_user", usernames)
+
+    def test_users_export_filters_by_no_exp(self):
+        self.target_user.detalle.no_exp = "SERMED-99999"
+        self.target_user.detalle.save()
+
+        response = self.client.get("/api/v1/users/export?noExp=99999")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["X-Total-Users"], "1")
 
     def test_user_detail_contract(self):
         response = self.client.get(f"/api/v1/users/{self.target_user.id_usuario}")
@@ -1509,3 +1595,184 @@ class RbacUsersApiTests(APITestCase):
             ).count(),
             0,
         )
+
+
+USER_IMPORT_HEADERS = [
+    "Usuario",
+    "Nombre(s)",
+    "Apellido Paterno",
+    "Apellido Materno",
+    "Correo",
+    "No. Expediente SERMED",
+    "Rol",
+    "Estado",
+]
+
+IMPORT_TEMPLATE_URL = "/api/v1/users/import/template"
+IMPORT_PREVIEW_URL = "/api/v1/users/import/preview"
+IMPORT_CONFIRM_URL = "/api/v1/users/import/confirm"
+
+
+def _users_xlsx_upload(rows, filename="import.xlsx"):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(list(USER_IMPORT_HEADERS))
+    for row in rows:
+        ws.append(list(row))
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return SimpleUploadedFile(
+        filename,
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+class RbacUsersImportApiTests(APITestCase):
+    """Cubre el import masivo de usuarios por Excel: plantilla, preview
+    (no escribe nada) y confirm (todo-o-nada)."""
+
+    def setUp(self):
+        self.admin = SyUsuario.objects.create(
+            usuario="admin_import_users",
+            correo="admin.import.users@example.com",
+            clave_hash=make_password("Admin_123456"),
+            est_activo=True,
+            cambiar_clave=False,
+            terminos_acept=True,
+        )
+        DetUsuario.objects.create(
+            id_usuario=self.admin,
+            nombre="Admin",
+            paterno="Import",
+            materno="",
+        )
+        self.admin_role = Roles.objects.create(
+            rol="ADMIN_IMPORT_USERS",
+            desc_rol="Administrador de import de usuarios",
+            landing_route="/admin/users",
+            is_admin=True,
+            is_active=True,
+        )
+        RelUsuarioRol.objects.create(
+            id_usuario=self.admin,
+            id_rol=self.admin_role,
+            is_primary=True,
+        )
+
+        self.role_medico = Roles.objects.create(
+            rol="MEDICO_IMPORT",
+            desc_rol="Rol medico",
+            landing_route="/medico",
+            is_active=True,
+        )
+
+        PolicyStore().clear_active_session(self.admin.id_usuario)
+        login_response = self.client.post(
+            "/api/v1/auth/login",
+            {"username": "admin_import_users", "password": "Admin_123456"},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        self.client.cookies = login_response.cookies
+        self.csrf_token = login_response.cookies.get(CSRF_COOKIE).value
+
+    def _post_file(self, url, file):
+        return self.client.post(
+            url,
+            {"file": file},
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+    def test_template_download_has_expected_headers(self):
+        response = self.client.get(IMPORT_TEMPLATE_URL)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        headers = [cell.value for cell in wb.active[1]]
+        self.assertEqual(headers, USER_IMPORT_HEADERS)
+
+    def test_preview_reports_valid_and_invalid_rows_without_writing(self):
+        before = SyUsuario.objects.count()
+        file = _users_xlsx_upload(
+            [
+                (
+                    "import_valid", "Juan", "Perez", "", "juan.import@example.com",
+                    "111", self.role_medico.rol, "Activo",
+                ),
+                ("", "Sin", "Usuario", "", "", "", self.role_medico.rol, "Activo"),
+            ]
+        )
+
+        response = self._post_file(IMPORT_PREVIEW_URL, file)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(SyUsuario.objects.count(), before)
+        self.assertEqual(response.data["totalRecords"], 2)
+        self.assertEqual(response.data["totalErrores"], 1)
+        self.assertEqual(response.data["inserted"], 0)
+        rows = response.data["rows"]
+        self.assertEqual(rows[0]["errors"], [])
+        self.assertIn("Usuario es obligatorio.", rows[1]["errors"])
+
+    def test_preview_flags_unknown_role_and_bad_email(self):
+        file = _users_xlsx_upload(
+            [
+                (
+                    "import_bad", "Ana", "Lopez", "", "not-an-email",
+                    "", "ROL_QUE_NO_EXISTE", "Activo",
+                ),
+            ]
+        )
+
+        response = self._post_file(IMPORT_PREVIEW_URL, file)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        errors = response.data["rows"][0]["errors"]
+        self.assertTrue(any("Correo" in e for e in errors))
+        self.assertTrue(any("Rol" in e for e in errors))
+
+    @patch("apps.administracion.use_cases.users.create_user.send_user_credentials_email")
+    def test_confirm_creates_all_users_when_every_row_is_valid(self, send_email_mock):
+        send_email_mock.return_value = True
+        file = _users_xlsx_upload(
+            [
+                (
+                    "bulk_one", "Uno", "Bulk", "", "bulk.one@example.com",
+                    "111", self.role_medico.rol, "Activo",
+                ),
+                ("bulk_two", "Dos", "Bulk", "", "", "222", self.role_medico.rol, "Dado de baja"),
+            ]
+        )
+
+        response = self._post_file(IMPORT_CONFIRM_URL, file)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["inserted"], 2)
+        self.assertEqual(response.data["totalErrores"], 0)
+
+        user_one = SyUsuario.objects.get(usuario="bulk_one")
+        self.assertEqual(user_one.correo, "bulk.one@example.com")
+        self.assertTrue(user_one.est_activo)
+
+        user_two = SyUsuario.objects.get(usuario="bulk_two")
+        self.assertIsNone(user_two.correo)
+        self.assertFalse(user_two.est_activo)
+
+        send_email_mock.assert_called_once()
+
+    def test_confirm_with_any_error_creates_nothing(self):
+        before = SyUsuario.objects.count()
+        file = _users_xlsx_upload(
+            [
+                ("bulk_ok", "Ok", "Bulk", "", "", "", self.role_medico.rol, "Activo"),
+                ("bulk_ok", "Duplicado", "Bulk", "", "", "", self.role_medico.rol, "Activo"),
+            ]
+        )
+
+        response = self._post_file(IMPORT_CONFIRM_URL, file)
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["code"], "IMPORT_HAS_ERRORS")
+        self.assertEqual(response.data["inserted"], 0)
+        self.assertEqual(SyUsuario.objects.count(), before)

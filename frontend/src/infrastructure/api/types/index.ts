@@ -89,6 +89,10 @@ export type {
   NotifyUsersResponse,
   NotifyUsersPreviewResponse,
   NotifyFailedItem,
+  // Importacion masiva (Excel)
+  UserImportRowData,
+  UserImportRow,
+  UserImportResult,
   // Refs
   EscolaridadRef,
   EscuelaRef,

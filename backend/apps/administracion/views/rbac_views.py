@@ -1,11 +1,8 @@
-import secrets
-import string
 import uuid
 import re
 from datetime import datetime, time, timezone as dt_timezone
 
 from django.conf import settings
-from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
@@ -28,7 +25,7 @@ from apps.authentication.services.auth_revision import (
     touch_users_auth_revision,
 )
 from apps.authentication.services.csrf_service import validate_csrf
-from apps.authentication.services.email_service import send_user_credentials_email, send_notification_email_batch
+from apps.authentication.services.email_service import send_notification_email_batch
 from apps.authentication.services.errors import AuthServiceError
 from apps.authentication.services.response_service import error_response, get_request_id
 from apps.authentication.services.session_service import authenticate_request
@@ -42,11 +39,13 @@ from apps.administracion.use_cases.rbac_write import (
     RbacWriteError,
 )
 from apps.administracion.services.rbac_feature_flags import is_rbac_read_s1_enabled
+from apps.administracion.use_cases.users.create_user import (
+    CedulaInput,
+    CreateUserData,
+    CreateUserUseCase,
+)
 
 
-TEMP_PASSWORD_LENGTH = 12
-TEMP_PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{}"
-TEMP_PASSWORD_ALPHABET = string.ascii_letters + string.digits + TEMP_PASSWORD_SYMBOLS
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 ISO_DATETIME_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?$"
@@ -124,23 +123,6 @@ def _parse_expires_at_end_of_day(raw_value):
         return end_of_day
     except (TypeError, ValueError, OverflowError):
         return "invalid"
-
-
-def _generate_temporary_password(length=TEMP_PASSWORD_LENGTH):
-    effective_length = max(length, 12)
-    while True:
-        candidate = "".join(
-            secrets.choice(TEMP_PASSWORD_ALPHABET) for _ in range(effective_length)
-        )
-        if not any(char.islower() for char in candidate):
-            continue
-        if not any(char.isupper() for char in candidate):
-            continue
-        if not any(char.isdigit() for char in candidate):
-            continue
-        if not any(char in TEMP_PASSWORD_SYMBOLS for char in candidate):
-            continue
-        return candidate
 
 
 def _apply_user_search_filter(queryset, search, *, path_prefix="", include_correo=True):
@@ -1304,6 +1286,10 @@ class UsersListCreateView(APIView):
         if tipo_personal_id:
             queryset = queryset.filter(detalle__id_tipo_personal_id=tipo_personal_id)
 
+        no_exp = request.query_params.get("noExp")
+        if no_exp:
+            queryset = queryset.filter(detalle__no_exp__icontains=no_exp)
+
         user_ids_queryset = (
             queryset.order_by("usuario", "id_usuario")
             .values_list("id_usuario", flat=True)
@@ -1356,7 +1342,6 @@ class UsersListCreateView(APIView):
             "username",
             "firstName",
             "paternalName",
-            "email",
             "primaryRoleId",
         ]
         missing = [field for field in required_fields if not request.data.get(field)]
@@ -1377,12 +1362,14 @@ class UsersListCreateView(APIView):
             )
 
         username = request.data.get("username")
-        email = request.data.get("email")
+        # Correo opcional: "" y None se tratan igual -- nunca se compara ni se
+        # persiste como string vacio (rompería el unique index con otros
+        # usuarios sin correo).
+        email = request.data.get("email") or None
 
-        if (
-            SyUsuario.objects.filter(usuario=username).exists()
-            or SyUsuario.objects.filter(correo=email).exists()
-        ):
+        duplicate_username = SyUsuario.objects.filter(usuario=username).exists()
+        duplicate_email = bool(email) and SyUsuario.objects.filter(correo=email).exists()
+        if duplicate_username or duplicate_email:
             _audit(
                 request,
                 "RBAC_USER_CREATE",
@@ -1436,28 +1423,7 @@ class UsersListCreateView(APIView):
                     request_id=_request_id(request),
                 )
 
-        temporary_password = _generate_temporary_password()
-        user = SyUsuario.objects.create(
-            usuario=username,
-            correo=email,
-            clave_hash=make_password(temporary_password),
-            est_activo=True,
-            est_bloqueado=False,
-            cambiar_clave=True,
-            terminos_acept=False,
-            usr_alta=actor,
-        )
-
         maternal_name = request.data.get("maternalName") or ""
-        full_name = " ".join(
-            part
-            for part in [
-                request.data.get("firstName"),
-                request.data.get("paternalName"),
-                maternal_name,
-            ]
-            if part
-        ).strip()
 
         area_clinica = None
         area_clinica_id = request.data.get("areaClinicaId")
@@ -1484,32 +1450,8 @@ class UsersListCreateView(APIView):
             from apps.catalogos.models import CatTipoPersonal
             tipo_personal_obj = CatTipoPersonal.objects.filter(id=tipo_personal_id).first()
 
-        DetUsuario.objects.create(
-            id_usuario=user,
-            nombre=request.data.get("firstName"),
-            paterno=request.data.get("paternalName"),
-            materno=maternal_name,
-            id_centro_atencion=clinic,
-            no_exp=request.data.get("noExp") or None,
-            cd_laboral=request.data.get("cdLaboral") or None,
-            telefono=request.data.get("telefono") or None,
-            sexo=request.data.get("sexo") or None,
-            fecha_nac=request.data.get("fechaNac") or None,
-            id_area_clinica=area_clinica,
-
-            id_escolaridad=escolaridad,
-            id_escuela=escuela,
-            id_tipo_personal=tipo_personal_obj,
-        )
-
-        RelUsuarioRol.objects.create(
-            id_usuario=user,
-            id_rol=role,
-            is_primary=True,
-            usr_asignacion=actor,
-        )
-
         cedulas_data = request.data.get("cedulas") or []
+        cedula_inputs = []
         if cedulas_data:
             if len(cedulas_data) > 3:
                 return error_response(
@@ -1549,23 +1491,47 @@ class UsersListCreateView(APIView):
                     status.HTTP_400_BAD_REQUEST,
                     request_id=_request_id(request),
                 )
-            for idx, cedula_item in enumerate(cedulas_data):
-                DetUsuarioCedula.objects.create(
-                    id_usuario=user,
+            cedula_inputs = [
+                CedulaInput(
                     numero=cedula_item["numero"].strip(),
                     tipo=(cedula_item.get("tipo") or "").strip(),
                     es_principal=bool(cedula_item.get("esPrincipal", False)),
-                    orden=idx + 1,
                 )
+                for cedula_item in cedulas_data
+            ]
 
-        credentials_email_sent = send_user_credentials_email(
-            recipient_email=user.correo,
-            username=user.usuario,
-            temporary_password=temporary_password,
-            user_name=full_name or user.usuario,
+        result = CreateUserUseCase.execute(
+            CreateUserData(
+                username=username,
+                first_name=request.data.get("firstName"),
+                paternal_name=request.data.get("paternalName"),
+                maternal_name=maternal_name,
+                email=email,
+                role=role,
+                actor=actor,
+                clinic=clinic,
+                no_exp=request.data.get("noExp") or None,
+                cd_laboral=request.data.get("cdLaboral") or None,
+                telefono=request.data.get("telefono") or None,
+                sexo=request.data.get("sexo") or None,
+                fecha_nac=request.data.get("fechaNac") or None,
+                area_clinica=area_clinica,
+                escolaridad=escolaridad,
+                escuela=escuela,
+                tipo_personal=tipo_personal_obj,
+                cedulas=cedula_inputs,
+            )
         )
+        user = result.user
 
-        if not credentials_email_sent and not settings.ALLOW_USER_CREATE_WITHOUT_EMAIL:
+        # `credentials_email_sent` es None cuando el usuario se creo SIN
+        # correo -- ahi nunca se intento enviar nada, no es un fallo y no
+        # dispara rollback. Cuando SI hay correo, se conserva el
+        # comportamiento existente gobernado por ALLOW_USER_CREATE_WITHOUT_EMAIL.
+        if (
+            result.credentials_email_sent is False
+            and not settings.ALLOW_USER_CREATE_WITHOUT_EMAIL
+        ):
             transaction.set_rollback(True)
             _audit(
                 request,
@@ -1583,6 +1549,7 @@ class UsersListCreateView(APIView):
                 request_id=_request_id(request),
             )
 
+        credentials_email_sent = bool(result.credentials_email_sent)
         payload = {
             "id": user.id_usuario,
             "username": user.usuario,
@@ -1715,9 +1682,13 @@ class UserDetailView(APIView):
             )
 
         if "email" in request.data:
-            email = request.data.get("email")
+            # Correo opcional: "" y None se tratan igual -- nunca se compara
+            # ni se persiste como string vacio (rompería el unique index con
+            # otros usuarios sin correo).
+            email = request.data.get("email") or None
             if (
-                SyUsuario.objects.filter(correo=email)
+                email
+                and SyUsuario.objects.filter(correo=email)
                 .exclude(id_usuario=user.id_usuario)
                 .exists()
             ):
@@ -2559,6 +2530,10 @@ class UserExportView(APIView):
             qs = qs.filter(est_activo=False)
         elif status_filter == "pending":
             qs = qs.filter(Q(terminos_acept=False) | Q(cambiar_clave=True))
+
+        no_exp = request.query_params.get("noExp")
+        if no_exp:
+            qs = qs.filter(detalle__no_exp__icontains=no_exp)
 
         users = list(qs.order_by("detalle__nombre_completo", "usuario").distinct())
 

@@ -182,7 +182,7 @@ export interface CreateUserRequest {
   firstName: string;
   paternalName: string;
   maternalName: string;
-  email: string;
+  email?: string;
   clinicId?: number | null;
   primaryRoleId: number;
   noExp?: string | null;
@@ -263,6 +263,11 @@ export interface UsersListParams extends PaginationParams {
   clinicId?: number;
   status?: "active" | "inactive" | "pending";
   tipoPersonalId?: number;
+  /**
+   * Filtro dedicado por No. Expediente SERMED (AND, independiente de `search`).
+   * @endpoint GET /api/v1/users?noExp=...
+   */
+  noExp?: string;
 }
 
 /**
@@ -358,6 +363,50 @@ export interface SetPrimaryRoleResponse {
 export interface RevokeRoleResponse {
   userId: number;
   roles: UserRole[];
+}
+
+// =============================================================================
+// IMPORTACION MASIVA (EXCEL)
+// =============================================================================
+
+/**
+ * Datos normalizados de una fila del Excel de importacion.
+ * Columnas de origen (en este orden exacto):
+ * Usuario | Nombre(s) | Apellido Paterno | Apellido Materno | Correo |
+ * No. Expediente SERMED | Rol | Estado
+ */
+export interface UserImportRowData {
+  username: string;
+  firstName: string;
+  paternalName: string;
+  maternalName: string;
+  email: string | null;
+  noExp: string | null;
+  roleName: string;
+  roleId: number | null;
+  estado: "Activo" | "Dado de baja";
+  isActive: boolean;
+}
+
+/**
+ * Fila procesada de la importacion (valida o con errores).
+ */
+export interface UserImportRow {
+  row: number;
+  data: UserImportRowData;
+  errors: string[];
+}
+
+/**
+ * Response de preview/confirm de importacion masiva.
+ * POST /api/v1/users/import/preview
+ * POST /api/v1/users/import/confirm
+ */
+export interface UserImportResult {
+  totalRecords: number;
+  totalErrores: number;
+  inserted: number;
+  rows: UserImportRow[];
 }
 
 // =============================================================================

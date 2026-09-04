@@ -120,10 +120,10 @@ describe("UserCreateDialog UI", () => {
     expect(await screen.findByText("Nombre requerido")).toBeVisible();
     expect(await screen.findByText("Apellido paterno requerido")).toBeVisible();
     expect(await screen.findByText("Usuario requerido")).toBeVisible();
-    expect(await screen.findByText("Correo invalido")).toBeVisible();
     expect(
       await screen.findByText("Selecciona un rol", { selector: "p" }),
     ).toBeVisible();
+    expect(screen.queryByText("Correo invalido")).not.toBeInTheDocument();
   });
 
   it("submits and closes dialog on success", async () => {

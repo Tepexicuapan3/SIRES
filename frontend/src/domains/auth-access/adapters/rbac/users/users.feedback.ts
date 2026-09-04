@@ -12,6 +12,10 @@ const USER_ERROR_MESSAGES: Record<string, string> = {
   SESSION_EXPIRED: "Tu sesion expiro. Inicia sesion nuevamente.",
   VALIDATION_ERROR: "Revisa los datos capturados antes de guardar.",
   NETWORK_ERROR: "No hay conexion con el servidor. Intenta nuevamente.",
+  IMPORT_HAS_ERRORS:
+    "El archivo tiene filas con error. Corrigelas y volve a subirlo.",
+  EMAIL_DELIVERY_FAILED:
+    "No se pudieron enviar las credenciales por correo a alguna fila. No se creo ningun usuario; revisa los correos e intenta nuevamente.",
 };
 
 export const getUserErrorMessage = (error: unknown, fallback: string) => {

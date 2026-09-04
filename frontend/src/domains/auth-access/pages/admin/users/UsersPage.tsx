@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileDown, Mail, Plus, RotateCcw, ShieldUser } from "lucide-react";
+import { FileDown, Mail, Plus, RotateCcw, ShieldUser, Upload } from "lucide-react";
 import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
 import { usePermissionDependencies } from "@/domains/auth-access/hooks/usePermissionDependencies";
@@ -34,6 +34,7 @@ import { useTableDetailsDialog } from "@features/admin/shared/hooks/useTableDeta
 import { UserDetailsDialog } from "@/domains/auth-access/components/admin/rbac/users/UserDetailsDialog";
 import { UserCreateDialog } from "@/domains/auth-access/components/admin/rbac/users/UserCreateDialog";
 import { UserNotifyDialog } from "@/domains/auth-access/components/admin/rbac/users/UserNotifyDialog";
+import { UserImportDialog } from "@/domains/auth-access/components/admin/rbac/users/UserImportDialog";
 import {
   buildUsersTableColumns,
   buildUsersVisibilityOptions,
@@ -70,6 +71,7 @@ export function UsersPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
+  const [noExpSearch, setNoExpSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>(
     USER_STATUS_FILTER.ALL,
   );
@@ -95,6 +97,7 @@ export function UsersPage() {
     });
   const [createOpen, setCreateOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const {
     open: detailsOpen,
     selectedItem: selectedUser,
@@ -103,6 +106,7 @@ export function UsersPage() {
     setOpen: setDetailsOpen,
   } = useTableDetailsDialog<UserListItem>();
   const debouncedSearch = useDebounce(search, 400);
+  const debouncedNoExpSearch = useDebounce(noExpSearch, 400);
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
   const { exportUsers, isExporting } = useExportUsers();
@@ -146,6 +150,7 @@ export function UsersPage() {
       page,
       pageSize,
       search: debouncedSearch || undefined,
+      noExp: debouncedNoExpSearch || undefined,
       status:
         statusFilter === USER_STATUS_FILTER.ALL ? undefined : statusFilter,
       roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
@@ -275,7 +280,10 @@ export function UsersPage() {
   ].filter(Boolean).length;
 
   const isSearchPending = search.trim() !== debouncedSearch.trim();
-  const hasFilters = Boolean(debouncedSearch.trim()) || appliedFiltersCount > 0;
+  const hasFilters =
+    Boolean(debouncedSearch.trim()) ||
+    Boolean(debouncedNoExpSearch.trim()) ||
+    appliedFiltersCount > 0;
   const tableErrorDescription = error
     ? getUserErrorMessage(
         error,
@@ -286,6 +294,7 @@ export function UsersPage() {
 
   const handleClearFilters = () => {
     setSearch("");
+    setNoExpSearch("");
     setStatusFilter(USER_STATUS_FILTER.ALL);
     setRoleFilter(ROLE_FILTER_ALL);
     setClinicFilter(CLINIC_FILTER_ALL);
@@ -319,11 +328,22 @@ export function UsersPage() {
         if (isExporting || !canReadUser) return;
         void exportUsers({
           search: debouncedSearch || undefined,
+          noExp: debouncedNoExpSearch || undefined,
           status: statusFilter === USER_STATUS_FILTER.ALL ? undefined : statusFilter,
           roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
           clinicId: clinicFilter === CLINIC_FILTER_ALL ? undefined : Number(clinicFilter),
           tipoPersonalId: tipoPersonalFilter === TIPO_PERSONAL_ALL ? undefined : Number(tipoPersonalFilter),
         });
+      },
+    },
+    {
+      id: "import-users",
+      label: "Importar usuarios",
+      icon: Upload,
+      disabled: !canCreateUser,
+      onSelect: () => {
+        if (!canCreateUser) return;
+        setImportOpen(true);
       },
     },
   ];
@@ -426,6 +446,17 @@ export function UsersPage() {
         description="Administra cuentas, rol primario y estado de acceso desde un solo tablero operativo."
         icon={<ShieldUser className="size-12" />}
       />
+
+      <div className="flex w-full min-w-0">
+        <TableSearch
+          value={noExpSearch}
+          onChange={(value) => {
+            setNoExpSearch(value);
+            setPage(1);
+          }}
+          placeholder="Buscar por No. Expediente SERMED..."
+        />
+      </div>
 
       <TableHeaderBar
         search={
@@ -550,6 +581,7 @@ export function UsersPage() {
         onOpenChange={setNotifyOpen}
         clinicOptions={clinicOptions}
       />
+      <UserImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }
