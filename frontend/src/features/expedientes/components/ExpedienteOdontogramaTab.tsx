@@ -236,7 +236,9 @@ function ToothCell({
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            {/* z-[150]: el Select vive dentro de un Popover (z-[140]) --
+                sin esto, la lista de opciones queda detras del popover. */}
+            <SelectContent className="z-[150]">
               {(Object.keys(CONDITION_LABELS) as ToothCondition[]).map(
                 (value) => (
                   <SelectItem key={value} value={value}>
