@@ -38,18 +38,22 @@ const CONDITION_LABELS: Record<ToothCondition, string> = {
   implant: "Implante",
 };
 
+// Todos los tonos son tokens reales del sistema de diseño (theme.css) --
+// ninguno es un color "suelto" de Tailwind. Las condiciones dentales
+// reutilizan la misma familia --color-area-* que ya usa el resto de la app
+// para distinguir áreas clínicas (gyn/geriat/peds), sumadas a los 4 tonos
+// clínicos (status-*) y el color de marca.
 const CONDITION_COLORS: Record<ToothCondition, string> = {
   healthy: "bg-status-stable/15 border-status-stable text-status-stable",
   caries: "bg-status-critical/15 border-status-critical text-status-critical",
   filled: "bg-status-info/15 border-status-info text-status-info",
-  crown: "bg-amber-500/15 border-amber-500 text-amber-600",
+  crown: "bg-area-peds/15 border-area-peds text-area-peds",
   missing: "bg-subtle border-line-struct text-txt-muted",
-  extraction_needed:
-    "bg-status-critical/25 border-status-critical text-status-critical",
-  root_canal: "bg-purple-500/15 border-purple-500 text-purple-600",
-  sealant: "bg-status-info/10 border-status-info text-status-info",
+  extraction_needed: "bg-area-gral/15 border-area-gral text-area-gral",
+  root_canal: "bg-area-gyn/15 border-area-gyn text-area-gyn",
+  sealant: "bg-area-geriat/15 border-area-geriat text-area-geriat",
   fracture: "bg-status-alert/15 border-status-alert text-status-alert",
-  implant: "bg-slate-500/15 border-slate-500 text-slate-600",
+  implant: "bg-brand/15 border-brand text-brand",
 };
 
 export function ExpedienteOdontogramaTab({
