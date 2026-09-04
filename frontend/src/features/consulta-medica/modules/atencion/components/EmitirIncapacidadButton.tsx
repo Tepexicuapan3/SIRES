@@ -64,7 +64,7 @@ const resolveEmitirIncapacidadError = (error: unknown): string => {
 
 const emitirIncapacidadSchema = z.object({
   leaveTypeId: z.string().min(1, { error: "Selecciona un tipo" }),
-  days: z.coerce.number().int().min(1, { error: "Minimo 1 dia" }).max(180),
+  days: z.number().int().min(1, { error: "Minimo 1 dia" }).max(180),
   startDate: z.string().min(1, { error: "Selecciona una fecha" }),
   isSubsequent: z.boolean(),
 });
@@ -182,7 +182,15 @@ export function EmitirIncapacidadButton({
                   <FormItem>
                     <FormLabel>Días</FormLabel>
                     <FormControl>
-                      <Input type="number" min={1} max={180} {...field} />
+                      <Input
+                        type="number"
+                        min={1}
+                        max={180}
+                        {...field}
+                        onChange={(event) =>
+                          field.onChange(event.target.valueAsNumber)
+                        }
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
