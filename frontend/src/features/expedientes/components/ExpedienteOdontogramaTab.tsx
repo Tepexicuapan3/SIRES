@@ -56,6 +56,52 @@ const CONDITION_COLORS: Record<ToothCondition, string> = {
   implant: "bg-brand/15 border-brand text-brand",
 };
 
+// Solo el color de texto de cada condicion (mismos tokens que CONDITION_COLORS)
+// -- el SVG del diente usa currentColor para trazo y relleno, asi que basta
+// con la clase de texto en el contenedor.
+const CONDITION_TEXT: Record<ToothCondition, string> = {
+  healthy: "text-status-stable",
+  caries: "text-status-critical",
+  filled: "text-status-info",
+  crown: "text-area-peds",
+  missing: "text-txt-muted",
+  extraction_needed: "text-area-gral",
+  root_canal: "text-area-gyn",
+  sealant: "text-area-geriat",
+  fracture: "text-status-alert",
+  implant: "text-brand",
+};
+
+// Silueta generica de diente (corona + dos raices) reutilizada para las 32
+// piezas -- el color viene de CONDITION_TEXT via currentColor. "Ausente"
+// se dibuja hueca y punteada (convencion clinica estandar de odontograma).
+function ToothShape({
+  className,
+  dashed,
+}: {
+  className?: string;
+  dashed?: boolean;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 34"
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M12 2 C7 2 4 5 4 9 C4 12 5 14 6 16 L7 26 C7 29 8 32 9.5 32 C10.5 32 11 30 11.5 27 L12 22 L12.5 27 C13 30 13.5 32 14.5 32 C16 32 17 29 17 26 L18 16 C19 14 20 12 20 9 C20 5 17 2 12 2 Z"
+        fill={dashed ? "none" : "currentColor"}
+        fillOpacity={dashed ? 1 : 0.18}
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeDasharray={dashed ? "2.5 2" : undefined}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function ExpedienteOdontogramaTab({
   noExp,
   pkNum = 0,
@@ -159,7 +205,7 @@ function ToothRow({
   return (
     <div>
       <p className="text-xs text-txt-muted mb-2 text-center">{label}</p>
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="flex flex-wrap gap-1.5 justify-center">
         {teeth.map((tooth) => (
           <ToothCell
             key={tooth.toothFdi}
@@ -221,10 +267,16 @@ function ToothCell({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`flex size-11 items-center justify-center rounded-lg border-2 text-xs font-semibold transition-opacity hover:opacity-80 ${CONDITION_COLORS[tooth.condition]}`}
-          title={CONDITION_LABELS[tooth.condition]}
+          className={`flex flex-col items-center gap-0.5 rounded-lg p-1 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${CONDITION_TEXT[tooth.condition]}`}
+          title={`Pieza ${tooth.toothFdi} · ${CONDITION_LABELS[tooth.condition]}`}
         >
-          {tooth.toothFdi}
+          <ToothShape
+            className="size-11"
+            dashed={tooth.condition === "missing"}
+          />
+          <span className="text-[10px] font-semibold leading-none text-txt-muted">
+            {tooth.toothFdi}
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 space-y-3">
