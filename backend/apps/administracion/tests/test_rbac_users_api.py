@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 
 import openpyxl
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.utils import timezone
@@ -626,6 +626,66 @@ class RbacUsersApiTests(APITestCase):
     def test_activate_user_not_found(self):
         response = self.client.patch(
             "/api/v1/users/999999/activate",
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["code"], "USER_NOT_FOUND")
+
+    def test_reset_password_success_forces_change_and_invalidates_old_password(self):
+        old_password = "Target_123456"
+
+        response = self.client.post(
+            f"/api/v1/users/{self.target_user.id_usuario}/reset-password",
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        new_password = response.data["temporaryPassword"]
+        self.assertTrue(response.data["mustChangePassword"])
+        self.assertEqual(len(new_password), 12)
+        self.assertRegex(new_password, r"[a-z]")
+        self.assertRegex(new_password, r"[A-Z]")
+        self.assertRegex(new_password, r"[0-9]")
+
+        self.target_user.refresh_from_db()
+        self.assertTrue(check_password(new_password, self.target_user.clave_hash))
+        self.assertFalse(check_password(old_password, self.target_user.clave_hash))
+        self.assertTrue(self.target_user.cambiar_clave)
+
+        event = AuditoriaEvento.objects.filter(
+            accion="RBAC_USER_PASSWORD_RESET"
+        ).latest("id_evento")
+        self.assertEqual(event.resultado, AuditoriaEvento.Resultado.SUCCESS)
+        self.assertEqual(event.recurso_id, self.target_user.id_usuario)
+        self.assertEqual(event.target_usuario_id, self.target_user.id_usuario)
+        self.assertNotIn(new_password, str(event.datos_antes))
+        self.assertNotIn(new_password, str(event.datos_despues))
+        self.assertNotIn(new_password, str(event.meta))
+
+    def test_reset_password_own_user_returns_conflict(self):
+        response = self.client.post(
+            f"/api/v1/users/{self.admin.id_usuario}/reset-password",
+            format="json",
+            HTTP_X_CSRF_TOKEN=self.csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["code"], "SELF_PASSWORD_RESET_NOT_ALLOWED")
+        self.admin.refresh_from_db()
+        self.assertTrue(check_password("Admin_123456", self.admin.clave_hash))
+
+        event = AuditoriaEvento.objects.filter(
+            accion="RBAC_USER_PASSWORD_RESET"
+        ).latest("id_evento")
+        self.assertEqual(event.resultado, AuditoriaEvento.Resultado.FAIL)
+        self.assertEqual(event.codigo_error, "SELF_PASSWORD_RESET_NOT_ALLOWED")
+
+    def test_reset_password_user_not_found(self):
+        response = self.client.post(
+            "/api/v1/users/999999/reset-password",
             format="json",
             HTTP_X_CSRF_TOKEN=self.csrf_token,
         )
@@ -1732,9 +1792,9 @@ class RbacUsersImportApiTests(APITestCase):
         self.assertTrue(any("Correo" in e for e in errors))
         self.assertTrue(any("Rol" in e for e in errors))
 
-    @patch("apps.administracion.use_cases.users.create_user.send_user_credentials_email")
-    def test_confirm_creates_all_users_when_every_row_is_valid(self, send_email_mock):
-        send_email_mock.return_value = True
+    @patch("apps.administracion.use_cases.users.import_users.send_user_credentials_email_batch")
+    def test_confirm_creates_all_users_when_every_row_is_valid(self, send_batch_mock):
+        send_batch_mock.return_value = {"sent": 1, "failed": []}
         file = _users_xlsx_upload(
             [
                 (
@@ -1750,6 +1810,7 @@ class RbacUsersImportApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["inserted"], 2)
         self.assertEqual(response.data["totalErrores"], 0)
+        self.assertEqual(response.data["emailFailures"], [])
 
         user_one = SyUsuario.objects.get(usuario="bulk_one")
         self.assertEqual(user_one.correo, "bulk.one@example.com")
@@ -1759,7 +1820,38 @@ class RbacUsersImportApiTests(APITestCase):
         self.assertIsNone(user_two.correo)
         self.assertFalse(user_two.est_activo)
 
-        send_email_mock.assert_called_once()
+        # Solo bulk_one tiene correo -- bulk_two no debe llegar al batch.
+        send_batch_mock.assert_called_once()
+        (pending_emails,), _ = send_batch_mock.call_args
+        self.assertEqual(len(pending_emails), 1)
+        self.assertEqual(pending_emails[0]["email"], "bulk.one@example.com")
+        self.assertEqual(pending_emails[0]["username"], "bulk_one")
+
+    @patch("apps.administracion.use_cases.users.import_users.send_user_credentials_email_batch")
+    def test_confirm_reports_email_failures_without_rolling_back(self, send_batch_mock):
+        send_batch_mock.return_value = {
+            "sent": 0,
+            "failed": [{"username": "bulk_one", "email": "bulk.one@example.com"}],
+        }
+        file = _users_xlsx_upload(
+            [
+                (
+                    "bulk_one", "Uno", "Bulk", "", "bulk.one@example.com",
+                    "111", self.role_medico.rol, "Activo",
+                ),
+            ]
+        )
+
+        response = self._post_file(IMPORT_CONFIRM_URL, file)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["inserted"], 1)
+        self.assertEqual(
+            response.data["emailFailures"],
+            [{"username": "bulk_one", "email": "bulk.one@example.com"}],
+        )
+        # El usuario se crea igual aunque el envio de correo haya fallado.
+        self.assertTrue(SyUsuario.objects.filter(usuario="bulk_one").exists())
 
     def test_confirm_with_any_error_creates_nothing(self):
         before = SyUsuario.objects.count()

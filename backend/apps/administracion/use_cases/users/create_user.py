@@ -18,8 +18,6 @@ llama, ya que el rollback ante fallo de envio depende de
 que no le corresponde a este caso de uso).
 """
 
-import secrets
-import string
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -27,29 +25,11 @@ from django.contrib.auth.hashers import make_password
 from django.db import transaction
 
 from apps.administracion.models import RelUsuarioRol
+from apps.administracion.use_cases.users.password_utils import (
+    generate_temporary_password,
+)
 from apps.authentication.models import DetUsuario, DetUsuarioCedula, SyUsuario
 from apps.authentication.services.email_service import send_user_credentials_email
-
-TEMP_PASSWORD_LENGTH = 12
-TEMP_PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{}"
-TEMP_PASSWORD_ALPHABET = string.ascii_letters + string.digits + TEMP_PASSWORD_SYMBOLS
-
-
-def generate_temporary_password(length=TEMP_PASSWORD_LENGTH):
-    effective_length = max(length, 12)
-    while True:
-        candidate = "".join(
-            secrets.choice(TEMP_PASSWORD_ALPHABET) for _ in range(effective_length)
-        )
-        if not any(char.islower() for char in candidate):
-            continue
-        if not any(char.isupper() for char in candidate):
-            continue
-        if not any(char.isdigit() for char in candidate):
-            continue
-        if not any(char in TEMP_PASSWORD_SYMBOLS for char in candidate):
-            continue
-        return candidate
 
 
 @dataclass(frozen=True)
@@ -80,6 +60,10 @@ class CreateUserData:
     tipo_personal: Optional[object] = None
     cedulas: List[CedulaInput] = field(default_factory=list)
     est_activo: bool = True
+    # False para el import masivo: las credenciales se mandan despues en
+    # batch (fuera de la transaccion), no una a una durante el alta -- ver
+    # `import_users.ConfirmUsersImportUseCase`.
+    send_credentials_email: bool = True
 
 
 @dataclass
@@ -152,7 +136,7 @@ class CreateUserUseCase:
             )
 
         credentials_email_sent = None
-        if correo:
+        if correo and data.send_credentials_email:
             credentials_email_sent = send_user_credentials_email(
                 recipient_email=correo,
                 username=user.usuario,

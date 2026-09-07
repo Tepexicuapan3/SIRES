@@ -13,6 +13,7 @@ import { useRolesList } from "@/domains/auth-access/hooks/rbac/roles/useRolesLis
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useActivateUser } from "@/domains/auth-access/hooks/rbac/users/useActivateUser";
 import { useDeactivateUser } from "@/domains/auth-access/hooks/rbac/users/useDeactivateUser";
+import { useResetUserPassword } from "@/domains/auth-access/hooks/rbac/users/useResetUserPassword";
 import type { CentroAtencionListItem, RoleListItem } from "@api/types";
 import { ApiError } from "@api/utils/errors";
 
@@ -96,6 +97,13 @@ vi.mock(
   }),
 );
 
+vi.mock(
+  "@/domains/auth-access/hooks/rbac/users/useResetUserPassword",
+  () => ({
+    useResetUserPassword: vi.fn(),
+  }),
+);
+
 const createRoleOption = (
   overrides: Partial<RoleListItem> = {},
 ): RoleListItem => ({
@@ -126,6 +134,7 @@ describe("UsersPage UI", () => {
   const refetchCapabilities = vi.fn();
   const activateMutate = vi.fn();
   const deactivateMutate = vi.fn();
+  const resetPasswordMutate = vi.fn();
   const defaultPermissionDeps = {
     hasCapability: () => true,
     hasPermission: () => true,
@@ -202,9 +211,16 @@ describe("UsersPage UI", () => {
       isPending: false,
     } as ReturnType<typeof useDeactivateUser>);
 
+    vi.mocked(useResetUserPassword).mockReturnValue({
+      mutateAsync: resetPasswordMutate,
+      isPending: false,
+    } as ReturnType<typeof useResetUserPassword>);
+
     activateMutate.mockResolvedValue({ id: 2, isActive: true });
     deactivateMutate.mockResolvedValue({ id: 1, isActive: false });
+    resetPasswordMutate.mockReset();
     vi.mocked(toast.success).mockClear();
+    vi.mocked(toast.error).mockClear();
     userDetailsDialogPropsSpy.mockClear();
   });
 
@@ -260,11 +276,15 @@ describe("UsersPage UI", () => {
     await user.click(screen.getByRole("button", { name: "Filtros" }));
     await user.click(screen.getByText("Inactivos"));
 
+    // NOTE: useUsersList is also called by UserNotifyDialog (rendered
+    // unconditionally by UsersPage) for its recipient-search autocomplete,
+    // so we cannot rely on this being the *last* call to the mock. We assert
+    // that UsersPage issued a call with the updated filter at some point.
     await waitFor(() => {
-      expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
+      expect(vi.mocked(useUsersList).mock.calls).toContainEqual([
         expect.objectContaining({ status: "inactive" }),
         expect.any(Object),
-      );
+      ]);
     });
   });
 
@@ -275,11 +295,14 @@ describe("UsersPage UI", () => {
     await user.click(screen.getByRole("button", { name: "Filtros" }));
     await user.click(screen.getByText("Pendientes"));
 
+    // See note above: useUsersList has two independent call sites
+    // (UsersPage and UserNotifyDialog's recipient autocomplete), so we check
+    // that a matching call happened rather than asserting on the last call.
     await waitFor(() => {
-      expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
+      expect(vi.mocked(useUsersList).mock.calls).toContainEqual([
         expect.objectContaining({ status: "pending" }),
         expect.any(Object),
-      );
+      ]);
     });
   });
 
@@ -289,11 +312,14 @@ describe("UsersPage UI", () => {
 
     await user.type(screen.getByPlaceholderText("Buscar en la tabla"), "juan");
 
+    // See note above: useUsersList has two independent call sites
+    // (UsersPage and UserNotifyDialog's recipient autocomplete), so we check
+    // that a matching call happened rather than asserting on the last call.
     await waitFor(() => {
-      expect(vi.mocked(useUsersList)).toHaveBeenLastCalledWith(
+      expect(vi.mocked(useUsersList).mock.calls).toContainEqual([
         expect.objectContaining({ search: "juan" }),
         expect.any(Object),
-      );
+      ]);
     });
   });
 
@@ -301,7 +327,10 @@ describe("UsersPage UI", () => {
     const user = userEvent.setup();
     render(<UsersPage />);
 
-    await user.click(screen.getByRole("button", { name: "Columnas" }));
+    // The "Columnas" button shows a badge with the count of currently
+    // hidden columns (e.g. "Telefono" is hidden by default), so its
+    // accessible name is "Columnas <n>" rather than a bare "Columnas".
+    await user.click(screen.getByRole("button", { name: /^Columnas/ }));
     await user.click(screen.getByRole("menuitemcheckbox", { name: "Correo" }));
 
     await waitFor(() => {
@@ -341,6 +370,95 @@ describe("UsersPage UI", () => {
     await waitFor(() => {
       expect(activateMutate).toHaveBeenCalledWith({ userId: 2 });
       expect(toast.success).toHaveBeenCalledWith("Usuario activado");
+    });
+  });
+
+  it("resets a user's password, shows it in a modal, and copies it", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+
+    resetPasswordMutate.mockResolvedValue({
+      temporaryPassword: "Temp0-Pass!",
+      mustChangePassword: true,
+    });
+
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    });
+    render(<UsersPage />);
+
+    const row = screen.getByText("Juan Perez").closest("tr");
+    expect(row).not.toBeNull();
+    const actions = within(row as HTMLElement).getByLabelText("Acciones");
+
+    fireEvent.pointerDown(actions);
+    fireEvent.click(actions);
+    await user.click(
+      screen.getByRole("menuitem", { name: "Restablecer contraseña" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Restablecer contraseña" }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Restablecer" }));
+
+    await waitFor(() => {
+      expect(resetPasswordMutate).toHaveBeenCalledWith({ userId: 1 });
+    });
+
+    expect(await screen.findByDisplayValue("Temp0-Pass!")).toBeVisible();
+
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Copiar" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("Temp0-Pass!");
+    });
+    expect(await screen.findByText("¡Copiado!")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue("Temp0-Pass!")).toBeNull();
+    });
+  });
+
+  it("shows a clear error when self password reset is blocked", async () => {
+    resetPasswordMutate.mockRejectedValue(
+      new ApiError(
+        "SELF_PASSWORD_RESET_NOT_ALLOWED",
+        "No permitido",
+        409,
+      ),
+    );
+
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    });
+    render(<UsersPage />);
+
+    const row = screen.getByText("Juan Perez").closest("tr");
+    expect(row).not.toBeNull();
+    const actions = within(row as HTMLElement).getByLabelText("Acciones");
+
+    fireEvent.pointerDown(actions);
+    fireEvent.click(actions);
+    await user.click(
+      screen.getByRole("menuitem", { name: "Restablecer contraseña" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Restablecer" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "No se pudo restablecer la contraseña",
+        expect.objectContaining({
+          description: expect.stringContaining(
+            "No podes restablecer tu propia contrasena",
+          ),
+        }),
+      );
     });
   });
 

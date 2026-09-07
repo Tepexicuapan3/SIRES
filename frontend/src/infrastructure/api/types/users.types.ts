@@ -249,6 +249,18 @@ export interface UserStatusResponse {
   isActive: boolean;
 }
 
+/**
+ * Response al restablecer la contraseña de un usuario.
+ * La contraseña temporal viaja en texto plano SOLO en esta respuesta;
+ * el frontend no debe persistirla mas alla del estado del modal de resultado
+ * (nunca localStorage, nunca logs).
+ * POST /api/v1/users/:id/reset-password
+ */
+export interface ResetUserPasswordResponse {
+  temporaryPassword: string;
+  mustChangePassword: boolean;
+}
+
 // =============================================================================
 // LISTADOS
 // =============================================================================
@@ -398,15 +410,29 @@ export interface UserImportRow {
 }
 
 /**
+ * Usuario cuya credencial de alta no se pudo enviar por correo durante el
+ * confirm (el usuario SI se creo -- solo el email fallo y hay que reenviar
+ * las credenciales manualmente).
+ */
+export interface UserImportEmailFailure {
+  username: string;
+  email: string;
+}
+
+/**
  * Response de preview/confirm de importacion masiva.
  * POST /api/v1/users/import/preview
  * POST /api/v1/users/import/confirm
+ *
+ * `emailFailures` solo viene poblado en la respuesta de confirm (preview
+ * nunca envia correos).
  */
 export interface UserImportResult {
   totalRecords: number;
   totalErrores: number;
   inserted: number;
   rows: UserImportRow[];
+  emailFailures?: UserImportEmailFailure[];
 }
 
 // =============================================================================

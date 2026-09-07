@@ -1,4 +1,4 @@
-import { Eye, UserCheck, UserX } from "lucide-react";
+import { Eye, KeyRound, UserCheck, UserX } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@shared/ui/avatar";
 import { Badge } from "@shared/ui/badge";
 import { Skeleton } from "@shared/ui/skeleton";
@@ -19,6 +19,7 @@ interface BuildUsersTableColumnsOptions {
   isStatusPending: boolean;
   onOpenDetails: (user: UserListItem) => void;
   onToggleStatus: (user: UserListItem) => void;
+  onRequestResetPassword: (user: UserListItem) => void;
 }
 
 const getInitials = (value: string) => {
@@ -40,6 +41,7 @@ export const buildUsersTableColumns = ({
   isStatusPending,
   onOpenDetails,
   onToggleStatus,
+  onRequestResetPassword,
 }: BuildUsersTableColumnsOptions): DataTableColumn<UserListItem>[] => {
   const baseColumns: DataTableColumn<UserListItem>[] = [
     {
@@ -266,6 +268,14 @@ export const buildUsersTableColumns = ({
           variant: row.isActive ? "destructive" : "default",
           disabled: isStatusPending,
           onSelect: () => onToggleStatus(row),
+        });
+
+        actions.push({
+          id: `reset-password-${row.id}`,
+          label: "Restablecer contraseña",
+          icon: KeyRound,
+          variant: "destructive",
+          onSelect: () => onRequestResetPassword(row),
         });
       }
 

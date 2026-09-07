@@ -44,6 +44,10 @@ from apps.administracion.use_cases.users.create_user import (
     CreateUserData,
     CreateUserUseCase,
 )
+from apps.administracion.use_cases.users.password_utils import (
+    generate_temporary_password,
+)
+from django.contrib.auth.hashers import make_password
 
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -1961,6 +1965,95 @@ class UserActivateView(UserStatusView):
 
 class UserDeactivateView(UserStatusView):
     activate = False
+
+
+class UserResetPasswordView(APIView):
+    # Reset administrativo de contraseña: metodo de fallback para cuando no
+    # hay internet (no se puede enviar correo) pero si hay acceso al
+    # sistema/base de datos. Genera una password temporal nueva y la
+    # devuelve en texto plano en la respuesta HTTP -- unico lugar donde esa
+    # password existe en texto plano, de forma transitoria. NUNCA se envia
+    # por correo ni se loguea en claro (ver `_audit` mas abajo).
+    authentication_classes = []
+    permission_classes = []
+
+    @transaction.atomic
+    def post(self, request, user_id):
+        actor, auth_error = _authorize(
+            request,
+            "admin:gestion:usuarios:update",
+            require_csrf=True,
+        )
+        if auth_error:
+            _audit(
+                request,
+                "RBAC_USER_PASSWORD_RESET",
+                "user",
+                resource_id=user_id,
+                result="FAIL",
+                error_code=auth_error.data.get("code"),
+            )
+            return auth_error
+
+        user = SyUsuario.objects.filter(id_usuario=user_id).first()
+        if not user:
+            _audit(
+                request,
+                "RBAC_USER_PASSWORD_RESET",
+                "user",
+                resource_id=user_id,
+                result="FAIL",
+                error_code="USER_NOT_FOUND",
+            )
+            return error_response(
+                "USER_NOT_FOUND",
+                "Usuario no encontrado",
+                status.HTTP_404_NOT_FOUND,
+                request_id=_request_id(request),
+            )
+
+        if actor.id_usuario == user.id_usuario:
+            _audit(
+                request,
+                "RBAC_USER_PASSWORD_RESET",
+                "user",
+                resource_id=user.id_usuario,
+                result="FAIL",
+                error_code="SELF_PASSWORD_RESET_NOT_ALLOWED",
+                target_user=user,
+            )
+            return error_response(
+                "SELF_PASSWORD_RESET_NOT_ALLOWED",
+                "No puedes restablecer tu propia contraseña por esta vía",
+                status.HTTP_409_CONFLICT,
+                request_id=_request_id(request),
+            )
+
+        temporary_password = generate_temporary_password()
+        user.clave_hash = make_password(temporary_password)
+        user.cambiar_clave = True
+        user.fch_modf = timezone.now()
+        user.usr_modf = actor
+        user.save(
+            update_fields=["clave_hash", "cambiar_clave", "fch_modf", "usr_modf"]
+        )
+
+        _audit(
+            request,
+            "RBAC_USER_PASSWORD_RESET",
+            "user",
+            resource_id=user.id_usuario,
+            result="SUCCESS",
+            after={"passwordReset": True},
+            target_user=user,
+        )
+        return Response(
+            {
+                "temporaryPassword": temporary_password,
+                "mustChangePassword": True,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class UserRolesView(APIView):

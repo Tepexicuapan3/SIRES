@@ -117,9 +117,17 @@ export function UserImportDialog({ open, onOpenChange }: UserImportDialogProps) 
         return;
       }
 
-      toast.success("Usuarios importados", {
-        description: `${result.inserted} usuario${result.inserted !== 1 ? "s" : ""} se ${result.inserted !== 1 ? "crearon" : "creo"} correctamente.`,
-      });
+      const failedCount = result.emailFailures?.length ?? 0;
+      if (failedCount > 0) {
+        const usernames = result.emailFailures!.map((f) => f.username).join(", ");
+        toast.warning("Usuarios importados con avisos", {
+          description: `${result.inserted} usuario${result.inserted !== 1 ? "s" : ""} se ${result.inserted !== 1 ? "crearon" : "creo"}, pero no se pudo enviar el correo de credenciales a: ${usernames}. Reenvialas manualmente.`,
+        });
+      } else {
+        toast.success("Usuarios importados", {
+          description: `${result.inserted} usuario${result.inserted !== 1 ? "s" : ""} se ${result.inserted !== 1 ? "crearon" : "creo"} correctamente.`,
+        });
+      }
       handleDialogOpenChange(false);
     } catch (error) {
       toast.error("No se pudo confirmar la importacion", {

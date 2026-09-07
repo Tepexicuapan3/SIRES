@@ -20,6 +20,7 @@ import type {
   UpdateUserRequest,
   UpdateUserResponse,
   UserStatusResponse,
+  ResetUserPasswordResponse,
   UsersListParams,
   UsersListResponse,
   UserDetailResponse,
@@ -135,6 +136,22 @@ export const usersAPI = {
   deactivate: async (userId: number): Promise<UserStatusResponse> => {
     const response = await apiClient.patch<UserStatusResponse>(
       `/users/${userId}/deactivate`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Restablecer contraseña: genera una temporal y la devuelve en texto plano
+   * (solo en esta respuesta, transitoria). El usuario debera cambiarla al
+   * iniciar sesion (mustChangePassword: true).
+   * @endpoint POST /api/v1/users/:id/reset-password
+   * @permission admin:gestion:usuarios:update
+   */
+  resetPassword: async (
+    userId: number,
+  ): Promise<ResetUserPasswordResponse> => {
+    const response = await apiClient.post<ResetUserPasswordResponse>(
+      `/users/${userId}/reset-password`,
     );
     return response.data;
   },

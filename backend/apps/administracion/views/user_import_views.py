@@ -19,7 +19,6 @@ from rest_framework.views import APIView
 from apps.administracion.services.user_import_service import ImportFileError
 from apps.administracion.use_cases.users.import_users import (
     ConfirmUsersImportUseCase,
-    EmailDeliveryFailedDuringImport,
     PreviewUsersImportUseCase,
     RoleVanishedDuringImport,
     TemplateUsersImportUseCase,
@@ -151,19 +150,20 @@ class UserImportConfirmView(APIView):
                 details=exc.details,
                 request_id=_request_id(request),
             )
-        except (EmailDeliveryFailedDuringImport, RoleVanishedDuringImport) as exc:
+        except RoleVanishedDuringImport as exc:
             _audit(
                 request,
                 "RBAC_USER_IMPORT_CONFIRM",
                 "user",
                 result="FAIL",
-                error_code="EMAIL_DELIVERY_FAILED",
+                error_code="ROLE_VANISHED",
             )
             return error_response(
-                "EMAIL_DELIVERY_FAILED",
+                "ROLE_VANISHED",
                 (
-                    "No se pudo completar el import: fallo en la fila "
-                    f"{exc.row_number} ({exc.username}). No se creó ningún usuario."
+                    "No se pudo completar el import: el rol de la fila "
+                    f"{exc.row_number} ({exc.username}) ya no existe o esta inactivo. "
+                    "No se creó ningún usuario."
                 ),
                 status.HTTP_500_INTERNAL_SERVER_ERROR,
                 request_id=_request_id(request),
@@ -188,6 +188,9 @@ class UserImportConfirmView(APIView):
             "RBAC_USER_IMPORT_CONFIRM",
             "user",
             result="SUCCESS",
-            after={"inserted": result["inserted"]},
+            after={
+                "inserted": result["inserted"],
+                "emailFailures": len(result["emailFailures"]),
+            },
         )
         return Response(result, status=status.HTTP_200_OK)

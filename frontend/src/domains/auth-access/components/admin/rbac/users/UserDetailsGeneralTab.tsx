@@ -162,6 +162,25 @@ export function UserDetailsGeneralTab({
           </div>
         </div>
 
+        {/* No. Expediente SERMED (solo lectura: clave de vínculo con SERMED, no editable) */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="noExp"
+            render={() => (
+              <FormItem>
+                <FormLabel>No. Expediente SERMED</FormLabel>
+                <FormControl>
+                  <Input
+                    value={userDetail.noExp ?? "Sin expediente asignado"}
+                    disabled
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+
         {/* Datos personales */}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField

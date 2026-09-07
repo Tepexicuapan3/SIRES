@@ -174,6 +174,13 @@ class RbacAuthzMatrixTests(APITestCase):
                 HTTP_X_CSRF_TOKEN=self.csrf_token,
             )
         )
+        self._assert_forbidden(
+            self.client.post(
+                f"/api/v1/users/{self.target_user.id_usuario}/reset-password",
+                format="json",
+                HTTP_X_CSRF_TOKEN=self.csrf_token,
+            )
+        )
 
     def test_user_subresource_endpoints_require_permissions(self):
         self._assert_forbidden(

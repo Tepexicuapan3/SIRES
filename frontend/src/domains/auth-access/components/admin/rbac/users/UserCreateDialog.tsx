@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
+import { useDebounce } from "@shared/hooks/useDebounce";
 import {
   Dialog,
   DialogContent,
@@ -99,24 +100,47 @@ export function UserCreateDialog({
     defaultValues: DEFAULT_VALUES,
   });
 
-  // SERMED lookup
-  const { lookup, isLoading: isLookingUp, result: lookupResult, error: lookupError } =
-    useEmpleadoSermedLookup();
-  const noExpInputRef = useRef<HTMLInputElement>(null);
+  // SERMED lookup — automático: se dispara solo al dejar de tipear el expediente
+  const NO_EXP_MIN_LENGTH = 4;
+  const {
+    lookup,
+    reset: resetLookup,
+    isLoading: isLookingUp,
+    result: lookupResult,
+    error: lookupError,
+  } = useEmpleadoSermedLookup();
   const [lookupAttempted, setLookupAttempted] = useState(false);
+  const lastLookedUpRef = useRef<string | null>(null);
 
-  const handleNoExpLookup = async () => {
-    const noExp = form.getValues("noExp")?.trim();
-    if (!noExp) return;
-    setLookupAttempted(true);
-    const found = await lookup(noExp);
-    if (found) {
-      if (found.firstName) form.setValue("firstName", found.firstName);
-      if (found.paternalName) form.setValue("paternalName", found.paternalName);
-      if (found.maternalName) form.setValue("maternalName", found.maternalName);
-      if (found.cdLaboral) form.setValue("cdLaboral", found.cdLaboral);
+  const watchedNoExp = form.watch("noExp");
+  const debouncedNoExp = useDebounce(watchedNoExp ?? "", 500);
+
+  useEffect(() => {
+    const trimmed = debouncedNoExp?.trim() ?? "";
+
+    if (trimmed.length < NO_EXP_MIN_LENGTH) {
+      lastLookedUpRef.current = null;
+      if (!trimmed) {
+        setLookupAttempted(false);
+        resetLookup();
+      }
+      return;
     }
-  };
+
+    if (lastLookedUpRef.current === trimmed) return;
+    lastLookedUpRef.current = trimmed;
+
+    setLookupAttempted(true);
+    void lookup(trimmed).then((found) => {
+      if (found) {
+        if (found.firstName) form.setValue("firstName", found.firstName);
+        if (found.paternalName) form.setValue("paternalName", found.paternalName);
+        if (found.maternalName) form.setValue("maternalName", found.maternalName);
+        if (found.cdLaboral) form.setValue("cdLaboral", found.cdLaboral);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedNoExp]);
 
   // Filter areas by selected clinic
   const watchedClinicId = form.watch("clinicId");
@@ -139,6 +163,8 @@ export function UserCreateDialog({
     if (!nextOpen) {
       form.reset(DEFAULT_VALUES);
       setLookupAttempted(false);
+      lastLookedUpRef.current = null;
+      resetLookup();
     }
     onOpenChange(nextOpen);
   };
@@ -214,6 +240,54 @@ export function UserCreateDialog({
                       onSubmit={form.handleSubmit(onSubmit)}
                       className="space-y-6"
                     >
+                      {/* No. expediente SERMED — primer campo: autocompleta el resto al escribir */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="noExp"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>No. expediente SERMED</FormLabel>
+                              <div className="relative">
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    onChange={(e) =>
+                                      field.onChange(e.target.value || null)
+                                    }
+                                    placeholder="Ej. 123456"
+                                    autoFocus
+                                    className={isLookingUp ? "pr-9" : undefined}
+                                  />
+                                </FormControl>
+                                {isLookingUp ? (
+                                  <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-txt-muted" />
+                                ) : null}
+                              </div>
+                              {lookupAttempted && !isLookingUp && lookupResult ? (
+                                <p className="text-xs text-status-stable">
+                                  Encontrado:{" "}
+                                  {[
+                                    lookupResult.firstName,
+                                    lookupResult.paternalName,
+                                    lookupResult.maternalName,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")}
+                                </p>
+                              ) : null}
+                              {lookupAttempted && !isLookingUp && lookupError ? (
+                                <p className="text-xs text-status-critical">
+                                  {lookupError}
+                                </p>
+                              ) : null}
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
                       {/* Datos personales */}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <FormField
@@ -281,68 +355,6 @@ export function UserCreateDialog({
                               <FormControl>
                                 <Input {...field} />
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        {/* No. expediente con búsqueda SERMED */}
-                        <FormField
-                          control={form.control}
-                          name="noExp"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>No. expediente SERMED</FormLabel>
-                              <div className="flex gap-2">
-                                <FormControl>
-                                  <Input
-                                    {...field}
-                                    ref={noExpInputRef}
-                                    value={field.value ?? ""}
-                                    onChange={(e) =>
-                                      field.onChange(e.target.value || null)
-                                    }
-                                    placeholder="Ej. 123456"
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        void handleNoExpLookup();
-                                      }
-                                    }}
-                                  />
-                                </FormControl>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="shrink-0"
-                                  disabled={isLookingUp || !form.getValues("noExp")}
-                                  onClick={() => void handleNoExpLookup()}
-                                >
-                                  {isLookingUp ? (
-                                    <Loader2 className="size-4 animate-spin" />
-                                  ) : (
-                                    <Search className="size-4" />
-                                  )}
-                                </Button>
-                              </div>
-                              {lookupAttempted && lookupResult ? (
-                                <p className="text-xs text-status-stable">
-                                  Encontrado:{" "}
-                                  {[
-                                    lookupResult.firstName,
-                                    lookupResult.paternalName,
-                                    lookupResult.maternalName,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" ")}
-                                </p>
-                              ) : null}
-                              {lookupAttempted && lookupError ? (
-                                <p className="text-xs text-status-critical">
-                                  {lookupError}
-                                </p>
-                              ) : null}
                               <FormMessage />
                             </FormItem>
                           )}

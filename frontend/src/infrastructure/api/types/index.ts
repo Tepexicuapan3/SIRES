@@ -69,6 +69,7 @@ export type {
   CreateUserResponse,
   UpdateUserResponse,
   UserStatusResponse,
+  ResetUserPasswordResponse,
   // Listados
   UsersListParams,
   UsersListResponse,
@@ -93,6 +94,7 @@ export type {
   UserImportRowData,
   UserImportRow,
   UserImportResult,
+  UserImportEmailFailure,
   // Refs
   EscolaridadRef,
   EscuelaRef,

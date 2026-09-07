@@ -41,7 +41,7 @@ ESTADO_ACTIVO = "Activo"
 ESTADO_BAJA = "Dado de baja"
 ESTADOS_VALIDOS = {ESTADO_ACTIVO, ESTADO_BAJA}
 
-MAX_ROWS = 2000
+MAX_ROWS = 5000
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 

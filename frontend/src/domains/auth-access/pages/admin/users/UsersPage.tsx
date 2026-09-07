@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { FileDown, Mail, Plus, RotateCcw, ShieldUser, Upload } from "lucide-react";
 import { useAuthSession } from "@/domains/auth-access/hooks/useAuthSession";
 import { useAuthCapabilities } from "@/domains/auth-access/hooks/useAuthCapabilities";
@@ -24,6 +25,8 @@ import { useUsersList } from "@/domains/auth-access/hooks/rbac/users/useUsersLis
 import { useExportUsers } from "@/domains/auth-access/hooks/rbac/users/useExportUsers";
 import { useActivateUser } from "@/domains/auth-access/hooks/rbac/users/useActivateUser";
 import { useDeactivateUser } from "@/domains/auth-access/hooks/rbac/users/useDeactivateUser";
+import { useResetUserPassword } from "@/domains/auth-access/hooks/rbac/users/useResetUserPassword";
+import { usersKeys } from "@/domains/auth-access/hooks/rbac/users/users.keys";
 import { useRolesList } from "@/domains/auth-access/hooks/rbac/roles/useRolesList";
 import { useCentrosAtencionList } from "@features/admin/modules/catalogos/centros-atencion/queries/useCentrosAtencionList";
 import { useAreasClinicasList } from "@features/admin/modules/catalogos/areas-clinicas/queries/useAreasClinicasList";
@@ -35,6 +38,8 @@ import { UserDetailsDialog } from "@/domains/auth-access/components/admin/rbac/u
 import { UserCreateDialog } from "@/domains/auth-access/components/admin/rbac/users/UserCreateDialog";
 import { UserNotifyDialog } from "@/domains/auth-access/components/admin/rbac/users/UserNotifyDialog";
 import { UserImportDialog } from "@/domains/auth-access/components/admin/rbac/users/UserImportDialog";
+import { UserResetPasswordResultDialog } from "@/domains/auth-access/components/admin/rbac/users/UserResetPasswordResultDialog";
+import { ConfirmDestructiveDialog } from "@features/admin/shared/components/ConfirmDestructiveDialog";
 import {
   buildUsersTableColumns,
   buildUsersVisibilityOptions,
@@ -44,7 +49,7 @@ import {
   RBAC_CAPABILITIES_DEGRADED_MESSAGE,
 } from "@/domains/auth-access/adapters/rbac/capabilities-gating";
 import { getUserErrorMessage } from "@/domains/auth-access/adapters/rbac/users/users.feedback";
-import type { UserListItem } from "@api/types";
+import type { ResetUserPasswordResponse, UserListItem } from "@api/types";
 
 const USER_STATUS_FILTER = {
   ALL: "all",
@@ -71,7 +76,6 @@ export function UsersPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
-  const [noExpSearch, setNoExpSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>(
     USER_STATUS_FILTER.ALL,
   );
@@ -98,6 +102,14 @@ export function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [resetPasswordConfirmOpen, setResetPasswordConfirmOpen] =
+    useState(false);
+  const [resetPasswordTarget, setResetPasswordTarget] =
+    useState<UserListItem | null>(null);
+  const [resetPasswordResult, setResetPasswordResult] =
+    useState<ResetUserPasswordResponse | null>(null);
+  const [resetPasswordResultOpen, setResetPasswordResultOpen] =
+    useState(false);
   const {
     open: detailsOpen,
     selectedItem: selectedUser,
@@ -106,9 +118,10 @@ export function UsersPage() {
     setOpen: setDetailsOpen,
   } = useTableDetailsDialog<UserListItem>();
   const debouncedSearch = useDebounce(search, 400);
-  const debouncedNoExpSearch = useDebounce(noExpSearch, 400);
+  const queryClient = useQueryClient();
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
+  const resetUserPassword = useResetUserPassword();
   const { exportUsers, isExporting } = useExportUsers();
   const { resolveCapability } = createCapabilityResolver({
     hasCapability,
@@ -150,7 +163,6 @@ export function UsersPage() {
       page,
       pageSize,
       search: debouncedSearch || undefined,
-      noExp: debouncedNoExpSearch || undefined,
       status:
         statusFilter === USER_STATUS_FILTER.ALL ? undefined : statusFilter,
       roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
@@ -257,6 +269,34 @@ export function UsersPage() {
     }
   };
 
+  const handleConfirmResetPassword = async () => {
+    if (!resetPasswordTarget) return;
+    try {
+      const result = await resetUserPassword.mutateAsync({
+        userId: resetPasswordTarget.id,
+      });
+      setResetPasswordConfirmOpen(false);
+      setResetPasswordResult(result);
+      setResetPasswordResultOpen(true);
+    } catch (error) {
+      toast.error("No se pudo restablecer la contraseña", {
+        description: getUserErrorMessage(
+          error,
+          "Error al restablecer la contraseña",
+        ),
+      });
+    }
+  };
+
+  const handleCloseResetPasswordResult = (nextOpen: boolean) => {
+    setResetPasswordResultOpen(nextOpen);
+    if (!nextOpen) {
+      setResetPasswordResult(null);
+      setResetPasswordTarget(null);
+      void queryClient.invalidateQueries({ queryKey: usersKeys.list() });
+    }
+  };
+
   const columns = buildUsersTableColumns({
     canReadUser,
     canUpdateUser,
@@ -264,6 +304,10 @@ export function UsersPage() {
     onOpenDetails: handleOpenDetails,
     onToggleStatus: (user) => {
       void handleToggleStatus(user);
+    },
+    onRequestResetPassword: (user) => {
+      setResetPasswordTarget(user);
+      setResetPasswordConfirmOpen(true);
     },
   });
   const visibilityOptions = buildUsersVisibilityOptions(showActions);
@@ -282,7 +326,6 @@ export function UsersPage() {
   const isSearchPending = search.trim() !== debouncedSearch.trim();
   const hasFilters =
     Boolean(debouncedSearch.trim()) ||
-    Boolean(debouncedNoExpSearch.trim()) ||
     appliedFiltersCount > 0;
   const tableErrorDescription = error
     ? getUserErrorMessage(
@@ -294,7 +337,6 @@ export function UsersPage() {
 
   const handleClearFilters = () => {
     setSearch("");
-    setNoExpSearch("");
     setStatusFilter(USER_STATUS_FILTER.ALL);
     setRoleFilter(ROLE_FILTER_ALL);
     setClinicFilter(CLINIC_FILTER_ALL);
@@ -328,7 +370,6 @@ export function UsersPage() {
         if (isExporting || !canReadUser) return;
         void exportUsers({
           search: debouncedSearch || undefined,
-          noExp: debouncedNoExpSearch || undefined,
           status: statusFilter === USER_STATUS_FILTER.ALL ? undefined : statusFilter,
           roleId: roleFilter === ROLE_FILTER_ALL ? undefined : Number(roleFilter),
           clinicId: clinicFilter === CLINIC_FILTER_ALL ? undefined : Number(clinicFilter),
@@ -446,17 +487,6 @@ export function UsersPage() {
         description="Administra cuentas, rol primario y estado de acceso desde un solo tablero operativo."
         icon={<ShieldUser className="size-12" />}
       />
-
-      <div className="flex w-full min-w-0">
-        <TableSearch
-          value={noExpSearch}
-          onChange={(value) => {
-            setNoExpSearch(value);
-            setPage(1);
-          }}
-          placeholder="Buscar por No. Expediente SERMED..."
-        />
-      </div>
 
       <TableHeaderBar
         search={
@@ -582,6 +612,32 @@ export function UsersPage() {
         clinicOptions={clinicOptions}
       />
       <UserImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ConfirmDestructiveDialog
+        open={resetPasswordConfirmOpen}
+        onOpenChange={(nextOpen) => {
+          setResetPasswordConfirmOpen(nextOpen);
+          if (!nextOpen) {
+            setResetPasswordTarget(null);
+          }
+        }}
+        title="Restablecer contraseña"
+        description={
+          resetPasswordTarget
+            ? `¿Restablecer la contraseña de ${resetPasswordTarget.fullname || resetPasswordTarget.username}? La contraseña actual dejará de funcionar de inmediato.`
+            : "¿Restablecer la contraseña de este usuario? La contraseña actual dejará de funcionar de inmediato."
+        }
+        confirmLabel="Restablecer"
+        onConfirm={() => {
+          void handleConfirmResetPassword();
+        }}
+        confirmDisabled={resetUserPassword.isPending}
+      />
+      <UserResetPasswordResultDialog
+        open={resetPasswordResultOpen}
+        onOpenChange={handleCloseResetPasswordResult}
+        temporaryPassword={resetPasswordResult?.temporaryPassword ?? null}
+        username={resetPasswordTarget?.username}
+      />
     </div>
   );
 }

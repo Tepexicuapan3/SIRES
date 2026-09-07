@@ -7,33 +7,16 @@ cada usuario (reusado fila por fila, igual que en el alta individual de
 `UsersListCreateView.post`).
 """
 
-from django.conf import settings
 from django.db import transaction
 
 from apps.administracion.services.user_import_service import (
     build_template,
     parse_and_validate,
 )
+from apps.authentication.services.email_service import send_user_credentials_email_batch
 from apps.catalogos.models import Roles
 
 from .create_user import CreateUserData, CreateUserUseCase
-
-
-class EmailDeliveryFailedDuringImport(Exception):
-    """
-    Se lanza dentro de la transaccion atomica del confirm cuando una fila
-    con correo falla al enviar credenciales y
-    `settings.ALLOW_USER_CREATE_WITHOUT_EMAIL` es False -- fuerza el
-    rollback de TODO el import (todo-o-nada), igual que en el alta
-    individual.
-    """
-
-    def __init__(self, row_number: int, username: str):
-        self.row_number = row_number
-        self.username = username
-        super().__init__(
-            f"Fallo el envio de credenciales para la fila {row_number} ({username})."
-        )
 
 
 class RoleVanishedDuringImport(Exception):
@@ -74,11 +57,16 @@ class ConfirmUsersImportUseCase:
     """
     Paso 2: recibe el MISMO archivo (nunca filas ya validadas por el
     cliente) y re-corre `parse_and_validate` como unica autoridad.
-    Todo-o-nada: si queda un solo error de validacion, no se crea ningun
-    usuario. Si todas las filas son validas, crea todos los usuarios dentro
-    de una unica transaccion atomica -- si el envio de credenciales de
-    alguna fila con correo falla (y el flag de tolerancia esta apagado), se
-    revierte TODO el import.
+    Todo-o-nada solo a nivel de VALIDACION: si queda un solo error, no se
+    crea ningun usuario. Si todas las filas son validas, crea todos los
+    usuarios dentro de una unica transaccion atomica SIN mandar correos
+    (para no abrir/cerrar SMTP miles de veces con una transaccion de DB
+    abierta, y para no dejar "emails fantasma" si un envio falla a mitad de
+    un import grande y se revierte la transaccion). Una vez comprometida la
+    transaccion, las credenciales se mandan en batch (una sola conexion
+    SMTP) fuera de ella -- si algun correo falla ahi, el usuario ya existe
+    en la BD igual; el fallo solo se reporta en `emailFailures` para
+    reenviar manualmente.
     """
 
     def execute(self, file, actor) -> dict:
@@ -93,18 +81,26 @@ class ConfirmUsersImportUseCase:
                 "has_errors": True,
             }
 
-        inserted = self._create_all(result["rows"], actor)
+        inserted, pending_emails = self._create_all(result["rows"], actor)
+
+        email_failures = []
+        if pending_emails:
+            batch_result = send_user_credentials_email_batch(pending_emails)
+            email_failures = batch_result["failed"]
+
         return {
             "totalRecords": result["total_records"],
             "totalErrores": 0,
             "inserted": inserted,
             "rows": result["rows"],
+            "emailFailures": email_failures,
             "has_errors": False,
         }
 
     @transaction.atomic
-    def _create_all(self, rows, actor) -> int:
+    def _create_all(self, rows, actor):
         inserted = 0
+        pending_emails = []
         for row in rows:
             data = row["data"]
             role = Roles.objects.filter(id_rol=data["roleId"], is_active=True).first()
@@ -125,15 +121,20 @@ class ConfirmUsersImportUseCase:
                     actor=actor,
                     no_exp=data["noExp"],
                     est_activo=data["isActive"],
+                    send_credentials_email=False,
                 )
             )
 
-            if (
-                create_result.credentials_email_sent is False
-                and not settings.ALLOW_USER_CREATE_WITHOUT_EMAIL
-            ):
-                raise EmailDeliveryFailedDuringImport(row["row"], data["username"])
+            if data["email"]:
+                pending_emails.append(
+                    {
+                        "email": data["email"],
+                        "username": create_result.user.usuario,
+                        "temporary_password": create_result.temporary_password,
+                        "user_name": create_result.full_name,
+                    }
+                )
 
             inserted += 1
 
-        return inserted
+        return inserted, pending_emails
