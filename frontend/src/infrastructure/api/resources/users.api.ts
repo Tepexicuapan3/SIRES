@@ -270,6 +270,7 @@ export const usersAPI = {
             // Elimina Content-Type: application/json del cliente base.
             // Axios genera multipart/form-data con boundary correcto.
             headers: { "Content-Type": undefined },
+            timeout: 60000,
           },
         );
         return response.data;
