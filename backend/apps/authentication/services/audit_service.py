@@ -2,7 +2,7 @@ from django.utils import timezone
 
 from apps.administracion.models import AuditoriaEvento
 from apps.authentication.services.observability_service import record_audit_event
-from apps.authentication.services.response_service import get_request_id
+from apps.authentication.services.response_service import get_client_ip, get_request_id
 
 
 def log_event(
@@ -36,7 +36,7 @@ def log_event(
     caller revierta TODA la operacion, no solo el registro de auditoria.
     """
     request_id = get_request_id(request)
-    ip_origen = request.META.get("REMOTE_ADDR")
+    ip_origen = get_client_ip(request)
     user_agent = request.META.get("HTTP_USER_AGENT")
 
     payload_meta = {"module": "auth"}

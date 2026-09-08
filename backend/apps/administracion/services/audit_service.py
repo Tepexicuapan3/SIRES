@@ -1,5 +1,6 @@
 from ..models import AuditoriaEvento
 from apps.authentication.services.observability_service import record_audit_event
+from apps.authentication.services.response_service import get_client_ip
 
 
 class AuditService:
@@ -31,7 +32,7 @@ class AuditService:
             target_usuario=target_usuario,
             resultado=resultado,
             codigo_error=codigo_error,
-            ip_origen=request.META.get("REMOTE_ADDR"),
+            ip_origen=get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT"),
             datos_antes=datos_antes,
             datos_despues=datos_despues,

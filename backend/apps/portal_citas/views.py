@@ -28,7 +28,11 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.authentication.services.response_service import error_response, get_request_id
+from apps.authentication.services.response_service import (
+    error_response,
+    get_client_ip,
+    get_request_id,
+)
 from apps.comunicados.serializers import AnuncioPortalSerializer
 from apps.comunicados.uses_case.listar_anuncios_vigentes_use_case import (
     ListarAnunciosVigentesUseCase,
@@ -189,7 +193,7 @@ class VerificarCodigoView(APIView):
                 validated_data["nombreCompleto"],
                 validated_data["fechaNacimiento"],
                 validated_data["codigo"],
-                ip_origen=request.META.get("REMOTE_ADDR"),
+                ip_origen=get_client_ip(request),
             )
         except PortalAuthError as exc:
             return _portal_error_response(request, exc)

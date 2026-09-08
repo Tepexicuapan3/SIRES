@@ -54,6 +54,19 @@ else:
         if host.strip()
     ]
 
+# Detras del gateway externo (ver nginx/proxy.conf y el repo ngnix-gateway):
+# el gateway termina TLS y ya manda X-Forwarded-Proto correcto, este header
+# es lo unico que le permite a Django saber que la conexion original fue
+# https aunque el ultimo salto (gateway -> proxy interno -> backend) sea
+# HTTP plano dentro de docker. Sin esto, SESSION_COOKIE_SECURE/
+# CSRF_COOKIE_SECURE nunca podrian confiar en el scheme real.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Atado a DEBUG (no hardcodeado en True) para no romper docker-compose.local
+# u otro entorno de desarrollo que corre en HTTP plano sin el gateway.
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=not DEBUG, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
+
 INSTALLED_APPS = [
     "daphne",
     "django.contrib.admin",

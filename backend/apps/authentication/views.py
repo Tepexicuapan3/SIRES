@@ -26,7 +26,11 @@ from apps.authentication.services.observability_service import (
     record_login_result,
     record_policy_deny,
 )
-from apps.authentication.services.response_service import error_response, get_request_id
+from apps.authentication.services.response_service import (
+    error_response,
+    get_client_ip,
+    get_request_id,
+)
 from apps.authentication.services.session_registry import close_session
 from apps.authentication.services.session_service import authenticate_request
 from apps.authentication.services.token_service import (
@@ -123,7 +127,7 @@ class LoginView(APIView):
                 result = login_user(
                     serializer.validated_data["username"],
                     serializer.validated_data["password"],
-                    request.META.get("REMOTE_ADDR"),
+                    get_client_ip(request),
                     request.META.get("HTTP_USER_AGENT"),
                 )
             except AuthServiceError as exc:
@@ -657,7 +661,7 @@ class CompleteOnboardingView(APIView):
                 user,
                 serializer.validated_data["newPassword"],
                 serializer.validated_data["termsAccepted"],
-                request.META.get("REMOTE_ADDR"),
+                get_client_ip(request),
                 getattr(request, "session_id", None),
             )
         except AuthServiceError as exc:
@@ -757,7 +761,7 @@ class RequestResetCodeView(APIView):
         try:
             user = request_reset_code(
                 serializer.validated_data["email"],
-                request.META.get("REMOTE_ADDR"),
+                get_client_ip(request),
             )
         except AuthServiceError as exc:
             base_meta = {
@@ -846,7 +850,7 @@ class VerifyResetCodeView(APIView):
             result = verify_reset_code(
                 serializer.validated_data["email"],
                 serializer.validated_data["code"],
-                request.META.get("REMOTE_ADDR"),
+                get_client_ip(request),
             )
         except AuthServiceError as exc:
             base_meta = {
@@ -1063,7 +1067,7 @@ class ResetPasswordView(APIView):
             result = reset_password(
                 reset_token,
                 serializer.validated_data["newPassword"],
-                request.META.get("REMOTE_ADDR"),
+                get_client_ip(request),
                 request.META.get("HTTP_USER_AGENT"),
             )
         except AuthServiceError as exc:

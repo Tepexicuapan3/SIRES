@@ -27,7 +27,11 @@ from apps.authentication.services.auth_revision import (
 from apps.authentication.services.csrf_service import validate_csrf
 from apps.authentication.services.email_service import send_notification_email_batch
 from apps.authentication.services.errors import AuthServiceError
-from apps.authentication.services.response_service import error_response, get_request_id
+from apps.authentication.services.response_service import (
+    error_response,
+    get_client_ip,
+    get_request_id,
+)
 from apps.authentication.services.session_service import authenticate_request
 from apps.catalogos.models import CatAreaClinica, CatCentroAtencion, Permisos, Roles
 from apps.administracion.use_cases.rbac_write import (
@@ -646,7 +650,7 @@ def _audit(
             target_nombre=_user_name(target_user) if target_user else None,
             resultado=result,
             codigo_error=error_code,
-            ip_origen=request.META.get("REMOTE_ADDR"),
+            ip_origen=get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT"),
             datos_antes=before,
             datos_despues=after,
