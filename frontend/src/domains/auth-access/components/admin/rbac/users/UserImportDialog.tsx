@@ -186,7 +186,8 @@ export function UserImportDialog({ open, onOpenChange }: UserImportDialogProps) 
                 </p>
                 <p>
                   Estado acepta solo &quot;Activo&quot; o &quot;Dado de
-                  baja&quot; (vacio se interpreta como Activo).
+                  baja&quot; (tambien se acepta &quot;Baja&quot; como
+                  sinonimo) (vacio se interpreta como Activo).
                 </p>
               </div>
 

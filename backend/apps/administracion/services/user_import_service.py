@@ -266,6 +266,7 @@ def parse_and_validate(file) -> dict:
         estado_lookup = {
             _strip_accents(v).lower(): v for v in ESTADOS_VALIDOS
         }
+        estado_lookup["baja"] = ESTADO_BAJA
         estado_key = _strip_accents(estado_normalized).lower()
         if estado_key not in estado_lookup:
             errors.append("Estado debe ser 'Activo' o 'Dado de baja'.")
