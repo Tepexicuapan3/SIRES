@@ -32,7 +32,7 @@ else:
         for host in str(
             config(
                 "ALLOWED_HOSTS",
-                default="localhost,127.0.0.1,0.0.0.0,backend,sires-backend,host.docker.internal,50.192.43.35",
+                default="localhost,127.0.0.1,0.0.0.0,backend,sires-backend,host.docker.internal",
             )
         ).split(",")
         if host.strip()
@@ -144,7 +144,7 @@ DATABASES = {
         "NAME": config("EXPEDIENTES_NAME", default="sermed"),
         "USER": config("EXPEDIENTES_USER", default="sermed"),
         "PASSWORD": config("EXPEDIENTES_PASSWORD", default="112233"),
-        "HOST": config("EXPEDIENTES_HOST", default="50.192.43.35"),
+        "HOST": config("EXPEDIENTES_HOST", default="127.0.0.1"),
         "PORT": config("EXPEDIENTES_PORT", default="5432"),
         "OPTIONS": {"client_encoding": "UTF8"},
     },
