@@ -169,15 +169,20 @@ export function UserImportDialog({ open, onOpenChange }: UserImportDialogProps) 
                   <strong>Nombre(s)</strong>, <strong>Apellido Paterno</strong>
                   , Apellido Materno, Correo,{" "}
                   <strong>No. Expediente SERMED</strong>, <strong>Rol</strong>,
-                  Estado.
+                  Tipo de Personal, Estado.
                 </p>
                 <p>
-                  Obligatorios: Usuario, Nombre(s), Apellido Paterno y Rol. El
-                  resto es opcional.
+                  Obligatorios: Usuario, Nombre(s) y Rol. El resto es
+                  opcional.
                 </p>
                 <p>
                   Rol se busca por nombre exacto contra los roles existentes
                   en el sistema.
+                </p>
+                <p>
+                  Tipo de Personal es opcional y, si se completa, se busca
+                  por nombre exacto contra los tipos de personal activos en
+                  el sistema.
                 </p>
                 <p>
                   Estado acepta solo &quot;Activo&quot; o &quot;Dado de
@@ -291,6 +296,7 @@ export function UserImportDialog({ open, onOpenChange }: UserImportDialogProps) 
                 <DataTable
                   columns={columns}
                   rows={pageRows}
+                  minWidthClassName="min-w-[1440px]"
                   getRowKey={(row, index) => `${row.row}-${index}`}
                   getRowClassName={(row) =>
                     row.errors.length > 0

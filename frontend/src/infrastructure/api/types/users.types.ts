@@ -385,7 +385,7 @@ export interface RevokeRoleResponse {
  * Datos normalizados de una fila del Excel de importacion.
  * Columnas de origen (en este orden exacto):
  * Usuario | Nombre(s) | Apellido Paterno | Apellido Materno | Correo |
- * No. Expediente SERMED | Rol | Estado
+ * No. Expediente SERMED | Rol | Tipo de Personal | Estado
  */
 export interface UserImportRowData {
   username: string;
@@ -396,6 +396,8 @@ export interface UserImportRowData {
   noExp: string | null;
   roleName: string;
   roleId: number | null;
+  tipoPersonalName: string;
+  tipoPersonalId: number | null;
   estado: "Activo" | "Dado de baja";
   isActive: boolean;
 }

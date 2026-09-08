@@ -1720,7 +1720,25 @@ class UserDetailView(APIView):
         if "firstName" in request.data:
             detail.nombre = request.data.get("firstName") or ""
         if "paternalName" in request.data:
-            detail.paterno = request.data.get("paternalName") or ""
+            paternal_name = request.data.get("paternalName")
+            if not paternal_name:
+                _audit(
+                    request,
+                    "RBAC_USER_UPDATE",
+                    "user",
+                    resource_id=user.id_usuario,
+                    result="FAIL",
+                    error_code="VALIDATION_ERROR",
+                    target_user=user,
+                )
+                return error_response(
+                    "VALIDATION_ERROR",
+                    "Datos de entrada invalidos",
+                    status.HTTP_400_BAD_REQUEST,
+                    details={"paternalName": ["Apellido Paterno es obligatorio"]},
+                    request_id=_request_id(request),
+                )
+            detail.paterno = paternal_name
         if "maternalName" in request.data:
             detail.materno = request.data.get("maternalName") or ""
 

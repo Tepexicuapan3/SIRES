@@ -24,7 +24,7 @@ import pandas as pd
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from apps.authentication.models import SyUsuario
-from apps.catalogos.models import Roles
+from apps.catalogos.models import CatTipoPersonal, Roles
 
 HEADERS = [
     "Usuario",
@@ -34,6 +34,7 @@ HEADERS = [
     "Correo",
     "No. Expediente SERMED",
     "Rol",
+    "Tipo de Personal",
     "Estado",
 ]
 
@@ -46,8 +47,8 @@ MAX_ROWS = 5000
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 _SAMPLE_ROWS = (
-    ("jperez", "Juan", "Pérez", "López", "juan.perez@example.com", "12345", "Médico", "Activo"),
-    ("mgomez", "María", "Gómez", "", "", "", "Recepción", "Activo"),
+    ("jperez", "Juan", "Pérez", "López", "juan.perez@example.com", "12345", "Médico", "Médico", "Activo"),
+    ("mgomez", "María", "Gómez", "", "", "", "Recepción", "", "Activo"),
 )
 
 
@@ -179,6 +180,7 @@ def parse_and_validate(file) -> dict:
                 "email": _clean_text(df.iloc[row_idx]["Correo"]),
                 "noExp": _clean_text(df.iloc[row_idx]["No. Expediente SERMED"]),
                 "roleName": _clean_text(df.iloc[row_idx]["Rol"]),
+                "tipoPersonalName": _clean_text(df.iloc[row_idx]["Tipo de Personal"]),
                 "estado": _clean_text(df.iloc[row_idx]["Estado"]),
             }
         )
@@ -208,6 +210,13 @@ def parse_and_validate(file) -> dict:
         role.rol: role
         for role in Roles.objects.filter(rol__in=role_names, is_active=True)
     }
+    tipo_personal_names = {p["tipoPersonalName"] for p in raw_rows if p["tipoPersonalName"]}
+    tipo_personal_by_name = {
+        tipo.name: tipo
+        for tipo in CatTipoPersonal.objects.filter(
+            name__in=tipo_personal_names, is_active=True
+        )
+    }
 
     result_rows = []
     total_errores = 0
@@ -224,9 +233,6 @@ def parse_and_validate(file) -> dict:
 
         if not parsed["firstName"]:
             errors.append("Nombre(s) es obligatorio.")
-
-        if not parsed["paternalName"]:
-            errors.append("Apellido Paterno es obligatorio.")
 
         if parsed["email"]:
             if not _EMAIL_RE.match(parsed["email"]):
@@ -246,6 +252,14 @@ def parse_and_validate(file) -> dict:
             if role is None:
                 errors.append(
                     f"Rol '{parsed['roleName']}' no existe o no está activo."
+                )
+
+        tipo_personal = None
+        if parsed["tipoPersonalName"]:
+            tipo_personal = tipo_personal_by_name.get(parsed["tipoPersonalName"])
+            if tipo_personal is None:
+                errors.append(
+                    f"Tipo de Personal '{parsed['tipoPersonalName']}' no encontrado."
                 )
 
         estado_normalized = parsed["estado"] or ESTADO_ACTIVO
@@ -268,6 +282,8 @@ def parse_and_validate(file) -> dict:
             "noExp": parsed["noExp"] or None,
             "roleName": parsed["roleName"],
             "roleId": role.id_rol if role else None,
+            "tipoPersonalName": parsed["tipoPersonalName"],
+            "tipoPersonalId": tipo_personal.id if tipo_personal else None,
             "estado": estado_resolved,
             "isActive": estado_resolved == ESTADO_ACTIVO,
         }

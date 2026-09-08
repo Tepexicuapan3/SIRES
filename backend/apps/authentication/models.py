@@ -105,7 +105,7 @@ class DetUsuario(models.Model):
         related_name="detalle",
     )
     nombre = models.CharField(max_length=80)
-    paterno = models.CharField(max_length=80)
+    paterno = models.CharField(max_length=80, null=True, blank=True)
     materno = models.CharField(max_length=80, null=True, blank=True)
     nombre_completo = GeneratedField(
         expression=_NOMBRE_COMPLETO_EXPRESSION,

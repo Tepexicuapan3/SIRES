@@ -61,6 +61,13 @@ export interface DataTableProps<T> {
   getRowKey?: (row: T, index: number) => string;
   getRowClassName?: (row: T, index: number) => string | undefined;
   className?: string;
+  /**
+   * Ancho minimo de la tabla (clase Tailwind, ej. "min-w-[900px]").
+   * Ajustalo cuando la suma de los anchos explicitos de las columnas
+   * supere el default: la tabla ya tiene scroll horizontal (ver
+   * shared/ui/table.tsx), asi que un valor mayor es seguro.
+   */
+  minWidthClassName?: string;
 }
 
 const defaultEmptyTitle = "Sin registros";
@@ -94,8 +101,9 @@ export function DataTable<T>({
   getRowKey,
   getRowClassName,
   className,
+  minWidthClassName = "min-w-[720px]",
 }: DataTableProps<T>) {
-  const tableClassName = "min-w-[720px] table-fixed";
+  const tableClassName = cn(minWidthClassName, "table-fixed");
   const shouldShowNoResults = hasFilters && rows.length === 0;
   const emptyStateTitle = shouldShowNoResults ? noResultsTitle : emptyTitle;
   const emptyStateDescription = shouldShowNoResults

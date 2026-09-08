@@ -6,7 +6,8 @@ import { type DataTableColumn } from "@features/admin/shared/components/DataTabl
 /**
  * Columnas de la tabla de vista previa de importacion masiva de usuarios.
  * Refleja el orden de la plantilla: Usuario | Nombre(s) | Apellido Paterno |
- * Apellido Materno | Correo | No. Expediente SERMED | Rol | Estado.
+ * Apellido Materno | Correo | No. Expediente SERMED | Rol | Tipo de Personal |
+ * Estado.
  */
 export function buildUserImportPreviewColumns(): DataTableColumn<UserImportRow>[] {
   return [
@@ -20,11 +21,13 @@ export function buildUserImportPreviewColumns(): DataTableColumn<UserImportRow>[
     {
       key: "username",
       header: "Usuario",
+      className: "w-[130px]",
       render: (row) => row.data.username || "—",
     },
     {
       key: "fullname",
       header: "Nombre completo",
+      className: "w-[220px]",
       render: (row) =>
         [row.data.firstName, row.data.paternalName, row.data.maternalName]
           .filter(Boolean)
@@ -33,17 +36,26 @@ export function buildUserImportPreviewColumns(): DataTableColumn<UserImportRow>[
     {
       key: "email",
       header: "Correo",
+      className: "w-[200px]",
       render: (row) => row.data.email || "—",
     },
     {
       key: "noExp",
       header: "No. Exp. SERMED",
+      className: "w-[140px]",
       render: (row) => row.data.noExp || "—",
     },
     {
       key: "roleName",
       header: "Rol",
+      className: "w-[140px]",
       render: (row) => row.data.roleName || "—",
+    },
+    {
+      key: "tipoPersonalName",
+      header: "Tipo de Personal",
+      className: "w-[150px]",
+      render: (row) => row.data.tipoPersonalName || "—",
     },
     {
       key: "estado",

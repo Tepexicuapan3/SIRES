@@ -14,7 +14,7 @@ from apps.administracion.services.user_import_service import (
     parse_and_validate,
 )
 from apps.authentication.services.email_service import send_user_credentials_email_batch
-from apps.catalogos.models import Roles
+from apps.catalogos.models import CatTipoPersonal, Roles
 
 from .create_user import CreateUserData, CreateUserUseCase
 
@@ -110,6 +110,12 @@ class ConfirmUsersImportUseCase:
             if role is None:
                 raise RoleVanishedDuringImport(row["row"], data["username"])
 
+            tipo_personal = None
+            if data["tipoPersonalId"]:
+                tipo_personal = CatTipoPersonal.objects.filter(
+                    id=data["tipoPersonalId"], is_active=True
+                ).first()
+
             create_result = CreateUserUseCase.execute(
                 CreateUserData(
                     username=data["username"],
@@ -121,6 +127,7 @@ class ConfirmUsersImportUseCase:
                     actor=actor,
                     no_exp=data["noExp"],
                     est_activo=data["isActive"],
+                    tipo_personal=tipo_personal,
                     send_credentials_email=False,
                 )
             )
