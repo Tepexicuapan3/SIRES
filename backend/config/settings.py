@@ -4,7 +4,6 @@ Django settings — SISEM + SIRES unificado.
 
 
 
-import json
 import os
 import sys
 from datetime import timedelta
@@ -16,21 +15,6 @@ from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 POSTAL_CODES_FILE_PATH = BASE_DIR / "storage" / "catalogs" / "codigos_postales.txt"
-# Agrega BASE_DIR al path para que 'cont' sea importable
-sys.path.insert(0, str(BASE_DIR))
-from cont import decrypt_password
-
-
-def _get_oracle_password() -> str:
-    try:
-        with open(BASE_DIR / "config.json", "r", encoding="utf-8") as f:
-            cfg = json.load(f)
-        enc = bytes.fromhex(cfg["oracle"]["password_encrypted"])
-        iv = bytes.fromhex(cfg["oracle"]["iv"])
-        return decrypt_password(enc, iv)
-    except Exception:
-        return os.environ.get("ORACLE_PASSWORD", "")
-
 
 SECRET_KEY = config(
     "SECRET_KEY",
@@ -135,7 +119,7 @@ ASGI_APPLICATION = "config.asgi.application"
 # ── Oracle ────────────────────────────────────────────────────────────────────
 ORACLE_CONFIG = {
     "user": config("ORACLE_USER", default="SERMED"),
-    "password": _get_oracle_password(),
+    "password": config("ORACLE_PASSWORD", default=""),
     "host": config("ORACLE_HOST", default="11.121.252.12"),
     "port": config("ORACLE_PORT", default="1526"),
     "service_name": config("ORACLE_SERVICE", default="NOMINAP"),
@@ -326,6 +310,25 @@ SIMPLE_JWT = {
 # sesion se libera sola y "auth-cerrar-sesiones-abandonadas" cierra su
 # fila de historial en el siguiente barrido.
 ACTIVE_SESSION_TTL_SECONDS = config("ACTIVE_SESSION_TTL_SECONDS", default=60 * 30, cast=int)
+
+# ── Hardening HTTPS/cookies ───────────────────────────────────────────────────
+# Todo default False a proposito: mientras el deploy sirva por HTTP plano
+# (ver nginx/proxy.conf -- sin dominio/certificado todavia, solo IP), activar
+# cualquiera de estos rompe el acceso (redirect a HTTPS inexistente, cookies
+# que el navegador descarta por venir de un origen no seguro). Prender los
+# 3 en el .env de produccion en cuanto haya dominio + certificado TLS reales.
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False, cast=bool
+)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=False, cast=bool)
+# nginx (proxy.conf) ya manda X-Forwarded-Proto -- con esto Django sabe que
+# la conexion real del cliente fue HTTPS aunque a el le llegue por HTTP
+# desde el proxy interno, y no entra en loop de redirect.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # ── CORS / CSRF ───────────────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = [
