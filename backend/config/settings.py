@@ -38,19 +38,6 @@ else:
         if host.strip()
     ]
 
-# Detras del gateway externo (ver nginx/proxy.conf y el repo ngnix-gateway):
-# el gateway termina TLS y ya manda X-Forwarded-Proto correcto, este header
-# es lo unico que le permite a Django saber que la conexion original fue
-# https aunque el ultimo salto (gateway -> proxy interno -> backend) sea
-# HTTP plano dentro de docker. Sin esto, SESSION_COOKIE_SECURE/
-# CSRF_COOKIE_SECURE nunca podrian confiar en el scheme real.
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
-# Atado a DEBUG (no hardcodeado en True) para no romper docker-compose.local
-# u otro entorno de desarrollo que corre en HTTP plano sin el gateway.
-SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=not DEBUG, cast=bool)
-CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
-
 INSTALLED_APPS = [
     "daphne",
     "django.contrib.admin",
@@ -312,14 +299,16 @@ SIMPLE_JWT = {
 ACTIVE_SESSION_TTL_SECONDS = config("ACTIVE_SESSION_TTL_SECONDS", default=60 * 30, cast=int)
 
 # ── Hardening HTTPS/cookies ───────────────────────────────────────────────────
-# Todo default False a proposito: mientras el deploy sirva por HTTP plano
-# (ver nginx/proxy.conf -- sin dominio/certificado todavia, solo IP), activar
-# cualquiera de estos rompe el acceso (redirect a HTTPS inexistente, cookies
-# que el navegador descarta por venir de un origen no seguro). Prender los
-# 3 en el .env de produccion en cuanto haya dominio + certificado TLS reales.
+# El gateway externo (ver repo ngnix-gateway, sisem.conf/citas.conf) SI
+# termina TLS real (cert firmado por la CA interna) y manda X-Forwarded-Proto
+# correcto -- nginx/proxy.conf de este repo lo respeta sin pisarlo. Por eso
+# las cookies Secure van atadas a DEBUG (prendidas salvo en dev local sin
+# proxy), no en False fijo. SECURE_SSL_REDIRECT queda en False a proposito:
+# el redirect 80->443 ya lo hace el gateway, duplicarlo en Django generaria
+# un loop si el header llegara a fallar.
 SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
-SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
-CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=not DEBUG, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
 SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
     "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False, cast=bool
