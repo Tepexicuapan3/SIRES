@@ -23,7 +23,7 @@ from .models import (
     Areas, Autorizadores, Bajas, CalidadLaboral, CatAreaClinica, CatCentroAtencion,
     CatCentroAtencionHorario, CatCentroAtencionExcepcion, CentroAreaClinica, Consultorios,
     Discapacidades, EdoCivil, Enfermedades, Escolaridad, Escuelas, Especialidades, EstudiosMed,
-    GruposDeMedicamentos, Licencias, MotivoCita, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
+    GruposDeMedicamentos, Licencias, Medicamentos, MotivoCita, Ocupaciones, OrigenCons, Parentesco, Pases, Permisos,
     Religion, Roles, CatSucursal, TipoDeCitas, TipoConsulta, TipoResidencia, TiposAreas, TiposSanguineo,
     TpAutorizacion, Turnos, Vacunas, CatTipoPersonal,
 )
@@ -53,6 +53,7 @@ from .serializers import (
     EstudiosMedDetailSerializer, EstudiosMedListSerializer, EstudiosMedWriteSerializer,
     GruposDeMedicamentosDetailSerializer, GruposDeMedicamentosListSerializer, GruposDeMedicamentosWriteSerializer,
     LicenciasDetailSerializer, LicenciasListSerializer, LicenciasWriteSerializer,
+    MedicamentosDetailSerializer, MedicamentosListSerializer, MedicamentosWriteSerializer,
     MotivoCitaDetailSerializer, MotivoCitaListSerializer, MotivoCitaWriteSerializer,
     OcupacionesDetailSerializer, OcupacionesListSerializer, OcupacionesWriteSerializer,
     OrigenConsDetailSerializer, OrigenConsListSerializer, OrigenConsWriteSerializer,
@@ -964,6 +965,22 @@ class EstudiosMedDetailView(CatalogBaseDetailView):
     write_serializer = EstudiosMedWriteSerializer
     wrapper_key = "medicalStudy"
     error_codes = MappingProxyType({"not_found": "MEDICAL_STUDIES_NOT_FOUND", "exists": "MEDICAL_STUDIES_EXISTS"})
+
+
+class MedicamentosListCreateView(CatalogBaseListCreateView):
+    catalog = "medicamentos"
+    model = Medicamentos
+    list_serializer = MedicamentosListSerializer
+    write_serializer = MedicamentosWriteSerializer
+    error_codes = MappingProxyType({"exists": "MEDICATIONS_EXISTS"})
+
+class MedicamentosDetailView(CatalogBaseDetailView):
+    catalog = "medicamentos"
+    model = Medicamentos
+    detail_serializer = MedicamentosDetailSerializer
+    write_serializer = MedicamentosWriteSerializer
+    wrapper_key = "medication"
+    error_codes = MappingProxyType({"not_found": "MEDICATIONS_NOT_FOUND", "exists": "MEDICATIONS_EXISTS"})
 
 
 class GruposDeMedicamentosListCreateView(CatalogBaseListCreateView):

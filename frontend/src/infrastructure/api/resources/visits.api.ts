@@ -1,7 +1,13 @@
 import apiClient from "@api/client";
 import type {
+  AddPrescriptionItemRequest,
+  AddSecondaryDiagnosisRequest,
   CieSearchParams,
   CieSearchResponse,
+  PrescriptionItem,
+  SecondaryDiagnosisItem,
+  VisitPrescriptionItemsResponse,
+  VisitSecondaryDiagnosesResponse,
   CaptureVitalsRequest,
   CaptureVitalsResponse,
   EditVitalsRequest,
@@ -101,6 +107,66 @@ export const visitsAPI = {
       {
         params,
       },
+    );
+    return response.data;
+  },
+
+  getSecondaryDiagnoses: async (
+    visitId: number,
+  ): Promise<VisitSecondaryDiagnosesResponse> => {
+    const response = await apiClient.get<VisitSecondaryDiagnosesResponse>(
+      `/visits/${visitId}/diagnoses`,
+    );
+    return response.data;
+  },
+
+  addSecondaryDiagnosis: async (
+    visitId: number,
+    data: AddSecondaryDiagnosisRequest,
+  ): Promise<SecondaryDiagnosisItem> => {
+    const response = await apiClient.post<SecondaryDiagnosisItem>(
+      `/visits/${visitId}/diagnoses`,
+      data,
+    );
+    return response.data;
+  },
+
+  cancelSecondaryDiagnosis: async (
+    visitId: number,
+    diagnosisId: number,
+  ): Promise<SecondaryDiagnosisItem> => {
+    const response = await apiClient.patch<SecondaryDiagnosisItem>(
+      `/visits/${visitId}/diagnoses/${diagnosisId}/cancel`,
+    );
+    return response.data;
+  },
+
+  getPrescriptionItems: async (
+    visitId: number,
+  ): Promise<VisitPrescriptionItemsResponse> => {
+    const response = await apiClient.get<VisitPrescriptionItemsResponse>(
+      `/visits/${visitId}/prescription-items`,
+    );
+    return response.data;
+  },
+
+  addPrescriptionItem: async (
+    visitId: number,
+    data: AddPrescriptionItemRequest,
+  ): Promise<PrescriptionItem> => {
+    const response = await apiClient.post<PrescriptionItem>(
+      `/visits/${visitId}/prescription-items`,
+      data,
+    );
+    return response.data;
+  },
+
+  cancelPrescriptionItem: async (
+    visitId: number,
+    itemId: number,
+  ): Promise<PrescriptionItem> => {
+    const response = await apiClient.patch<PrescriptionItem>(
+      `/visits/${visitId}/prescription-items/${itemId}/cancel`,
     );
     return response.data;
   },

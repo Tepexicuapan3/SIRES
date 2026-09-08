@@ -24,6 +24,7 @@ from apps.catalogos.models import (
     EstudiosMed,
     GruposDeMedicamentos,
     Licencias,
+    Medicamentos,
     MotivoCita,
     Ocupaciones,
     OrigenCons,
@@ -600,6 +601,66 @@ class GruposDeMedicamentosDetailSerializer(CatalogDetailSerializer):
 class GruposDeMedicamentosWriteSerializer(CatalogWriteSerializer):
     class Meta(CatalogWriteSerializer.Meta):
         model = GruposDeMedicamentos
+
+
+class MedicamentosListSerializer(CatalogListSerializer):
+    genericName = serializers.CharField(
+        source="generic_name", allow_null=True, required=False,
+    )
+    presentation = serializers.CharField(allow_null=True, required=False)
+    cuadroBasico = serializers.ChoiceField(
+        source="cuadro_basico", choices=Medicamentos.CuadroBasico.choices,
+    )
+    isControlled = serializers.BooleanField(source="is_controlled")
+    maxQuantity = serializers.IntegerField(
+        source="max_quantity", allow_null=True, required=False,
+    )
+
+    class Meta(CatalogListSerializer.Meta):
+        model = Medicamentos
+        fields = CatalogListSerializer.Meta.fields + (
+            "genericName", "presentation", "cuadroBasico", "isControlled", "maxQuantity",
+        )
+
+
+class MedicamentosDetailSerializer(CatalogDetailSerializer):
+    genericName = serializers.CharField(
+        source="generic_name", allow_null=True, required=False,
+    )
+    presentation = serializers.CharField(allow_null=True, required=False)
+    cuadroBasico = serializers.ChoiceField(
+        source="cuadro_basico", choices=Medicamentos.CuadroBasico.choices,
+    )
+    isControlled = serializers.BooleanField(source="is_controlled")
+    maxQuantity = serializers.IntegerField(
+        source="max_quantity", allow_null=True, required=False,
+    )
+
+    class Meta(CatalogDetailSerializer.Meta):
+        model = Medicamentos
+        fields = CatalogDetailSerializer.Meta.fields + (
+            "genericName", "presentation", "cuadroBasico", "isControlled", "maxQuantity",
+        )
+
+
+class MedicamentosWriteSerializer(CatalogWriteSerializer):
+    genericName = serializers.CharField(
+        source="generic_name", allow_null=True, required=False,
+    )
+    presentation = serializers.CharField(allow_null=True, required=False)
+    cuadroBasico = serializers.ChoiceField(
+        source="cuadro_basico", choices=Medicamentos.CuadroBasico.choices, required=False,
+    )
+    isControlled = serializers.BooleanField(source="is_controlled", required=False)
+    maxQuantity = serializers.IntegerField(
+        source="max_quantity", allow_null=True, required=False,
+    )
+
+    class Meta(CatalogWriteSerializer.Meta):
+        model = Medicamentos
+        fields = CatalogWriteSerializer.Meta.fields + (
+            "genericName", "presentation", "cuadroBasico", "isControlled", "maxQuantity",
+        )
 
 
 class LicenciasListSerializer(CatalogListSerializer):

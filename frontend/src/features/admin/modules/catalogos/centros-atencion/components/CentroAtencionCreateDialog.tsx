@@ -64,6 +64,7 @@ const CENTER_ORIGIN = {
 const CENTER_TYPE = {
   CLINICA: "CLINICA",
   HOSPITAL: "HOSPITAL",
+  INSTITUTO: "INSTITUTO",
 } as const;
 
 const DEFAULT_VALUES: CreateCentroAtencionFormValues = {
@@ -336,6 +337,9 @@ export function CentroAtencionCreateDialog({
                                   </SelectItem>
                                   <SelectItem value={CENTER_TYPE.HOSPITAL}>
                                     Hospital
+                                  </SelectItem>
+                                  <SelectItem value={CENTER_TYPE.INSTITUTO}>
+                                    Instituto
                                   </SelectItem>
                                 </SelectContent>
                               </Select>

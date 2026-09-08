@@ -22,6 +22,8 @@ from apps.realtime.events import (
 from apps.recepcion.services.errors import VisitDomainError
 
 from .serializers import (
+    AddPrescriptionItemSerializer,
+    AddSecondaryDiagnosisSerializer,
     ClinicalHistoryUpdateSerializer,
     CloseConsultationSerializer,
     CreateMedicalLeaveSerializer,
@@ -38,7 +40,10 @@ from .uses_case.clinical_history_usecase import (
     upsert_clinical_history,
 )
 from .uses_case.consultation_usecase import (
+    add_secondary_diagnosis,
+    cancel_secondary_diagnosis,
     close_consultation,
+    get_secondary_diagnoses,
     save_diagnosis,
     save_prescriptions,
     search_cies,
@@ -49,6 +54,11 @@ from .uses_case.medical_leave_usecase import (
     get_patient_medical_leaves,
 )
 from .uses_case.patient_history_usecase import get_patient_consultations_history
+from .uses_case.prescription_item_usecase import (
+    add_prescription_item,
+    cancel_prescription_item,
+    get_prescription_items,
+)
 from .uses_case.study_result_usecase import (
     create_study_result,
     get_patient_study_results,
@@ -827,6 +837,241 @@ class PatientStudyResultsHistoryView(APIView):
             )
         except VisitDomainError as exc:
             return _domain_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VisitSecondaryDiagnosesView(APIView):
+    """
+    Diagnosticos secundarios/comorbilidades de una consulta -- separado del
+    diagnostico PRINCIPAL (VisitDiagnosisSaveView). Equivalente moderno de
+    det_hisnotcie del legado.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, visit_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = get_secondary_diagnoses(visit_id, roles, permissions)
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+    def post(self, request, visit_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        serializer = AddSecondaryDiagnosisSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        actor_id, roles, permissions = _actor_context(user)
+        data = serializer.validated_data
+
+        try:
+            payload = add_secondary_diagnosis(
+                visit_id,
+                roles,
+                cie_code=data["cieCode"],
+                notes=data.get("notes"),
+                doctor_id=actor_id,
+                permissions=permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "SecondaryDiagnosisAdded",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "visitId": visit_id,
+                "actorId": actor_id,
+            },
+        )
+
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VisitSecondaryDiagnosisCancelView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def patch(self, request, visit_id, diagnosis_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        actor_id, roles, permissions = _actor_context(user)
+
+        try:
+            payload = cancel_secondary_diagnosis(
+                visit_id,
+                diagnosis_id,
+                roles,
+                doctor_id=actor_id,
+                permissions=permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "SecondaryDiagnosisCancelled",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "visitId": visit_id,
+                "diagnosisId": diagnosis_id,
+                "actorId": actor_id,
+            },
+        )
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VisitPrescriptionItemsView(APIView):
+    """
+    Items de receta estructurados (medicamento del catalogo + indicaciones
+    + cantidad) -- complementa a VisitPrescriptionsSaveView (texto libre).
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, visit_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        _, roles, permissions = _actor_context(user)
+
+        try:
+            payload = get_prescription_items(visit_id, roles, permissions)
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+    def post(self, request, visit_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        serializer = AddPrescriptionItemSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(
+                "VALIDATION_ERROR",
+                "Hay errores en el formulario",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                details=serializer.errors,
+                request_id=get_request_id(request),
+            )
+
+        actor_id, roles, permissions = _actor_context(user)
+        data = serializer.validated_data
+
+        try:
+            payload = add_prescription_item(
+                visit_id,
+                roles,
+                medication_id=data["medicationId"],
+                quantity=data["quantity"],
+                indications=data["indications"],
+                dose=data.get("dose"),
+                actor_id=actor_id,
+                permissions=permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "PrescriptionItemAdded",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "visitId": visit_id,
+                "actorId": actor_id,
+            },
+        )
+
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VisitPrescriptionItemCancelView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def patch(self, request, visit_id, item_id):
+        user, error = _auth_or_error(request)
+        if error:
+            return error
+
+        csrf_error = _csrf_or_error(request)
+        if csrf_error:
+            return csrf_error
+
+        actor_id, roles, permissions = _actor_context(user)
+
+        try:
+            payload = cancel_prescription_item(
+                visit_id, item_id, roles, actor_id=actor_id, permissions=permissions,
+            )
+        except VisitDomainError as exc:
+            return _domain_error_response(request, exc)
+
+        log_event(
+            request,
+            "PrescriptionItemCancelled",
+            "SUCCESS",
+            actor_user=user,
+            meta={
+                "module": "consulta_medica",
+                "endpoint": request.path,
+                "visitId": visit_id,
+                "itemId": item_id,
+                "actorId": actor_id,
+            },
+        )
 
         return Response(payload, status=status.HTTP_200_OK)
 

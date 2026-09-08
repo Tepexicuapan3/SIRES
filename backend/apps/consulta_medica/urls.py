@@ -13,7 +13,11 @@ from apps.consulta_medica.views import (
     VisitConsultationStartView,
     VisitDiagnosisSaveView,
     VisitMedicalLeaveCreateView,
+    VisitPrescriptionItemCancelView,
+    VisitPrescriptionItemsView,
     VisitPrescriptionsSaveView,
+    VisitSecondaryDiagnosesView,
+    VisitSecondaryDiagnosisCancelView,
     VisitStudyResultCreateView,
 )
 
@@ -75,9 +79,29 @@ urlpatterns = [
         name="visit-diagnosis-save",
     ),
     path(
+        "visits/<int:visit_id>/diagnoses",
+        VisitSecondaryDiagnosesView.as_view(),
+        name="visit-secondary-diagnoses",
+    ),
+    path(
+        "visits/<int:visit_id>/diagnoses/<int:diagnosis_id>/cancel",
+        VisitSecondaryDiagnosisCancelView.as_view(),
+        name="visit-secondary-diagnosis-cancel",
+    ),
+    path(
         "visits/<int:visit_id>/prescriptions",
         VisitPrescriptionsSaveView.as_view(),
         name="visit-prescriptions-save",
+    ),
+    path(
+        "visits/<int:visit_id>/prescription-items",
+        VisitPrescriptionItemsView.as_view(),
+        name="visit-prescription-items",
+    ),
+    path(
+        "visits/<int:visit_id>/prescription-items/<int:item_id>/cancel",
+        VisitPrescriptionItemCancelView.as_view(),
+        name="visit-prescription-item-cancel",
     ),
     path(
         "visits/<int:visit_id>/consultation/start",

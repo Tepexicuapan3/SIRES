@@ -50,11 +50,19 @@ export const buildCentrosAtencionTableColumns = ({
       accessorKey: "centerType",
       align: "center",
       className: "w-[140px]",
-      render: (row) => (
-        <Badge variant={row.centerType === "HOSPITAL" ? "secondary" : "outline"}>
-          {row.centerType === "HOSPITAL" ? "Hospital" : "Clínica"}
-        </Badge>
-      ),
+      render: (row) => {
+        const label =
+          row.centerType === "HOSPITAL"
+            ? "Hospital"
+            : row.centerType === "INSTITUTO"
+              ? "Instituto"
+              : "Clínica";
+        return (
+          <Badge variant={row.centerType === "CLINICA" ? "outline" : "secondary"}>
+            {label}
+          </Badge>
+        );
+      },
     },
     {
       key: "legacyFolio",

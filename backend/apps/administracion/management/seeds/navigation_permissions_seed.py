@@ -105,3 +105,13 @@ NAVIGATION_PERMISSIONS_SEED += [
     ("comunicados:anuncios:update", "Editar anuncios del portal de citas"),
     ("comunicados:anuncios:delete", "Eliminar anuncios del portal de citas"),
 ]
+
+# Cuarta tanda (2026-09-08): permisos del modulo nuevo Pases/Referencias
+# (Laboratorio, Gabinete, Especialidad, Hospitalizacion, Tercer Nivel).
+# Lectura y escritura separadas a proposito -- a diferencia de
+# clinico:consultas:read (que hoy habilita lectura Y escritura), este
+# modulo no repite ese hueco de seguridad desde el arranque.
+NAVIGATION_PERMISSIONS_SEED += [
+    ("clinico:pases:read", "Ver pases y referencias medicas"),
+    ("clinico:pases:create", "Emitir y cancelar pases y referencias medicas"),
+]

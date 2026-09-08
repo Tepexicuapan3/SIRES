@@ -48,7 +48,7 @@ export type TurnoRef = CatalogRef;
 // ENUMS / LITERALS
 // =============================================================================
 
-export type CentroAtencionType = "CLINICA" | "HOSPITAL";
+export type CentroAtencionType = "CLINICA" | "HOSPITAL" | "INSTITUTO";
 export type DiaSemana = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type TipoExcepcion = "CERRADO" | "HORARIO_MODIFICADO" | "AVISO";
 

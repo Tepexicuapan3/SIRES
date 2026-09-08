@@ -188,6 +188,28 @@ class CreateStudyResultSerializer(serializers.Serializer):
         return value
 
 
+class AddSecondaryDiagnosisSerializer(serializers.Serializer):
+    cieCode = serializers.CharField(max_length=8, allow_blank=False)
+    notes = serializers.CharField(
+        max_length=255, required=False, allow_blank=True, allow_null=True,
+    )
+
+    def validate_cieCode(self, value):
+        normalized = value.strip().upper()
+        if not normalized:
+            raise serializers.ValidationError("cieCode es obligatorio.")
+        return normalized
+
+
+class AddPrescriptionItemSerializer(serializers.Serializer):
+    medicationId = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+    indications = serializers.CharField(max_length=140, allow_blank=False)
+    dose = serializers.CharField(
+        max_length=100, required=False, allow_blank=True, allow_null=True,
+    )
+
+
 class SearchCieSerializer(serializers.Serializer):
     search = serializers.CharField(max_length=120, allow_blank=False)
     limit = serializers.IntegerField(min_value=1, max_value=20, required=False, default=8)

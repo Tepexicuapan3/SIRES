@@ -7,8 +7,9 @@ from .base import CatalogBase
 class CatCentroAtencion(CatalogBase):
 
     class TipoCentro(models.TextChoices):
-        CLINICA  = "CLINICA",  "Clínica"
-        HOSPITAL = "HOSPITAL", "Hospital"
+        CLINICA   = "CLINICA",   "Clínica"
+        HOSPITAL  = "HOSPITAL",  "Hospital"
+        INSTITUTO = "INSTITUTO", "Instituto"
 
     id          = models.BigAutoField(primary_key=True, db_column="id_centro_atencion")
     name        = models.CharField(max_length=120, db_column="nombre")

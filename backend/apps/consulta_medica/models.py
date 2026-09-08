@@ -81,6 +81,64 @@ class VisitConsultationRevision(models.Model):
         return f"Consulta {self.consultation_id} — revision {self.changed_at}"
 
 
+class VisitDiagnosis(models.Model):
+    """
+    Diagnostico secundario/comorbilidad de una consulta -- complementa a
+    VisitConsultation.primary_diagnosis/cie (que sigue siendo el
+    diagnostico PRINCIPAL, obligatorio para cerrar la consulta segun
+    NOM-024). Equivalente moderno de det_hisnotcie del legado, que permitia
+    N codigos CIE-10 por nota en una tabla detalle. Baja logica (status)
+    en vez de DELETE, mismo criterio que el legado (sw_status 'A'/'B').
+    """
+
+    class Status(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        CANCELADO = "cancelado", "Cancelado"
+
+    id_visit_diagnosis = models.BigAutoField(
+        primary_key=True, db_column="id_diagnostico",
+    )
+    consultation = models.ForeignKey(
+        VisitConsultation,
+        db_column="id_consulta",
+        on_delete=models.PROTECT,
+        related_name="secondary_diagnoses",
+    )
+    cie = models.ForeignKey(
+        "catalogos.CatCies",
+        db_column="clave_cie",
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    notes = models.CharField(max_length=255, db_column="notas", null=True, blank=True)
+    status = models.CharField(
+        max_length=20, db_column="estatus", choices=Status.choices,
+        default=Status.ACTIVO,
+    )
+
+    is_active = models.BooleanField(db_column="est_activo", default=True)
+    created_at = models.DateTimeField(db_column="fch_alta", auto_now_add=True)
+    updated_at = models.DateTimeField(db_column="fch_modf", auto_now=True)
+    deleted_at = models.DateTimeField(db_column="fch_baja", null=True, blank=True)
+    created_by_id = models.BigIntegerField(db_column="usr_alta", null=True, blank=True)
+    updated_by_id = models.BigIntegerField(db_column="usr_modf", null=True, blank=True)
+    deleted_by_id = models.BigIntegerField(db_column="usr_baja", null=True, blank=True)
+
+    class Meta:
+        db_table = "cns_visit_diagnosis"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["consultation", "cie"],
+                condition=models.Q(status="activo"),
+                name="cns_visit_diagnosis_one_active_per_cie",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["consultation"], name="cns_visitdiag_consult_idx"),
+            models.Index(fields=["is_active"], name="cns_visitdiag_active_idx"),
+        ]
+
+
 class VisitPrescription(models.Model):
     id_prescription = models.BigAutoField(primary_key=True, db_column="id_receta")
     id_visit = models.OneToOneField(
@@ -103,6 +161,65 @@ class VisitPrescription(models.Model):
         indexes = [
             models.Index(fields=["is_active"], name="cns_rx_active_idx"),
             models.Index(fields=["created_at"], name="cns_rx_created_idx"),
+        ]
+
+
+class VisitPrescriptionItem(models.Model):
+    """
+    Item de receta estructurado y respaldado por catalogo -- complementa a
+    VisitPrescription.items (JSON de texto libre, que se mantiene para
+    indicaciones adicionales/generales). Equivalente moderno de
+    det_receta del legado (medicamento + indicaciones + cantidad, tabla
+    detalle 1:N contra la nota). Baja logica (status), no DELETE.
+    """
+
+    class Status(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        CANCELADO = "cancelado", "Cancelado"
+
+    id_prescription_item = models.BigAutoField(
+        primary_key=True, db_column="id_receta_item",
+    )
+    prescription = models.ForeignKey(
+        "consulta_medica.VisitPrescription",
+        db_column="id_receta",
+        on_delete=models.PROTECT,
+        related_name="structured_items",
+    )
+    medication = models.ForeignKey(
+        "catalogos.Medicamentos",
+        db_column="id_medic",
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    dose = models.CharField(max_length=100, db_column="dosis", null=True, blank=True)
+    indications = models.CharField(max_length=140, db_column="indicaciones")
+    quantity = models.PositiveIntegerField(db_column="cantidad")
+    status = models.CharField(
+        max_length=20, db_column="estatus", choices=Status.choices,
+        default=Status.ACTIVO,
+    )
+
+    is_active = models.BooleanField(db_column="est_activo", default=True)
+    created_at = models.DateTimeField(db_column="fch_alta", auto_now_add=True)
+    updated_at = models.DateTimeField(db_column="fch_modf", auto_now=True)
+    deleted_at = models.DateTimeField(db_column="fch_baja", null=True, blank=True)
+    created_by_id = models.BigIntegerField(db_column="usr_alta", null=True, blank=True)
+    updated_by_id = models.BigIntegerField(db_column="usr_modf", null=True, blank=True)
+    deleted_by_id = models.BigIntegerField(db_column="usr_baja", null=True, blank=True)
+
+    class Meta:
+        db_table = "cns_visit_prescription_item"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["prescription", "medication"],
+                condition=models.Q(status="activo"),
+                name="cns_rxitem_one_active_per_medication",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["prescription"], name="cns_rxitem_prescription_idx"),
+            models.Index(fields=["is_active"], name="cns_rxitem_active_idx"),
         ]
 
 
@@ -156,12 +273,11 @@ class MedicalLeave(models.Model):
 class StudyResult(models.Model):
     """
     Resultado de un estudio de laboratorio/gabinete, adjuntado como archivo.
-    SIRES todavia no tiene la app `pases` conectada (ver gap analysis
-    architecture/historial-clinico-legado-vs-sires-gaps) -- no hay un
-    "pase"/orden previo que este resultado referencie, a diferencia del
-    legado (pas_laboratorio/pas_gabinete -> ope_resultadoslab). Por ahora
-    el medico sube el resultado directo, sin flujo de orden/autorizacion
-    intermedio. Revisar si se conecta a `pases` cuando esa app se active.
+    Conectado opcionalmente a `pases.ReferralStudyDetail` -- si el estudio
+    vino de un pase/orden previo (Laboratorio/Gabinete), referral_study lo
+    referencia (equivalente al legado pas_laboratorio/pas_gabinete ->
+    ope_resultadoslab). Se mantiene nullable porque el medico puede seguir
+    subiendo un resultado directo sin orden previa.
     """
 
     id_study_result = models.BigAutoField(primary_key=True, db_column="id_resultado")
@@ -178,6 +294,14 @@ class StudyResult(models.Model):
         db_column="id_estudio",
         on_delete=models.PROTECT,
         related_name="+",
+    )
+    referral_study = models.ForeignKey(
+        "pases.ReferralStudyDetail",
+        db_column="id_pase_estudio",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="results",
     )
     result_date = models.DateField(db_column="fecha_resultado")
     notes = models.TextField(db_column="notas", null=True, blank=True)

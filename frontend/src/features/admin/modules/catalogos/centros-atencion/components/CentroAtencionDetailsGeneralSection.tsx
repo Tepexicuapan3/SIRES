@@ -42,6 +42,7 @@ const CENTER_ORIGIN = {
 const CENTER_TYPE = {
   CLINICA: "CLINICA",
   HOSPITAL: "HOSPITAL",
+  INSTITUTO: "INSTITUTO",
 } as const;
 
 export function CentroAtencionDetailsGeneralSection({
@@ -129,6 +130,9 @@ export function CentroAtencionDetailsGeneralSection({
                     </SelectItem>
                     <SelectItem value={CENTER_TYPE.HOSPITAL}>
                       Hospital
+                    </SelectItem>
+                    <SelectItem value={CENTER_TYPE.INSTITUTO}>
+                      Instituto
                     </SelectItem>
                   </SelectContent>
                 </Select>

@@ -75,7 +75,10 @@ export const buildCreateCentroAtencionPayload = (
 ): CreateCentroAtencionRequest => ({
   name: values.name.trim(),
   code: normalizeCode(values.code),
-  centerType: normalizeCenterType(values.centerType) as "CLINICA" | "HOSPITAL",
+  centerType: normalizeCenterType(values.centerType) as
+    | "CLINICA"
+    | "HOSPITAL"
+    | "INSTITUTO",
   legacyFolio: normalizeNullableText(values.legacyFolio),
   isExternal: values.isExternal,
 
@@ -107,7 +110,8 @@ export const buildUpdateCentroAtencionPayload = (
   if (dirtyFields.centerType && values.centerType !== undefined) {
     payload.centerType = normalizeCenterType(values.centerType) as
       | "CLINICA"
-      | "HOSPITAL";
+      | "HOSPITAL"
+      | "INSTITUTO";
   }
 
   if (dirtyFields.legacyFolio) {

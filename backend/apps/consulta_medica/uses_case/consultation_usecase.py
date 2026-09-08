@@ -6,6 +6,7 @@ from apps.authentication.services.permission_dependencies import (
 from apps.consulta_medica.repositories.cies_repository import CiesRepository
 from apps.consulta_medica.repositories.consultation_repository import ConsultationRepository
 from apps.consulta_medica.repositories.prescription_repository import PrescriptionRepository
+from apps.consulta_medica.repositories.visit_diagnosis_repository import VisitDiagnosisRepository
 from apps.recepcion.repositories.visit_repository import VisitRepository
 from apps.recepcion.services.errors import VisitDomainError
 from apps.recepcion.uses_case.visit_state_machine_usecase import (
@@ -280,6 +281,108 @@ def close_consultation(
         "visit": VisitRepository.to_contract(visit),
         "consultation": ConsultationRepository.to_contract(consultation),
     }
+
+
+def _get_consultation_or_error(visit):
+    consultation = ConsultationRepository.get_by_visit(visit)
+    if consultation is None:
+        raise VisitDomainError(
+            "CONSULTATION_NOT_FOUND",
+            "Primero debes guardar el diagnostico de esta consulta.",
+            409,
+        )
+    return consultation
+
+
+def add_secondary_diagnosis(
+    visit_id,
+    roles,
+    *,
+    cie_code,
+    notes=None,
+    doctor_id,
+    permissions=None,
+):
+    """
+    Agrega un diagnostico secundario/comorbilidad a la consulta -- el
+    diagnostico PRINCIPAL sigue siendo VisitConsultation.primary_diagnosis/
+    cie (save_diagnosis/close_consultation). Equivalente moderno de
+    det_hisnotcie del legado (N codigos CIE-10 por nota, en tabla detalle).
+    """
+    ensure_doctor_role(roles, permissions)
+
+    visit = _get_visit_or_error(visit_id)
+    consultation = _get_consultation_or_error(visit)
+
+    normalized_cie_code = _normalize_cie_code(cie_code)
+    if not normalized_cie_code:
+        raise VisitDomainError(
+            "VALIDATION_ERROR",
+            "Hay errores en el formulario",
+            422,
+            details={"cieCode": ["cieCode es obligatorio."]},
+        )
+
+    cie = CiesRepository.get_active_by_code(normalized_cie_code)
+    if cie is None:
+        raise VisitDomainError(
+            "VALIDATION_ERROR",
+            "Hay errores en el formulario",
+            422,
+            details={"cieCode": ["La clave CIE no existe o no esta activa."]},
+        )
+
+    if VisitDiagnosisRepository.get_active_by_consultation_and_cie(consultation, cie):
+        raise VisitDomainError(
+            "DIAGNOSIS_ALREADY_EXISTS",
+            "Ese codigo CIE-10 ya esta agregado como diagnostico de esta consulta.",
+            409,
+        )
+
+    normalized_notes = (notes or "").strip() or None
+
+    diagnosis = VisitDiagnosisRepository.create(
+        consultation=consultation,
+        cie=cie,
+        notes=normalized_notes,
+        created_by_id=doctor_id,
+        updated_by_id=doctor_id,
+    )
+    return VisitDiagnosisRepository.to_contract(diagnosis)
+
+
+def cancel_secondary_diagnosis(
+    visit_id,
+    diagnosis_id,
+    roles,
+    *,
+    doctor_id,
+    permissions=None,
+):
+    ensure_doctor_role(roles, permissions)
+
+    visit = _get_visit_or_error(visit_id)
+    consultation = _get_consultation_or_error(visit)
+
+    diagnosis = VisitDiagnosisRepository.get_by_id(diagnosis_id)
+    if diagnosis is None or diagnosis.consultation_id != consultation.id_consultation:
+        raise VisitDomainError(
+            "DIAGNOSIS_NOT_FOUND", "Diagnostico secundario no encontrado.", 404,
+        )
+
+    diagnosis = VisitDiagnosisRepository.cancel(diagnosis, updated_by_id=doctor_id)
+    return VisitDiagnosisRepository.to_contract(diagnosis)
+
+
+def get_secondary_diagnoses(visit_id, roles, permissions=None):
+    ensure_doctor_role(roles, permissions)
+
+    visit = _get_visit_or_error(visit_id)
+    consultation = _get_consultation_or_error(visit)
+
+    diagnoses = VisitDiagnosisRepository.list_for_consultation(consultation)
+    items = [VisitDiagnosisRepository.to_contract(d) for d in diagnoses]
+    return {"items": items, "total": len(items)}
 
 
 def search_cies(search, roles, permissions=None, *, limit=10):

@@ -13,6 +13,9 @@ import { Label } from "@shared/ui/label";
 import { Textarea } from "@shared/ui/textarea";
 import { EmitirIncapacidadButton } from "@features/consulta-medica/modules/atencion/components/EmitirIncapacidadButton";
 import { SubirResultadoEstudioButton } from "@features/consulta-medica/modules/atencion/components/SubirResultadoEstudioButton";
+import { EmitirPaseButton } from "@features/consulta-medica/modules/atencion/components/EmitirPaseButton";
+import { SecondaryDiagnosesButton } from "@features/consulta-medica/modules/atencion/components/SecondaryDiagnosesButton";
+import { PrescriptionItemsButton } from "@features/consulta-medica/modules/atencion/components/PrescriptionItemsButton";
 import {
   VISIT_STATUS,
   type CieSearchItem,
@@ -586,6 +589,13 @@ export function ConsultationDetailDialog({
                 Guardar diagnostico
               </Button>
 
+              {selectedVisit ? (
+                <SecondaryDiagnosesButton
+                  visitId={selectedVisit.id}
+                  disabled={!canSaveClinicalData}
+                />
+              ) : null}
+
               <Button
                 type="button"
                 variant="outline"
@@ -600,6 +610,13 @@ export function ConsultationDetailDialog({
               </Button>
 
               {selectedVisit ? (
+                <PrescriptionItemsButton
+                  visitId={selectedVisit.id}
+                  disabled={!canSaveClinicalData}
+                />
+              ) : null}
+
+              {selectedVisit ? (
                 <EmitirIncapacidadButton
                   visitId={selectedVisit.id}
                   disabled={!canSaveClinicalData}
@@ -608,6 +625,13 @@ export function ConsultationDetailDialog({
 
               {selectedVisit ? (
                 <SubirResultadoEstudioButton
+                  visitId={selectedVisit.id}
+                  disabled={!canSaveClinicalData}
+                />
+              ) : null}
+
+              {selectedVisit ? (
+                <EmitirPaseButton
                   visitId={selectedVisit.id}
                   disabled={!canSaveClinicalData}
                 />

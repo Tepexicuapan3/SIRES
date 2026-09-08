@@ -17,8 +17,15 @@ export const useInventarioVacunasOptions = (enabled = true) => {
     enabled,
   });
 
+  // Excluye "Instituto" -- son centros externos de referencia (Tercer
+  // Nivel, ver modulo pases), no lugares operativos de SIRES donde se
+  // aplican/almacenan vacunas.
+  const centrosOperativos = (centrosData?.items ?? []).filter(
+    (c) => c.centerType !== "INSTITUTO",
+  );
+
   return {
     vacunaOptions: (vacunasData?.items ?? []).map((v) => ({ id: v.id, name: v.name })),
-    centroOptions: (centrosData?.items ?? []).map((c) => ({ id: c.id, name: c.name })),
+    centroOptions: centrosOperativos.map((c) => ({ id: c.id, name: c.name })),
   };
 };

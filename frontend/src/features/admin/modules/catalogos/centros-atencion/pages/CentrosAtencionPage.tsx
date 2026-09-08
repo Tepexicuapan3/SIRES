@@ -49,6 +49,7 @@ const CENTER_TYPE_FILTER = {
   ALL: "all",
   CLINICA: "CLINICA",
   HOSPITAL: "HOSPITAL",
+  INSTITUTO: "INSTITUTO",
 } as const;
 
 type CenterStatusFilter =
@@ -350,6 +351,15 @@ export function CentrosAtencionPage() {
           selected: centerTypeFilter === CENTER_TYPE_FILTER.HOSPITAL,
           onSelect: () => {
             setCenterTypeFilter(CENTER_TYPE_FILTER.HOSPITAL);
+            setPage(1);
+          },
+        },
+        {
+          id: CENTER_TYPE_FILTER.INSTITUTO,
+          label: "Institutos",
+          selected: centerTypeFilter === CENTER_TYPE_FILTER.INSTITUTO,
+          onSelect: () => {
+            setCenterTypeFilter(CENTER_TYPE_FILTER.INSTITUTO);
             setPage(1);
           },
         },

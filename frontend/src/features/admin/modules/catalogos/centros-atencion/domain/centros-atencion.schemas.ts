@@ -53,7 +53,7 @@ const optionalTime = (label: string) =>
 export const centroAtencionDetailsSchema = z.object({
   name: requiredText("Nombre", 120),
   code: requiredText("CLUES", 50),
-  centerType: z.enum(["CLINICA", "HOSPITAL"], {
+  centerType: z.enum(["CLINICA", "HOSPITAL", "INSTITUTO"], {
     error: "Tipo de centro invalido",
   }),
   legacyFolio: optionalText(10),

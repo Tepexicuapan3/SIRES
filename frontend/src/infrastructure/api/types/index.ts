@@ -399,6 +399,48 @@ export type {
 } from "@api/types/medical-leave.types";
 
 // =============================================================================
+// PASES / REFERENCIAS (Referral)
+// =============================================================================
+export type {
+  ReferralType,
+  ReferralVisitType,
+  ReferralStatus,
+  ReferralStudyItem,
+  ReferralItem,
+  PatientReferralsResponse,
+  CreateReferralStudyRequest,
+  CreateReferralRequest,
+  CancelReferralRequest,
+} from "@api/types/referral.types";
+
+// =============================================================================
+// DIAGNOSTICOS SECUNDARIOS (VisitDiagnosis)
+// =============================================================================
+export type {
+  SecondaryDiagnosisStatus,
+  SecondaryDiagnosisItem,
+  VisitSecondaryDiagnosesResponse,
+  AddSecondaryDiagnosisRequest,
+} from "@api/types/visit-diagnosis.types";
+
+// =============================================================================
+// RECETA ESTRUCTURADA (VisitPrescriptionItem)
+// =============================================================================
+export type {
+  PrescriptionItemStatus,
+  PrescriptionItem,
+  VisitPrescriptionItemsResponse,
+  AddPrescriptionItemRequest,
+} from "@api/types/prescription-item.types";
+
+export type {
+  CuadroBasico,
+  MedicamentoListItem,
+  MedicamentosListResponse,
+  MedicamentosListParams,
+} from "@api/types/catalogos/medicamentos.types";
+
+// =============================================================================
 // RESULTADOS DE ESTUDIOS (StudyResult)
 // =============================================================================
 export type {
